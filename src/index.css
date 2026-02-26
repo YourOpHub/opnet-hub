@@ -1850,6 +1850,17 @@ a:hover {
   letter-spacing: -.01em
 }
 
+.F a {
+  color: var(--t3);
+  text-decoration: none;
+  transition: color .2s;
+  font-weight: 500
+}
+
+.F a:hover {
+  color: var(--o)
+}
+
 /* ═══ DASHBOARD ═══ */
 .hero-d {
   text-align: center;

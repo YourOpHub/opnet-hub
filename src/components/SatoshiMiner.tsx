@@ -345,7 +345,6 @@ const SatoshiMiner: React.FC = () => {
                         {/* Pixel art miner sprite */}
                         <div style={{
                             width: 180, height: 180, position: 'relative',
-                            overflow: 'hidden', borderRadius: 8,
                             transition: 'transform .1s',
                             transform: hitting ? 'scale(1.15) rotate(-5deg)' : 'scale(1)',
                         }}>
@@ -354,10 +353,8 @@ const SatoshiMiner: React.FC = () => {
                                 alt="Miner"
                                 draggable={false}
                                 style={{
-                                    width: '100%',
-                                    height: hitting ? '100%' : '130%',
-                                    objectFit: 'cover',
-                                    objectPosition: hitting ? 'center center' : 'center top',
+                                    width: '100%', height: '100%',
+                                    objectFit: 'contain',
                                     filter: `drop-shadow(0 0 20px ${stage.color}) drop-shadow(0 4px 12px rgba(0,0,0,.6))`,
                                     imageRendering: 'pixelated',
                                     transition: 'filter .15s',

@@ -174,7 +174,8 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
               <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={{
                 background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
                 color: 'var(--w)', padding: '8px 12px', fontSize: '.82rem', fontWeight: 700,
-                fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none'
+                fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none',
+                flexShrink: 0, minWidth: 110, whiteSpace: 'nowrap'
               }}>
                 {TOKENS.map((t, i) => (
                   <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>
@@ -210,7 +211,8 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
               <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={{
                 background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
                 color: 'var(--w)', padding: '8px 12px', fontSize: '.82rem', fontWeight: 700,
-                fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none'
+                fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none',
+                flexShrink: 0, minWidth: 110, whiteSpace: 'nowrap'
               }}>
                 {TOKENS.map((t, i) => (
                   <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>

@@ -49,7 +49,7 @@ const getMineEmission = (daysSinceStart: number): number => {
 const MINE_PER_SAT = 0.001;
 const fs = (n: number): string => { if (n >= 1e8) return (n / 1e8).toFixed(4) + ' BTC'; if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n).toString() };
 const co = (u: Up) => Math.floor(u.base * Math.pow(u.g, u.lv));
-const ld = (k: string, d: any) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } };
+const ld = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d } catch { return d } };
 
 /* ─── 6 evolution stages with pixel art sprites ─── */
 const STAGES = [

@@ -6,7 +6,7 @@
  */
 
 const MCP_URL = '/api/bob';
-const VPS_URL = 'http://188.137.250.160/api/bob';
+const VPS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/bob` : '';
 const DIRECT_URL = 'https://ai.opnet.org/mcp';
 
 let sessionId: string | null = null;
@@ -17,9 +17,9 @@ function getUrl(): string {
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     return MCP_URL; // Vite dev proxy
   }
-  if (vpsAvailable === true) return VPS_URL; // VPS proxy (no CORS issues)
-  if (vpsAvailable === false) return DIRECT_URL; // fallback
-  return VPS_URL; // try VPS first
+  if (VPS_URL && vpsAvailable === true) return VPS_URL;
+  if (vpsAvailable === false || !VPS_URL) return DIRECT_URL;
+  return VPS_URL || DIRECT_URL;
 }
 
 function parseSSE(text: string): unknown | null {
@@ -43,6 +43,7 @@ async function mcpCall(method: string, params?: Record<string, unknown>, id?: nu
     method: 'POST',
     headers,
     body: JSON.stringify({ jsonrpc: '2.0', method, params, id: id ?? Date.now() }),
+    signal: AbortSignal.timeout(10000),
   });
 
   // Capture session ID from response

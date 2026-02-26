@@ -21,3 +21,7 @@ vps_key
 *.pem
 deploy/node_modules/
 deploy/data.db
+deploy/deployed.json
+deploy/*.mjs
+deploy/OP_20/build/
+deploy/OP_20/node_modules/

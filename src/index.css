@@ -2191,6 +2191,22 @@ a:hover {
   min-height: 440px
 }
 
+/* ═══ ACCESSIBILITY: reduced motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══ METS mobile ═══ */
+@media(max-width:500px) {
+  .mets {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
 @media(max-width:600px) {
   .qp {
     width: 100%;

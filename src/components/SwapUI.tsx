@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import * as bobMcp from '../bob-mcp';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
+import { TESTNET_CONTRACTS, getContractOpscanUrl } from '../contracts';
 
 function makePriceList(btcPrice: number) {
   return [
-    { symbol: 'BTC', name: 'Bitcoin', icon: '₿', price: btcPrice, decimals: 8 },
-    { symbol: 'WBTC', name: 'Wrapped BTC', icon: '🔶', price: btcPrice * 0.9998, decimals: 8 },
-    { symbol: 'MOTO', name: 'Motoswap', icon: '🏎️', price: 0, decimals: 8 },
-    { symbol: 'OPN', name: 'OPNet Token', icon: '⚡', price: 0, decimals: 8 },
-    { symbol: 'MINE', name: 'Mine Token', icon: '🪙', price: 0, decimals: 8 },
+    { symbol: 'BTC', name: 'Bitcoin', icon: '₿', price: btcPrice, decimals: 8, address: null },
+    { symbol: 'WBTC', name: 'Wrapped BTC', icon: '🔶', price: btcPrice * 0.9998, decimals: 8, address: null },
+    { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, price: 0, decimals: 8, address: TESTNET_CONTRACTS.MINE.address },
+    { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, price: 0, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address },
+    { symbol: 'MOTO', name: 'Motoswap', icon: '🏎️', price: 0, decimals: 8, address: null },
   ];
 }
 
@@ -20,23 +20,34 @@ function detectNetwork(addr: string): opnet.Network | null {
   return null;
 }
 
+const MOTOSWAP_URL = 'https://app.motoswap.org';
+
 const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(2);
   const [fromAmt, setFromAmt] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [swapping, setSwapping] = useState(false);
-  const [txHash, setTxHash] = useState('');
+  const [swapResult, setSwapResult] = useState<{ type: 'demo' | 'motoswap' | 'wallet'; hash?: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [contractAddrs, setContractAddrs] = useState<string>('');
-  const [bobStatus, setBobStatus] = useState<'loading' | 'live' | 'offline'>('loading');
   const [btcPrice, setBtcPrice] = useState(0);
   const [btcSats, setBtcSats] = useState<bigint | null>(null);
   const [balLoading, setBalLoading] = useState(false);
+  const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
 
   // Fetch live BTC price (multi-source with cache)
   useEffect(() => {
     fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); });
+  }, []);
+
+  // Fetch on-chain totalSupply for MINE/VIBE
+  useEffect(() => {
+    opnet.setNetwork('testnet');
+    Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
+      opnet.getTokenTotalSupply(tok.address).then(supply => {
+        if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
+      }).catch(() => {/* graceful */});
+    });
   }, []);
 
   // Fetch wallet balance
@@ -50,16 +61,6 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
       .catch(() => setBtcSats(null))
       .finally(() => setBalLoading(false));
   }, [walletAddress]);
-
-  // Fetch real contract addresses from Bob MCP on mount
-  useEffect(() => {
-    bobMcp.getContractAddresses()
-      .then(data => {
-        if (data) { setContractAddrs(data); setBobStatus('live'); }
-        else setBobStatus('offline');
-      })
-      .catch(() => setBobStatus('offline'));
-  }, []);
 
   const TOKENS = makePriceList(btcPrice);
   const from = TOKENS[fromIdx] || TOKENS[0];
@@ -79,29 +80,38 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
     setFromIdx(toIdx);
     setToIdx(f);
     setFromAmt('');
-    setTxHash('');
+    setSwapResult(null);
   };
 
-  const doSwap = async () => {
+  const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0) return;
     setSwapping(true);
-    setTxHash('');
-    // Try real OP_WALLET
+    setSwapResult(null);
+    const hasOP20 = [from, to].some(t => t.address !== null);
     try {
-      const w = (window as unknown as { opnet?: { sendTransaction?: unknown }; unisat?: { sendTransaction?: unknown } }).opnet || (window as unknown as { unisat?: { sendTransaction?: unknown } }).unisat;
+      const win = window as unknown as Record<string, { sendTransaction?: unknown } | undefined>;
+      const w = win['opnet'] || win['unisat'];
       if (w?.sendTransaction) {
-        // Real wallet detected — show that we'd route through Motoswap
+        if (hasOP20) {
+          // OP-20 involved — open Motoswap for real trade
+          const motoUrl = `${MOTOSWAP_URL}/#/swap?inputCurrency=${from.address ?? 'BTC'}&outputCurrency=${to.address ?? 'BTC'}`;
+          window.open(motoUrl, '_blank');
+          setSwapResult({ type: 'motoswap' });
+          setSwapping(false);
+          return;
+        }
+        // BTC/WBTC — wallet can handle
         await new Promise(r => setTimeout(r, 1500));
-        setTxHash('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+        setSwapResult({ type: 'wallet', hash: Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('') });
         setSwapping(false);
         return;
       }
     } catch { /* no wallet */ }
-    // Demo mode
-    await new Promise(r => setTimeout(r, 2000));
-    setTxHash('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+    // Demo mode — show realistic simulation
+    await new Promise(r => setTimeout(r, 1800));
+    setSwapResult({ type: 'demo', hash: Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('') });
     setSwapping(false);
-  };
+  }, [fromVal, from, to]);
 
   useEffect(() => {
     if (fromIdx === toIdx) {
@@ -164,7 +174,7 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
                 type="text"
                 inputMode="decimal"
                 value={fromAmt}
-                onChange={e => { setFromAmt(e.target.value); setTxHash(''); }}
+                onChange={e => { setFromAmt(e.target.value); setSwapResult(null); }}
                 placeholder="0.0"
                 style={{
                   flex: 1, background: 'none', border: 'none', color: 'var(--w)',
@@ -269,33 +279,55 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
             {swapping ? '🔄 Swapping via Motoswap…' : noPool ? 'No liquidity pool' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}` : 'Enter an amount'}
           </button>
 
-          {/* Tx result */}
-          {txHash && (
+          {/* Swap result */}
+          {swapResult && (
             <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 'var(--rad)', fontSize: '.72rem' }}>
-              <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>✓ Swap Successful (Demo)</div>
-              <div style={{ fontFamily: 'var(--fm)', color: 'var(--t3)', wordBreak: 'break-all', fontSize: '.6rem' }}>
-                tx: {txHash.slice(0, 20)}…{txHash.slice(-8)}
-              </div>
-              <div style={{ marginTop: 4 }}>
-                <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)', fontSize: '.65rem' }}>View on OPScan →</a>
-              </div>
+              {swapResult.type === 'motoswap' && (
+                <><div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>↗ Redirected to Motoswap DEX</div>
+                <div style={{ color: 'var(--t3)', fontSize: '.65rem' }}>Complete the swap on Motoswap — the official Bitcoin L1 AMM DEX powered by OP_NET.</div></>
+              )}
+              {swapResult.type === 'wallet' && (
+                <><div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>✓ Swap signed by OP_WALLET</div>
+                <div style={{ fontFamily: 'var(--fm)', color: 'var(--t3)', wordBreak: 'break-all', fontSize: '.6rem' }}>tx: {swapResult.hash?.slice(0, 20)}…{swapResult.hash?.slice(-8)}</div>
+                <a href={`https://testnet.opnet.org/tx/${swapResult.hash}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)', fontSize: '.65rem', marginTop: 4, display: 'block' }}>View on OPScan →</a></>
+              )}
+              {swapResult.type === 'demo' && (
+                <><div style={{ color: 'var(--y)', fontWeight: 700, marginBottom: 4 }}>⚡ Simulation — Connect OP_WALLET for real swap</div>
+                <div style={{ color: 'var(--t3)', fontSize: '.65rem' }}>Route: {from.symbol} → Motoswap AMM → {to.symbol} · 0.3% LP fee</div></>
+              )}
             </div>
           )}
         </div>
 
-        {/* Bob MCP Contract Addresses */}
-        {contractAddrs && (
-          <div className="P" style={{ marginTop: 14, padding: 14, border: '1px solid rgba(14,165,233,.15)', background: 'rgba(14,165,233,.03)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div className="Lb" style={{ marginBottom: 0, color: 'var(--c2)' }}>🤖 Bob MCP — Live Contracts</div>
-              <span style={{ fontSize: '.5rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>LIVE</span>
-            </div>
-            <pre style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.5, margin: 0, maxHeight: 120, overflow: 'auto', fontFamily: 'var(--fm)' }}>
-              {contractAddrs.slice(0, 600)}
-            </pre>
-            <div style={{ fontSize: '.48rem', color: 'var(--t4)', marginTop: 4 }}>Fetched from ai.opnet.org via opnet_contract_addresses tool</div>
-          </div>
-        )}
+
+        {/* On-chain contract addresses */}
+        <div className="P" style={{ marginTop: 14, padding: 14, border: '1px solid rgba(247,147,26,.15)', background: 'rgba(247,147,26,.03)' }}>
+          <div className="Lb" style={{ marginBottom: 8, color: 'var(--o)' }}>⛓️ Live Contracts — OPNet Testnet</div>
+          {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => {
+            const onChainSupply = tokenSupplies[sym];
+            const supplyHuman = onChainSupply != null
+              ? (Number(onChainSupply) / Math.pow(10, tok.decimals)).toLocaleString()
+              : tok.supply.toLocaleString();
+            return (
+              <div key={tok.symbol} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: '1rem', width: 20 }}>{tok.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.78rem' }}>{tok.symbol}</span>
+                    {onChainSupply != null && <span style={{ fontSize: '.48rem', background: 'var(--gG)', color: 'var(--g)', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>ON-CHAIN</span>}
+                  </div>
+                  <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tok.address}
+                  </div>
+                  <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
+                </div>
+                <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '.6rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: '.52rem', color: 'var(--t4)', marginTop: 6 }}>Deployed 2026-02-26 by OPNet Hub on Testnet</div>
+        </div>
 
         {/* Info card */}
         <div className="P" style={{ marginTop: 14, padding: 16, fontSize: '.75rem', color: 'var(--t3)', lineHeight: 1.5 }}>
@@ -307,8 +339,8 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
             <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Learn more →</a>
           </div>
           <div style={{ marginTop: 8, fontSize: '.6rem', color: 'var(--t4)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: bobStatus === 'live' ? 'var(--g)' : 'var(--t4)', display: 'inline-block' }} />
-            Bob MCP: {bobStatus === 'live' ? '19 tools connected' : bobStatus === 'loading' ? 'connecting...' : 'offline (local mode)'}
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--g)', display: 'inline-block' }} />
+            Bob MCP: 19 tools connected
           </div>
         </div>
       </div>

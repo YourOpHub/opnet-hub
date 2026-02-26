@@ -37,13 +37,14 @@ interface RpcResponse {
   error?: { code?: number; message: string };
 }
 
-async function rpc(method: string, params: unknown[] = []): Promise<unknown> {
+async function rpc(method: string, params: unknown[] = [], timeoutMs = 8000): Promise<unknown> {
   const url = getRpcUrl();
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() }),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const data = (await res.json()) as RpcResponse;
     if (data.error) throw new Error(data.error.message || 'RPC error');
@@ -152,15 +153,59 @@ export async function getMempoolInfo(): Promise<{ count?: number; opnetCount?: n
   }
 }
 
-/** Simulate contract call (read-only). Calldata = hex string (with or without 0x). */
-export async function call(to: string, calldata: string, from?: string): Promise<{ returnData?: string } | null> {
-  const data = calldata.startsWith('0x') ? calldata.slice(2) : calldata;
+/** Simulate contract call (read-only).
+ *  btc_call params: [to, calldataHex, fromMLDSAHex?, fromTweakedHex?, blockHeight?, ...] */
+export async function callContract(
+  to: string,
+  selectorHex: string,
+  calldataBodyHex = '',
+  fromMLDSAHex?: string,
+  fromTweakedHex?: string,
+): Promise<string | null> {
+  const data = (selectorHex + calldataBodyHex).replace(/^0x/, '');
   try {
-    const params = from ? [to, data, from, undefined] : [to, data];
-    const r = await rpc('btc_call', params) as { returnData?: string };
-    return r || null;
+    const params: (string | undefined)[] = [to, data, fromMLDSAHex, fromTweakedHex];
+    const r = await rpc('btc_call', params) as Record<string, unknown>;
+    if (!r) return null;
+    if (r.error) return null;
+    if (typeof r.result === 'string') return r.result;
+    if (typeof r.returnData === 'string') return r.returnData;
+    return null;
   } catch {
     return null;
+  }
+}
+
+/** Get OP-20 token balance for an owner (returns 0n on any failure).
+ *  ownerMLDSAHex: 32-byte ML-DSA key hash hex of the token holder */
+export async function getTokenBalance(
+  tokenAddress: string,
+  ownerMLDSAHex: string,
+  ownerTweakedHex?: string,
+): Promise<bigint> {
+  try {
+    const BALANCE_OF_SELECTOR = '5b46f8f6';
+    const result = await callContract(tokenAddress, BALANCE_OF_SELECTOR, ownerMLDSAHex, ownerMLDSAHex, ownerTweakedHex);
+    if (!result) return 0n;
+    const hex = result.startsWith('0x') ? result.slice(2) : result;
+    if (!hex || hex === '0'.repeat(64) || hex === '') return 0n;
+    return BigInt('0x' + hex.slice(0, 64));
+  } catch {
+    return 0n;
+  }
+}
+
+/** Get OP-20 totalSupply (returns 0n on failure) */
+export async function getTokenTotalSupply(tokenAddress: string): Promise<bigint> {
+  try {
+    const TOTAL_SUPPLY_SELECTOR = '18160ddd';
+    const result = await callContract(tokenAddress, TOTAL_SUPPLY_SELECTOR);
+    if (!result) return 0n;
+    const hex = result.startsWith('0x') ? result.slice(2) : result;
+    if (!hex) return 0n;
+    return BigInt('0x' + hex.slice(0, 64));
+  } catch {
+    return 0n;
   }
 }
 

@@ -1,20 +1,31 @@
 /**
- * OPNet Hub API Client — connects to VPS backend at 188.137.250.160
+ * OPNet Hub API Client — connects to backend via VITE_API_URL env var
  * Handles player sync, leaderboard, token info, and claims
  */
 
-const API_BASE = 'http://188.137.250.160';
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+let apiFailed = false;
+let apiFailCount = 0;
+const MAX_FAIL = 2;
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T | null> {
+  if (!API_BASE || apiFailed) return null;
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...opts,
       headers: { 'Content-Type': 'application/json', ...opts?.headers },
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
+    apiFailCount = 0;
     return await res.json() as T;
   } catch (e) {
-    console.warn(`[API] ${path} failed:`, e);
+    apiFailCount++;
+    if (apiFailCount >= MAX_FAIL) {
+      apiFailed = true;
+      console.warn(`[API] Backend unreachable after ${MAX_FAIL} attempts, disabling API calls`);
+    }
     return null;
   }
 }

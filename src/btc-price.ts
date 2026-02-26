@@ -13,21 +13,11 @@ interface PriceData {
 
 let cached: PriceData | null = null;
 let cacheTime = 0;
-const CACHE_TTL = 60_000; // 60s
-
-async function tryCoingecko(): Promise<PriceData | null> {
-  try {
-    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true');
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (!d?.bitcoin?.usd) return null;
-    return { usd: d.bitcoin.usd, usd_24h_change: d.bitcoin.usd_24h_change ?? 0, usd_market_cap: d.bitcoin.usd_market_cap ?? 0, source: 'CoinGecko' };
-  } catch { return null; }
-}
+const CACHE_TTL = 120_000; // 120s
 
 async function tryCoinCap(): Promise<PriceData | null> {
   try {
-    const res = await fetch('https://api.coincap.io/v2/assets/bitcoin');
+    const res = await fetch('https://api.coincap.io/v2/assets/bitcoin', { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const d = await res.json();
     if (!d?.data?.priceUsd) return null;
@@ -42,7 +32,7 @@ async function tryCoinCap(): Promise<PriceData | null> {
 
 async function tryBlockchainInfo(): Promise<PriceData | null> {
   try {
-    const res = await fetch('https://blockchain.info/ticker');
+    const res = await fetch('https://blockchain.info/ticker', { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const d = await res.json();
     if (!d?.USD?.last) return null;
@@ -50,10 +40,20 @@ async function tryBlockchainInfo(): Promise<PriceData | null> {
   } catch { return null; }
 }
 
+async function tryCoingecko(): Promise<PriceData | null> {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true', { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d?.bitcoin?.usd) return null;
+    return { usd: d.bitcoin.usd, usd_24h_change: d.bitcoin.usd_24h_change ?? 0, usd_market_cap: d.bitcoin.usd_market_cap ?? 0, source: 'CoinGecko' };
+  } catch { return null; }
+}
+
 export async function fetchBtcPrice(): Promise<PriceData> {
   if (cached && Date.now() - cacheTime < CACHE_TTL) return cached;
 
-  const result = (await tryCoingecko()) || (await tryCoinCap()) || (await tryBlockchainInfo());
+  const result = (await tryCoinCap()) || (await tryBlockchainInfo()) || (await tryCoingecko());
   if (result) {
     cached = result;
     cacheTime = Date.now();

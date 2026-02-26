@@ -68,7 +68,7 @@ const TokenLauncher: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 14, alignItems: 'start' }}>
+      <div className="launch-grid">
         <div className="P">
           <div className="Lb">📝 Token Config</div>
           <div className="lf">

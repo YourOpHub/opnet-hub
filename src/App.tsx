@@ -8,6 +8,7 @@ import SatoshiMiner from './components/SatoshiMiner';
 import EcosystemDir from './components/EcosystemDir';
 import Portfolio from './components/Portfolio';
 import TokenLauncher from './components/TokenLauncher';
+import SwapUI from './components/SwapUI';
 import QuestPanel from './components/Quests';
 
 const TABS = [
@@ -16,6 +17,7 @@ const TABS = [
     { id: 'portfolio', i: '💼', l: 'Portfolio' },
     { id: 'bob', i: '🤖', l: 'Bob AI' },
     { id: 'tools', i: '🛠️', l: 'Tools' },
+    { id: 'swap', i: '🔄', l: 'Swap' },
     { id: 'launch', i: '🚀', l: 'Launcher' },
     { id: 'game', i: '⛏️', l: 'Epoch Miner' },
     { id: 'news', i: '📰', l: 'News' },
@@ -54,6 +56,7 @@ const App: React.FC = () => {
             case 'portfolio': return <Portfolio walletAddress={wAddr} />;
             case 'bob': return <BobChat />;
             case 'tools': return <TokenTools />;
+            case 'swap': return <SwapUI />;
             case 'launch': return <TokenLauncher />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;
@@ -97,7 +100,15 @@ const App: React.FC = () => {
             <main className="M" key={tab}>{P()}</main>
 
             <footer className="F">
-                <strong>OPNet Hub</strong> — Mission Control for Programmable Bitcoin · <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">docs.opnet.org</a>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">Docs</a>
+                    <a href="https://ai.opnet.org" target="_blank" rel="noopener noreferrer">Bob AI</a>
+                    <a href="https://opscan.org" target="_blank" rel="noopener noreferrer">OPScan</a>
+                    <a href="https://motoswap.org" target="_blank" rel="noopener noreferrer">Motoswap</a>
+                    <a href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">Vibecode</a>
+                    <a href="https://github.com/YourOpHub/opnet-hub" target="_blank" rel="noopener noreferrer">GitHub</a>
+                </div>
+                <strong>OPNet Hub</strong> — Mission Control for Programmable Bitcoin · Built for the <a href="https://vibecode.finance/challenge" target="_blank" rel="noopener noreferrer">#opnetvibecode</a> Challenge
             </footer>
 
             <button className="q-fab" onClick={() => setQOpen(!qOpen)}>

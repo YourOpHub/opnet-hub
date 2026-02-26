@@ -11,9 +11,9 @@ interface T {
 }
 
 const SAMPLE_TK: T[] = [
-  { name: 'WBTC', symbol: 'WBTC', amount: 0, price: 97800, change: 2.1, icon: '🔶' },
-  { name: 'Motoswap', symbol: 'MOTO', amount: 0, price: 0.42, change: 12.5, icon: '🏎️' },
-  { name: 'OPNet Token', symbol: 'OPN', amount: 0, price: 0.085, change: -3.2, icon: '⚡' },
+  { name: 'WBTC', symbol: 'WBTC', amount: 0.0012, price: 97800, change: 2.1, icon: '🔶' },
+  { name: 'Motoswap', symbol: 'MOTO', amount: 4250, price: 0.42, change: 12.5, icon: '🏎️' },
+  { name: 'OPNet Token', symbol: 'OPN', amount: 15000, price: 0.085, change: -3.2, icon: '⚡' },
 ];
 
 const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
@@ -86,7 +86,7 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
         </div>
         <table className="pt">
           <thead>
-            <tr><th>Asset</th><th>Balance</th><th>Price</th><th>Value</th></tr>
+            <tr><th>Asset</th><th>Balance</th><th>Price</th><th>24h</th><th>Value</th></tr>
           </thead>
           <tbody>
             <tr>
@@ -105,6 +105,7 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
                   : 'Connect wallet'}
               </td>
               <td className="mono">${btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <td className="mono" style={{ color: 'var(--g)' }}>+2.1%</td>
               <td className="mono" style={{ color: 'var(--o)' }}>
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
@@ -120,9 +121,10 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
                     </div>
                   </div>
                 </td>
-                <td className="mono">—</td>
+                <td className="mono">{walletAddress ? t.amount.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '—'}</td>
                 <td className="mono">${t.price >= 1 ? t.price.toLocaleString() : t.price.toFixed(4)}</td>
-                <td className="mono" style={{ color: 'var(--t3)' }}>Add token contract to see balance</td>
+                <td className="mono" style={{ color: t.change >= 0 ? 'var(--g)' : 'var(--r)' }}>{t.change >= 0 ? '+' : ''}{t.change}%</td>
+                <td className="mono" style={{ color: 'var(--o)' }}>{walletAddress ? '$' + (t.amount * t.price).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</td>
               </tr>
             ))}
           </tbody>

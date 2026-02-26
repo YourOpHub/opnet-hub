@@ -19,3 +19,5 @@ start-game.bat
 test-wallet.js
 vps_key
 *.pem
+deploy/node_modules/
+deploy/data.db

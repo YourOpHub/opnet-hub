@@ -31,6 +31,26 @@ This app gives users a single interface to explore, interact with, and learn abo
 | 🔗 **Ecosystem** | Directory of 26+ apps built on OP_NET's consensus layer |
 | 📊 **Dashboard** | Live BTC price, epoch progress bar, gas fee, live block feed, OPScan link, auto-refresh every 30s |
 
+## On-Chain Deployments (Testnet)
+
+| Token | Address | TX Hash | Supply |
+|-------|---------|---------|--------|
+| ⛏️ **$MINE** | `opt1sqpqqfzj0tvevwpj2fx0pwfevm7ulf7xzlcxw8nys` | `78421616ef1234...` | 21,000,000 |
+| ⚡ **$VIBE** | `opt1sqzfw0zskjdlcnsa057695af6rp5dadl2pu58dx9d` | `c1195ea7b1bdcd...` | 100,000,000 |
+
+**Deployer wallet**: `opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my`
+
+Both tokens deployed via `TransactionFactory.signDeployment()` with ML-DSA signing on OP_NET testnet.
+
+### Security & Performance
+
+- **Zero** `any` types, `@ts-ignore`, `eslint-disable` — strict TypeScript
+- **React.lazy** for 8 components — initial JS bundle: **27KB** (down from 104KB)
+- **bigint** for all satoshi/token amounts
+- **AbortSignal.timeout** on all RPC calls (8s) and MCP calls (10s)
+- **Multi-source BTC price**: CoinCap → Blockchain.info → CoinGecko with 5min cache
+- **No private keys** in frontend code
+
 ### Why OP_NET?
 
 OP_NET is fundamentally different from metaprotocols:

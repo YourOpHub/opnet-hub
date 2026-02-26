@@ -40,7 +40,7 @@ const App: React.FC = () => {
             }
         } catch { /* extension not available or user rejected */ }
         // Fallback: demo mode with simulated address
-        const addr = 'bcrt1q' + Math.random().toString(36).slice(2, 12);
+        const addr = 'opt1p' + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
         setWAddr(addr); setWOn(true); localStorage.setItem('hub_wallet', '1');
     }, []);
 
@@ -56,7 +56,7 @@ const App: React.FC = () => {
             case 'portfolio': return <Portfolio walletAddress={wAddr} />;
             case 'bob': return <BobChat />;
             case 'tools': return <TokenTools />;
-            case 'swap': return <SwapUI />;
+            case 'swap': return <SwapUI walletAddress={wAddr} />;
             case 'launch': return <TokenLauncher />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;

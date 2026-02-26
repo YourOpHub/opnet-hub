@@ -1,47 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import * as opnet from '../opnet';
 
-interface T {
-  name: string;
-  symbol: string;
-  amount: number;
-  price: number;
-  change: number;
-  icon: string;
+function detectNetwork(addr: string): opnet.Network | null {
+  if (addr.startsWith('opt1')) return 'testnet';
+  if (addr.startsWith('bcrt1')) return 'regtest';
+  if (addr.startsWith('bc1')) return 'mainnet';
+  if (addr.startsWith('tb1')) return 'testnet';
+  return null;
 }
-
-const SAMPLE_TK: T[] = [
-  { name: 'WBTC', symbol: 'WBTC', amount: 0.0012, price: 97800, change: 2.1, icon: '🔶' },
-  { name: 'Motoswap', symbol: 'MOTO', amount: 4250, price: 0.42, change: 12.5, icon: '🏎️' },
-  { name: 'OPNet Token', symbol: 'OPN', amount: 15000, price: 0.085, change: -3.2, icon: '⚡' },
-  { name: 'Mine Token', symbol: 'MINE', amount: 8420, price: 0.0012, change: 45.8, icon: '🪙' },
-];
 
 const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const [btcSats, setBtcSats] = useState<bigint | null>(null);
   const [btcLoading, setBtcLoading] = useState(false);
-  const [btcPrice, setBtcPrice] = useState(97842);
+  const [btcPrice, setBtcPrice] = useState(0);
+  const [btcChange, setBtcChange] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')
       .then((r) => r.json())
-      .then((d) => { if (!cancelled && d?.bitcoin?.usd) setBtcPrice(d.bitcoin.usd); })
+      .then((d) => {
+        if (!cancelled && d?.bitcoin?.usd) {
+          setBtcPrice(d.bitcoin.usd);
+          setBtcChange(d.bitcoin.usd_24h_change ?? 0);
+        }
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!walletAddress || (!walletAddress.startsWith('bcrt1') && !walletAddress.startsWith('tb1') && !walletAddress.startsWith('bc1'))) {
+    const net = walletAddress ? detectNetwork(walletAddress) : null;
+    if (!walletAddress || !net) {
       setBtcSats(null);
       return;
     }
-    const net = walletAddress.startsWith('bcrt1') ? 'regtest' : walletAddress.startsWith('tb1') ? 'testnet' : 'mainnet';
     opnet.setNetwork(net);
     let cancelled = false;
     setBtcLoading(true);
     opnet.getBalance(walletAddress)
-      .then((sats) => { if (!cancelled) { setBtcSats(sats); } })
+      .then((sats) => { if (!cancelled) setBtcSats(sats); })
       .catch(() => { if (!cancelled) setBtcSats(null); })
       .finally(() => { if (!cancelled) setBtcLoading(false); });
     return () => { cancelled = true; };
@@ -49,9 +47,9 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
 
   const btcAmount = btcSats != null ? Number(btcSats) / 1e8 : 0;
   const btcUsd = btcAmount * btcPrice;
-  const sampleTot = SAMPLE_TK.reduce((s, t) => s + t.amount * t.price, 0);
-  const tot = btcUsd + sampleTot;
+  const tot = btcUsd;
   const totBtc = btcPrice > 0 ? tot / btcPrice : 0;
+  const isTestnet = walletAddress?.startsWith('opt1');
 
   return (
     <div>
@@ -75,8 +73,8 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
           <div className="pm-l">Your BTC (chain)</div>
         </div>
         <div className="P pm">
-          <div className="pm-v">{1 + SAMPLE_TK.length}</div>
-          <div className="pm-l">Assets</div>
+          <div className="pm-v">{isTestnet ? 'Testnet' : walletAddress ? '1' : '—'}</div>
+          <div className="pm-l">{isTestnet ? 'Network' : 'Assets'}</div>
         </div>
       </div>
 
@@ -106,28 +104,19 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
                   : 'Connect wallet'}
               </td>
               <td className="mono">${btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-              <td className="mono" style={{ color: 'var(--g)' }}>+2.1%</td>
+              <td className="mono" style={{ color: btcChange >= 0 ? 'var(--g)' : 'var(--r)' }}>{btcChange >= 0 ? '+' : ''}{btcChange.toFixed(1)}%</td>
               <td className="mono" style={{ color: 'var(--o)' }}>
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
             </tr>
-            {SAMPLE_TK.map((t, i) => (
-              <tr key={i}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: '1rem' }}>{t.icon}</span>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--w)' }}>{t.name}</div>
-                      <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>{t.symbol}</div>
-                    </div>
-                  </div>
+            {walletAddress && isTestnet && (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '18px 12px', color: 'var(--t3)', fontSize: '.75rem' }}>
+                  <div style={{ marginBottom: 6 }}>OP-20 token balances will appear here once tokens are deployed.</div>
+                  <div style={{ fontSize: '.65rem', color: 'var(--t4)' }}>Deploy $MINE via OP_WALLET → Token Launcher tab, then balances will load from chain.</div>
                 </td>
-                <td className="mono">{walletAddress ? t.amount.toLocaleString(undefined, { maximumFractionDigits: 4 }) : '—'}</td>
-                <td className="mono">${t.price >= 1 ? t.price.toLocaleString() : t.price.toFixed(4)}</td>
-                <td className="mono" style={{ color: t.change >= 0 ? 'var(--g)' : 'var(--r)' }}>{t.change >= 0 ? '+' : ''}{t.change}%</td>
-                <td className="mono" style={{ color: 'var(--o)' }}>{walletAddress ? '$' + (t.amount * t.price).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
         {!walletAddress && (

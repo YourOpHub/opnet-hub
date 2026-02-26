@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import * as bobMcp from '../bob-mcp';
+import * as opnet from '../opnet';
 
-const TOKENS = [
-  { symbol: 'BTC', name: 'Bitcoin', icon: '₿', price: 97842, decimals: 8 },
-  { symbol: 'WBTC', name: 'Wrapped BTC', icon: '🔶', price: 97800, decimals: 8 },
-  { symbol: 'MOTO', name: 'Motoswap', icon: '🏎️', price: 0.42, decimals: 8 },
-  { symbol: 'OPN', name: 'OPNet Token', icon: '⚡', price: 0.085, decimals: 8 },
-  { symbol: 'PILL', name: 'Orange Pill', icon: '💊', price: 0.0034, decimals: 8 },
-  { symbol: 'MINE', name: 'Mine Token', icon: '🪙', price: 0.0012, decimals: 8 },
-];
+function makePriceList(btcPrice: number) {
+  return [
+    { symbol: 'BTC', name: 'Bitcoin', icon: '₿', price: btcPrice, decimals: 8 },
+    { symbol: 'WBTC', name: 'Wrapped BTC', icon: '🔶', price: btcPrice * 0.9998, decimals: 8 },
+    { symbol: 'MOTO', name: 'Motoswap', icon: '🏎️', price: 0, decimals: 8 },
+    { symbol: 'OPN', name: 'OPNet Token', icon: '⚡', price: 0, decimals: 8 },
+    { symbol: 'MINE', name: 'Mine Token', icon: '🪙', price: 0, decimals: 8 },
+  ];
+}
 
-const SwapUI: React.FC = () => {
+function detectNetwork(addr: string): opnet.Network | null {
+  if (addr.startsWith('opt1')) return 'testnet';
+  if (addr.startsWith('bcrt1')) return 'regtest';
+  if (addr.startsWith('bc1')) return 'mainnet';
+  return null;
+}
+
+const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(2);
   const [fromAmt, setFromAmt] = useState('');
@@ -20,6 +29,29 @@ const SwapUI: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [contractAddrs, setContractAddrs] = useState<string>('');
   const [bobStatus, setBobStatus] = useState<'loading' | 'live' | 'offline'>('loading');
+  const [btcPrice, setBtcPrice] = useState(0);
+  const [btcSats, setBtcSats] = useState<bigint | null>(null);
+  const [balLoading, setBalLoading] = useState(false);
+
+  // Fetch live BTC price
+  useEffect(() => {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+      .then(r => r.json())
+      .then(d => { if (d?.bitcoin?.usd) setBtcPrice(d.bitcoin.usd); })
+      .catch(() => {});
+  }, []);
+
+  // Fetch wallet balance
+  useEffect(() => {
+    const net = walletAddress ? detectNetwork(walletAddress) : null;
+    if (!walletAddress || !net) { setBtcSats(null); return; }
+    opnet.setNetwork(net);
+    setBalLoading(true);
+    opnet.getBalance(walletAddress)
+      .then(s => setBtcSats(s))
+      .catch(() => setBtcSats(null))
+      .finally(() => setBalLoading(false));
+  }, [walletAddress]);
 
   // Fetch real contract addresses from Bob MCP on mount
   useEffect(() => {
@@ -31,14 +63,18 @@ const SwapUI: React.FC = () => {
       .catch(() => setBobStatus('offline'));
   }, []);
 
-  const from = TOKENS[fromIdx];
-  const to = TOKENS[toIdx];
+  const TOKENS = makePriceList(btcPrice);
+  const from = TOKENS[fromIdx] || TOKENS[0];
+  const to = TOKENS[toIdx] || TOKENS[2];
+  const btcBal = btcSats != null ? Number(btcSats) / 1e8 : null;
 
   const fromVal = parseFloat(fromAmt) || 0;
-  const rate = from.price / to.price;
-  const toVal = fromVal * rate;
+  const canQuote = from.price > 0 && to.price > 0;
+  const rate = canQuote ? from.price / to.price : 0;
+  const toVal = canQuote ? fromVal * rate : 0;
   const fee = fromVal * 0.003; // 0.3% LP fee
   const priceImpact = fromVal > 0 ? Math.min(fromVal * 0.001, 5) : 0; // simulated
+  const noPool = !canQuote;
 
   const flip = () => {
     const f = fromIdx;
@@ -119,7 +155,11 @@ const SwapUI: React.FC = () => {
           <div style={{ padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)', marginBottom: 4 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>From</span>
-              <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>Balance: —</span>
+              <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>
+                Balance: {from.symbol === 'BTC'
+                  ? (balLoading ? '…' : btcBal != null ? btcBal.toFixed(8) + ' BTC' : '—')
+                  : '—'}
+              </span>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
@@ -182,8 +222,15 @@ const SwapUI: React.FC = () => {
             {toVal > 0 && <div style={{ fontSize: '.65rem', color: 'var(--t4)', marginTop: 4 }}>≈ ${(toVal * to.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>}
           </div>
 
+          {/* No liquidity warning */}
+          {noPool && fromVal > 0 && (
+            <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.15)', borderRadius: 'var(--rad)', fontSize: '.72rem', color: 'var(--y)' }}>
+              No liquidity pool found for {from.symbol}/{to.symbol} on Motoswap testnet yet. Deploy tokens and create a pool first.
+            </div>
+          )}
+
           {/* Rate info */}
-          {fromVal > 0 && (
+          {fromVal > 0 && canQuote && (
             <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg3)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)', fontSize: '.72rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ color: 'var(--t3)' }}>Rate</span>
@@ -207,7 +254,7 @@ const SwapUI: React.FC = () => {
           {/* Swap button */}
           <button
             onClick={doSwap}
-            disabled={!fromVal || fromVal <= 0 || swapping}
+            disabled={!fromVal || fromVal <= 0 || swapping || noPool}
             style={{
               width: '100%', padding: '14px', marginTop: 14,
               background: fromVal > 0 ? 'linear-gradient(135deg, var(--o), var(--o2))' : 'var(--bg4)',
@@ -219,7 +266,7 @@ const SwapUI: React.FC = () => {
               opacity: swapping ? 0.7 : 1
             }}
           >
-            {swapping ? '🔄 Swapping via Motoswap…' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}` : 'Enter an amount'}
+            {swapping ? '🔄 Swapping via Motoswap…' : noPool ? 'No liquidity pool' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}` : 'Enter an amount'}
           </button>
 
           {/* Tx result */}

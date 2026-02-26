@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
       }
 
       // 2. Fetch Price
-      let priceInfo = { usd: 97842, usd_24h_change: 2.34, usd_market_cap: 1.93e12 };
+      let priceInfo = { usd: 0, usd_24h_change: 0, usd_market_cap: 0 };
       try {
         const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true');
         const data = await res.json();

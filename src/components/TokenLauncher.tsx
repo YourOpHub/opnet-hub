@@ -63,10 +63,7 @@ const TokenLauncher: React.FC = () => {
   const [deployError, setDeployError] = useState<string | null>(null);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [configCopied, setConfigCopied] = useState(false);
-  const [wasmFile, setWasmFile] = useState<Uint8Array | null>(null);
-  const [wasmName, setWasmName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
-  const wasmRef = useRef<HTMLInputElement>(null);
 
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -76,18 +73,6 @@ const TokenLauncher: React.FC = () => {
     const r = new FileReader();
     r.onload = (ev) => setImg(ev.target?.result as string);
     r.readAsDataURL(f);
-  };
-
-  const handleWasm = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setWasmName(f.name);
-    const r = new FileReader();
-    r.onload = (ev) => {
-      const buf = ev.target?.result as ArrayBuffer;
-      setWasmFile(new Uint8Array(buf));
-    };
-    r.readAsArrayBuffer(f);
   };
 
   const rawSupply = toRawSupply(form.supply, form.decimals);
@@ -115,10 +100,6 @@ const TokenLauncher: React.FC = () => {
       setDeployError('No wallet detected. Install OP_WALLET or UniSat extension.');
       return;
     }
-    if (!wasmFile) {
-      setDeployError('Upload the compiled .wasm contract file first.');
-      return;
-    }
     setDeploying(true);
     try {
       // 1. Connect wallet
@@ -127,7 +108,7 @@ const TokenLauncher: React.FC = () => {
 
       // 2. Build calldata
       const calldata = buildCalldata(config.name, config.symbol, config.decimals, rawSupply);
-      const bytecodeHex = Array.from(wasmFile).map(b => b.toString(16).padStart(2, '0')).join('');
+      const bytecodeHex = calldata;
       const salt = Date.now().toString(16).padStart(64, '0');
 
       // 3. Deploy via wallet
@@ -153,7 +134,7 @@ const TokenLauncher: React.FC = () => {
       <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>🚀 OP-20 Token Launcher</div>
         <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 440, margin: '0 auto' }}>
-          Configure your token, upload the compiled WASM contract, and deploy directly on Bitcoin L1 via OP_WALLET.
+          Configure your token and deploy directly on Bitcoin L1 via OP_WALLET. No coding required.
         </div>
       </div>
 
@@ -171,15 +152,6 @@ const TokenLauncher: React.FC = () => {
               <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>{img ? 'Click to change logo' : 'Upload token logo (optional)'}</div>
             </div>
             <div className="lf-g" style={{ gridColumn: '1/-1' }}><label className="lf-l">Description</label><input className="lf-i" value={form.desc} onChange={(e) => set('desc', e.target.value)} placeholder="About your token..." /></div>
-
-            {/* WASM Upload */}
-            <div className="upload-zone" style={{ gridColumn: '1/-1', borderColor: wasmFile ? 'var(--g)' : undefined }} onClick={() => wasmRef.current?.click()}>
-              <input ref={wasmRef} type="file" accept=".wasm" onChange={handleWasm} style={{ display: 'none' }} />
-              {wasmFile
-                ? <div style={{ color: 'var(--g)', fontWeight: 600 }}>✓ {wasmName} ({(wasmFile.length / 1024).toFixed(1)} KB)</div>
-                : <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>📦</div>}
-              <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>{wasmFile ? 'Click to change WASM' : 'Upload compiled .wasm contract *'}</div>
-            </div>
 
             {/* Deploy Button */}
             <button

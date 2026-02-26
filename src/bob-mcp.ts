@@ -58,7 +58,10 @@ async function mcpCall(method: string, params?: Record<string, unknown>, id?: nu
 
 export async function initBob(): Promise<boolean> {
   if (initialized) return true;
-  // Try VPS proxy first (production CORS bypass)
+  // On GitHub Pages or other static hosts, MCP is blocked by CORS — skip silently
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !VPS_URL) {
+    return false;
+  }
   try {
     const res = await mcpCall('initialize', {
       protocolVersion: '2024-11-05',
@@ -68,7 +71,6 @@ export async function initBob(): Promise<boolean> {
     initialized = !!res?.result?.serverInfo;
     if (initialized) { vpsAvailable = (getUrl() === VPS_URL); return true; }
   } catch {
-    // VPS failed, try direct
     if (vpsAvailable === null) {
       vpsAvailable = false;
       sessionId = null;
@@ -80,8 +82,7 @@ export async function initBob(): Promise<boolean> {
         }, 1) as { result?: { serverInfo?: { name: string } } };
         initialized = !!res?.result?.serverInfo;
         return initialized;
-      } catch (e2) {
-        console.warn('[Bob MCP] Init failed (both VPS and direct):', e2);
+      } catch {
         return false;
       }
     }

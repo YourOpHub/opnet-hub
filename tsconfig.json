@@ -23,6 +23,11 @@
     "include": [
         "src"
     ],
+    "exclude": [
+        "deploy",
+        "node_modules",
+        "dist"
+    ],
     "references": [
         {
             "path": "./tsconfig.node.json"

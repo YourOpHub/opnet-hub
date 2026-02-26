@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
+import { TESTNET_CONTRACTS } from '../contracts';
 
 const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   const [p, setP] = useState<{ usd: number; usd_24h_change: number; usd_market_cap: number } | null>(null);
@@ -190,22 +191,19 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
       <div className="P" style={{ marginBottom: 16, padding: 18, border: '1px solid rgba(34,197,94,.15)', background: 'rgba(34,197,94,.03)' }}>
         <div className="Lb" style={{ marginBottom: 10, color: 'var(--g)' }}>✅ Live OP-20 Tokens — Deployed on OPNet Testnet</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
-          {[
-            { symbol: 'MINE', name: 'Mine Token', icon: '⛏️', address: 'opt1sqpqqfzj0tvevwpj2fx0pwfevm7ulf7xzlcxw8nys', supply: '21,000,000', desc: 'OPNet Hub game token' },
-            { symbol: 'VIBE', name: 'Vibe Token', icon: '⚡', address: 'opt1sqzfw0zskjdlcnsa057695af6rp5dadl2pu58dx9d', supply: '100,000,000', desc: '#opnetvibecode token' },
-          ].map(tok => (
+          {Object.values(TESTNET_CONTRACTS).map(tok => (
             <div key={tok.symbol} style={{ padding: '10px 14px', background: 'var(--bg2)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: '1.2rem' }}>{tok.icon}</span>
                 <div>
                   <div style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.9rem' }}>${tok.symbol}</div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--t4)' }}>{tok.desc}</div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--t4)' }}>{tok.description}</div>
                 </div>
                 <span style={{ marginLeft: 'auto', fontSize: '.5rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>LIVE</span>
               </div>
               <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', wordBreak: 'break-all', marginBottom: 4 }}>{tok.address}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>Supply: {tok.supply}</span>
+                <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>Supply: {tok.supply.toLocaleString()}</span>
                 <a href={`https://testnet.opnet.org/contract/${tok.address}`} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>View ↗</a>
               </div>

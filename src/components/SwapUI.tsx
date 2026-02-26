@@ -54,7 +54,7 @@ const SwapUI: React.FC = () => {
     setTxHash('');
     // Try real OP_WALLET
     try {
-      const w = (window as any).opnet || (window as any).unisat;
+      const w = (window as unknown as { opnet?: { sendTransaction?: unknown }; unisat?: { sendTransaction?: unknown } }).opnet || (window as unknown as { unisat?: { sendTransaction?: unknown } }).unisat;
       if (w?.sendTransaction) {
         // Real wallet detected — show that we'd route through Motoswap
         await new Promise(r => setTimeout(r, 1500));

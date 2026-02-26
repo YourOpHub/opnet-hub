@@ -33,7 +33,7 @@ const App: React.FC = () => {
     const conn = useCallback(async () => {
         // Try OP_WALLET extension first
         try {
-            const w = (window as any).opnet || (window as any).unisat;
+            const w = (window as unknown as { opnet?: { requestAccounts: () => Promise<string[]> }; unisat?: { requestAccounts: () => Promise<string[]> } }).opnet || (window as unknown as { unisat?: { requestAccounts: () => Promise<string[]> } }).unisat;
             if (w) {
                 const a = await w.requestAccounts();
                 if (a?.length) { setWAddr(a[0]); setWOn(true); localStorage.setItem('hub_wallet', '1'); return; }

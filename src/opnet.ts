@@ -1,6 +1,12 @@
 /**
  * OP_NET RPC — browser-compatible wrapper
  * All methods use live OP_NET JSON-RPC (regtest / testnet / mainnet).
+ * 
+ * Network address HRPs:
+ *   mainnet  → bc1   (networks.bitcoin)
+ *   testnet  → opt1  (networks.opnetTestnet — Signet fork, NOT networks.testnet)
+ *   regtest  → bcrt1 (networks.regtest)
+ * 
  * @see https://docs.opnet.org
  */
 

@@ -1,6 +1,8 @@
 # ⚡ OPNet Hub — Mission Control for Programmable Bitcoin
 
-> The first dashboard for Bitcoin's consensus layer. Built for the [OP_NET Vibecoding Challenge](https://vibecode.finance).
+> The first mission control dashboard for Bitcoin's consensus layer. Built for the [OP_NET Vibecoding Challenge](https://vibecode.finance).
+
+🌐 **Live Demo**: https://yourophub.github.io/opnet-hub/
 
 ![Bitcoin L1](https://img.shields.io/badge/Bitcoin-L1-F7931A?style=flat&logo=bitcoin&logoColor=white)
 ![OP_NET](https://img.shields.io/badge/OP__NET-Consensus_Layer-0ea5e9?style=flat)
@@ -23,9 +25,10 @@ This app gives users a single interface to explore, interact with, and learn abo
 | 💼 **Portfolio** | **Live BTC balance** from OP_NET RPC when wallet is connected; sample OP-20 rows |
 | 🛠️ **Tools** | **Live RPC**: BTC/Sats/USD converter, OP-20 token explorer (name/symbol/supply from chain), wallet inspector (balance), gas & mempool from OP_NET |
 | ⛏️ **Epoch Miner** | Idle clicker game teaching OP_NET concepts (WASM Compiler, ML-DSA Signer, Merkle Trees, epochs) |
-| 🎯 **Quests** | Guided onboarding — 8 tasks to learn OP_NET, XP system, levels |
+| 🎯 **Quests** | Tiered onboarding (Beginner → Explorer → Builder) — 8 tasks, XP, level progression, accessible via the ⚡ FAB button |
 | 📰 **News** | Curated OP_NET and Bitcoin news feed with filtering |
 | 🔗 **Ecosystem** | Directory of 26+ apps built on OP_NET's consensus layer |
+| 📊 **Dashboard** | Live BTC price, epoch progress bar, gas fee, OPScan link, auto-refresh every 30s |
 
 ### Why OP_NET?
 
@@ -44,7 +47,7 @@ OP_NET is fundamentally different from metaprotocols:
 - **OP_NET**: Live JSON-RPC (regtest/testnet/mainnet): block height, epoch, balance, contract code & storage, gas parameters
 - **APIs**: CoinGecko (BTC price), optional Blockchain.info fallback
 - **Wallet**: OPWallet browser extension; real chain balance in Portfolio
-- **AI**: Bob MCP server (ai.opnet.org)
+- **AI**: Bob MCP server ([ai.opnet.org](https://ai.opnet.org)) — 28+ tools, zero config
 
 ## Getting Started
 
@@ -87,19 +90,21 @@ Build: `npm run build` → output in `dist/`. See **[DEPLOY.md](./DEPLOY.md)** f
 
 ```
 src/
-├── App.tsx            # Main app with 9 tabs + wallet connect
-├── index.css          # v7 "Mission Control" design system
-├── main.tsx           # Entry point
+├── App.tsx              # Main app, 9 tabs + OP_WALLET connect + Quest FAB
+├── index.css            # Premium design system (glassmorphism, animations)
+├── main.tsx             # Entry point
+├── opnet.ts             # OP_NET JSON-RPC wrapper (mainnet/testnet/regtest)
 └── components/
-    ├── Landing.tsx     # Hero + 3 pillars + ticker + features
-    ├── BobChat.tsx     # AI copilot (21 knowledge entries)
-    ├── TokenLauncher.tsx  # OP-20 deployment + image upload
-    ├── Portfolio.tsx   # Consensus-verified holdings
-    ├── TokenTools.tsx  # Converter + explorer + inspector + gas
-    ├── SatoshiMiner.tsx  # Epoch miner game (12 OP_NET upgrades)
-    ├── Quests.tsx      # Onboarding quests + XP system
-    ├── NewsFeed.tsx    # OP_NET/Bitcoin news
-    └── EcosystemDir.tsx  # 26+ ecosystem apps
+    ├── Landing.tsx       # Hero + pillars + ticker + Vibecode CTA
+    ├── Dashboard.tsx     # Live metrics: price, epoch progress, gas, OPScan
+    ├── BobChat.tsx       # AI copilot linked to ai.opnet.org MCP server
+    ├── TokenLauncher.tsx # OP-20 config + deploy steps from template
+    ├── Portfolio.tsx     # Live wallet balance + OP-20 holdings
+    ├── TokenTools.tsx    # Converter + token explorer + gas & mempool
+    ├── SatoshiMiner.tsx  # Epoch miner game — 12 upgrades, 6 stages
+    ├── Quests.tsx        # Tiered onboarding: Beginner / Explorer / Builder
+    ├── NewsFeed.tsx      # OP_NET/Bitcoin curated news
+    └── EcosystemDir.tsx  # 26+ dApps on OP_NET consensus layer
 ```
 
 ## Built With

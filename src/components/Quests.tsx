@@ -3,17 +3,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 interface Quest {
     id: string; icon: string; title: string; desc: string; xp: number;
     reward: string; done: boolean; check: () => boolean; tab?: string;
+    tier: 'beginner' | 'explorer' | 'builder';
 }
 
+const TIERS = {
+    beginner: { label: 'Getting Started', color: 'var(--g)', icon: '🌱' },
+    explorer: { label: 'Deep Dive', color: 'var(--c)', icon: '🔍' },
+    builder: { label: 'Builder Path', color: 'var(--o)', icon: '🏗️' },
+};
+
 const makeQuests = (): Quest[] => [
-    { id: 'q1', icon: '🔗', title: 'Connect Wallet', desc: 'Link OPWallet for consensus features.', xp: 50, reward: '🏷️ Wallet Badge', done: false, check: () => !!localStorage.getItem('hub_wallet') },
-    { id: 'q2', icon: '🤖', title: 'Ask Bob AI', desc: 'Learn about OP_NET from the copilot.', xp: 30, reward: '🧠 Knowledge', done: false, check: () => !!localStorage.getItem('hub_bob_used'), tab: 'bob' },
-    { id: 'q3', icon: '⛏️', title: 'Mine 100 Sats', desc: 'Earn 100 sats in Epoch Miner.', xp: 40, reward: '💎 Miner', done: false, check: () => { try { return JSON.parse(localStorage.getItem('sm_t') || '0') >= 100 } catch { return false } }, tab: 'game' },
-    { id: 'q4', icon: '🔧', title: 'Use Tools', desc: 'Try the BTC/Sats converter.', xp: 20, reward: '🔧 Analyst', done: false, check: () => !!localStorage.getItem('hub_tools_used'), tab: 'tools' },
-    { id: 'q5', icon: '🚀', title: 'Deploy Token', desc: 'Launch an OP-20 on Bitcoin L1.', xp: 100, reward: '🚀 Creator', done: false, check: () => !!localStorage.getItem('hub_token_launched'), tab: 'launch' },
-    { id: 'q6', icon: '🌐', title: 'Explore dApps', desc: 'Browse the OP_NET ecosystem.', xp: 30, reward: '🌐 Explorer', done: false, check: () => !!localStorage.getItem('hub_eco_visited'), tab: 'eco' },
-    { id: 'q7', icon: '⬆️', title: 'Buy Upgrade', desc: 'Get a miner upgrade.', xp: 50, reward: '⬆️ Builder', done: false, check: () => !!localStorage.getItem('sm_upgraded'), tab: 'game' },
-    { id: 'q8', icon: '📰', title: 'Read News', desc: 'Check OP_NET news.', xp: 20, reward: '📰 Informed', done: false, check: () => !!localStorage.getItem('hub_news_visited'), tab: 'news' },
+    { id: 'q1', icon: '🔗', title: 'Connect Wallet', desc: 'Link OP_WALLET to access consensus features and sign transactions.', xp: 50, reward: '🏷️ Wallet Badge', done: false, check: () => !!localStorage.getItem('hub_wallet'), tier: 'beginner' },
+    { id: 'q2', icon: '🤖', title: 'Chat with Bob', desc: 'Ask Bob AI about OP_NET — learn how consensus differs from indexers.', xp: 30, reward: '🧠 Knowledge Seeker', done: false, check: () => !!localStorage.getItem('hub_bob_used'), tab: 'bob', tier: 'beginner' },
+    { id: 'q8', icon: '📰', title: 'Read the News', desc: 'Stay informed on OP_NET protocol updates and ecosystem growth.', xp: 20, reward: '� Informed', done: false, check: () => !!localStorage.getItem('hub_news_visited'), tab: 'news', tier: 'beginner' },
+    { id: 'q4', icon: '🔧', title: 'Use Developer Tools', desc: 'Convert BTC/sats, inspect wallets, or check gas parameters.', xp: 20, reward: '🔧 Analyst', done: false, check: () => !!localStorage.getItem('hub_tools_used'), tab: 'tools', tier: 'explorer' },
+    { id: 'q6', icon: '🌐', title: 'Explore Ecosystem', desc: 'Browse 26+ dApps built on OP_NET consensus layer.', xp: 30, reward: '🌐 Explorer', done: false, check: () => !!localStorage.getItem('hub_eco_visited'), tab: 'eco', tier: 'explorer' },
+    { id: 'q3', icon: '⛏️', title: 'Mine 100 Sats', desc: 'Learn about epochs by mining in the interactive Epoch Miner game.', xp: 40, reward: '💎 Miner', done: false, check: () => { try { return JSON.parse(localStorage.getItem('sm_t') || '0') >= 100 } catch { return false } }, tab: 'game', tier: 'explorer' },
+    { id: 'q7', icon: '⬆️', title: 'Buy an Upgrade', desc: 'Invest sats in WASM, consensus, or mining infrastructure.', xp: 50, reward: '⬆️ Builder', done: false, check: () => !!localStorage.getItem('sm_upgraded'), tab: 'game', tier: 'builder' },
+    { id: 'q5', icon: '�', title: 'Deploy a Token', desc: 'Configure and launch an OP-20 token on Bitcoin L1.', xp: 100, reward: '� Creator', done: false, check: () => !!localStorage.getItem('hub_token_launched'), tab: 'launch', tier: 'builder' },
 ];
 
 const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: string) => void }> = ({ open, onClose, onNav }) => {
@@ -40,6 +47,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
     const done = quests.filter(q => q.done).length;
     const level = Math.floor(totalXP / 100) + 1;
     const pct = Math.round((totalXP / maxXP) * 100);
+    const tierOrder: Array<'beginner' | 'explorer' | 'builder'> = ['beginner', 'explorer', 'builder'];
 
     return (
         <>
@@ -47,8 +55,8 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
             <div className={`qp ${open ? 'qp-open' : ''}`}>
                 <div className="qp-head">
                     <div>
-                        <div style={{ fontWeight: 800, fontSize: '1rem' }}>🎯 Quests</div>
-                        <div style={{ fontSize: '.65rem', color: 'var(--t3)' }}>Learn OP_NET, unlock badges</div>
+                        <div style={{ fontWeight: 800, fontSize: '1rem' }}>🎯 OP_NET Onboarding</div>
+                        <div style={{ fontSize: '.65rem', color: 'var(--t3)' }}>Master Bitcoin L1 — earn proof of knowledge</div>
                     </div>
                     <button className="qp-close" onClick={onClose}>✕</button>
                 </div>
@@ -56,31 +64,56 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
                 <div className="qp-stats">
                     <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--y)' }}>Lv.{level}</div><div className="qp-stat-l">Level</div></div>
                     <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--o)' }}>{done}/{quests.length}</div><div className="qp-stat-l">Done</div></div>
-                    <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--c)' }}>{pct}%</div><div className="qp-stat-l">Progress</div></div>
+                    <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--c)' }}>{totalXP}</div><div className="qp-stat-l">XP</div></div>
                 </div>
-                <div className="hb" style={{ margin: '0 0 12px' }}><div className="hf" style={{ width: `${pct}%` }} /></div>
+                <div style={{ padding: '0 18px 12px' }}>
+                    <div className="hb"><div className="hf" style={{ width: `${pct}%` }} /></div>
+                </div>
 
-                {done === quests.length && (
-                    <div style={{ textAlign: 'center', padding: '12px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 'var(--rad)', marginBottom: 10, fontSize: '.78rem', color: 'var(--g)', fontWeight: 700 }}>
-                        🏆 OP_NET Master — All quests complete!
+                {done === quests.length ? (
+                    <div style={{ textAlign: 'center', padding: '16px', margin: '0 12px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 'var(--rad)', fontSize: '.78rem', color: 'var(--g)', fontWeight: 700 }}>
+                        <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>🏆</div>
+                        <div>OP_NET Master — All quests complete!</div>
+                        <div style={{ fontSize: '.62rem', color: 'var(--t3)', fontWeight: 500, marginTop: 4 }}>You've proven deep knowledge of Bitcoin's consensus layer</div>
+                    </div>
+                ) : (
+                    <div style={{ padding: '0 12px 8px', fontSize: '.62rem', color: 'var(--t4)', textAlign: 'center', lineHeight: 1.5 }}>
+                        Complete quests to prove you understand OP_NET.<br />Each badge demonstrates a real skill on Bitcoin L1.
                     </div>
                 )}
 
                 <div className="qp-list">
-                    {quests.map(q => (
-                        <div key={q.id} className={`qp-item ${q.done ? 'qp-done' : ''}`} onClick={() => { if (!q.done && q.tab) { onNav(q.tab); onClose() } }}>
-                            <div className="qp-item-icon">{q.done ? '✅' : q.icon}</div>
-                            <div className="qp-item-body">
-                                <div className="qp-item-title">{q.title}</div>
-                                <div className="qp-item-desc">{q.done ? q.reward : q.desc}</div>
-                            </div>
-                            <div className="qp-item-xp">+{q.xp}</div>
-                        </div>
-                    ))}
+                    {tierOrder.map(tier => {
+                        const tierQuests = quests.filter(q => q.tier === tier);
+                        const tierDone = tierQuests.filter(q => q.done).length;
+                        const t = TIERS[tier];
+                        return (
+                            <React.Fragment key={tier}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 4px 3px', fontSize: '.58rem', fontWeight: 700, color: t.color, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                                    <span>{t.icon}</span> {t.label} <span style={{ color: 'var(--t4)', fontWeight: 500 }}>({tierDone}/{tierQuests.length})</span>
+                                </div>
+                                {tierQuests.map(q => (
+                                    <div key={q.id} className={`qp-item ${q.done ? 'qp-done' : ''}`} onClick={() => { if (!q.done && q.tab) { onNav(q.tab); onClose() } }}>
+                                        <div className="qp-item-icon">{q.done ? '✅' : q.icon}</div>
+                                        <div className="qp-item-body">
+                                            <div className="qp-item-title">{q.title}</div>
+                                            <div className="qp-item-desc">{q.done ? q.reward : q.desc}</div>
+                                        </div>
+                                        <div className="qp-item-xp">+{q.xp}</div>
+                                    </div>
+                                ))}
+                            </React.Fragment>
+                        );
+                    })}
                 </div>
 
-                <div style={{ padding: '10px 0', textAlign: 'center', fontSize: '.6rem', color: 'var(--t4)' }}>
-                    Quests unlock badges that prove you know OP_NET
+                <div style={{ padding: '12px 18px', borderTop: '1px solid var(--bd)', marginTop: 8 }}>
+                    <a href="https://vibecode.finance/challenge" target="_blank" rel="noopener noreferrer" style={{
+                        display: 'block', textAlign: 'center', padding: '10px', background: 'var(--oG)', border: '1px solid rgba(247,147,26,.15)',
+                        borderRadius: 'var(--rad)', textDecoration: 'none', color: 'var(--o)', fontSize: '.72rem', fontWeight: 700
+                    }}>
+                        🏆 Join the Vibecoding Challenge → win Motocats + $PILL
+                    </a>
                 </div>
             </div>
         </>

@@ -19,9 +19,9 @@ This app gives users a single interface to explore, interact with, and learn abo
 |---------|-------------|
 | 🏠 **Landing** | Hero page explaining OP_NET's 3 pillars: Consensus, WASM Contracts, Post-Quantum Security |
 | 🤖 **Bob AI** | AI copilot with 21 knowledge topics about OP_NET consensus layer, epochs, ML-DSA, gas, tokens |
-| 🚀 **Token Launcher** | Deploy OP-20 fungible tokens on Bitcoin L1. Upload custom logo or auto-generate SVG |
-| 💼 **Portfolio** | Track consensus-verified OP-20 holdings with live BTC prices |
-| 🛠️ **Tools** | BTC/Sats/USD converter, OP-20 explorer, wallet inspector, gas estimator |
+| 🚀 **Token Launcher** | Configure your OP-20 (name, symbol, supply), then follow real deploy steps: build from [OP_20](https://github.com/btc-vision/OP_20) template and deploy via OP_WALLET |
+| 💼 **Portfolio** | **Live BTC balance** from OP_NET RPC when wallet is connected; sample OP-20 rows |
+| 🛠️ **Tools** | **Live RPC**: BTC/Sats/USD converter, OP-20 token explorer (name/symbol/supply from chain), wallet inspector (balance), gas & mempool from OP_NET |
 | ⛏️ **Epoch Miner** | Idle clicker game teaching OP_NET concepts (WASM Compiler, ML-DSA Signer, Merkle Trees, epochs) |
 | 🎯 **Quests** | Guided onboarding — 8 tasks to learn OP_NET, XP system, levels |
 | 📰 **News** | Curated OP_NET and Bitcoin news feed with filtering |
@@ -41,9 +41,9 @@ OP_NET is fundamentally different from metaprotocols:
 
 - **Frontend**: React 19 + TypeScript + Vite 5
 - **Styling**: Custom CSS with grid-line circuit aesthetic
-- **OP_NET SDK**: `opnet` npm package
-- **APIs**: CoinGecko (prices), Blockchain.info (blocks)
-- **Wallet**: OPWallet browser extension integration
+- **OP_NET**: Live JSON-RPC (regtest/testnet/mainnet): block height, epoch, balance, contract code & storage, gas parameters
+- **APIs**: CoinGecko (BTC price), optional Blockchain.info fallback
+- **Wallet**: OPWallet browser extension; real chain balance in Portfolio
 - **AI**: Bob MCP server (ai.opnet.org)
 
 ## Getting Started
@@ -78,6 +78,10 @@ Bob is OP_NET's MCP server. Add to `.cursor/mcp.json`:
 ```
 
 No API key needed. Restart your editor.
+
+## Deploy (VPS + Cloudflare)
+
+Build: `npm run build` → output in `dist/`. See **[DEPLOY.md](./DEPLOY.md)** for Nginx config, uploading to a VPS, and putting Cloudflare in front (optional). You can use an IP first; add a domain later and point it to the same server.
 
 ## Project Structure
 

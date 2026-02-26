@@ -54,6 +54,8 @@ const SatoshiMiner: React.FC = () => {
     const [hitting, setHitting] = useState(false);
     const [flash, setFlash] = useState(false);
     const [upgFlash, setUpgFlash] = useState('');
+    const [shockwave, setShockwave] = useState(false);
+    const [imgErr, setImgErr] = useState(false);
     const fidRef = useRef(0);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const sparksRef = useRef<Spark[]>([]);
@@ -137,6 +139,8 @@ const SatoshiMiner: React.FC = () => {
         setTimeout(() => setFx(p => p.filter(f => f.id !== id)), 800);
         // Hit animation
         setHitting(true); setTimeout(() => setHitting(false), 200);
+        // Shockwave on golden
+        if (g) { setShockwave(true); setTimeout(() => setShockwave(false), 500); }
         // Canvas sparks
         const cvs = canvasRef.current;
         if (cvs) {
@@ -196,12 +200,21 @@ const SatoshiMiner: React.FC = () => {
 
                 <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 16px', minHeight: 460 }}>
                     {/* Stage label */}
-                    <div style={{ fontFamily: 'var(--fm)', fontSize: '.58rem', color: stage.color, textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 8, opacity: .7 }}>
-                        ◆ {stage.name} · Stage {stageIdx + 1}/{STAGES.length}
+                    <div style={{ fontFamily: 'var(--fm)', fontSize: '.58rem', color: stage.color, textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: stage.color, boxShadow: `0 0 8px ${stage.color}`, animation: 'blink 2s infinite' }} />
+                        {stage.name} · Stage {stageIdx + 1}/{STAGES.length}
                     </div>
 
                     {/* Character sprite */}
                     <div style={{ position: 'relative', cursor: 'pointer', userSelect: 'none' }} onClick={click}>
+                        {/* Shockwave on golden */}
+                        {shockwave && <div style={{
+                            position: 'absolute', inset: -60, borderRadius: '50%',
+                            border: `2px solid ${stage.color}`,
+                            animation: 'shockwave .5s ease-out forwards',
+                            pointerEvents: 'none', zIndex: 5
+                        }} />}
+
                         {/* Pulsing rings */}
                         <div style={{
                             position: 'absolute', inset: -20, borderRadius: '50%',
@@ -215,19 +228,39 @@ const SatoshiMiner: React.FC = () => {
                             animation: 'ringPulse 2.5s ease-in-out infinite .6s',
                             pointerEvents: 'none'
                         }} />
+                        <div style={{
+                            position: 'absolute', inset: -60, borderRadius: '50%',
+                            border: `1px solid ${stage.ring.replace(/[\d.]+\)$/, '.03)')}`,
+                            animation: 'ringPulse 3s ease-in-out infinite 1.2s',
+                            pointerEvents: 'none'
+                        }} />
 
-                        {/* Sprite image */}
-                        <img
-                            src={hitting ? stage.spriteHit : stage.sprite}
-                            alt="miner"
-                            style={{
-                                width: 160, height: 160, objectFit: 'contain',
-                                filter: `drop-shadow(0 0 20px ${stage.color}) ${hitting ? 'brightness(1.3)' : 'brightness(1)'}`,
-                                transition: 'filter .1s, transform .1s',
-                                transform: hitting ? 'scale(1.08) rotate(-5deg)' : 'scale(1)',
-                                imageRendering: 'pixelated',
-                            }}
-                        />
+                        {/* Sprite image or CSS fallback */}
+                        {imgErr ? (
+                            <div style={{
+                                width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '5rem', filter: `drop-shadow(0 0 24px ${stage.color})`,
+                                transition: 'transform .1s',
+                                transform: hitting ? 'scale(1.12) rotate(-8deg)' : 'scale(1)',
+                                background: `radial-gradient(circle, ${stage.ring}, transparent 70%)`,
+                                borderRadius: '50%'
+                            }}>
+                                {stageIdx < 2 ? '⛏️' : stageIdx < 4 ? '🖥️' : '🏭'}
+                            </div>
+                        ) : (
+                            <img
+                                src={hitting ? stage.spriteHit : stage.sprite}
+                                alt="miner"
+                                onError={() => setImgErr(true)}
+                                style={{
+                                    width: 160, height: 160, objectFit: 'contain',
+                                    filter: `drop-shadow(0 0 24px ${stage.color}) ${hitting ? 'brightness(1.4) saturate(1.3)' : 'brightness(1)'}`,
+                                    transition: 'filter .1s, transform .1s',
+                                    transform: hitting ? 'scale(1.1) rotate(-6deg)' : 'scale(1)',
+                                    imageRendering: 'pixelated',
+                                }}
+                            />
+                        )}
 
                         {/* Fly-up numbers */}
                         {fx.map(f => (
@@ -240,8 +273,8 @@ const SatoshiMiner: React.FC = () => {
                         ))}
 
                         {/* Click hint */}
-                        <div style={{ textAlign: 'center', marginTop: 4, fontSize: '.55rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                            Click to mine
+                        <div style={{ textAlign: 'center', marginTop: 6, fontSize: '.55rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                            ⛏ Click to mine
                         </div>
                     </div>
 

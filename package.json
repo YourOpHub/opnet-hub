@@ -1,0 +1,26 @@
+{
+  "name": "opnet-hub",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "OPNet Hub — Mission Control for Programmable Bitcoin (OP_NET Consensus Layer)",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@btc-vision/walletconnect": "^1.9.10",
+    "opnet": "^1.8.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8",
+    "vite-plugin-node-polyfills": "^0.22.0"
+  }
+}

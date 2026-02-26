@@ -71,7 +71,7 @@ const MINE_GAME_POOL = 10_500_000;
 const MINE_DAILY_BASE = 350_000;
 const MINE_HALVING_DAYS = 7;
 const MINE_PER_SAT = 0.001;
-const LAUNCH_DATE = new Date('2025-02-26T00:00:00Z');
+const LAUNCH_DATE = new Date('2026-02-26T00:00:00Z');
 
 function getDailyEmission() {
   const days = Math.floor((Date.now() - LAUNCH_DATE.getTime()) / 86400000);

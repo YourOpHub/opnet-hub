@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import * as opnet from '../opnet';
+import * as api from '../api';
 
 /* ─── Types ─── */
 interface Up { id: string; name: string; icon: string; desc: string; flavor: string; base: number; g: number; pc?: number; ps?: number; lv: number; cat: 'c' | 'a' | 's' }
@@ -82,6 +83,10 @@ const SatoshiMiner: React.FC = () => {
     const [mineBalance, setMineBalance] = useState<number>(() => ld('sm_mine', 0));
     const [mineStartDay] = useState<number>(() => ld('sm_mine_start', Math.floor(Date.now() / 86400000)));
     const [showClaim, setShowClaim] = useState(false);
+    const [claimStatus, setClaimStatus] = useState<'idle' | 'syncing' | 'claiming' | 'done' | 'error'>('idle');
+    const [serverPool, setServerPool] = useState<number | null>(null);
+    const [leaderboard, setLeaderboard] = useState<api.LeaderboardEntry[]>([]);
+    const clickCount = useRef(0);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const sparksRef = useRef<Spark[]>([]);
     const animRef = useRef(0);
@@ -186,7 +191,24 @@ const SatoshiMiner: React.FC = () => {
     // Derived: current day and emission
     const daysSinceStart = Math.floor(Date.now() / 86400000) - mineStartDay;
     const dailyEmission = getMineEmission(daysSinceStart);
-    const minePoolRemaining = Math.max(0, MINE_GAME_POOL - mineBalance);
+    const minePoolRemaining = serverPool !== null ? serverPool : Math.max(0, MINE_GAME_POOL - mineBalance);
+
+    // Server sync: push game state every 30s + fetch leaderboard
+    useEffect(() => {
+        const doSync = async () => {
+            try {
+                const walletAddr = localStorage.getItem('hub_wallet') || `anon_${Math.random().toString(36).slice(2, 10)}`;
+                if (!localStorage.getItem('hub_wallet_anon')) localStorage.setItem('hub_wallet_anon', walletAddr);
+                const addr = localStorage.getItem('hub_wallet') || localStorage.getItem('hub_wallet_anon') || 'anon';
+                await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps });
+                const lb = await api.getLeaderboard(10);
+                if (lb) { setLeaderboard(lb.leaderboard); setServerPool(lb.stats.remaining); }
+            } catch { /* silent */ }
+        };
+        doSync();
+        const iv = setInterval(doSync, 30000);
+        return () => clearInterval(iv);
+    }, [mineBalance, tot, sps]);
 
     // Save
     useEffect(() => { const sv = () => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)); localStorage.setItem('sm_mine', JSON.stringify(mineBalance)); localStorage.setItem('sm_mine_start', JSON.stringify(mineStartDay)); }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv, mineBalance, mineStartDay]);
@@ -209,6 +231,7 @@ const SatoshiMiner: React.FC = () => {
         const x = e.clientX - r.left, y = e.clientY - r.top;
         const g = Math.random() < gc; const v = g ? spc * 5 : spc;
         setSats(p => p + v); setTot(p => p + v);
+        clickCount.current++;
         // $MINE on click
         const mineEarned = v * MINE_PER_SAT * (g ? 5 : 1);
         if (minePoolRemaining > 0) setMineBalance(p => Math.min(MINE_GAME_POOL, p + mineEarned));
@@ -434,17 +457,29 @@ const SatoshiMiner: React.FC = () => {
                         <div style={{ fontSize: '.5rem', color: 'var(--t4)', textAlign: 'center', marginTop: 2 }}>{((1 - minePoolRemaining / MINE_GAME_POOL) * 100).toFixed(4)}% distributed</div>
                     </div>
                     <button
-                        onClick={() => setShowClaim(true)}
-                        disabled={mineBalance < 1}
+                        onClick={async () => {
+                            if (claimStatus === 'idle' && mineBalance >= 1) {
+                                setClaimStatus('syncing');
+                                const addr = localStorage.getItem('hub_wallet') || localStorage.getItem('hub_wallet_anon') || '';
+                                if (!addr) { setShowClaim(true); setClaimStatus('idle'); return; }
+                                await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps });
+                                setClaimStatus('claiming');
+                                const res = await api.claimTokens(addr, mineBalance);
+                                if (res?.ok) { setClaimStatus('done'); setMineBalance(0); setTimeout(() => setClaimStatus('idle'), 3000); }
+                                else { setClaimStatus('error'); setTimeout(() => setClaimStatus('idle'), 3000); }
+                            } else { setShowClaim(true); }
+                        }}
+                        disabled={mineBalance < 1 || claimStatus === 'syncing' || claimStatus === 'claiming'}
                         style={{
                             marginTop: 8, width: '100%', padding: '8px 0',
-                            background: mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)',
-                            border: 'none', borderRadius: 'var(--rad)', color: mineBalance >= 1 ? '#000' : 'var(--t4)',
+                            background: claimStatus === 'done' ? 'var(--gG)' : claimStatus === 'error' ? 'rgba(239,68,68,.15)' : mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)',
+                            border: 'none', borderRadius: 'var(--rad)',
+                            color: claimStatus === 'done' ? 'var(--g)' : claimStatus === 'error' ? '#ef4444' : mineBalance >= 1 ? '#000' : 'var(--t4)',
                             fontWeight: 700, fontSize: '.75rem', cursor: mineBalance >= 1 ? 'pointer' : 'not-allowed',
                             transition: '.2s'
                         }}
                     >
-                        {mineBalance >= 1 ? `Claim ${mineBalance.toFixed(0)} MINE` : 'Mine to earn $MINE'}
+                        {claimStatus === 'syncing' ? 'Syncing...' : claimStatus === 'claiming' ? 'Claiming...' : claimStatus === 'done' ? 'Claimed!' : claimStatus === 'error' ? 'Error — retry' : mineBalance >= 1 ? `Claim ${mineBalance.toFixed(0)} MINE` : 'Mine to earn $MINE'}
                     </button>
                     {showClaim && (
                         <div style={{ marginTop: 8, padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)', lineHeight: 1.5 }}>
@@ -452,7 +487,7 @@ const SatoshiMiner: React.FC = () => {
                             Token: <span style={{ fontFamily: 'var(--fm)', color: 'var(--c)' }}>$MINE (OP-20)</span><br />
                             Supply: {MINE_TOTAL_SUPPLY.toLocaleString()} | Decimals: {MINE_DECIMALS}<br />
                             Contract: <span style={{ fontFamily: 'var(--fm)', fontSize: '.55rem' }}>{MINE_CONTRACT}</span><br />
-                            <span style={{ color: 'var(--t4)' }}>Install OP_WALLET → Connect → Sign ML-DSA tx to claim on Bitcoin L1</span>
+                            <span style={{ color: 'var(--t4)' }}>Connect OP_WALLET → Sign ML-DSA tx → Tokens sent on Bitcoin L1</span>
                             <button onClick={() => setShowClaim(false)} style={{ marginTop: 4, background: 'none', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t3)', fontSize: '.55rem', padding: '2px 8px', cursor: 'pointer' }}>Close</button>
                         </div>
                     )}
@@ -460,6 +495,19 @@ const SatoshiMiner: React.FC = () => {
                         OP-20 token on Bitcoin L1 · Secured by ML-DSA · Consensus-verified
                     </div>
                 </div>
+                {/* Leaderboard */}
+                {leaderboard.length > 0 && (
+                    <div className="P" style={{ padding: 12, marginBottom: 6 }}>
+                        <div className="Lb" style={{ marginBottom: 6 }}>🏆 Leaderboard</div>
+                        {leaderboard.slice(0, 5).map((e, i) => (
+                            <div key={e.address} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', fontSize: '.6rem', borderBottom: i < 4 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
+                                <span style={{ color: i === 0 ? 'var(--y)' : i === 1 ? 'var(--t2)' : i === 2 ? 'var(--o)' : 'var(--t3)', fontWeight: i < 3 ? 700 : 400 }}>#{e.rank} {e.address.slice(0, 8)}…</span>
+                                <span style={{ fontFamily: 'var(--fm)', color: 'var(--y)', fontWeight: 600 }}>{e.mine_balance.toFixed(1)}</span>
+                            </div>
+                        ))}
+                        <div style={{ fontSize: '.48rem', color: 'var(--t4)', textAlign: 'center', marginTop: 4 }}>Live from VPS · Updates every 30s</div>
+                    </div>
+                )}
                 <div className="ucol">{ren('c', '⚙️ CONSENSUS')}{ren('a', '⛏️ MINING')}{ren('s', '✨ SPECIAL')}</div>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import * as opnet from '../opnet';
 
 /* ─── Types ─── */
 interface Up { id: string; name: string; icon: string; desc: string; flavor: string; base: number; g: number; pc?: number; ps?: number; lv: number; cat: 'c' | 'a' | 's' }
@@ -34,14 +35,14 @@ const fs = (n: number): string => { if (n >= 1e8) return (n / 1e8).toFixed(4) + 
 const co = (u: Up) => Math.floor(u.base * Math.pow(u.g, u.lv));
 const ld = (k: string, d: any) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } };
 
-/* ─── 6 evolution stages ─── */
+/* ─── 6 evolution stages (CSS-only sprites, no external images) ─── */
 const STAGES = [
-    { name: 'Genesis Node', color: '#F7931A', ring: 'rgba(247,147,26,.15)', bg: 'radial-gradient(circle, #1a1200 0%, #0a0a1a 70%)', sprite: '/miner-idle.png', spriteHit: '/miner-hit.png' },
-    { name: 'WASM Core', color: '#0ea5e9', ring: 'rgba(14,165,233,.2)', bg: 'radial-gradient(circle, #001520 0%, #0a0a1a 70%)', sprite: '/miner-idle.png', spriteHit: '/miner-hit.png' },
-    { name: 'Consensus Hub', color: '#a78bfa', ring: 'rgba(167,139,250,.2)', bg: 'radial-gradient(circle, #120020 0%, #0a0a1a 70%)', sprite: '/mining-rig.png', spriteHit: '/mining-rig.png' },
-    { name: 'Quantum Forge', color: '#22c55e', ring: 'rgba(34,197,94,.2)', bg: 'radial-gradient(circle, #002010 0%, #0a0a1a 70%)', sprite: '/mining-rig.png', spriteHit: '/mining-rig.png' },
-    { name: 'Epoch Array', color: '#eab308', ring: 'rgba(234,179,8,.2)', bg: 'radial-gradient(circle, #1a1500 0%, #0a0a1a 70%)', sprite: '/mining-farm.png', spriteHit: '/mining-farm.png' },
-    { name: 'Merkle Matrix', color: '#ec4899', ring: 'rgba(236,72,153,.2)', bg: 'radial-gradient(circle, #1a0015 0%, #0a0a1a 70%)', sprite: '/mining-farm.png', spriteHit: '/mining-farm.png' },
+    { name: 'Genesis Node', color: '#F7931A', ring: 'rgba(247,147,26,.15)', bg: 'radial-gradient(circle, #1a1200 0%, #0a0a1a 70%)', emoji: '⛏️' },
+    { name: 'WASM Core', color: '#0ea5e9', ring: 'rgba(14,165,233,.2)', bg: 'radial-gradient(circle, #001520 0%, #0a0a1a 70%)', emoji: '⚙️' },
+    { name: 'Consensus Hub', color: '#a78bfa', ring: 'rgba(167,139,250,.2)', bg: 'radial-gradient(circle, #120020 0%, #0a0a1a 70%)', emoji: '🖥️' },
+    { name: 'Quantum Forge', color: '#22c55e', ring: 'rgba(34,197,94,.2)', bg: 'radial-gradient(circle, #002010 0%, #0a0a1a 70%)', emoji: '🔐' },
+    { name: 'Epoch Array', color: '#eab308', ring: 'rgba(234,179,8,.2)', bg: 'radial-gradient(circle, #1a1500 0%, #0a0a1a 70%)', emoji: '🏭' },
+    { name: 'Merkle Matrix', color: '#ec4899', ring: 'rgba(236,72,153,.2)', bg: 'radial-gradient(circle, #1a0015 0%, #0a0a1a 70%)', emoji: '🌳' },
 ];
 
 const SatoshiMiner: React.FC = () => {
@@ -55,8 +56,13 @@ const SatoshiMiner: React.FC = () => {
     const [flash, setFlash] = useState(false);
     const [upgFlash, setUpgFlash] = useState('');
     const [shockwave, setShockwave] = useState(false);
-    const [imgErr, setImgErr] = useState(false);
     const fidRef = useRef(0);
+    // Real chain sync
+    const [chainBlock, setChainBlock] = useState(0);
+    const [chainEpoch, setChainEpoch] = useState(0);
+    const [chainHash, setChainHash] = useState('');
+    const [chainSynced, setChainSynced] = useState(false);
+    const prevChainBlock = useRef(0);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const sparksRef = useRef<Spark[]>([]);
     const animRef = useRef(0);
@@ -74,6 +80,38 @@ const SatoshiMiner: React.FC = () => {
     const epochBlocks = blk % EP;
     const epochNum = Math.floor(blk / EP);
     const gc = 0.03 * Math.pow(2, lkLv);
+
+    // ─── Real OP_NET chain sync ───
+    useEffect(() => {
+        let cancelled = false;
+        const sync = async () => {
+            try {
+                const [height, ep] = await Promise.all([
+                    opnet.getBlockHeight().catch(() => 0),
+                    opnet.getLatestEpoch().catch(() => null),
+                ]);
+                if (cancelled) return;
+                if (height > 0) {
+                    // Bonus sats when a real new block arrives
+                    if (prevChainBlock.current > 0 && height > prevChainBlock.current) {
+                        const bonus = spc * 10;
+                        setSats(p => p + bonus);
+                        setTot(p => p + bonus);
+                        setFlash(true);
+                        setTimeout(() => setFlash(false), 400);
+                    }
+                    prevChainBlock.current = height;
+                    setChainBlock(height);
+                    setChainEpoch(ep?.number ?? Math.floor(height / 5));
+                    setChainHash(ep?.hash ?? ('0x' + height.toString(16).padStart(8, '0') + 'a'.repeat(56)));
+                    setChainSynced(true);
+                }
+            } catch { /* chain sync optional */ }
+        };
+        sync();
+        const iv = setInterval(sync, 15000);
+        return () => { cancelled = true; clearInterval(iv); };
+    }, [spc]);
 
     // Canvas particles
     useEffect(() => {
@@ -235,32 +273,17 @@ const SatoshiMiner: React.FC = () => {
                             pointerEvents: 'none'
                         }} />
 
-                        {/* Sprite image or CSS fallback */}
-                        {imgErr ? (
-                            <div style={{
-                                width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '5rem', filter: `drop-shadow(0 0 24px ${stage.color})`,
-                                transition: 'transform .1s',
-                                transform: hitting ? 'scale(1.12) rotate(-8deg)' : 'scale(1)',
-                                background: `radial-gradient(circle, ${stage.ring}, transparent 70%)`,
-                                borderRadius: '50%'
-                            }}>
-                                {stageIdx < 2 ? '⛏️' : stageIdx < 4 ? '🖥️' : '🏭'}
-                            </div>
-                        ) : (
-                            <img
-                                src={hitting ? stage.spriteHit : stage.sprite}
-                                alt="miner"
-                                onError={() => setImgErr(true)}
-                                style={{
-                                    width: 160, height: 160, objectFit: 'contain',
-                                    filter: `drop-shadow(0 0 24px ${stage.color}) ${hitting ? 'brightness(1.4) saturate(1.3)' : 'brightness(1)'}`,
-                                    transition: 'filter .1s, transform .1s',
-                                    transform: hitting ? 'scale(1.1) rotate(-6deg)' : 'scale(1)',
-                                    imageRendering: 'pixelated',
-                                }}
-                            />
-                        )}
+                        {/* CSS sprite (no external images needed) */}
+                        <div style={{
+                            width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '5rem', filter: `drop-shadow(0 0 24px ${stage.color})`,
+                            transition: 'transform .1s',
+                            transform: hitting ? 'scale(1.12) rotate(-8deg)' : 'scale(1)',
+                            background: `radial-gradient(circle, ${stage.ring}, transparent 70%)`,
+                            borderRadius: '50%'
+                        }}>
+                            {stage.emoji}
+                        </div>
 
                         {/* Fly-up numbers */}
                         {fx.map(f => (
@@ -278,14 +301,15 @@ const SatoshiMiner: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Auto miners visual */}
+                    {/* Auto miners visual (CSS-only) */}
                     {autoLv > 0 && (
-                        <div style={{ display: 'flex', gap: 6, marginTop: 14, alignItems: 'center' }}>
-                            {autoLv >= 1 && <img src="/mining-rig.png" alt="rig" style={{ width: 36, height: 36, imageRendering: 'pixelated', opacity: .7, animation: 'bob 2s ease-in-out infinite', filter: `drop-shadow(0 0 6px ${stage.color})` }} />}
-                            {autoLv >= 5 && <img src="/mining-rig.png" alt="rig" style={{ width: 36, height: 36, imageRendering: 'pixelated', opacity: .7, animation: 'bob 2s ease-in-out infinite .3s', filter: `drop-shadow(0 0 6px ${stage.color})` }} />}
-                            {autoLv >= 10 && <img src="/mining-farm.png" alt="farm" style={{ width: 44, height: 44, imageRendering: 'pixelated', opacity: .8, animation: 'bob 2.5s ease-in-out infinite .5s', filter: `drop-shadow(0 0 8px ${stage.color})` }} />}
-                            {autoLv >= 20 && <img src="/mining-farm.png" alt="farm" style={{ width: 44, height: 44, imageRendering: 'pixelated', opacity: .8, animation: 'bob 2.5s ease-in-out infinite .8s', filter: `drop-shadow(0 0 8px ${stage.color})` }} />}
-                            <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginLeft: 4 }}>⚡ {autoLv} miners active</div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
+                            {Array.from({ length: Math.min(autoLv, 5) }).map((_, i) => (
+                                <span key={i} style={{ fontSize: '1.4rem', animation: `bob 2s ease-in-out infinite ${i * 0.2}s`, filter: `drop-shadow(0 0 6px ${stage.color})` }}>
+                                    {i < 3 ? '⛏️' : '🏭'}
+                                </span>
+                            ))}
+                            <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginLeft: 4 }}>⚡ {autoLv} miners</div>
                         </div>
                     )}
 
@@ -313,8 +337,31 @@ const SatoshiMiner: React.FC = () => {
 
             {/* Sidebar */}
             <div>
+                {/* Real chain sync card */}
                 <div className="P" style={{ padding: 12, marginBottom: 6 }}>
-                    <div className="Lb" style={{ marginBottom: 4 }}>📊 Network</div>
+                    <div className="Lb" style={{ marginBottom: 4 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: chainSynced ? 'var(--g)' : 'var(--t4)', boxShadow: chainSynced ? '0 0 8px var(--g)' : 'none', display: 'inline-block' }} />
+                        {chainSynced ? '� OP_NET Synced' : '⏳ Syncing...'}
+                    </div>
+                    {chainSynced && (
+                        <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.6 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Chain Block</span>
+                                <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--o)' }}>#{chainBlock.toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Chain Epoch</span>
+                                <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)' }}>{chainEpoch.toLocaleString()}</span>
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: '.55rem', color: 'var(--t4)', wordBreak: 'break-all', fontFamily: 'var(--fm)' }}>
+                                Target: {chainHash.slice(0, 18)}…
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: '.52rem', color: 'var(--c)', textAlign: 'center' }}>+{fs(spc * 10)} bonus on new block</div>
+                        </div>
+                    )}
+                </div>
+                <div className="P" style={{ padding: 12, marginBottom: 6 }}>
+                    <div className="Lb" style={{ marginBottom: 4 }}>📊 Your Stats</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
                         <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: stage.color, fontSize: '.85rem' }}>{fs(tot)}</div><div style={{ fontSize: '.48rem', color: 'var(--t4)' }}>Total Mined</div></div>
                         <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)', fontSize: '.85rem' }}>{sps.toFixed(1)}/s</div><div style={{ fontSize: '.48rem', color: 'var(--t4)' }}>Hash Rate</div></div>

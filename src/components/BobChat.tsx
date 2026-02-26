@@ -37,6 +37,8 @@ const PROMPTS = [
     { l: '🔗 OP_NET', k: 'opnet' }, { l: '🔐 Consensus', k: 'consensus' }, { l: '⚡ WASM', k: 'wasm' },
     { l: '🛡️ Quantum', k: 'quantum' }, { l: '🔄 Epochs', k: 'epoch' }, { l: '🤖 Bob MCP', k: 'mcp' },
     { l: '🏆 Vibecode', k: 'vibecode' }, { l: '💰 DeFi', k: 'defi' },
+    { l: '📜 Contracts', k: 'show contract addresses' }, { l: '🔒 Audit', k: 'security audit' },
+    { l: '💻 CLI', k: 'cli deploy' }, { l: '📊 BTC Monitor', k: 'btc monitor' },
 ];
 
 const localAns = (q: string): string => {
@@ -92,7 +94,24 @@ const BobChat: React.FC = () => {
 
         if (mcpStatus === 'live') {
             try {
-                const mcpResult = await bobMcp.searchKnowledge(userText);
+                let mcpResult: string | null = null;
+                const lq = userText.toLowerCase();
+                // Route to the best Bob tool based on query
+                if (/contract.?address|motoswap.?addr|staking.?addr|token.?addr/i.test(lq)) {
+                    mcpResult = await bobMcp.getContractAddresses();
+                } else if (/audit|security|vulnerabilit/i.test(lq)) {
+                    mcpResult = await bobMcp.getAuditInfo();
+                } else if (/cli|deploy|compil|mldsa.?key|keygen/i.test(lq)) {
+                    mcpResult = await bobMcp.getCliHelp();
+                } else if (/monitor|mempool|track|block.*watch/i.test(lq)) {
+                    mcpResult = await bobMcp.getBtcMonitor();
+                } else if (/guide|tutorial|doc|how.?to|develop/i.test(lq)) {
+                    mcpResult = await bobMcp.getDevDocs();
+                } else if (/skill|capabilit|what.?can|tools/i.test(lq)) {
+                    mcpResult = await bobMcp.getSkillCatalog();
+                } else {
+                    mcpResult = await bobMcp.searchKnowledge(userText);
+                }
                 if (mcpResult && mcpResult.length > 20) {
                     reply = trimMcp(mcpResult);
                     source = 'mcp';

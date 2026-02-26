@@ -119,6 +119,111 @@ export async function getBtcMonitor(): Promise<string | null> {
   }
 }
 
+/** Get well-known OP_NET contract addresses (MotoSwap, NativeSwap, Staking, tokens) */
+export async function getContractAddresses(): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_contract_addresses',
+      arguments: {},
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] Contract addresses failed:', e);
+    return null;
+  }
+}
+
+/** Query OP_NET blockchain via Bob's RPC tool */
+export async function bobRpc(method: string, params: string = '[]'): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_rpc',
+      arguments: { method, params },
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] RPC failed:', e);
+    return null;
+  }
+}
+
+/** Get OP_NET development guidelines and documentation */
+export async function getDevDocs(section?: string): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_opnet_dev',
+      arguments: section ? { section } : {},
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] Dev docs failed:', e);
+    return null;
+  }
+}
+
+/** Smart contract security audit guidelines */
+export async function getAuditInfo(section?: string): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_opnet_audit',
+      arguments: section ? { section } : {},
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] Audit failed:', e);
+    return null;
+  }
+}
+
+/** CLI operations: MLDSA key gen, plugin compilation */
+export async function getCliHelp(operation?: string): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_opnet_cli',
+      arguments: operation ? { operation } : {},
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] CLI failed:', e);
+    return null;
+  }
+}
+
+/** List all Bob's skills (78+) */
+export async function getSkillCatalog(): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_skill_catalog',
+      arguments: {},
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] Skill catalog failed:', e);
+    return null;
+  }
+}
+
+/** Crypto frontend design system docs */
+export async function getCryptoFrontendDocs(): Promise<string | null> {
+  if (!initialized) { const ok = await initBob(); if (!ok) return null; }
+  try {
+    const res = await mcpCall('tools/call', {
+      name: 'opnet_crypto_frontend',
+      arguments: {},
+    }) as { result?: { content?: Array<{ text?: string }> } };
+    return res?.result?.content?.[0]?.text || null;
+  } catch (e) {
+    console.warn('[Bob MCP] Crypto frontend failed:', e);
+    return null;
+  }
+}
+
 export function isConnected(): boolean {
   return initialized;
 }

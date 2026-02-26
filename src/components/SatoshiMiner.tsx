@@ -31,6 +31,21 @@ const ACHS = [
     { id: 'a7', l: '₿ 1 BTC', c: (t: number) => t >= 1e8 },
 ];
 const EP = 5;
+
+/* ─── $MINE Token Economics ─── */
+const MINE_TOTAL_SUPPLY = 21_000_000;
+const MINE_GAME_POOL = 10_500_000;
+const MINE_DAILY_BASE = 350_000;
+const MINE_HALVING_DAYS = 7;
+const MINE_DECIMALS = 8;
+const MINE_CONTRACT = 'bcrt1p_mine_token_placeholder'; // testnet deployment target
+/** Calculate current daily emission with weekly halving */
+const getMineEmission = (daysSinceStart: number): number => {
+    const halvings = Math.floor(daysSinceStart / MINE_HALVING_DAYS);
+    return MINE_DAILY_BASE / Math.pow(2, halvings);
+};
+/** MINE earned per game sat mined (conversion rate) */
+const MINE_PER_SAT = 0.001;
 const fs = (n: number): string => { if (n >= 1e8) return (n / 1e8).toFixed(4) + ' BTC'; if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n).toString() };
 const co = (u: Up) => Math.floor(u.base * Math.pow(u.g, u.lv));
 const ld = (k: string, d: any) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } };
@@ -63,6 +78,10 @@ const SatoshiMiner: React.FC = () => {
     const [chainHash, setChainHash] = useState('');
     const [chainSynced, setChainSynced] = useState(false);
     const prevChainBlock = useRef(0);
+    // $MINE token tracking
+    const [mineBalance, setMineBalance] = useState<number>(() => ld('sm_mine', 0));
+    const [mineStartDay] = useState<number>(() => ld('sm_mine_start', Math.floor(Date.now() / 86400000)));
+    const [showClaim, setShowClaim] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const sparksRef = useRef<Spark[]>([]);
     const animRef = useRef(0);
@@ -164,14 +183,35 @@ const SatoshiMiner: React.FC = () => {
     useEffect(() => { if (sps <= 0) return; const iv = setInterval(() => { setSats(p => p + sps / 10); setTot(p => p + sps / 10) }, 100); return () => clearInterval(iv) }, [sps]);
     // Auto blocks
     useEffect(() => { const r = Math.max(2000, 10000 - Math.min(8000, sps * 8)); const iv = setInterval(() => { setBlk(p => { const nb = p + 1; if (nb % EP === 0) { setHlv(h => h + 1); setFlash(true); setTimeout(() => setFlash(false), 400) } const g = Math.random() < gc; const rw = g ? br * 10 : br; setSats(s => s + rw); setTot(t => t + rw); return nb }) }, r); return () => clearInterval(iv) }, [sps, br, gc]);
+    // Derived: current day and emission
+    const daysSinceStart = Math.floor(Date.now() / 86400000) - mineStartDay;
+    const dailyEmission = getMineEmission(daysSinceStart);
+    const minePoolRemaining = Math.max(0, MINE_GAME_POOL - mineBalance);
+
     // Save
-    useEffect(() => { const sv = () => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)) }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv]);
+    useEffect(() => { const sv = () => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)); localStorage.setItem('sm_mine', JSON.stringify(mineBalance)); localStorage.setItem('sm_mine_start', JSON.stringify(mineStartDay)); }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv, mineBalance, mineStartDay]);
+
+    // $MINE accumulation (tied to game activity)
+    useEffect(() => {
+        if (sps <= 0) return;
+        const emissionPerSec = dailyEmission / 86400;
+        const playerShare = Math.min(1, (sps + spc / 10) / 500);
+        const iv = setInterval(() => {
+            if (minePoolRemaining <= 0) return;
+            const earned = emissionPerSec * playerShare * 0.1;
+            setMineBalance(p => Math.min(MINE_GAME_POOL, p + earned));
+        }, 100);
+        return () => clearInterval(iv);
+    }, [sps, spc, dailyEmission, minePoolRemaining]);
 
     const click = useCallback((e: React.MouseEvent) => {
         const el = e.currentTarget as HTMLElement; const r = el.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
         const g = Math.random() < gc; const v = g ? spc * 5 : spc;
         setSats(p => p + v); setTot(p => p + v);
+        // $MINE on click
+        const mineEarned = v * MINE_PER_SAT * (g ? 5 : 1);
+        if (minePoolRemaining > 0) setMineBalance(p => Math.min(MINE_GAME_POOL, p + mineEarned));
         const id = fidRef.current++;
         setFx(p => [...p, { id, x, y, v, gold: g }]);
         setTimeout(() => setFx(p => p.filter(f => f.id !== id)), 800);
@@ -341,7 +381,7 @@ const SatoshiMiner: React.FC = () => {
                 <div className="P" style={{ padding: 12, marginBottom: 6 }}>
                     <div className="Lb" style={{ marginBottom: 4 }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: chainSynced ? 'var(--g)' : 'var(--t4)', boxShadow: chainSynced ? '0 0 8px var(--g)' : 'none', display: 'inline-block' }} />
-                        {chainSynced ? '� OP_NET Synced' : '⏳ Syncing...'}
+                        {chainSynced ? '🔗 OP_NET Synced' : '⏳ Syncing...'}
                     </div>
                     {chainSynced && (
                         <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.6 }}>
@@ -365,6 +405,59 @@ const SatoshiMiner: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
                         <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: stage.color, fontSize: '.85rem' }}>{fs(tot)}</div><div style={{ fontSize: '.48rem', color: 'var(--t4)' }}>Total Mined</div></div>
                         <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)', fontSize: '.85rem' }}>{sps.toFixed(1)}/s</div><div style={{ fontSize: '.48rem', color: 'var(--t4)' }}>Hash Rate</div></div>
+                    </div>
+                </div>
+                {/* $MINE Token Panel */}
+                <div className="P" style={{ padding: 12, marginBottom: 6, border: '1px solid rgba(234,179,8,.2)', background: 'rgba(234,179,8,.03)' }}>
+                    <div className="Lb" style={{ marginBottom: 6, color: 'var(--y)' }}>🪙 $MINE Token</div>
+                    <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.7 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Your Balance</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--y)' }}>{mineBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} MINE</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Daily Emission</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: 'var(--t2)' }}>{dailyEmission.toLocaleString()}/day</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Pool Remaining</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: minePoolRemaining > 0 ? 'var(--g)' : 'var(--r)' }}>{(minePoolRemaining / 1e6).toFixed(2)}M</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Halving</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: 'var(--c)' }}>Every {MINE_HALVING_DAYS} days</span>
+                        </div>
+                        {/* Pool progress bar */}
+                        <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.06)' }}>
+                            <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, var(--y), var(--o))', width: `${(1 - minePoolRemaining / MINE_GAME_POOL) * 100}%`, transition: 'width .3s' }} />
+                        </div>
+                        <div style={{ fontSize: '.5rem', color: 'var(--t4)', textAlign: 'center', marginTop: 2 }}>{((1 - minePoolRemaining / MINE_GAME_POOL) * 100).toFixed(4)}% distributed</div>
+                    </div>
+                    <button
+                        onClick={() => setShowClaim(true)}
+                        disabled={mineBalance < 1}
+                        style={{
+                            marginTop: 8, width: '100%', padding: '8px 0',
+                            background: mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)',
+                            border: 'none', borderRadius: 'var(--rad)', color: mineBalance >= 1 ? '#000' : 'var(--t4)',
+                            fontWeight: 700, fontSize: '.75rem', cursor: mineBalance >= 1 ? 'pointer' : 'not-allowed',
+                            transition: '.2s'
+                        }}
+                    >
+                        {mineBalance >= 1 ? `Claim ${mineBalance.toFixed(0)} MINE` : 'Mine to earn $MINE'}
+                    </button>
+                    {showClaim && (
+                        <div style={{ marginTop: 8, padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)', lineHeight: 1.5 }}>
+                            <strong style={{ color: 'var(--y)' }}>Claim via OP_WALLET</strong><br />
+                            Token: <span style={{ fontFamily: 'var(--fm)', color: 'var(--c)' }}>$MINE (OP-20)</span><br />
+                            Supply: {MINE_TOTAL_SUPPLY.toLocaleString()} | Decimals: {MINE_DECIMALS}<br />
+                            Contract: <span style={{ fontFamily: 'var(--fm)', fontSize: '.55rem' }}>{MINE_CONTRACT}</span><br />
+                            <span style={{ color: 'var(--t4)' }}>Install OP_WALLET → Connect → Sign ML-DSA tx to claim on Bitcoin L1</span>
+                            <button onClick={() => setShowClaim(false)} style={{ marginTop: 4, background: 'none', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t3)', fontSize: '.55rem', padding: '2px 8px', cursor: 'pointer' }}>Close</button>
+                        </div>
+                    )}
+                    <div style={{ marginTop: 6, fontSize: '.5rem', color: 'var(--t4)', textAlign: 'center' }}>
+                        OP-20 token on Bitcoin L1 · Secured by ML-DSA · Consensus-verified
                     </div>
                 </div>
                 <div className="ucol">{ren('c', '⚙️ CONSENSUS')}{ren('a', '⛏️ MINING')}{ren('s', '✨ SPECIAL')}</div>

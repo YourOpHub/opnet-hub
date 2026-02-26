@@ -14,6 +14,7 @@ const SAMPLE_TK: T[] = [
   { name: 'WBTC', symbol: 'WBTC', amount: 0.0012, price: 97800, change: 2.1, icon: '🔶' },
   { name: 'Motoswap', symbol: 'MOTO', amount: 4250, price: 0.42, change: 12.5, icon: '🏎️' },
   { name: 'OPNet Token', symbol: 'OPN', amount: 15000, price: 0.085, change: -3.2, icon: '⚡' },
+  { name: 'Mine Token', symbol: 'MINE', amount: 8420, price: 0.0012, change: 45.8, icon: '🪙' },
 ];
 
 const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as bobMcp from '../bob-mcp';
 
 const TOKENS = [
   { symbol: 'BTC', name: 'Bitcoin', icon: '₿', price: 97842, decimals: 8 },
@@ -6,6 +7,7 @@ const TOKENS = [
   { symbol: 'MOTO', name: 'Motoswap', icon: '🏎️', price: 0.42, decimals: 8 },
   { symbol: 'OPN', name: 'OPNet Token', icon: '⚡', price: 0.085, decimals: 8 },
   { symbol: 'PILL', name: 'Orange Pill', icon: '💊', price: 0.0034, decimals: 8 },
+  { symbol: 'MINE', name: 'Mine Token', icon: '🪙', price: 0.0012, decimals: 8 },
 ];
 
 const SwapUI: React.FC = () => {
@@ -16,6 +18,18 @@ const SwapUI: React.FC = () => {
   const [swapping, setSwapping] = useState(false);
   const [txHash, setTxHash] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [contractAddrs, setContractAddrs] = useState<string>('');
+  const [bobStatus, setBobStatus] = useState<'loading' | 'live' | 'offline'>('loading');
+
+  // Fetch real contract addresses from Bob MCP on mount
+  useEffect(() => {
+    bobMcp.getContractAddresses()
+      .then(data => {
+        if (data) { setContractAddrs(data); setBobStatus('live'); }
+        else setBobStatus('offline');
+      })
+      .catch(() => setBobStatus('offline'));
+  }, []);
 
   const from = TOKENS[fromIdx];
   const to = TOKENS[toIdx];
@@ -222,14 +236,32 @@ const SwapUI: React.FC = () => {
           )}
         </div>
 
+        {/* Bob MCP Contract Addresses */}
+        {contractAddrs && (
+          <div className="P" style={{ marginTop: 14, padding: 14, border: '1px solid rgba(14,165,233,.15)', background: 'rgba(14,165,233,.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div className="Lb" style={{ marginBottom: 0, color: 'var(--c2)' }}>🤖 Bob MCP — Live Contracts</div>
+              <span style={{ fontSize: '.5rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>LIVE</span>
+            </div>
+            <pre style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.5, margin: 0, maxHeight: 120, overflow: 'auto', fontFamily: 'var(--fm)' }}>
+              {contractAddrs.slice(0, 600)}
+            </pre>
+            <div style={{ fontSize: '.48rem', color: 'var(--t4)', marginTop: 4 }}>Fetched from ai.opnet.org via opnet_contract_addresses tool</div>
+          </div>
+        )}
+
         {/* Info card */}
         <div className="P" style={{ marginTop: 14, padding: 16, fontSize: '.75rem', color: 'var(--t3)', lineHeight: 1.5 }}>
           <div className="Lb">ℹ️ About Motoswap</div>
           <p>Motoswap is the first AMM DEX on Bitcoin L1 — Uniswap V2 style pools secured by OP_NET cryptographic consensus. All swap prices are mathematically proven correct.</p>
           <p style={{ marginTop: 8 }}>In production, swaps route through real Motoswap smart contracts via OP_WALLET. This interface demonstrates the flow — connect your OP_WALLET for live trading.</p>
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <a href="https://motoswap.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Trade on Motoswap →</a>
             <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Learn more →</a>
+          </div>
+          <div style={{ marginTop: 8, fontSize: '.6rem', color: 'var(--t4)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: bobStatus === 'live' ? 'var(--g)' : 'var(--t4)', display: 'inline-block' }} />
+            Bob MCP: {bobStatus === 'live' ? '19 tools connected' : bobStatus === 'loading' ? 'connecting...' : 'offline (local mode)'}
           </div>
         </div>
       </div>

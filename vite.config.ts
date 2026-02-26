@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
-    base: '/',
+    base: '/opnet-hub/',
     plugins: [react(), nodePolyfills()],
     resolve: {
         alias: {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as opnet from '../opnet';
+import { fetchBtcPrice } from '../btc-price';
 
 const Dashboard: React.FC = () => {
   const [p, setP] = useState<{ usd: number; usd_24h_change: number; usd_market_cap: number } | null>(null);
@@ -31,15 +32,8 @@ const Dashboard: React.FC = () => {
         } catch { }
       }
 
-      // 2. Fetch Price
-      let priceInfo = { usd: 0, usd_24h_change: 0, usd_market_cap: 0 };
-      try {
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true');
-        const data = await res.json();
-        if (data?.bitcoin) priceInfo = data.bitcoin;
-      } catch (e) {
-        console.warn('Price fetch failed', e);
-      }
+      // 2. Fetch Price (multi-source with cache)
+      const priceInfo = await fetchBtcPrice();
 
       // 3. Fetch gas
       try {

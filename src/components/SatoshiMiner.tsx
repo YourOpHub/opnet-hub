@@ -51,15 +51,21 @@ const fs = (n: number): string => { if (n >= 1e8) return (n / 1e8).toFixed(4) + 
 const co = (u: Up) => Math.floor(u.base * Math.pow(u.g, u.lv));
 const ld = (k: string, d: any) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } };
 
-/* ─── 6 evolution stages (CSS-only sprites, no external images) ─── */
+/* ─── 6 evolution stages with pixel art sprites ─── */
 const STAGES = [
-    { name: 'Genesis Node', color: '#F7931A', ring: 'rgba(247,147,26,.15)', bg: 'radial-gradient(circle, #1a1200 0%, #0a0a1a 70%)', emoji: '⛏️' },
-    { name: 'WASM Core', color: '#0ea5e9', ring: 'rgba(14,165,233,.2)', bg: 'radial-gradient(circle, #001520 0%, #0a0a1a 70%)', emoji: '⚙️' },
-    { name: 'Consensus Hub', color: '#a78bfa', ring: 'rgba(167,139,250,.2)', bg: 'radial-gradient(circle, #120020 0%, #0a0a1a 70%)', emoji: '🖥️' },
-    { name: 'Quantum Forge', color: '#22c55e', ring: 'rgba(34,197,94,.2)', bg: 'radial-gradient(circle, #002010 0%, #0a0a1a 70%)', emoji: '🔐' },
-    { name: 'Epoch Array', color: '#eab308', ring: 'rgba(234,179,8,.2)', bg: 'radial-gradient(circle, #1a1500 0%, #0a0a1a 70%)', emoji: '🏭' },
-    { name: 'Merkle Matrix', color: '#ec4899', ring: 'rgba(236,72,153,.2)', bg: 'radial-gradient(circle, #1a0015 0%, #0a0a1a 70%)', emoji: '🌳' },
+    { name: 'Genesis Node', color: '#F7931A', ring: 'rgba(247,147,26,.15)', bg: 'radial-gradient(circle, #1a1200 0%, #0a0a1a 70%)' },
+    { name: 'WASM Core', color: '#0ea5e9', ring: 'rgba(14,165,233,.2)', bg: 'radial-gradient(circle, #001520 0%, #0a0a1a 70%)' },
+    { name: 'Consensus Hub', color: '#a78bfa', ring: 'rgba(167,139,250,.2)', bg: 'radial-gradient(circle, #120020 0%, #0a0a1a 70%)' },
+    { name: 'Quantum Forge', color: '#22c55e', ring: 'rgba(34,197,94,.2)', bg: 'radial-gradient(circle, #002010 0%, #0a0a1a 70%)' },
+    { name: 'Epoch Array', color: '#eab308', ring: 'rgba(234,179,8,.2)', bg: 'radial-gradient(circle, #1a1500 0%, #0a0a1a 70%)' },
+    { name: 'Merkle Matrix', color: '#ec4899', ring: 'rgba(236,72,153,.2)', bg: 'radial-gradient(circle, #1a0015 0%, #0a0a1a 70%)' },
 ];
+
+/* Sprite paths (public/ — resolved via Vite base) */
+const BASE = import.meta.env.BASE_URL;
+const SPRITE_IDLE = `${BASE}miner-idle.png`;
+const SPRITE_HIT = `${BASE}miner-hit.png`;
+const SPRITE_RIG = `${BASE}mining-rig.png`;
 
 const SatoshiMiner: React.FC = () => {
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
@@ -336,16 +342,34 @@ const SatoshiMiner: React.FC = () => {
                             pointerEvents: 'none'
                         }} />
 
-                        {/* CSS sprite (no external images needed) */}
+                        {/* Pixel art miner sprite */}
                         <div style={{
-                            width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '5rem', filter: `drop-shadow(0 0 24px ${stage.color})`,
+                            width: 180, height: 180, position: 'relative',
+                            overflow: 'hidden', borderRadius: 8,
                             transition: 'transform .1s',
-                            transform: hitting ? 'scale(1.12) rotate(-8deg)' : 'scale(1)',
-                            background: `radial-gradient(circle, ${stage.ring}, transparent 70%)`,
-                            borderRadius: '50%'
+                            transform: hitting ? 'scale(1.15) rotate(-5deg)' : 'scale(1)',
                         }}>
-                            {stage.emoji}
+                            <img
+                                src={hitting ? SPRITE_HIT : SPRITE_IDLE}
+                                alt="Miner"
+                                draggable={false}
+                                style={{
+                                    width: '100%',
+                                    height: hitting ? '100%' : '130%',
+                                    objectFit: 'cover',
+                                    objectPosition: hitting ? 'center center' : 'center top',
+                                    filter: `drop-shadow(0 0 20px ${stage.color}) drop-shadow(0 4px 12px rgba(0,0,0,.6))`,
+                                    imageRendering: 'pixelated',
+                                    transition: 'filter .15s',
+                                }}
+                            />
+                            {/* Impact flash on hit */}
+                            {hitting && <div style={{
+                                position: 'absolute', inset: 0, borderRadius: '50%',
+                                background: `radial-gradient(circle, ${stage.ring}, transparent 60%)`,
+                                animation: 'fadeIn .1s ease',
+                                pointerEvents: 'none',
+                            }} />}
                         </div>
 
                         {/* Fly-up numbers */}
@@ -364,13 +388,16 @@ const SatoshiMiner: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Auto miners visual (CSS-only) */}
+                    {/* Auto miners visual (pixel art rigs) */}
                     {autoLv > 0 && (
-                        <div style={{ display: 'flex', gap: 8, marginTop: 14, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 14, alignItems: 'center' }}>
                             {Array.from({ length: Math.min(autoLv, 5) }).map((_, i) => (
-                                <span key={i} style={{ fontSize: '1.4rem', animation: `bob 2s ease-in-out infinite ${i * 0.2}s`, filter: `drop-shadow(0 0 6px ${stage.color})` }}>
-                                    {i < 3 ? '⛏️' : '🏭'}
-                                </span>
+                                <img key={i} src={SPRITE_RIG} alt="Rig" draggable={false} style={{
+                                    width: 38, height: 38, objectFit: 'contain', imageRendering: 'pixelated',
+                                    animation: `bob 2s ease-in-out infinite ${i * 0.2}s`,
+                                    filter: `drop-shadow(0 0 6px ${stage.color})`,
+                                    opacity: .85 + i * .03,
+                                }} />
                             ))}
                             <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginLeft: 4 }}>⚡ {autoLv} miners</div>
                         </div>

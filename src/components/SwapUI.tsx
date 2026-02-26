@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as bobMcp from '../bob-mcp';
 import * as opnet from '../opnet';
+import { fetchBtcPrice } from '../btc-price';
 
 function makePriceList(btcPrice: number) {
   return [
@@ -33,12 +34,9 @@ const SwapUI: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const [btcSats, setBtcSats] = useState<bigint | null>(null);
   const [balLoading, setBalLoading] = useState(false);
 
-  // Fetch live BTC price
+  // Fetch live BTC price (multi-source with cache)
   useEffect(() => {
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
-      .then(r => r.json())
-      .then(d => { if (d?.bitcoin?.usd) setBtcPrice(d.bitcoin.usd); })
-      .catch(() => {});
+    fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); });
   }, []);
 
   // Fetch wallet balance

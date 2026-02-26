@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as opnet from '../opnet';
+import { fetchBtcPrice } from '../btc-price';
 
 function detectNetwork(addr: string): opnet.Network | null {
   if (addr.startsWith('opt1')) return 'testnet';
@@ -14,18 +15,13 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const [btcLoading, setBtcLoading] = useState(false);
   const [btcPrice, setBtcPrice] = useState(0);
   const [btcChange, setBtcChange] = useState(0);
+  const [priceLoading, setPriceLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled && d?.bitcoin?.usd) {
-          setBtcPrice(d.bitcoin.usd);
-          setBtcChange(d.bitcoin.usd_24h_change ?? 0);
-        }
-      })
-      .catch(() => {});
+    fetchBtcPrice().then(p => {
+      if (!cancelled) { setBtcPrice(p.usd); setBtcChange(p.usd_24h_change); setPriceLoading(false); }
+    });
     return () => { cancelled = true; };
   }, []);
 
@@ -55,19 +51,19 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
     <div>
       <div className="ph">
         <div className="P pm">
-          <div className="pm-v" style={{ color: 'var(--o)' }}>
-            ${tot >= 1e6 ? (tot / 1e6).toFixed(2) + 'M' : tot.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          <div className="pm-v" style={{ color: 'var(--o)', fontSize: '1rem', wordBreak: 'break-all' }}>
+            {priceLoading ? '…' : '$' + (tot >= 1e6 ? (tot / 1e6).toFixed(2) + 'M' : tot.toLocaleString(undefined, { maximumFractionDigits: 2 }))}
           </div>
           <div className="pm-l">Total (USD)</div>
         </div>
         <div className="P pm">
-          <div className="pm-v" style={{ color: 'var(--y)' }}>
-            {totBtc.toFixed(6)} BTC
+          <div className="pm-v" style={{ color: 'var(--y)', fontSize: '1rem', wordBreak: 'break-all' }}>
+            {priceLoading ? '…' : totBtc.toFixed(8) + ' BTC'}
           </div>
           <div className="pm-l">BTC Value</div>
         </div>
         <div className="P pm">
-          <div className="pm-v" style={{ color: 'var(--g)' }}>
+          <div className="pm-v" style={{ color: 'var(--g)', fontSize: '1rem', wordBreak: 'break-all' }}>
             {walletAddress ? (btcLoading ? '…' : opnet.formatSats(btcSats ?? 0n)) : '—'}
           </div>
           <div className="pm-l">Your BTC (chain)</div>
@@ -103,7 +99,7 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
                   ? (btcLoading ? '…' : btcAmount.toLocaleString(undefined, { maximumFractionDigits: 8 }))
                   : 'Connect wallet'}
               </td>
-              <td className="mono">${btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+              <td className="mono">{priceLoading ? '…' : '$' + btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
               <td className="mono" style={{ color: btcChange >= 0 ? 'var(--g)' : 'var(--r)' }}>{btcChange >= 0 ? '+' : ''}{btcChange.toFixed(1)}%</td>
               <td className="mono" style={{ color: 'var(--o)' }}>
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}

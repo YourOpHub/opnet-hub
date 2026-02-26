@@ -1,21 +1,25 @@
 /**
  * Bob MCP Client — connects to ai.opnet.org MCP server
  * Uses Vite proxy in dev (/api/bob → ai.opnet.org/mcp)
- * Falls back to direct URL in production (may fail due to CORS)
+ * Uses VPS proxy in production (CORS bypass)
+ * Falls back to direct URL if VPS unavailable
  */
 
 const MCP_URL = '/api/bob';
+const VPS_URL = 'http://188.137.250.160/api/bob';
 const DIRECT_URL = 'https://ai.opnet.org/mcp';
 
 let sessionId: string | null = null;
 let initialized = false;
+let vpsAvailable: boolean | null = null;
 
 function getUrl(): string {
-  // In dev, use proxy; in production, try direct
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return MCP_URL;
+    return MCP_URL; // Vite dev proxy
   }
-  return DIRECT_URL;
+  if (vpsAvailable === true) return VPS_URL; // VPS proxy (no CORS issues)
+  if (vpsAvailable === false) return DIRECT_URL; // fallback
+  return VPS_URL; // try VPS first
 }
 
 function parseSSE(text: string): unknown | null {
@@ -53,6 +57,7 @@ async function mcpCall(method: string, params?: Record<string, unknown>, id?: nu
 
 export async function initBob(): Promise<boolean> {
   if (initialized) return true;
+  // Try VPS proxy first (production CORS bypass)
   try {
     const res = await mcpCall('initialize', {
       protocolVersion: '2024-11-05',
@@ -60,11 +65,27 @@ export async function initBob(): Promise<boolean> {
       clientInfo: { name: 'opnet-hub', version: '1.0.0' },
     }, 1) as { result?: { serverInfo?: { name: string } } };
     initialized = !!res?.result?.serverInfo;
-    return initialized;
-  } catch (e) {
-    console.warn('[Bob MCP] Init failed:', e);
-    return false;
+    if (initialized) { vpsAvailable = (getUrl() === VPS_URL); return true; }
+  } catch {
+    // VPS failed, try direct
+    if (vpsAvailable === null) {
+      vpsAvailable = false;
+      sessionId = null;
+      try {
+        const res = await mcpCall('initialize', {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'opnet-hub', version: '1.0.0' },
+        }, 1) as { result?: { serverInfo?: { name: string } } };
+        initialized = !!res?.result?.serverInfo;
+        return initialized;
+      } catch (e2) {
+        console.warn('[Bob MCP] Init failed (both VPS and direct):', e2);
+        return false;
+      }
+    }
   }
+  return false;
 }
 
 export async function searchKnowledge(query: string): Promise<string | null> {

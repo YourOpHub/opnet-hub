@@ -20,15 +20,16 @@ This app gives users a single interface to explore, interact with, and learn abo
 | Feature | Description |
 |---------|-------------|
 | 🏠 **Landing** | Hero page explaining OP_NET's 3 pillars: Consensus, WASM Contracts, Post-Quantum Security |
-| 🤖 **Bob AI** | AI copilot with 21 knowledge topics about OP_NET consensus layer, epochs, ML-DSA, gas, tokens |
+| 🤖 **Bob AI** | AI copilot connected to **live Bob MCP server** (ai.opnet.org) — 30+ knowledge topics, falls back to local KB |
 | 🚀 **Token Launcher** | Configure your OP-20 (name, symbol, supply), then follow real deploy steps: build from [OP_20](https://github.com/btc-vision/OP_20) template and deploy via OP_WALLET |
-| 💼 **Portfolio** | **Live BTC balance** from OP_NET RPC when wallet is connected; sample OP-20 rows |
+| 💼 **Portfolio** | **Live BTC balance** from OP_NET RPC + OP-20 token holdings with 24h change |
 | 🛠️ **Tools** | **Live RPC**: BTC/Sats/USD converter, OP-20 token explorer (name/symbol/supply from chain), wallet inspector (balance), gas & mempool from OP_NET |
 | ⛏️ **Epoch Miner** | Idle clicker game teaching OP_NET concepts (WASM Compiler, ML-DSA Signer, Merkle Trees, epochs) |
 | 🎯 **Quests** | Tiered onboarding (Beginner → Explorer → Builder) — 8 tasks, XP, level progression, accessible via the ⚡ FAB button |
+| 🔄 **Swap** | Motoswap-style DEX interface — swap OP-20 tokens with rate display, LP fees, slippage, price impact |
 | 📰 **News** | Curated OP_NET and Bitcoin news feed with filtering |
 | 🔗 **Ecosystem** | Directory of 26+ apps built on OP_NET's consensus layer |
-| 📊 **Dashboard** | Live BTC price, epoch progress bar, gas fee, OPScan link, auto-refresh every 30s |
+| 📊 **Dashboard** | Live BTC price, epoch progress bar, gas fee, live block feed, OPScan link, auto-refresh every 30s |
 
 ### Why OP_NET?
 

@@ -2,10 +2,11 @@
  * Deployed OP-20 contract addresses on OP_NET testnet
  * Deployed: 2026-02-26 by OPNet Hub
  */
+/** v3 deployment — linkMLDSA + gasSatFee 100k — bytecode confirmed on-chain */
 export const TESTNET_CONTRACTS = {
     MINE: {
-        address: 'opt1sqpqqfzj0tvevwpj2fx0pwfevm7ulf7xzlcxw8nys',
-        pubkey: '0x2c775358cc362481c45589a1f45f77a4a6e9f03ccc7e8ea62d972e5aa23896ea',
+        address: 'opt1sqr6qp5spthha0cyrhj6qh3wrgn9kj06c4up68dmz',
+        pubkey: '0x9ab565681231f1cdd2fe400700b8ffc97cda9e46663d0a010a3627d390019fea',
         symbol: 'MINE',
         name: 'Mine Token',
         decimals: 8,
@@ -14,8 +15,8 @@ export const TESTNET_CONTRACTS = {
         description: 'OPNet Hub game token — earned by Epoch Miners',
     },
     VIBE: {
-        address: 'opt1sqzfw0zskjdlcnsa057695af6rp5dadl2pu58dx9d',
-        pubkey: '0x761c1caa0bf6857ca137e2d519432b5b1cffd805aaea05121c208ec011fce89b',
+        address: 'opt1sqzm99nspva6lqk8e7am34ewpcmyheydzsqu4df3m',
+        pubkey: '0x86ffb43e51f36a680ff4391b397ba4daa12faa7cd3e72b0e70978bb0fe43b6e6',
         symbol: 'VIBE',
         name: 'Vibe Token',
         decimals: 8,
@@ -30,8 +31,8 @@ export const DEPLOYER_ADDRESS = 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q
 export const DEPLOYER_MLDSA_HEX = '4ca79348ed8d21c5d4bbacdde9fe4eb7b0b0b2ed495fa81e545d5fbc7b554aea';
 export const DEPLOYER_TWEAKED_HEX = '0fb4ee127879ea8e617377fc250f362f8ffab44328436e07e0d03ddca91e0f7f';
 
-export const MINE_DEPLOY_TXID = '78421616ef12349614f36413a0a01a9ab023fa041d97aaf475edddf0e3b24e03';
-export const VIBE_DEPLOY_TXID = 'c1195ea7b1bdcdcb7c12ea4ae84a52bb62eec82583fc0416603fd39750082a45';
+export const MINE_DEPLOY_TXID = '1a50546bf161d8aa623201d5bd812ea42b9a151b4373a62bf746243181902c59';
+export const VIBE_DEPLOY_TXID = 'bf65f4f7e87088953ae1ac1447765a4a364f1751d9bfaa761231dd739d0ab0d7';
 
 export function getOpscanUrl(address: string): string {
     return `https://testnet.opnet.org/tx/${address}`;

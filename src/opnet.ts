@@ -153,6 +153,12 @@ export async function getMempoolInfo(): Promise<{ count?: number; opnetCount?: n
   }
 }
 
+/** Decode base64 string to hex */
+function base64ToHex(b64: string): string {
+  const bin = atob(b64);
+  return Array.from(bin, c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+}
+
 /** Simulate contract call (read-only).
  *  btc_call params: [to, calldataHex, fromMLDSAHex?, fromTweakedHex?, blockHeight?, ...] */
 export async function callContract(
@@ -168,9 +174,11 @@ export async function callContract(
     const r = await rpc('btc_call', params) as Record<string, unknown>;
     if (!r) return null;
     if (r.error) return null;
-    if (typeof r.result === 'string') return r.result;
-    if (typeof r.returnData === 'string') return r.returnData;
-    return null;
+    if (typeof r.revert === 'string' && r.revert.length > 4) return null;
+    const raw = typeof r.result === 'string' ? r.result : (typeof r.returnData === 'string' ? r.returnData : null);
+    if (!raw || raw === 'AA==') return null;
+    if (raw.startsWith('0x')) return raw;
+    try { return '0x' + base64ToHex(raw); } catch { return raw; }
   } catch {
     return null;
   }
@@ -188,8 +196,8 @@ export async function getTokenBalance(
     const result = await callContract(tokenAddress, BALANCE_OF_SELECTOR, ownerMLDSAHex, ownerMLDSAHex, ownerTweakedHex);
     if (!result) return 0n;
     const hex = result.startsWith('0x') ? result.slice(2) : result;
-    if (!hex || hex === '0'.repeat(64) || hex === '') return 0n;
-    return BigInt('0x' + hex.slice(0, 64));
+    if (!hex || hex.length < 2) return 0n;
+    return BigInt('0x' + hex);
   } catch {
     return 0n;
   }
@@ -202,8 +210,8 @@ export async function getTokenTotalSupply(tokenAddress: string): Promise<bigint>
     const result = await callContract(tokenAddress, TOTAL_SUPPLY_SELECTOR);
     if (!result) return 0n;
     const hex = result.startsWith('0x') ? result.slice(2) : result;
-    if (!hex) return 0n;
-    return BigInt('0x' + hex.slice(0, 64));
+    if (!hex || hex.length < 2) return 0n;
+    return BigInt('0x' + hex);
   } catch {
     return 0n;
   }

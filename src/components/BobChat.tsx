@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-interface Msg { id: number; role: 'bot' | 'user'; text: string }
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import * as bobMcp from '../bob-mcp';
+
+interface Msg { id: number; role: 'bot' | 'user'; text: string; source?: 'mcp' | 'local' }
+
 const KB: Record<string, string> = {
     'opnet': '**OP_NET** is the first consensus layer on Bitcoin — not a metaprotocol, not a sidechain. It brings Turing-complete smart contracts to Bitcoin L1 with cryptographic proof of correct execution. Unlike BRC-20 (indexer hope), OP_NET provides mathematical certainty.',
     'consensus': '**Consensus Layer** means every OP_NET node processing the same Bitcoin blocks arrives at the exact same state. Only ONE honest node is needed. No new trust assumptions beyond Bitcoin itself.',
@@ -29,12 +32,14 @@ const KB: Record<string, string> = {
     'assemblyscript': '**AssemblyScript** is the primary language for OP_NET smart contracts. TypeScript-like syntax that compiles to WASM. Bob can scaffold complete AS contracts for you!',
     'security': 'OP_NET security: **ML-DSA** post-quantum signatures + **cryptographic consensus** + **deterministic WASM execution** + **4-epoch deep attestation** (~21 blocks). The most secure smart contract platform on Bitcoin.',
 };
+
 const PROMPTS = [
     { l: '🔗 OP_NET', k: 'opnet' }, { l: '🔐 Consensus', k: 'consensus' }, { l: '⚡ WASM', k: 'wasm' },
     { l: '🛡️ Quantum', k: 'quantum' }, { l: '🔄 Epochs', k: 'epoch' }, { l: '🤖 Bob MCP', k: 'mcp' },
     { l: '🏆 Vibecode', k: 'vibecode' }, { l: '💰 DeFi', k: 'defi' },
 ];
-const ans = (q: string): string => {
+
+const localAns = (q: string): string => {
     const l = q.toLowerCase(); for (const [k, v] of Object.entries(KB)) { if (l.includes(k)) return v }
     if (/hi|hello|hey|привет/.test(l)) return 'Hey! 👋 I\'m Bob — your OP_NET AI Instructor. I know everything about building on Bitcoin L1. Ask about the protocol, smart contracts, or try the full version at **ai.opnet.org**!';
     if (/price|цена/.test(l)) return 'Check **Dashboard** for live BTC price + current OP_NET epoch number! Data comes from CoinGecko + live OP_NET RPC.';
@@ -42,18 +47,79 @@ const ans = (q: string): string => {
     if (/challenge|prize|contest|submit/.test(l)) return 'The **Vibecoding Challenge** runs at vibecode.finance/challenge. Three themed weeks with **Motocats NFTs** + **$PILL tokens** as prizes. Build with Bob, tweet with #opnetvibecode @opnetbtc, submit your GitHub repo. Judges score independently!';
     return 'I specialize in **OP_NET** — the first consensus layer on Bitcoin. Try asking about **consensus**, **WASM**, **epochs**, **DeFi**, **vibecoding**, or any feature! For full AI dev tools, connect Bob at **ai.opnet.org** 🧠';
 };
+
+/** Trim MCP markdown to a concise chat reply */
+function trimMcp(raw: string): string {
+    const lines = raw.split('\n').filter(l => l.trim());
+    // Take first meaningful section (up to ~600 chars)
+    let out = '';
+    for (const line of lines) {
+        if (out.length > 600) break;
+        // Skip fetch instructions and file paths
+        if (line.startsWith('**Fetch:**') || line.match(/^`[a-z].*\.md`$/)) continue;
+        out += line + '\n';
+    }
+    return out.trim() || raw.slice(0, 600);
+}
+
 const bold = (t: string) => t.split('**').map((p, i) => i % 2 === 1 ? <strong key={i} style={{ color: 'var(--c2)' }}>{p}</strong> : <span key={i}>{p}</span>);
 
 const BobChat: React.FC = () => {
-    const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, role: 'bot', text: '🧠 I\'m **Bob**, the OP_NET AI Instructor. I know everything about building on Bitcoin L1 — smart contracts, epochs, post-quantum security, DeFi, and the Vibecoding Challenge. The full version of me with **28+ dev tools** lives at **ai.opnet.org** — connect me to your IDE! Ask me anything here.' }]);
-    const [inp, setInp] = useState(''); const [typ, setTyp] = useState(false);
+    const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, role: 'bot', text: '🧠 I\'m **Bob**, the OP_NET AI Instructor. I know everything about building on Bitcoin L1 — smart contracts, epochs, post-quantum security, DeFi, and the Vibecoding Challenge.\n\nI\'m connected to the **live Bob MCP server** at ai.opnet.org with **28+ dev tools**. Ask me anything!' }]);
+    const [inp, setInp] = useState('');
+    const [typ, setTyp] = useState(false);
+    const [mcpStatus, setMcpStatus] = useState<'connecting' | 'live' | 'local'>('connecting');
     const end = useRef<HTMLDivElement>(null);
+
     useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs, typ]);
-    const send = (t: string) => { if (!t.trim()) return; localStorage.setItem('hub_bob_used', '1'); setMsgs(p => [...p, { id: Date.now(), role: 'user', text: t.trim() }]); setInp(''); setTyp(true); setTimeout(() => { setMsgs(p => [...p, { id: Date.now() + 1, role: 'bot', text: ans(t) }]); setTyp(false) }, 400 + Math.random() * 400) };
+
+    // Try to connect to MCP on mount
+    useEffect(() => {
+        bobMcp.initBob().then(ok => setMcpStatus(ok ? 'live' : 'local')).catch(() => setMcpStatus('local'));
+    }, []);
+
+    const send = useCallback(async (t: string) => {
+        if (!t.trim() || typ) return;
+        localStorage.setItem('hub_bob_used', '1');
+        const userText = t.trim();
+        setMsgs(p => [...p, { id: Date.now(), role: 'user', text: userText }]);
+        setInp('');
+        setTyp(true);
+
+        // Try MCP first, fall back to local KB
+        let reply: string;
+        let source: 'mcp' | 'local' = 'local';
+
+        if (mcpStatus === 'live') {
+            try {
+                const mcpResult = await bobMcp.searchKnowledge(userText);
+                if (mcpResult && mcpResult.length > 20) {
+                    reply = trimMcp(mcpResult);
+                    source = 'mcp';
+                } else {
+                    reply = localAns(userText);
+                }
+            } catch {
+                reply = localAns(userText);
+            }
+        } else {
+            // Simulate slight delay for local responses
+            await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
+            reply = localAns(userText);
+        }
+
+        setMsgs(p => [...p, { id: Date.now() + 1, role: 'bot', text: reply, source }]);
+        setTyp(false);
+    }, [typ, mcpStatus]);
+
+    const statusColor = mcpStatus === 'live' ? 'var(--g)' : mcpStatus === 'connecting' ? 'var(--y)' : 'var(--t3)';
+    const statusLabel = mcpStatus === 'live' ? 'MCP Live' : mcpStatus === 'connecting' ? 'Connecting...' : 'Local KB';
+
     return (
         <div className="P chat-w">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <div className="Lb" style={{ marginBottom: 0 }}>🤖 Bob AI — OP_NET Instructor</div><span className="tag tag-g">Online</span>
+                <div className="Lb" style={{ marginBottom: 0 }}>🤖 Bob AI — OP_NET Instructor</div>
+                <span className="tag" style={{ background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>{statusLabel}</span>
             </div>
             <a href="https://ai.opnet.org" target="_blank" rel="noopener noreferrer" style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 10,
@@ -65,7 +131,15 @@ const BobChat: React.FC = () => {
             </a>
             <div className="chips">{PROMPTS.map(p => <button key={p.k} className="chip" onClick={() => send(p.l.replace(/^[^ ]+ /, ''))}>{p.l}</button>)}</div>
             <div className="chat-b">
-                {msgs.map(m => <div key={m.id} className={`bub ${m.role === 'bot' ? 'ai' : 'me'}`}><div className="bub-w">{m.role === 'bot' ? '🤖 Bob' : '👤 You'}</div><div>{bold(m.text)}</div></div>)}
+                {msgs.map(m => (
+                    <div key={m.id} className={`bub ${m.role === 'bot' ? 'ai' : 'me'}`}>
+                        <div className="bub-w" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {m.role === 'bot' ? '🤖 Bob' : '👤 You'}
+                            {m.source === 'mcp' && <span style={{ fontSize: '.5rem', background: 'var(--gG)', color: 'var(--g)', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>MCP</span>}
+                        </div>
+                        <div>{bold(m.text)}</div>
+                    </div>
+                ))}
                 {typ && <div className="bub ai"><div className="bub-w">🤖 Bob</div><div className="dots"><span>●</span><span>●</span><span>●</span></div></div>}
                 <div ref={end} />
             </div>

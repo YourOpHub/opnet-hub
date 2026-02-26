@@ -13,6 +13,14 @@ export default defineConfig({
     server: {
         port: 3000,
         open: true,
+        proxy: {
+            '/api/bob': {
+                target: 'https://ai.opnet.org',
+                changeOrigin: true,
+                rewrite: (path: string) => path.replace(/^\/api\/bob/, '/mcp'),
+                secure: true,
+            },
+        },
     },
     build: {
         rollupOptions: {

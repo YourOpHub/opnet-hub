@@ -375,6 +375,17 @@ a:hover {
   .M { padding: 16px }
   .Hi { padding: 0 16px; height: 56px }
   .Ni { padding: 0 16px }
+  .Hr { gap: 4px }
+  .Ha { display: none }
+  .Lo .s { display: none }
+  .Wb { padding: 7px 14px; font-size: .7rem }
+  .ticker { flex-wrap: wrap; gap: 12px; padding: 16px }
+  .tk-s { display: none }
+  .eco-bn { flex-direction: column; gap: 12px; padding: 16px }
+  .chat-w { height: 480px }
+  .hero-ctas { flex-wrap: wrap }
+  .btn-p, .btn-s { flex: 1; min-width: 120px; text-align: center }
+  .mz-wrap { min-height: 360px }
 }
 
 /* ═══ PANEL — frosted glass cards ═══ */

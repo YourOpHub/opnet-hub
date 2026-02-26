@@ -5,6 +5,7 @@ const Dashboard: React.FC = () => {
   const [p, setP] = useState<{ usd: number; usd_24h_change: number; usd_market_cap: number } | null>(null);
   const [blk, setBlk] = useState(0);
   const [epochNum, setEpochNum] = useState<number | null>(null);
+  const [blockLog, setBlockLog] = useState<Array<{ height: number; time: Date; epoch: number }>>([]);
   const [gasParams, setGasParams] = useState<{ conservative?: number; recommended?: number } | null>(null);
   const [ld, setLd] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -48,7 +49,15 @@ const Dashboard: React.FC = () => {
 
       if (!cancelled) {
         setP(priceInfo);
-        if (block > 0) { setBlk(block); setEpochNum(epochNum); }
+        if (block > 0) {
+          setBlk(prev => {
+            if (block !== prev && block > 0) {
+              setBlockLog(log => [{ height: block, time: new Date(), epoch: Math.floor(block / 5) }, ...log].slice(0, 8));
+            }
+            return block;
+          });
+          setEpochNum(epochNum);
+        }
         setLd(false);
         setLastUpdate(new Date());
         setPulse(true);
@@ -108,8 +117,8 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="mets" style={{ marginTop: 16 }}>
-        <div className="P met"><div className="met-i">�</div><div className="met-v" style={{ color: 'var(--g)', fontSize: '1rem' }}>ML-DSA</div><div className="met-l">PQ Security</div></div>
-        <div className="P met"><div className="met-i">��</div><div className="met-v" style={{ color: 'var(--g)' }}>26+</div><div className="met-l">dApps Live</div></div>
+        <div className="P met"><div className="met-i">🔐</div><div className="met-v" style={{ color: 'var(--g)', fontSize: '1rem' }}>ML-DSA</div><div className="met-l">PQ Security</div></div>
+        <div className="P met"><div className="met-i">📦</div><div className="met-v" style={{ color: 'var(--g)' }}>26+</div><div className="met-l">dApps Live</div></div>
         <div className="P met"><div className="met-i">🌐</div><div className="met-v" style={{ color: 'var(--c)', fontSize: '1rem' }}>Mainnet</div><div className="met-l">Network</div></div>
         <div className="P met"><div className="met-i">🔗</div>
           <div className="met-v" style={{ fontSize: '1rem' }}>
@@ -118,6 +127,31 @@ const Dashboard: React.FC = () => {
           <div className="met-l">Block Explorer</div>
         </div>
       </div>
+
+      {/* Live Block Feed */}
+      {blockLog.length > 0 && (
+        <div className="P" style={{ marginTop: 16 }}>
+          <div className="Lb">⚡ Live Block Feed</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {blockLog.map((b, i) => (
+              <div key={b.height + '-' + i} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                padding: '8px 12px', borderRadius: 'var(--rad)', fontSize: '.75rem',
+                background: i === 0 ? 'rgba(247,147,26,.04)' : 'rgba(255,255,255,.02)',
+                border: `1px solid ${i === 0 ? 'rgba(247,147,26,.12)' : 'var(--bd)'}`,
+                animation: i === 0 ? 'pageIn .3s ease' : 'none'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: i === 0 ? 'var(--o)' : 'var(--t2)' }}>#{b.height.toLocaleString()}</span>
+                  <span style={{ fontSize: '.6rem', color: 'var(--t4)', background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4 }}>Epoch {b.epoch}</span>
+                  {b.height % 5 === 0 && <span style={{ fontSize: '.5rem', color: 'var(--y)', fontWeight: 700 }}>⚡ EPOCH</span>}
+                </div>
+                <span style={{ fontSize: '.6rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{b.time.toLocaleTimeString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -17,3 +17,5 @@ npm_out.log
 install.bat
 start-game.bat
 test-wallet.js
+vps_key
+*.pem

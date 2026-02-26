@@ -24,9 +24,9 @@ This app gives users a single interface to explore, interact with, and learn abo
 | 🚀 **Token Launcher** | Configure your OP-20 (name, symbol, supply), then follow real deploy steps: build from [OP_20](https://github.com/btc-vision/OP_20) template and deploy via OP_WALLET |
 | 💼 **Portfolio** | **Live BTC balance** from OP_NET RPC + OP-20 token holdings with 24h change |
 | 🛠️ **Tools** | **Live RPC**: BTC/Sats/USD converter, OP-20 token explorer (name/symbol/supply from chain), wallet inspector (balance), gas & mempool from OP_NET |
-| ⛏️ **Epoch Miner** | Idle clicker game teaching OP_NET concepts (WASM Compiler, ML-DSA Signer, Merkle Trees, epochs) |
+| ⛏️ **Epoch Miner** | Idle clicker game with **$MINE token** economics — halving, pool distribution, real VPS leaderboard, claim flow |
 | 🎯 **Quests** | Tiered onboarding (Beginner → Explorer → Builder) — 8 tasks, XP, level progression, accessible via the ⚡ FAB button |
-| 🔄 **Swap** | Motoswap-style DEX interface — swap OP-20 tokens with rate display, LP fees, slippage, price impact |
+| 🔄 **Swap** | Motoswap-style DEX — swap OP-20 tokens, **Bob MCP live contract addresses**, LP fees, slippage, price impact |
 | 📰 **News** | Curated OP_NET and Bitcoin news feed with filtering |
 | 🔗 **Ecosystem** | Directory of 26+ apps built on OP_NET's consensus layer |
 | 📊 **Dashboard** | Live BTC price, epoch progress bar, gas fee, live block feed, OPScan link, auto-refresh every 30s |
@@ -48,7 +48,9 @@ OP_NET is fundamentally different from metaprotocols:
 - **OP_NET**: Live JSON-RPC (regtest/testnet/mainnet): block height, epoch, balance, contract code & storage, gas parameters
 - **APIs**: CoinGecko (BTC price), optional Blockchain.info fallback
 - **Wallet**: OPWallet browser extension; real chain balance in Portfolio
-- **AI**: Bob MCP server ([ai.opnet.org](https://ai.opnet.org)) — 28+ tools, zero config
+- **AI**: Bob MCP server ([ai.opnet.org](https://ai.opnet.org)) — **19 tools** integrated (knowledge, audit, CLI, contracts, RPC, monitor, skills)
+- **Backend**: Node.js Express API on VPS — Bob proxy (CORS bypass), player sync, leaderboard, $MINE claims
+- **Token**: $MINE (OP-20) — 21M supply, 10.5M game pool, weekly halving, consensus-verified on Bitcoin L1
 
 ## Getting Started
 
@@ -83,9 +85,33 @@ Bob is OP_NET's MCP server. Add to `.cursor/mcp.json`:
 
 No API key needed. Restart your editor.
 
-## Deploy (VPS + Cloudflare)
+## Backend API (VPS)
 
-Build: `npm run build` → output in `dist/`. See **[DEPLOY.md](./DEPLOY.md)** for Nginx config, uploading to a VPS, and putting Cloudflare in front (optional). You can use an IP first; add a domain later and point it to the same server.
+The backend runs on a VPS at `188.137.250.160` and provides:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Server status + $MINE pool stats |
+| `/api/token` | GET | $MINE token info (supply, emission, pool) |
+| `/api/leaderboard` | GET | Top miners ranked by $MINE balance |
+| `/api/player/sync` | POST | Sync game state from frontend |
+| `/api/claim` | POST | Claim accumulated $MINE tokens |
+| `/api/bob` | POST | Bob MCP proxy (CORS bypass for production) |
+| `/api/rpc` | POST | OP_NET RPC proxy |
+
+### Deploy Backend
+
+```bash
+# SSH into VPS, then:
+curl -sL https://raw.githubusercontent.com/YourOpHub/opnet-hub/master/server/setup-vps.sh | bash
+```
+
+### Deploy Frontend
+
+```bash
+npm run build    # base set to /opnet-hub/ for GitHub Pages
+npx gh-pages -d dist
+```
 
 ## Project Structure
 
@@ -95,17 +121,26 @@ src/
 ├── index.css            # Premium design system (glassmorphism, animations)
 ├── main.tsx             # Entry point
 ├── opnet.ts             # OP_NET JSON-RPC wrapper (mainnet/testnet/regtest)
+├── bob-mcp.ts           # Bob MCP client — 19 tools, VPS proxy + direct fallback
+├── api.ts               # VPS API client (sync, leaderboard, claims)
 └── components/
     ├── Landing.tsx       # Hero + pillars + ticker + Vibecode CTA
     ├── Dashboard.tsx     # Live metrics: price, epoch progress, gas, OPScan
-    ├── BobChat.tsx       # AI copilot linked to ai.opnet.org MCP server
+    ├── BobChat.tsx       # AI copilot — smart routing to 10+ Bob tools
     ├── TokenLauncher.tsx # OP-20 config + deploy steps from template
-    ├── Portfolio.tsx     # Live wallet balance + OP-20 holdings
+    ├── Portfolio.tsx     # Live wallet balance + OP-20 + $MINE holdings
     ├── TokenTools.tsx    # Converter + token explorer + gas & mempool
-    ├── SatoshiMiner.tsx  # Epoch miner game — 12 upgrades, 6 stages
-    ├── Quests.tsx        # Tiered onboarding: Beginner / Explorer / Builder
+    ├── SatoshiMiner.tsx  # Epoch miner + $MINE token + VPS leaderboard
+    ├── SwapUI.tsx        # Motoswap DEX + Bob contract addresses
+    ├── Quests.tsx        # Tiered onboarding via FAB button
     ├── NewsFeed.tsx      # OP_NET/Bitcoin curated news
     └── EcosystemDir.tsx  # 26+ dApps on OP_NET consensus layer
+server/
+├── index.js             # Express API: Bob proxy, player sync, claims, leaderboard
+├── setup-vps.sh         # One-command VPS deployment script
+├── deploy-token.js      # $MINE token deployment + chain verification
+├── nginx.conf           # Nginx reverse proxy config
+└── .env.example         # Environment variables template
 ```
 
 ## Built With

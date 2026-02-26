@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "opnet-bob": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "mcp-remote",
+                "https://ai.opnet.org/mcp"
+            ]
+        }
+    }
+}

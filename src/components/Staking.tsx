@@ -109,10 +109,11 @@ const Staking: React.FC = () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
-        const [stakedRes, rewardRes, totalRes] = await Promise.allSettled([
+        const [stakedRes, rewardRes, totalRes, rateRes] = await Promise.allSettled([
           stakingContract.stakedAmount(senderAddr),
           stakingContract.stakedReward(senderAddr),
           stakingContract.totalStaked(),
+          stakingContract.getRewardRate(),
         ]);
         if (cancelled) return;
         if (stakedRes.status === 'fulfilled' && !(stakedRes.value as CallResult).revert) {
@@ -126,6 +127,10 @@ const Staking: React.FC = () => {
         if (totalRes.status === 'fulfilled' && !(totalRes.value as CallResult).revert) {
           const decoded = (totalRes.value as CallResult).properties as Record<string, unknown>;
           if (decoded?.amount) setTotalStakedOnChain(BigInt(String(decoded.amount)));
+        }
+        if (rateRes.status === 'fulfilled' && !(rateRes.value as CallResult).revert) {
+          const decoded = (rateRes.value as CallResult).properties as Record<string, unknown>;
+          if (decoded?.rate) setRewardRate(BigInt(String(decoded.rate)));
         }
       } catch { /* ignore */ }
     };
@@ -242,10 +247,18 @@ const Staking: React.FC = () => {
 
   const connected = !!walletAddress;
   const busy = staking || unstaking || claiming;
+  const [rewardRate, setRewardRate] = useState<bigint>(0n);
+
   const userStakedNum = Number(userStaked) / 1e8;
   const userRewardsNum = Number(userRewards) / 1e8;
   const totalStakedNum = Number(totalStakedOnChain) / 1e8;
-  const projectedAPR = 42; // placeholder until contract is live
+  // APR = (rewardRate * blocksPerYear / totalStaked) * 100
+  // Bitcoin: ~144 blocks/day → ~52,560/year
+  const BLOCKS_PER_YEAR = 52_560;
+  const rateNum = Number(rewardRate) / 1e8;
+  const projectedAPR = totalStakedNum > 0 && rateNum > 0
+    ? Math.min((rateNum * BLOCKS_PER_YEAR / totalStakedNum) * 100, 999_999)
+    : 0;
 
   return (
     <div>
@@ -302,7 +315,7 @@ const Staking: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 16 }}>
         <div className="P" style={{ padding: 14, textAlign: 'center' }}>
           <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Projected APR</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--g)', fontFamily: 'var(--fm)' }}>{projectedAPR}%</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--g)', fontFamily: 'var(--fm)' }}>{projectedAPR > 0 ? (projectedAPR > 10000 ? `${(projectedAPR / 1000).toFixed(0)}K` : projectedAPR.toFixed(0)) + '%' : '—'}</div>
         </div>
         <div className="P" style={{ padding: 14, textAlign: 'center' }}>
           <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Total Staked</div>

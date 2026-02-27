@@ -14,6 +14,7 @@ import {
   POOL_ADDRESS, POOL_PUBKEY,
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
+import LiquidityModal from './LiquidityModal';
 
 /** OPNet testnet network config */
 const NETWORK = networks.testnet;
@@ -503,83 +504,15 @@ const SwapUI: React.FC = () => {
             </div>
           )}
 
-          {/* Inline Add Liquidity panel */}
-          {showLiquidity && (
-            <div style={{ marginBottom: 12, padding: '12px', background: 'rgba(14,165,233,.04)', borderRadius: 'var(--rad)', border: '1px solid rgba(14,165,233,.15)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: '.72rem', fontWeight: 700, color: '#0ea5e9' }}>💧 Add Liquidity</span>
-                {lpUserMine > 0 && reserveA > 0 && (
-                  <span style={{ fontSize: '.58rem', color: 'var(--p)', fontWeight: 700, fontFamily: 'var(--fm)' }}>Your share: {((lpUserMine / reserveA) * 100).toFixed(2)}%</span>
-                )}
-              </div>
-              <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 6 }}>Ratio: {reserveA > 0 ? `1 MINE = ${(reserveB / reserveA).toFixed(2)} VIBE` : '...'}</div>
-              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: '.55rem', color: 'var(--t4)' }}>⛏️ MINE</span>
-                    {connected && balances['MINE'] != null && balances['MINE'] > 0n && (
-                      <button onClick={() => setLpMineAmt((Number(balances['MINE']) / 1e8).toString())}
-                        style={{ fontSize: '.48rem', color: 'var(--o)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--ff)' }}>MAX</button>
-                    )}
-                  </div>
-                  <input type="number" value={lpMineAmt} onChange={e => setLpMineAmt(e.target.value)}
-                    placeholder="0.0" style={{
-                      width: '100%', padding: '8px', borderRadius: 8, border: '1px solid var(--bd)',
-                      background: 'var(--bg3)', color: 'var(--w)', fontSize: '.8rem', fontFamily: 'var(--fm)',
-                      outline: 'none', boxSizing: 'border-box',
-                    }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', padding: '0 2px 8px', color: 'var(--t4)', fontSize: '.8rem' }}>+</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 2 }}>⚡ VIBE (auto)</div>
-                  <input type="number" value={lpVibeAmt} readOnly
-                    style={{
-                      width: '100%', padding: '8px', borderRadius: 8, border: '1px solid var(--bd)',
-                      background: 'rgba(255,255,255,.02)', color: 'var(--t2)', fontSize: '.8rem', fontFamily: 'var(--fm)',
-                      outline: 'none', boxSizing: 'border-box',
-                    }} />
-                </div>
-              </div>
-              {parseFloat(lpMineAmt) > 0 && reserveA > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6, padding: '4px 0' }}>
-                  <span>New share: <strong style={{ color: '#0ea5e9' }}>{((parseFloat(lpMineAmt) / (reserveA + parseFloat(lpMineAmt))) * 100).toFixed(2)}%</strong></span>
-                  <span>Reserves: {(reserveA + parseFloat(lpMineAmt)).toLocaleString(undefined, {maximumFractionDigits: 0})} / {(reserveB + parseFloat(lpVibeAmt || '0')).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                </div>
-              )}
-              {connected ? (
-                <button onClick={addLiquidity} disabled={addingLP || !lpMineAmt}
-                  style={{
-                    width: '100%', padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: addingLP ? 'var(--bg4)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                    color: '#fff', fontWeight: 700, fontSize: '.78rem', fontFamily: 'var(--ff)',
-                    opacity: addingLP || !lpMineAmt ? 0.6 : 1, transition: 'all .2s',
-                  }}>
-                  {addingLP ? (lpStep || 'Processing...') : '💧 Add Liquidity'}
-                </button>
-              ) : (
-                <button onClick={openConnectModal} style={{
-                  width: '100%', padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
-                  fontWeight: 700, fontSize: '.78rem', fontFamily: 'var(--ff)',
-                }}>Connect Wallet</button>
-              )}
-              {lpResult && (
-                <div style={{
-                  marginTop: 6, padding: '6px 10px', borderRadius: 6,
-                  background: lpResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-                  border: `1px solid ${lpResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
-                  fontSize: '.62rem', color: lpResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
-                }}>
-                  {lpResult.msg}
-                </div>
-              )}
-              {lpUserMine > 0 && (
-                <div style={{ marginTop: 6, display: 'flex', gap: 8, fontSize: '.55rem', color: 'var(--t4)' }}>
-                  <span>Your LP: {lpUserMine.toLocaleString()} MINE + {lpUserVibe.toLocaleString()} VIBE</span>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Liquidity Modal */}
+          <LiquidityModal
+            open={showLiquidity}
+            onClose={() => setShowLiquidity(false)}
+            reserveA={reserveA}
+            reserveB={reserveB}
+            balances={balances}
+            onRefresh={() => { fetchReserves(); setBalRefreshKey(k => k + 1); }}
+          />
 
           {/* From */}
           <div style={{ padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)', marginBottom: 4 }}>

@@ -50,6 +50,18 @@ const POOL_ABI: BitcoinInterfaceAbi = [
   },
 ];
 
+/** ABI for MintableToken publicMint method */
+const MINTABLE_ABI: BitcoinInterfaceAbi = [
+  {
+    name: 'publicMint',
+    inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }],
+    outputs: [],
+    type: BitcoinAbiTypes.Function,
+  },
+];
+
+const MINT_AMOUNT = 1000; // Fixed 1000 tokens per mint
+
 /** Fetch network gas parameters and build proper tx params */
 async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const gas = await provider.gasParameters();
@@ -112,15 +124,15 @@ const SwapUI: React.FC = () => {
   const [balances, setBalances] = useState<Record<string, bigint>>({});
   const [balLoading, setBalLoading] = useState(false);
   const [balRefreshKey, setBalRefreshKey] = useState(0);
-  const [claiming, setClaiming] = useState<string | null>(null);
-  const [claimResult, setClaimResult] = useState<{sym: string; ok: boolean; msg: string} | null>(null);
+  const [minting, setMinting] = useState<string | null>(null);
+  const [mintResult, setMintResult] = useState<{sym: string; ok: boolean; msg: string} | null>(null);
   const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
   const [history, setHistory] = useState<TxRecord[]>([]);
 
   useEffect(() => {
-    if (walletAddress) setHistory(getTxHistory(walletAddress).filter(r => r.type === 'swap' || r.type === 'claim'));
+    if (walletAddress) setHistory(getTxHistory(walletAddress).filter(r => r.type === 'swap' || r.type === 'mint' || r.type === 'claim'));
   }, [walletAddress, balRefreshKey]);
 
   const poolReady = !!POOL_ADDRESS;
@@ -278,29 +290,34 @@ const SwapUI: React.FC = () => {
     }
   }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal, provider, senderAddr]);
 
-  /** Claim tokens via VPS faucet (transfers from deployer wallet) */
-  const claimTokens = useCallback(async (sym: string) => {
-    if (!walletAddress) { openConnectModal(); return; }
-    setClaiming(sym);
-    setClaimResult(null);
+  /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
+  const mintTokens = useCallback(async (sym: string) => {
+    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!senderAddr) { setMintResult({ sym, ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
+    setMinting(sym);
+    setMintResult(null);
     try {
-      const res = await fetch(`${FAUCET_URL}/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: sym, address: walletAddress }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Claim failed');
-      setClaimResult({ sym, ok: true, msg: data.message || `Claimed ${sym}!` });
-      addTxRecord({ type: 'claim', txHash: '', tokenA: sym, amountA: sym === 'MINE' ? '100000' : '500000', status: 'confirmed', wallet: walletAddress! });
+      const tok = TESTNET_CONTRACTS[sym as keyof typeof TESTNET_CONTRACTS];
+      if (!tok) throw new Error('Unknown token');
+      const rawAmount = BigInt(MINT_AMOUNT) * BigInt(Math.pow(10, tok.decimals));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      const sim = await contract.publicMint(rawAmount);
+      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
+      const txParams = await buildTxParams(provider, walletAddress!);
+      const receipt = await (sim as CallResult).sendTransaction(txParams);
+      const txHash = receipt.transactionId || '';
+      setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}! TX: ${txHash.slice(0, 16)}…` });
+      addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: walletAddress! });
       setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Claim failed';
-      setClaimResult({ sym, ok: false, msg });
+      let msg = e instanceof Error ? e.message : 'Mint failed';
+      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC: https://faucet.opnet.org';
+      setMintResult({ sym, ok: false, msg });
     } finally {
-      setClaiming(null);
+      setMinting(null);
     }
-  }, [walletAddress, openConnectModal]);
+  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -512,14 +529,14 @@ const SwapUI: React.FC = () => {
                   <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, alignItems: 'flex-end' }}>
-                  <button onClick={() => claimTokens(sym)} disabled={claiming === sym}
+                  <button onClick={() => mintTokens(sym)} disabled={minting === sym}
                     style={{
-                      padding: '5px 12px', borderRadius: 6, border: 'none', cursor: claiming === sym ? 'wait' : 'pointer',
+                      padding: '5px 12px', borderRadius: 6, border: 'none', cursor: minting === sym ? 'wait' : 'pointer',
                       background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: 'white',
                       fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
                       boxShadow: '0 2px 8px rgba(168,85,247,.25)',
                     }}>
-                    {claiming === sym ? 'Claiming...' : `🎁 Claim ${sym}`}
+                    {minting === sym ? 'Minting...' : `🪙 Mint 1K ${sym}`}
                   </button>
                   <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize: '.54rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
@@ -527,17 +544,17 @@ const SwapUI: React.FC = () => {
               </div>
             );
           })}
-          {claimResult && (
+          {mintResult && (
             <div style={{ marginTop: 8, padding: '8px 12px',
-              background: claimResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-              border: `1px solid ${claimResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+              background: mintResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
+              border: `1px solid ${mintResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
               borderRadius: 'var(--rad)', fontSize: '.7rem',
-              color: claimResult.ok ? 'var(--g)' : '#ef4444' }}>
-              {claimResult.msg}
+              color: mintResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all' }}>
+              {mintResult.msg}
             </div>
           )}
-          <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)' }}>
-            Click <strong>Claim</strong> to receive free testnet tokens from the faucet. 5 min cooldown per token.
+          <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)' }}>
+            Click <strong>Mint</strong> to receive 1,000 tokens via on-chain <code>publicMint</code>. Requires testnet BTC for gas.
           </div>
         </div>
 

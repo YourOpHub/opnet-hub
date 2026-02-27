@@ -1,8 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { networks } from '@btc-vision/bitcoin';
+import { Address } from '@btc-vision/transaction';
+import {
+  JSONRpcProvider, getContract, OP_20_ABI,
+  type IOP20Contract,
+} from 'opnet';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, DEPLOYER_ADDRESS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
-import { getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
+import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
+import { getTxHistory, formatTimeAgo } from '../txHistory';
+
+const NETWORK = networks.testnet;
+const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 
 function detectNetwork(addr: string): opnet.Network | null {
   if (addr.startsWith('opt1')) return 'testnet';
@@ -25,6 +34,7 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
   const [btcChange, setBtcChange] = useState(0);
   const [priceLoading, setPriceLoading] = useState(true);
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
+  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,13 +59,21 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
       .catch(() => { if (!cancelled) setBtcSats(null); })
       .finally(() => { if (!cancelled) setBtcLoading(false); });
 
-    // Fetch OP-20 token balances via btc_call balanceOf for ANY wallet
-    const tokenEntries = Object.entries(TESTNET_CONTRACTS);
-    tokenEntries.forEach(([sym, tok]) => {
+    // Fetch OP-20 token balances via opnet SDK (getContract + balanceOf)
+    const senderAddr = Address.fromString(walletAddress);
+    Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
       setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
-      opnet.getTokenBalance(tok.address, walletAddress)
-        .then(bal => { if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: bal, loading: false, error: false } })); })
-        .catch(() => { if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } })); });
+      (async () => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
+          const sim = await op20.balanceOf(senderAddr as any);
+          const bal = sim?.properties?.balance ?? 0n;
+          if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: BigInt(bal.toString()), loading: false, error: false } }));
+        } catch {
+          if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } }));
+        }
+      })();
     });
 
     return () => { cancelled = true; };
@@ -130,7 +148,7 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
               const tb = tokenBalances[sym];
               const rawBal = tb?.balance ?? 0n;
               const humanBal = Number(rawBal) / Math.pow(10, tok.decimals);
-              const isDeployer = walletAddress === DEPLOYER_ADDRESS;
+              const isDeployer = false;
               return (
                 <tr key={tok.symbol}>
                   <td>

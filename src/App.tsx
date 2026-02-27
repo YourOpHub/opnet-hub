@@ -1,10 +1,12 @@
-import React, { useState, useCallback, useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
+import { networks } from '@btc-vision/bitcoin';
+import { Address } from '@btc-vision/transaction';
+import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
 import { getTxHistory, formatTimeAgo } from './txHistory';
 import { TESTNET_CONTRACTS } from './contracts';
-import * as opnetRpc from './opnet';
 
 const BobChat = lazy(() => import('./components/BobChat'));
 const NewsFeed = lazy(() => import('./components/NewsFeed'));
@@ -61,25 +63,31 @@ const App: React.FC = () => {
     const [wDrop, setWDrop] = useState(false);
     const [balances, setBalances] = useState<Record<string, string>>({});
     const dropRef = useRef<HTMLDivElement>(null);
+    const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const sdkProvider = useMemo(() => new JSONRpcProvider('https://testnet.opnet.org/api/v1/json-rpc', networks.testnet), []);
 
-    // Close dropdown on outside click
-    useEffect(() => {
-        const h = (e: MouseEvent) => { if (dropRef.current && !dropRef.current.contains(e.target as Node)) setWDrop(false); };
-        document.addEventListener('mousedown', h);
-        return () => document.removeEventListener('mousedown', h);
-    }, []);
+    const openDrop = useCallback(() => { clearTimeout(hoverTimer.current); setWDrop(true); }, []);
+    const closeDrop = useCallback(() => { hoverTimer.current = setTimeout(() => setWDrop(false), 300); }, []);
 
-    // Fetch balances when dropdown opens
+    // Fetch balances when dropdown opens — use opnet SDK for accurate results
     useEffect(() => {
         if (!wDrop || !wAddr) return;
-        opnetRpc.setNetwork('testnet');
+        let cancelled = false;
+        const senderAddr = Address.fromString(wAddr);
         Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
-            opnetRpc.getTokenBalance(tok.address, wAddr).then(bal => {
-                const human = (Number(bal) / Math.pow(10, tok.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
-                setBalances(prev => ({ ...prev, [sym]: human }));
-            }).catch(() => {});
+            (async () => {
+                try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, networks.testnet, senderAddr as any);
+                    const sim = await op20.balanceOf(senderAddr as any);
+                    const bal = sim?.properties?.balance ?? 0n;
+                    const human = (Number(BigInt(bal.toString())) / Math.pow(10, tok.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
+                    if (!cancelled) setBalances(prev => ({ ...prev, [sym]: human }));
+                } catch { /* ignore */ }
+            })();
         });
-    }, [wDrop, wAddr]);
+        return () => { cancelled = true; };
+    }, [wDrop, wAddr, sdkProvider]);
 
     const handleWallet = useCallback(() => {
         if (wOn) {
@@ -125,7 +133,10 @@ const App: React.FC = () => {
                     <div className="Hr">
                         <a className="Ha" href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">Docs</a>
                         <a className="Ha" href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">Vibecode</a>
-                        <div ref={dropRef} style={{ position: 'relative' }}>
+                        <div ref={dropRef} style={{ position: 'relative' }}
+                            onMouseEnter={wOn ? openDrop : undefined}
+                            onMouseLeave={wOn ? closeDrop : undefined}
+                        >
                             <button className={`Wb ${wOn ? 'on' : ''}`}
                                 onClick={wOn ? () => setWDrop(v => !v) : handleWallet}
                                 disabled={connecting}

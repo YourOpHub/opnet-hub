@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI,
   type IOP20Contract,
 } from 'opnet';
 import * as opnet from '../opnet';
+import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
-import { getTxHistory, formatTimeAgo } from '../txHistory';
+import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
+import { getTxHistory, formatTimeAgo, addTxRecord } from '../txHistory';
 
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
@@ -36,6 +37,22 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
   const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
 
+  // LP position from localStorage
+  const [lpMine, setLpMine] = useState(() => { try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch { return 0; } });
+  const [lpVibe, setLpVibe] = useState(() => { try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch { return 0; } });
+  const [reserveA, setReserveA] = useState(0);
+  const [reserveB, setReserveB] = useState(0);
+  const hasLP = lpMine > 0 || lpVibe > 0;
+  const poolShareMine = reserveA > 0 ? (lpMine / reserveA) * 100 : 0;
+  const poolShareVibe = reserveB > 0 ? (lpVibe / reserveB) * 100 : 0;
+  const poolShare = Math.max(poolShareMine, poolShareVibe);
+
+  // Remove liquidity state
+  const [removing, setRemoving] = useState(false);
+  const [removeStep, setRemoveStep] = useState('');
+  const [removeResult, setRemoveResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     fetchBtcPrice().then(p => {
@@ -43,6 +60,42 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
     });
     return () => { cancelled = true; };
   }, []);
+
+  // Fetch pool reserves
+  useEffect(() => {
+    if (!POOL_ADDRESS) return;
+    let cancelled = false;
+    const fetchRes = async () => {
+      try {
+        const res = await opnetRpc.callContract(POOL_ADDRESS, '06374bfc');
+        if (res && !cancelled) {
+          const hex = res.startsWith('0x') ? res.slice(2) : res;
+          if (hex.length >= 128) {
+            const r0 = Number(BigInt('0x' + hex.slice(0, 64))) / 1e8;
+            const r1 = Number(BigInt('0x' + hex.slice(64, 128))) / 1e8;
+            if (r0 > 0) setReserveA(r0);
+            if (r1 > 0) setReserveB(r1);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    fetchRes();
+  }, [refreshKey]);
+
+  // Remove liquidity: SimplePool v1 tracks LP locally (no on-chain LP tokens)
+  // Clears the local position record. Tokens remain in pool until v2 with on-chain withdrawal.
+  const removeLiquidity = useCallback(() => {
+    if (!walletAddress || !hasLP) return;
+    const prevMine = lpMine;
+    const prevVibe = lpVibe;
+    localStorage.setItem('hub_lp_mine', '0');
+    localStorage.setItem('hub_lp_vibe', '0');
+    setLpMine(0);
+    setLpVibe(0);
+    setRemoveResult({ ok: true, msg: `Position cleared: ${prevMine.toLocaleString()} MINE + ${prevVibe.toLocaleString()} VIBE removed from tracking.` });
+    addTxRecord({ type: 'claim', txHash: '', tokenA: 'LP', amountA: `${prevMine}+${prevVibe}`, status: 'confirmed', wallet: walletAddress });
+    setTimeout(() => setRefreshKey(k => k + 1), 3000);
+  }, [walletAddress, lpMine, lpVibe, hasLP]);
 
   useEffect(() => {
     const net = walletAddress ? detectNetwork(walletAddress) : null;
@@ -191,6 +244,75 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
           </div>
         )}
       </div>
+
+      {/* Liquidity Positions */}
+      {walletAddress && POOL_ADDRESS && (
+        <div className="P" style={{ marginTop: 14 }}>
+          <div className="Lb">🌊 Liquidity Positions</div>
+          {hasLP ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {/* MINE/VIBE Pool card */}
+                <div style={{ flex: 1, minWidth: 220, padding: '12px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--bd)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.82rem' }}>⛏️ MINE / ⚡ VIBE</div>
+                    <span style={{ fontSize: '.62rem', padding: '2px 8px', background: 'rgba(247,147,26,.12)', color: 'var(--o)', borderRadius: 6, fontWeight: 700 }}>
+                      {poolShare.toFixed(2)}% pool share
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem', color: 'var(--t2)', marginBottom: 4 }}>
+                    <span>Your MINE</span>
+                    <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)' }}>{lpMine.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem', color: 'var(--t2)', marginBottom: 4 }}>
+                    <span>Your VIBE</span>
+                    <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)' }}>{lpVibe.toLocaleString()}</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--bd)', margin: '8px 0', paddingTop: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--t3)' }}>
+                      <span>Pool MINE reserve</span>
+                      <span style={{ fontFamily: 'var(--fm)' }}>{reserveA > 0 ? reserveA.toLocaleString() : '...'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--t3)', marginTop: 2 }}>
+                      <span>Pool VIBE reserve</span>
+                      <span style={{ fontFamily: 'var(--fm)' }}>{reserveB > 0 ? reserveB.toLocaleString() : '...'}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={removeLiquidity}
+                    disabled={removing}
+                    style={{
+                      marginTop: 10, width: '100%', padding: '8px', borderRadius: 8,
+                      border: '1px solid rgba(239,68,68,.3)', background: 'rgba(239,68,68,.08)',
+                      color: '#ef4444', fontWeight: 700, fontSize: '.72rem', cursor: 'pointer',
+                      fontFamily: 'var(--ff)', opacity: removing ? 0.5 : 1,
+                    }}
+                  >
+                    {removing ? removeStep || 'Removing...' : 'Remove Liquidity'}
+                  </button>
+                </div>
+              </div>
+              {removeResult && (
+                <div style={{
+                  padding: '8px 12px', borderRadius: 8, fontSize: '.72rem',
+                  background: removeResult.ok ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
+                  border: `1px solid ${removeResult.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`,
+                  color: removeResult.ok ? 'var(--g)' : '#ef4444',
+                }}>
+                  {removeResult.msg}
+                </div>
+              )}
+              <div style={{ fontSize: '.6rem', color: 'var(--t4)', padding: '0 2px' }}>
+                SimplePool v1 — LP positions tracked locally. On-chain LP tokens & withdrawal in v2.
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: 14, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>
+              No liquidity positions. Add liquidity in the <strong>Swap</strong> tab.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Transaction History */}
       {history.length > 0 && (

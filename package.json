@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "vite --port 3000",
     "build": "tsc && vite build",
-    "preview": "vite preview",
-    "deploy": "node scripts/deploy.js"
+    "build:prod": "tsc && vite build --base /opnet-hub/",
+    "preview": "vite preview --port 4000",
+    "test:serve": "tsc && vite build && vite preview --port 4000",
+    "deploy": "tsc && vite build --base /opnet-hub/ && npx gh-pages -d dist"
   },
   "dependencies": {
     "@btc-vision/bitcoin": "^6.5.6",

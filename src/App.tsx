@@ -4,7 +4,7 @@ import { networks } from '@btc-vision/bitcoin';
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
-import { getTxHistory, formatTimeAgo } from './txHistory';
+// txHistory used in Portfolio, not here
 import { TESTNET_CONTRACTS } from './contracts';
 
 const BobChat = lazy(() => import('./components/BobChat'));
@@ -162,15 +162,6 @@ const App: React.FC = () => {
                                         </div>
                                     ))}
                                     <div style={{ borderTop: '1px solid var(--bd)', margin: '10px 0 8px' }} />
-                                    <div style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--t2)', marginBottom: 6 }}>Recent Activity</div>
-                                    {getTxHistory(wAddr).slice(0, 5).map(tx => (
-                                        <div key={tx.id} style={{ fontSize: '.62rem', color: 'var(--t3)', padding: '3px 0', display: 'flex', justifyContent: 'space-between' }}>
-                                            <span>{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'} {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA}→${tx.tokenB}` : `${tx.type} ${Number(tx.amountA||0).toLocaleString()} ${tx.tokenA}`}</span>
-                                            <span style={{ color: 'var(--t4)' }}>{formatTimeAgo(tx.ts)}</span>
-                                        </div>
-                                    ))}
-                                    {getTxHistory(wAddr).length === 0 && <div style={{ fontSize: '.62rem', color: 'var(--t4)' }}>No activity yet</div>}
-                                    <div style={{ borderTop: '1px solid var(--bd)', margin: '8px 0' }} />
                                     <div style={{ display: 'flex', gap: 6 }}>
                                         <button onClick={() => { navigate('portfolio'); setWDrop(false); }}
                                             style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--o), var(--o2))', color: '#000', fontWeight: 700, fontSize: '.7rem', fontFamily: 'var(--ff)' }}>

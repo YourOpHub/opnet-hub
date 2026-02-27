@@ -2,8 +2,11 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
+// Base path: '/' for dev/preview, '/opnet-hub/' for GitHub Pages prod
+const base = process.env.VITE_BASE || '/';
+
 export default defineConfig({
-    base: '/',
+    base,
     plugins: [
         nodePolyfills({
             globals: { Buffer: true, global: true, process: true },

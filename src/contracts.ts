@@ -59,14 +59,11 @@ export const OP20_SELECTORS = {
     allowance: 0xd864b7ca,
 } as const;
 
-/** OPScan explorer — works for testnet contract inspection */
+/** OPScan explorer — works for testnet contract/tx inspection */
 const OPSCAN = 'https://opscan.org';
 
-/** OPNet testnet explorer for TXs */
-const EXPLORER = 'https://testnet.opnet.org';
-
 export function getTxUrl(txid: string): string {
-    return `${EXPLORER}/tx/${txid}`;
+    return `${OPSCAN}/transactions/${txid}?network=op_testnet`;
 }
 
 export function getContractOpscanUrl(address: string): string {

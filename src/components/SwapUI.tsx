@@ -1,13 +1,58 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { Address, BinaryWriter } from '@btc-vision/transaction';
-import * as opnet from '../opnet';
+import { Address } from '@btc-vision/transaction';
+import { networks } from '@btc-vision/bitcoin';
+import {
+  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes,
+  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
+} from 'opnet';
+import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import {
   TESTNET_CONTRACTS,
-  POOL_ADDRESS, POOL_PUBKEY, POOL_SELECTORS, OP20_SELECTORS,
+  POOL_ADDRESS, POOL_PUBKEY,
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
+
+/** OPNet testnet network config */
+const NETWORK = networks.testnet;
+const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
+
+/** Custom ABI for SimplePool contract */
+const POOL_ABI: BitcoinInterfaceAbi = [
+  {
+    name: 'swap',
+    inputs: [
+      { name: 'tokenIn', type: ABIDataTypes.ADDRESS },
+      { name: 'amountIn', type: ABIDataTypes.UINT256 },
+      { name: 'minAmountOut', type: ABIDataTypes.UINT256 },
+    ],
+    outputs: [],
+    type: BitcoinAbiTypes.Function,
+  },
+  {
+    name: 'getReserves',
+    constant: true,
+    inputs: [],
+    outputs: [
+      { name: 'reserveA', type: ABIDataTypes.UINT256 },
+      { name: 'reserveB', type: ABIDataTypes.UINT256 },
+    ],
+    type: BitcoinAbiTypes.Function,
+  },
+  {
+    name: 'sync',
+    inputs: [],
+    outputs: [],
+    type: BitcoinAbiTypes.Function,
+  },
+];
+
+interface IPoolContract {
+  swap(tokenIn: Address, amountIn: bigint, minAmountOut: bigint): Promise<CallResult>;
+  getReserves(): Promise<CallResult>;
+  sync(): Promise<CallResult>;
+}
 
 /** Initial pool reserves (will be read from chain once pool is deployed) */
 const INIT_RESERVE_A = 5_000_000;  // MINE
@@ -55,9 +100,9 @@ const SwapUI: React.FC = () => {
   useEffect(() => { fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); }); }, []);
 
   useEffect(() => {
-    opnet.setNetwork('testnet');
+    opnetRpc.setNetwork('testnet');
     Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
-      opnet.getTokenTotalSupply(tok.address).then(supply => {
+      opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
         if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
       }).catch(() => {});
     });
@@ -66,20 +111,20 @@ const SwapUI: React.FC = () => {
   // Fetch balances
   useEffect(() => {
     if (!walletAddress || !hashedMLDSAKey) { setBalances({}); return; }
-    opnet.setNetwork('testnet');
+    opnetRpc.setNetwork('testnet');
     setBalLoading(true);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
     const jobs: Promise<void>[] = [];
     for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
       jobs.push(
-        opnet.getTokenBalance(tok.address, mldsa, tweaked)
+        opnetRpc.getTokenBalance(tok.address, mldsa, tweaked)
           .then(b => setBalances(prev => ({ ...prev, [sym]: b })))
           .catch(() => {})
       );
     }
     jobs.push(
-      opnet.getBalance(walletAddress)
+      opnetRpc.getBalance(walletAddress)
         .then(b => setBalances(prev => ({ ...prev, BTC: b })))
         .catch(() => {})
     );
@@ -107,30 +152,23 @@ const SwapUI: React.FC = () => {
 
   const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
 
-  /** Helper: send interaction via OP_WALLET web3 API */
-  const sendInteraction = async (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    web3: any, contractAddr: string, calldata: Uint8Array,
-  ) => {
-    const result = await web3.signAndBroadcastInteraction({
-      calldata,
-      to: contractAddr,
-      from: walletAddress!,
-      feeRate: 10,
-      priorityFee: 10_000n,
-      gasSatFee: 100_000n,
-      revealMLDSAPublicKey: true,
-      linkMLDSAPublicKeyToAddress: true,
-    });
-    // Returns [fundingResult, interactionResult, UTXOs, txHex]
-    const tx = Array.isArray(result) ? result[1] : result;
-    return tx?.result || tx?.transactionId || '';
-  };
+  /** Create opnet provider (memoized) */
+  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+
+  /** Build sender Address from wallet publicKey */
+  const senderAddr = useMemo(() => {
+    if (!publicKey) return undefined;
+    try {
+      const hex = publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`;
+      return Address.fromString(hex);
+    } catch { return undefined; }
+  }, [publicKey]);
 
   /**
    * Execute a REAL on-chain swap via SimplePool AMM:
    * Step 1: increaseAllowance(poolAddress, amountIn) on token-in
    * Step 2: swap(tokenIn, amountIn, minAmountOut) on pool contract
+   * Uses getContract() from opnet — proper ABI encoding + wallet signing.
    */
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
@@ -140,16 +178,13 @@ const SwapUI: React.FC = () => {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inst = walletInstance as any;
-    const web3 = inst.web3 || inst;
-    if (!web3?.signAndBroadcastInteraction) {
-      setSwapResult({ type: 'error', error: 'Wallet does not support Web3 API. Use OP_WALLET.' });
+    if (!poolReady) {
+      setSwapResult({ type: 'error', error: 'Pool contract not yet deployed. Coming soon!' });
       return;
     }
 
-    if (!poolReady) {
-      setSwapResult({ type: 'error', error: 'Pool contract not yet deployed. Coming soon!' });
+    if (!senderAddr) {
+      setSwapResult({ type: 'error', error: 'Wallet public key not available. Reconnect wallet.' });
       return;
     }
 
@@ -160,27 +195,52 @@ const SwapUI: React.FC = () => {
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
       const minOut = BigInt(Math.floor(toVal * (1 - slippage / 100) * Math.pow(10, to.decimals)));
 
+      const txParams = {
+        signer: null as null,
+        mldsaSigner: null as null,
+        refundTo: walletAddress!,
+        maximumAllowedSatToSpend: 100_000n,
+        network: NETWORK,
+        feeRate: 10,
+        priorityFee: 50_000n,
+        revealMLDSAPublicKey: true,
+        linkMLDSAPublicKeyToAddress: true,
+      };
+
       // STEP 1: Approve pool to spend token-in
       setSwapStep('Approving token spend...');
-      const approveWriter = new BinaryWriter();
-      approveWriter.writeSelector(OP20_SELECTORS.increaseAllowance);
-      approveWriter.writeAddress(Address.fromString(POOL_PUBKEY));
-      approveWriter.writeU256(rawAmount);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tokenContract = getContract<IOP20Contract>(
+        from.address, OP_20_ABI, provider, NETWORK, senderAddr as any,
+      );
+      const poolAddr = Address.fromString(POOL_PUBKEY) as any;
+      const approveSim = await tokenContract.increaseAllowance(poolAddr, rawAmount);
 
-      await sendInteraction(web3, from.address, approveWriter.getBuffer());
+      if (approveSim.revert) {
+        throw new Error(`Approval simulation reverted: ${approveSim.revert}`);
+      }
+
+      const approveReceipt = await approveSim.sendTransaction(txParams);
+      console.log('[Swap] Approve TX:', approveReceipt.transactionId);
 
       // Brief wait for approval to propagate
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 4000));
 
       // STEP 2: Call swap on pool
       setSwapStep('Executing swap on pool...');
-      const swapWriter = new BinaryWriter();
-      swapWriter.writeSelector(POOL_SELECTORS.swap);
-      swapWriter.writeAddress(Address.fromString(from.pubkey));
-      swapWriter.writeU256(rawAmount);
-      swapWriter.writeU256(minOut);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const poolContract = getContract<any>(
+        POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any,
+      ) as unknown as IPoolContract;
+      const tokenInAddr = Address.fromString(from.pubkey);
+      const swapSim = await poolContract.swap(tokenInAddr, rawAmount, minOut);
 
-      const txHash = await sendInteraction(web3, POOL_ADDRESS, swapWriter.getBuffer());
+      if ((swapSim as CallResult).revert) {
+        throw new Error(`Swap simulation reverted: ${(swapSim as CallResult).revert}`);
+      }
+
+      const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams);
+      const txHash = swapReceipt.transactionId || '';
 
       setSwapStep('');
       setSwapResult({
@@ -199,7 +259,7 @@ const SwapUI: React.FC = () => {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal, provider, senderAddr]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);

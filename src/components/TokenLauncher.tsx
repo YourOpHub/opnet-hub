@@ -1,8 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { BinaryWriter } from '@btc-vision/transaction';
+import { networks } from '@btc-vision/bitcoin';
+import { JSONRpcProvider } from 'opnet';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
+
+const NETWORK = networks.testnet;
+const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 
 const FAUCET = 'https://faucet.opnet.org';
 const GENERIC_WASM = 'GenericToken.wasm';
@@ -100,6 +105,8 @@ const TokenLauncher: React.FC = () => {
     return writer.getBuffer();
   };
 
+  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+
   /** Deploy token: fetch GenericToken.wasm + encode calldata → Web3Provider.deployContract() */
   const deployToken = async () => {
     if (!walletAddress || !walletInstance) {
@@ -142,11 +149,21 @@ const TokenLauncher: React.FC = () => {
       setDeployStep('Encoding token parameters...');
       const calldata = encodeCalldata();
 
-      // 3. Deploy via Web3Provider — wallet handles signer, UTXOs, MLDSA, challenge
+      // 3. Fetch UTXOs from provider (required by wallet API)
+      setDeployStep('Fetching UTXOs...');
+      const utxos = await provider.utxoManager.getUTXOs({
+        address: walletAddress,
+      });
+      if (!utxos || utxos.length === 0) {
+        throw new Error(`No UTXOs found for your address. Get testnet BTC: ${FAUCET}`);
+      }
+
+      // 4. Deploy via Web3Provider
       setDeployStep('Sign the transaction in your wallet...');
       const result = await web3.deployContract({
         bytecode,
         calldata,
+        utxos,
         from: walletAddress,
         feeRate: 10,
         priorityFee: 10_000n,

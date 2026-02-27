@@ -1,8 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { BinaryWriter } from '@btc-vision/transaction';
+import { Address } from '@btc-vision/transaction';
+import { networks } from '@btc-vision/bitcoin';
+import {
+  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes,
+  type BitcoinInterfaceAbi, type CallResult,
+} from 'opnet';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+
+const NETWORK = networks.testnet;
+const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
+
+/** ABI for MintableToken publicMint method */
+const MINTABLE_ABI: BitcoinInterfaceAbi = [
+  {
+    name: 'publicMint',
+    inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }],
+    outputs: [],
+    type: BitcoinAbiTypes.Function,
+  },
+];
 
 const FAUCET = 'https://faucet.opnet.org';
 
@@ -21,10 +39,6 @@ interface DeployedToken {
   deployer: string;
 }
 
-// publicMint selector from MintableToken ABI (sha256-based)
-// We'll compute it or hardcode after build. For now use a placeholder.
-// The actual selector comes from the opnet-transform build output.
-const PUBLIC_MINT_SELECTOR = 0x94d0d1a5; // publicMint(uint256) — from opnet-transform
 
 const genLogo = (sym: string): string => {
   const s = (sym || '?').toUpperCase().slice(0, 3);
@@ -34,7 +48,7 @@ const genLogo = (sym: string): string => {
 };
 
 const TokenGallery: React.FC = () => {
-  const { walletAddress, walletInstance, openConnectModal } = useWalletConnect();
+  const { walletAddress, walletInstance, publicKey, openConnectModal } = useWalletConnect();
   const [tokens, setTokens] = useState<DeployedToken[]>([]);
   const [chainInfo, setChainInfo] = useState<Record<string, { totalSupply: bigint; confirmed: boolean }>>({});
   const [mintAddr, setMintAddr] = useState<string | null>(null);
@@ -81,6 +95,16 @@ const TokenGallery: React.FC = () => {
     localStorage.setItem('hub_deployed_tokens', JSON.stringify(updated));
   };
 
+  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+
+  const senderAddr = useMemo(() => {
+    if (!publicKey) return undefined;
+    try {
+      const hex = publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`;
+      return Address.fromString(hex);
+    } catch { return undefined; }
+  }, [publicKey]);
+
   const doMint = useCallback(async (token: DeployedToken) => {
     if (!walletAddress || !walletInstance) {
       openConnectModal();
@@ -93,11 +117,8 @@ const TokenGallery: React.FC = () => {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inst = walletInstance as any;
-    const web3 = inst.web3 || inst;
-    if (!web3?.signAndBroadcastInteraction) {
-      setMintResult({ ok: false, msg: 'Wallet does not support Web3 API. Use OP_WALLET.' });
+    if (!senderAddr) {
+      setMintResult({ ok: false, msg: 'Wallet public key not available. Reconnect wallet.' });
       return;
     }
 
@@ -106,23 +127,30 @@ const TokenGallery: React.FC = () => {
 
     try {
       const rawAmount = BigInt(Math.floor(amt * Math.pow(10, token.decimals)));
-      const writer = new BinaryWriter();
-      writer.writeSelector(PUBLIC_MINT_SELECTOR);
-      writer.writeU256(rawAmount);
 
-      const result = await web3.signAndBroadcastInteraction({
-        calldata: writer.getBuffer(),
-        to: token.address,
-        from: walletAddress,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(
+        token.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any,
+      );
+      const sim = await contract.publicMint(rawAmount);
+
+      if ((sim as CallResult).revert) {
+        throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
+      }
+
+      const receipt = await (sim as CallResult).sendTransaction({
+        signer: null,
+        mldsaSigner: null,
+        refundTo: walletAddress!,
+        maximumAllowedSatToSpend: 100_000n,
+        network: NETWORK,
         feeRate: 10,
-        priorityFee: 10_000n,
-        gasSatFee: 100_000n,
+        priorityFee: 50_000n,
         revealMLDSAPublicKey: true,
         linkMLDSAPublicKeyToAddress: true,
       });
 
-      const tx = Array.isArray(result) ? result[1] : result;
-      const txHash = tx?.result || tx?.transactionId || '';
+      const txHash = receipt.transactionId || '';
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
@@ -133,7 +161,7 @@ const TokenGallery: React.FC = () => {
     } finally {
       setMinting(false);
     }
-  }, [walletAddress, walletInstance, mintAmount, openConnectModal]);
+  }, [walletAddress, walletInstance, mintAmount, openConnectModal, provider, senderAddr]);
 
   const connected = !!walletAddress;
   const inputStyle: React.CSSProperties = {

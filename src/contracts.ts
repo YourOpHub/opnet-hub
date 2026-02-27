@@ -70,15 +70,16 @@ export const STAKING_ADDRESS = 'opt1sqpxk2hqaux0upqyz7wz3egnv8rfjrusj058388t8';
 export const STAKING_PUBKEY = '0xb921bda1595223005ff40de0bcb50572bd9401865a5b67f5383d48f877143928';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
-/** Staking selectors (from opnet-transform) */
+/** Staking selectors (from opnet-transform build output) */
 export const STAKING_SELECTORS = {
-    stake: 0x0, // will be set after build
-    unstake: 0x0,
-    claim: 0x0,
-    stakedAmount: 0x0,
-    stakedReward: 0x0,
-    totalStaked: 0x0,
-    getRewardRate: 0x0,
+    stake: 0x0ccd8b3d,
+    unstake: 0x5e445065,
+    claim: 0xa443c5e4,
+    stakedAmount: 0x6ae777fd,
+    stakedReward: 0x07350949,
+    totalStaked: 0xbacead82,
+    getRewardRate: 0x5bb1159d,
+    setRewardRate: 0x0888d584,
 } as const;
 
 /** OPScan explorer — works for testnet contract/tx inspection */

@@ -89,17 +89,40 @@ const Staking: React.FC = () => {
     ]).finally(() => setBalLoading(false));
   }, [walletAddress, hashedMLDSAKey, publicKey, refreshKey]);
 
-  // Fetch staking stats (when contract is deployed)
+  // Fetch live staking stats from contract
   useEffect(() => {
     if (!STAKING_DEPLOYED || !senderAddr) return;
-    // TODO: query stakedAmount, stakedReward, totalStaked from contract
-  }, [senderAddr, refreshKey]);
+    let cancelled = false;
+    const fetchStats = async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
+        const [stakedRes, rewardRes, totalRes] = await Promise.allSettled([
+          stakingContract.stakedAmount(senderAddr),
+          stakingContract.stakedReward(senderAddr),
+          stakingContract.totalStaked(),
+        ]);
+        if (cancelled) return;
+        if (stakedRes.status === 'fulfilled' && !(stakedRes.value as CallResult).revert) {
+          const decoded = (stakedRes.value as CallResult).properties as Record<string, unknown>;
+          if (decoded?.amount) setUserStaked(BigInt(String(decoded.amount)));
+        }
+        if (rewardRes.status === 'fulfilled' && !(rewardRes.value as CallResult).revert) {
+          const decoded = (rewardRes.value as CallResult).properties as Record<string, unknown>;
+          if (decoded?.amount) setUserRewards(BigInt(String(decoded.amount)));
+        }
+        if (totalRes.status === 'fulfilled' && !(totalRes.value as CallResult).revert) {
+          const decoded = (totalRes.value as CallResult).properties as Record<string, unknown>;
+          if (decoded?.amount) setTotalStakedOnChain(BigInt(String(decoded.amount)));
+        }
+      } catch { /* ignore */ }
+    };
+    fetchStats();
+    const iv = setInterval(fetchStats, 30000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [senderAddr, provider, refreshKey]);
 
   const doStake = useCallback(async () => {
-    if (!STAKING_DEPLOYED) {
-      setResult({ type: 'error', msg: 'Staking contract not yet deployed. Run: OPNET_MNEMONIC="..." node deploy/deploy-staking.mjs' });
-      return;
-    }
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
     const amt = parseFloat(stakeAmount);
     if (!amt || amt <= 0) { setResult({ type: 'error', msg: 'Enter a valid amount' }); return; }
@@ -218,22 +241,10 @@ const Staking: React.FC = () => {
         </p>
       </div>
 
-      {!STAKING_DEPLOYED && (
-        <div className="P" style={{ padding: 16, marginBottom: 16, border: '1px solid rgba(234,179,8,.2)', background: 'rgba(234,179,8,.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: '1.1rem' }}>🚧</span>
-            <span style={{ fontWeight: 700, color: 'var(--y)' }}>Staking Contract — Ready to Deploy</span>
-          </div>
-          <p style={{ fontSize: '.72rem', color: 'var(--t3)', lineHeight: 1.5, marginBottom: 8 }}>
-            The <strong>SimpleStaking</strong> contract is ready. Deploy it with:
-          </p>
-          <code style={{ display: 'block', padding: '8px 12px', background: 'var(--bg3)', borderRadius: 6, fontSize: '.62rem', color: 'var(--c2)', wordBreak: 'break-all', lineHeight: 1.6 }}>
-            cd deploy/OP_20 && npx asc --target staking<br />
-            OPNET_MNEMONIC="..." node deploy/deploy-staking.mjs
-          </code>
-          <p style={{ fontSize: '.6rem', color: 'var(--t4)', marginTop: 6 }}>
-            Contract: <code>deploy/OP_20/src/staking/SimpleStaking.ts</code> · Token: MINE ({STAKING_TOKEN.address.slice(0, 20)}...)
-          </p>
+      {STAKING_DEPLOYED && (
+        <div style={{ marginBottom: 12, padding: '6px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.62rem', color: 'var(--g)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', display: 'inline-block' }} />
+          Contract live on testnet · <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)', textDecoration: 'none' }}>View on OPScan ↗</a>
         </div>
       )}
 

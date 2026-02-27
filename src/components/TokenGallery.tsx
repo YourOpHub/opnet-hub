@@ -134,12 +134,10 @@ const TokenGallery: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const receipt = await (sim as CallResult).sendTransaction({
         refundTo: walletAddress!,
-        maximumAllowedSatToSpend: 100_000n,
+        maximumAllowedSatToSpend: 10_000n,
         network: NETWORK,
         feeRate: 10,
-        priorityFee: 50_000n,
-        revealMLDSAPublicKey: true,
-        linkMLDSAPublicKeyToAddress: true,
+        priorityFee: 10_000n,
       } as any);
 
       const txHash = receipt.transactionId || '';

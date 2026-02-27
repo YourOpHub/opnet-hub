@@ -161,25 +161,27 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
         width: '100%', maxWidth: 420, maxHeight: '90vh', overflow: 'auto',
-        background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 16,
-        padding: '20px 22px', boxShadow: '0 24px 48px rgba(0,0,0,.5)',
+        background: 'rgba(10,10,18,.95)', border: '1px solid rgba(255,255,255,.08)',
+        borderRadius: 22, padding: '24px 22px',
+        boxShadow: '0 24px 64px rgba(0,0,0,.6)', backdropFilter: 'blur(24px)',
       }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>💧 Liquidity</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <span style={{ fontWeight: 800, fontSize: '.95rem', color: '#fff', letterSpacing: '-.02em' }}>Liquidity</span>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: 'var(--t3)', fontSize: '1.2rem',
-            cursor: 'pointer', padding: '4px 8px', lineHeight: 1,
+            background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
+            borderRadius: 8, color: '#5a6578', fontSize: '.9rem',
+            cursor: 'pointer', padding: '4px 10px', lineHeight: 1, transition: 'all .2s',
           }}>&times;</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg3)', borderRadius: 10, padding: 3 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 18, background: 'rgba(255,255,255,.03)', borderRadius: 12, padding: 3 }}>
           {(['add', 'remove'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: tab === t ? (t === 'add' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'linear-gradient(135deg, #ef4444, #dc2626)') : 'transparent',
-              color: tab === t ? '#fff' : 'var(--t3)', fontWeight: 700, fontSize: '.8rem',
+              color: tab === t ? '#fff' : '#5a6578', fontWeight: 700, fontSize: '.78rem',
               fontFamily: 'var(--ff)', transition: 'all .2s',
             }}>
               {t === 'add' ? '+ Add' : '− Remove'}
@@ -188,23 +190,25 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         </div>
 
         {/* Pool Info */}
-        <div style={{ padding: '10px 12px', background: 'var(--bg3)', borderRadius: 10, marginBottom: 14, fontSize: '.7rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ color: 'var(--t3)' }}>Pool</span>
-            <span style={{ color: 'var(--w)', fontWeight: 700 }}>⛏️ MINE / ⚡ VIBE</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ color: 'var(--t3)' }}>Reserves</span>
-            <span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>{reserveA.toLocaleString()} / {reserveB.toLocaleString()}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ color: 'var(--t3)' }}>Rate</span>
-            <span style={{ fontFamily: 'var(--fm)', color: 'var(--o)' }}>1 MINE = {ratio.toFixed(2)} VIBE</span>
+        <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,.025)', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', marginBottom: 16, fontSize: '.68rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: hasLP ? 8 : 0 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>MINE</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 700, fontSize: '.72rem' }}>{reserveA.toLocaleString()}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>VIBE</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 700, fontSize: '.72rem' }}>{reserveB.toLocaleString()}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>RATE</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#F7931A', fontWeight: 700, fontSize: '.72rem' }}>1:{ratio.toFixed(1)}</div>
+            </div>
           </div>
           {hasLP && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--bd)', paddingTop: 4, marginTop: 4 }}>
-              <span style={{ color: 'var(--t3)' }}>Your Share</span>
-              <span style={{ fontFamily: 'var(--fm)', color: '#0ea5e9', fontWeight: 700 }}>{poolShare.toFixed(2)}%</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 8 }}>
+              <span style={{ color: '#5a6578', fontSize: '.6rem' }}>Your Share</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#0ea5e9', fontWeight: 700, fontSize: '.72rem' }}>{poolShare.toFixed(2)}%</span>
             </div>
           )}
         </div>
@@ -212,40 +216,40 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {/* ADD TAB */}
         {tab === 'add' && (
           <div>
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>⛏️ MINE</span>
-                <span style={{ fontSize: '.6rem', color: 'var(--t4)' }}>Balance: {fmtBal(mineBal)}</span>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '.58rem', color: '#5a6578', fontWeight: 500 }}>MINE</span>
+                <span style={{ fontSize: '.55rem', color: '#3d4555' }}>Balance: {fmtBal(mineBal)}</span>
               </div>
               <div style={{ position: 'relative' }}>
                 <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
                   placeholder="0.0" style={{
-                    width: '100%', padding: '12px 70px 12px 12px', borderRadius: 10,
-                    border: '1px solid var(--bd)', background: 'var(--bg3)', color: 'var(--w)',
-                    fontSize: '.9rem', fontFamily: 'var(--fm)', outline: 'none', boxSizing: 'border-box',
+                    width: '100%', padding: '14px 70px 14px 14px', borderRadius: 14,
+                    border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
+                    fontSize: '.9rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none', boxSizing: 'border-box',
                   }} />
                 {mineBal != null && mineBal > 0n && (
                   <button onClick={() => setMineAmt((Number(mineBal) / 1e8).toString())} style={{
-                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                    padding: '4px 10px', borderRadius: 6, border: '1px solid var(--o)',
-                    background: 'rgba(247,147,26,.1)', color: 'var(--o)', cursor: 'pointer',
-                    fontSize: '.65rem', fontWeight: 700, fontFamily: 'var(--ff)',
+                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                    padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(247,147,26,.2)',
+                    background: 'rgba(247,147,26,.08)', color: '#F7931A', cursor: 'pointer',
+                    fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)',
                   }}>MAX</button>
                 )}
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', color: 'var(--t4)', fontSize: '1rem', margin: '6px 0' }}>+</div>
+            <div style={{ textAlign: 'center', color: '#3d4555', fontSize: '.85rem', margin: '4px 0', fontWeight: 700 }}>+</div>
 
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>⚡ VIBE (auto)</span>
-                <span style={{ fontSize: '.6rem', color: 'var(--t4)' }}>Balance: {fmtBal(vibeBal)}</span>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '.58rem', color: '#5a6578', fontWeight: 500 }}>VIBE (auto)</span>
+                <span style={{ fontSize: '.55rem', color: '#3d4555' }}>Balance: {fmtBal(vibeBal)}</span>
               </div>
               <input type="number" value={vibeAmt} readOnly style={{
-                width: '100%', padding: '12px', borderRadius: 10,
-                border: '1px solid var(--bd)', background: 'rgba(255,255,255,.02)', color: 'var(--t2)',
-                fontSize: '.9rem', fontFamily: 'var(--fm)', outline: 'none', boxSizing: 'border-box',
+                width: '100%', padding: '14px', borderRadius: 14,
+                border: '1px solid rgba(255,255,255,.04)', background: 'rgba(255,255,255,.015)', color: '#8b95a9',
+                fontSize: '.9rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none', boxSizing: 'border-box',
               }} />
             </div>
 
@@ -262,18 +266,20 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
             {connected ? (
               <button onClick={addLiquidity} disabled={busy || !mineAmt} style={{
-                width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: busy ? 'var(--bg4)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                color: '#fff', fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
+                width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                color: '#fff', fontWeight: 700, fontSize: '.82rem', fontFamily: 'var(--ff)',
                 opacity: busy || !mineAmt ? 0.5 : 1, transition: 'all .2s',
+                boxShadow: !busy && mineAmt ? '0 4px 16px rgba(14,165,233,.2)' : 'none',
               }}>
-                {busy ? (step || 'Processing...') : '💧 Add Liquidity'}
+                {busy ? (step || 'Processing...') : 'Add Liquidity'}
               </button>
             ) : (
               <button onClick={openConnectModal} style={{
-                width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer',
                 background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
-                fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
+                fontWeight: 700, fontSize: '.82rem', fontFamily: 'var(--ff)',
+                boxShadow: '0 4px 16px rgba(14,165,233,.2)',
               }}>Connect Wallet</button>
             )}
           </div>
@@ -284,33 +290,33 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           <div>
             {hasLP ? (
               <>
-                <div style={{ padding: '14px', background: 'var(--bg3)', borderRadius: 10, marginBottom: 14 }}>
-                  <div style={{ fontSize: '.65rem', color: 'var(--t4)', marginBottom: 8 }}>Your Position</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: '.8rem', color: 'var(--t2)' }}>⛏️ MINE</span>
-                    <span style={{ fontSize: '.9rem', fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>{lpMine.toLocaleString()}</span>
+                <div style={{ padding: '16px', background: 'rgba(255,255,255,.025)', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', marginBottom: 14 }}>
+                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>Your Position</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: '.75rem', color: '#8b95a9' }}>MINE</span>
+                    <span style={{ fontSize: '.85rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpMine.toLocaleString()}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: '.8rem', color: 'var(--t2)' }}>⚡ VIBE</span>
-                    <span style={{ fontSize: '.9rem', fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>{lpVibe.toLocaleString()}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: '.75rem', color: '#8b95a9' }}>VIBE</span>
+                    <span style={{ fontSize: '.85rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpVibe.toLocaleString()}</span>
                   </div>
-                  <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>Pool Share</span>
-                    <span style={{ fontSize: '.85rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>{poolShare.toFixed(2)}%</span>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '.58rem', color: '#5a6578' }}>Pool Share</span>
+                    <span style={{ fontSize: '.88rem', fontWeight: 800, color: '#0ea5e9', fontFamily: "'JetBrains Mono', monospace" }}>{poolShare.toFixed(2)}%</span>
                   </div>
                 </div>
 
                 <button onClick={removeLiquidity} disabled={busy} style={{
-                  width: '100%', padding: '14px', borderRadius: 10,
-                  border: '1px solid rgba(239,68,68,.3)', background: 'rgba(239,68,68,.08)',
-                  color: '#ef4444', fontWeight: 700, fontSize: '.85rem', cursor: 'pointer',
+                  width: '100%', padding: '15px', borderRadius: 14,
+                  border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)',
+                  color: '#ef4444', fontWeight: 700, fontSize: '.82rem', cursor: 'pointer',
                   fontFamily: 'var(--ff)', opacity: busy ? 0.5 : 1, transition: 'all .2s',
                 }}>
                   Remove Full Position
                 </button>
 
-                <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.06)', borderRadius: 8, fontSize: '.6rem', color: 'var(--y)' }}>
-                  SimplePool v1 — positions tracked locally. On-chain LP tokens with proportional withdrawal in v2.
+                <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.04)', borderRadius: 10, border: '1px solid rgba(234,179,8,.08)', fontSize: '.58rem', color: '#f59e0b' }}>
+                  SimplePool v1 — positions tracked locally. On-chain LP tokens in v2.
                 </div>
               </>
             ) : (
@@ -336,8 +342,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {/* Pool link */}
         <div style={{ marginTop: 14, textAlign: 'center' }}>
           <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>
-            View pool contract on OPScan ↗
+            style={{ fontSize: '.56rem', color: '#38bdf8', textDecoration: 'none' }}>
+            View pool on OPScan ↗
           </a>
         </div>
       </div>

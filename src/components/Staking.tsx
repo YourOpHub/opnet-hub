@@ -262,111 +262,93 @@ const Staking: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 4 }}>🏦 Staking</h2>
-        <p style={{ color: 'var(--t3)', fontSize: '.78rem' }}>
-          Stake <strong>MINE</strong> tokens to earn rewards — same token used in Swap & Mint
-        </p>
-      </div>
-
-      {STAKING_DEPLOYED && (
-        <div style={{ marginBottom: 12, padding: '6px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.62rem', color: 'var(--g)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', display: 'inline-block' }} />
-          Contract live on testnet · <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)', textDecoration: 'none' }}>View on OPScan ↗</a>
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 4, letterSpacing: '-.02em' }}>Staking</h2>
+          <p style={{ color: '#5a6578', fontSize: '.75rem' }}>
+            Stake <strong style={{ color: '#fff' }}>MINE</strong> to earn block rewards
+          </p>
         </div>
-      )}
-
-      {/* Wallet Balances */}
-      <div className="P" style={{ padding: 16, marginBottom: 16 }}>
-        <div className="Lb" style={{ marginBottom: 10 }}>💰 Your Wallet</div>
-        {!connected ? (
-          <div style={{ textAlign: 'center', padding: 16 }}>
-            <button onClick={openConnectModal} style={{
-              padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
-              fontWeight: 700, fontSize: '.82rem', fontFamily: 'var(--ff)',
-            }}>Connect Wallet</button>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-            <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: 'var(--rad)', textAlign: 'center' }}>
-              <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginBottom: 4 }}>⛏️ MINE</div>
-              <div style={{ fontWeight: 700, fontSize: '.95rem', color: '#F7931A', fontFamily: 'var(--fm)' }}>
-                {balLoading ? '...' : fmtToken(mineBalance)}
-              </div>
-            </div>
-            <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: 'var(--rad)', textAlign: 'center' }}>
-              <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginBottom: 4 }}>⚡ VIBE</div>
-              <div style={{ fontWeight: 700, fontSize: '.95rem', color: '#0ea5e9', fontFamily: 'var(--fm)' }}>
-                {balLoading ? '...' : fmtToken(vibeBalance)}
-              </div>
-            </div>
-            <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: 'var(--rad)', textAlign: 'center' }}>
-              <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginBottom: 4 }}>₿ BTC</div>
-              <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>
-                {balLoading ? '...' : (Number(btcBalance) / 1e8).toFixed(4)}
-              </div>
-            </div>
-          </div>
+        {STAKING_DEPLOYED && (
+          <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.12)', textDecoration: 'none', fontSize: '.58rem', color: '#10b981', fontWeight: 600 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            Live on Testnet ↗
+          </a>
         )}
       </div>
 
+      {/* Wallet Balances */}
+      {!connected ? (
+        <div style={{ marginBottom: 16, padding: '28px', borderRadius: 20, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', textAlign: 'center' }}>
+          <div style={{ fontSize: '.75rem', color: '#5a6578', marginBottom: 12 }}>Connect your wallet to start staking</div>
+          <button onClick={openConnectModal} style={{
+            padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
+            fontWeight: 700, fontSize: '.82rem', fontFamily: 'var(--ff)',
+            boxShadow: '0 4px 16px rgba(14,165,233,.2)',
+          }}>Connect Wallet</button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+          {[
+            { label: 'MINE', value: balLoading ? '...' : fmtToken(mineBalance), color: '#F7931A' },
+            { label: 'VIBE', value: balLoading ? '...' : fmtToken(vibeBalance), color: '#0ea5e9' },
+            { label: 'BTC', value: balLoading ? '...' : (Number(btcBalance) / 1e8).toFixed(4), color: '#F7931A' },
+          ].map(b => (
+            <div key={b.label} style={{ padding: '14px 12px', borderRadius: 16, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', textAlign: 'center' }}>
+              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{b.label}</div>
+              <div style={{ fontWeight: 700, fontSize: '.95rem', color: b.color, fontFamily: "'JetBrains Mono', monospace" }}>{b.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* APR & Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 16 }}>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Projected APR</div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--g)', fontFamily: 'var(--fm)' }}>{projectedAPR > 0 ? (projectedAPR > 10000 ? `${(projectedAPR / 1000).toFixed(0)}K` : projectedAPR.toFixed(0)) + '%' : '—'}</div>
-        </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Total Staked</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--p)', fontFamily: 'var(--fm)' }}>{totalStakedNum > 0 ? fmtToken(totalStakedOnChain) : '—'}</div>
-        </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Your Staked</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)' }}>{userStakedNum > 0 ? fmtToken(userStaked) : '—'}</div>
-        </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Rewards</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--g)', fontFamily: 'var(--fm)' }}>{userRewardsNum > 0 ? fmtToken(userRewards) : '—'}</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+        {[
+          { label: 'APR', value: projectedAPR > 0 ? (projectedAPR > 10000 ? `${(projectedAPR / 1000).toFixed(0)}K` : projectedAPR.toFixed(0)) + '%' : '—', color: '#10b981', big: true },
+          { label: 'Total Staked', value: totalStakedNum > 0 ? fmtToken(totalStakedOnChain) : '—', color: '#a78bfa' },
+          { label: 'Your Staked', value: userStakedNum > 0 ? fmtToken(userStaked) : '—', color: '#F7931A' },
+          { label: 'Rewards', value: userRewardsNum > 0 ? fmtToken(userRewards) : '—', color: '#10b981' },
+        ].map(s => (
+          <div key={s.label} style={{ padding: '16px 12px', borderRadius: 18, textAlign: 'center', background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+            <div style={{ fontSize: '.52rem', color: '#5a6578', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6, fontWeight: 600 }}>{s.label}</div>
+            <div style={{ fontSize: s.big ? '1.5rem' : '1.05rem', fontWeight: 800, color: s.color, fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Staking Interface */}
-      <div className="P" style={{ padding: 20, marginBottom: 16 }}>
-        <div className="Lb" style={{ marginBottom: 12 }}>Stake MINE Tokens</div>
-
-        {/* Token info banner */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 14, background: 'rgba(247,147,26,.05)', border: '1px solid rgba(247,147,26,.15)', borderRadius: 'var(--rad)' }}>
-          <span style={{ fontSize: '1.3rem' }}>⛏️</span>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--w)' }}>MINE — {STAKING_TOKEN.name}</div>
-            <div style={{ fontSize: '.55rem', color: 'var(--t4)', fontFamily: 'var(--fm)', wordBreak: 'break-all' }}>{STAKING_TOKEN.address}</div>
-          </div>
+      <div style={{ padding: '24px 22px', marginBottom: 16, borderRadius: 22, background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(20px)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <span style={{ fontSize: '.95rem', fontWeight: 800, color: '#fff', letterSpacing: '-.02em' }}>Stake MINE</span>
           {connected && (
-            <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-              <div style={{ fontSize: '.55rem', color: 'var(--t4)' }}>Balance</div>
-              <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)', fontSize: '.85rem' }}>{fmtToken(mineBalance)}</div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 2 }}>AVAILABLE</div>
+              <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: "'JetBrains Mono', monospace", fontSize: '.82rem' }}>{fmtToken(mineBalance)}</div>
             </div>
           )}
         </div>
 
         {/* Stake input */}
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>Amount to Stake</div>
+          <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 6, fontWeight: 500 }}>Amount to Stake</div>
           <div style={{ position: 'relative' }}>
             <input type="number" value={stakeAmount} onChange={e => setStakeAmount(e.target.value)}
               placeholder="0" style={{
-                width: '100%', padding: '14px 80px 14px 14px', borderRadius: 10,
-                border: '1px solid var(--bd)', background: 'var(--bg3)', color: 'var(--w)',
-                fontSize: '.9rem', fontFamily: 'var(--fm)', outline: 'none', boxSizing: 'border-box',
+                width: '100%', padding: '16px 80px 16px 16px', borderRadius: 14,
+                border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
+                fontSize: '.95rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none', boxSizing: 'border-box',
+                transition: 'border-color .2s',
               }} />
             {connected && mineBalance > 0n && (
               <button onClick={() => setStakeAmount((Number(mineBalance) / 1e8).toString())}
                 style={{
-                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                  padding: '6px 14px', borderRadius: 6, border: '1px solid var(--p)',
-                  background: 'rgba(168,85,247,.1)', color: 'var(--p)', cursor: 'pointer',
-                  fontSize: '.7rem', fontWeight: 700, fontFamily: 'var(--ff)',
+                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(167,139,250,.2)',
+                  background: 'rgba(167,139,250,.08)', color: '#a78bfa', cursor: 'pointer',
+                  fontSize: '.65rem', fontWeight: 700, fontFamily: 'var(--ff)', transition: 'all .2s',
                 }}>MAX</button>
             )}
           </div>
@@ -375,10 +357,11 @@ const Staking: React.FC = () => {
         {/* Stake button */}
         <button onClick={doStake} disabled={busy || !stakeAmount}
           style={{
-            width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: busy ? 'var(--bg4)' : 'linear-gradient(135deg, #a78bfa, #7c3aed)',
+            width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer',
+            background: busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #a78bfa, #7c3aed)',
             color: '#fff', fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
             opacity: busy || !stakeAmount ? 0.5 : 1, transition: 'all .2s', marginBottom: 10,
+            boxShadow: !busy && stakeAmount ? '0 4px 16px rgba(167,139,250,.2)' : 'none',
           }}>
           {staking ? (step || 'Staking...') : `Stake MINE`}
         </button>
@@ -386,20 +369,20 @@ const Staking: React.FC = () => {
         {/* Unstake section */}
         {STAKING_DEPLOYED && userStakedNum > 0 && (
           <>
-            <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>Amount to Unstake</div>
+            <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 6, fontWeight: 500 }}>Amount to Unstake</div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
                 placeholder="0" style={{
-                  flex: 1, padding: '12px', borderRadius: 10, border: '1px solid var(--bd)',
-                  background: 'var(--bg3)', color: 'var(--w)', fontSize: '.85rem', fontFamily: 'var(--fm)',
-                  outline: 'none', boxSizing: 'border-box',
+                  flex: 1, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)',
+                  background: 'rgba(255,255,255,.025)', color: '#fff', fontSize: '.85rem', fontFamily: "'JetBrains Mono', monospace",
+                  fontWeight: 700, outline: 'none', boxSizing: 'border-box',
                 }} />
               <button onClick={doUnstake} disabled={busy || !unstakeAmount}
                 style={{
-                  padding: '12px 20px', borderRadius: 10,
-                  border: '1px solid rgba(239,68,68,.3)', background: 'rgba(239,68,68,.06)',
-                  color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: '.8rem', fontFamily: 'var(--ff)',
-                  opacity: busy || !unstakeAmount ? 0.5 : 1,
+                  padding: '14px 22px', borderRadius: 14,
+                  border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)',
+                  color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: '.78rem', fontFamily: 'var(--ff)',
+                  opacity: busy || !unstakeAmount ? 0.5 : 1, transition: 'all .2s',
                 }}>
                 {unstaking ? '⏳...' : 'Unstake'}
               </button>
@@ -411,10 +394,11 @@ const Staking: React.FC = () => {
         {STAKING_DEPLOYED && userRewardsNum > 0 && (
           <button onClick={doClaim} disabled={busy}
             style={{
-              width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, var(--g), #16a34a)', color: '#000',
+              width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer',
+              background: busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #10b981, #059669)', color: '#000',
               fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
               opacity: busy ? 0.5 : 1, transition: 'all .2s',
+              boxShadow: !busy ? '0 4px 16px rgba(16,185,129,.2)' : 'none',
             }}>
             {claiming ? (step || 'Claiming...') : `Claim ${fmtToken(userRewards)} MINE Rewards`}
           </button>
@@ -435,33 +419,30 @@ const Staking: React.FC = () => {
       </div>
 
       {/* Token Verification */}
-      <div className="P" style={{ padding: 16, marginBottom: 16 }}>
-        <div className="Lb" style={{ marginBottom: 10 }}>🔗 Token Verification</div>
-        <p style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.5, marginBottom: 10 }}>
-          All features use the <strong>same MINE token contract</strong>. Verify:
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ padding: '18px 20px', marginBottom: 16, borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+        <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>Token Verification</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
             { label: 'Mint (publicMint)', addr: TESTNET_CONTRACTS.MINE.address },
             { label: 'Swap Pool (MINE/VIBE)', addr: TESTNET_CONTRACTS.MINE.address },
             { label: 'Staking', addr: STAKING_TOKEN.address },
           ].map(item => (
-            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 8 }}>
-              <span style={{ fontSize: '.7rem', color: 'var(--g)' }}>✓</span>
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
+              <span style={{ fontSize: '.65rem', color: '#10b981' }}>✓</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '.68rem', fontWeight: 600, color: 'var(--w)' }}>{item.label}</div>
-                <div style={{ fontSize: '.5rem', fontFamily: 'var(--fm)', color: 'var(--t4)', wordBreak: 'break-all' }}>{item.addr}</div>
+                <div style={{ fontSize: '.68rem', fontWeight: 600, color: '#fff' }}>{item.label}</div>
+                <div style={{ fontSize: '.48rem', fontFamily: "'JetBrains Mono', monospace", color: '#3d4555', wordBreak: 'break-all' }}>{item.addr}</div>
               </div>
               <a href={getContractOpscanUrl(item.addr)} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '.5rem', color: 'var(--c2)', textDecoration: 'none' }}>OPScan ↗</a>
+                style={{ fontSize: '.5rem', color: '#38bdf8', textDecoration: 'none' }}>OPScan ↗</a>
             </div>
           ))}
         </div>
       </div>
 
       {/* How it works */}
-      <div className="P" style={{ padding: 16 }}>
-        <div className="Lb" style={{ marginBottom: 10 }}>How Staking Works</div>
+      <div style={{ padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+        <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>How It Works</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
             { step: '1', title: 'Approve & Stake', desc: 'Approve the staking contract to spend your MINE, then stake' },
@@ -470,13 +451,13 @@ const Staking: React.FC = () => {
           ].map(s => (
             <div key={s.step} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
               <div style={{
-                minWidth: 28, height: 28, borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--p), #7c3aed)',
+                minWidth: 26, height: 26, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #a78bfa, #7c3aed)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: '.75rem', color: '#fff',
+                fontWeight: 800, fontSize: '.7rem', color: '#fff', flexShrink: 0,
               }}>{s.step}</div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: 2 }}>{s.title}</div>
+                <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 2, color: '#fff' }}>{s.title}</div>
                 <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>{s.desc}</div>
               </div>
             </div>

@@ -463,27 +463,26 @@ const SwapUI: React.FC = () => {
 
   return (
     <div>
-      <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>🔄 Token Swap</div>
-        <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 440, margin: '0 auto' }}>
-          Swap MINE ↔ VIBE on Bitcoin L1. {connected ? 'Real on-chain OP-20 transfer via your wallet.' : 'Connect wallet for real transactions.'}
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 440, margin: '0 auto' }}>
-        <div className="P" style={{ padding: 20, position: 'relative' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div className="Lb" style={{ marginBottom: 0 }}>Swap</div>
+      <div style={{ maxWidth: 460, margin: '0 auto' }}>
+        <div style={{
+          padding: '24px 22px', position: 'relative', borderRadius: 22,
+          background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)',
+          backdropFilter: 'blur(20px)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '.95rem', fontWeight: 800, color: 'var(--w)', letterSpacing: '-.02em' }}>Swap</span>
+              {connected && <span style={{ fontSize: '.5rem', background: 'rgba(16,185,129,.08)', color: '#10b981', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>LIVE</span>}
+            </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              {connected && <span style={{ fontSize: '.55rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>LIVE</span>}
               <button onClick={() => { setShowLiquidity(!showLiquidity); setShowSettings(false); }} style={{
-                background: showLiquidity ? 'rgba(14,165,233,.12)' : 'none', border: '1px solid ' + (showLiquidity ? 'rgba(14,165,233,.3)' : 'var(--bd)'), borderRadius: 'var(--rad)',
-                color: showLiquidity ? '#0ea5e9' : 'var(--t3)', padding: '4px 10px', fontSize: '.7rem', cursor: 'pointer', fontFamily: 'var(--ff)'
+                background: showLiquidity ? 'rgba(14,165,233,.1)' : 'rgba(255,255,255,.03)', border: '1px solid ' + (showLiquidity ? 'rgba(14,165,233,.25)' : 'rgba(255,255,255,.06)'), borderRadius: 10,
+                color: showLiquidity ? '#0ea5e9' : 'var(--t4)', padding: '6px 10px', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .2s'
               }}>💧</button>
               <button onClick={() => { setShowSettings(!showSettings); setShowLiquidity(false); }} style={{
-                background: 'none', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
-                color: 'var(--t3)', padding: '4px 10px', fontSize: '.7rem', cursor: 'pointer', fontFamily: 'var(--ff)'
-              }}>⚙️ {slippage}%</button>
+                background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10,
+                color: 'var(--t4)', padding: '6px 10px', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .2s'
+              }}>⚙ {slippage}%</button>
             </div>
           </div>
 
@@ -515,10 +514,10 @@ const SwapUI: React.FC = () => {
           />
 
           {/* From */}
-          <div style={{ padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)', marginBottom: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>From</span>
-              <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>Balance: {fmtBal(fromBal, from.decimals)}</span>
+          <div style={{ padding: '16px', background: 'rgba(255,255,255,.025)', borderRadius: 16, border: '1px solid rgba(255,255,255,.05)', marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '.62rem', color: 'var(--t4)', fontWeight: 500 }}>From</span>
+              <span style={{ fontSize: '.62rem', color: 'var(--t4)' }}>Balance: {fmtBal(fromBal, from.decimals)}</span>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input type="text" inputMode="decimal" value={fromAmt}
@@ -539,13 +538,14 @@ const SwapUI: React.FC = () => {
           </div>
 
           {/* Flip */}
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '-8px 0', position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '-6px 0', position: 'relative', zIndex: 2 }}>
             <button onClick={flip} style={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 34, height: 34, borderRadius: '50%',
               background: 'linear-gradient(135deg, var(--o), var(--o2))',
-              border: '3px solid var(--bg2)', color: '#000', fontSize: '1rem',
+              border: '3px solid rgba(10,10,18,.8)', color: '#000', fontSize: '.9rem',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'transform .2s', fontWeight: 700
+              transition: 'transform .25s cubic-bezier(.4,0,.2,1)', fontWeight: 700,
+              boxShadow: '0 2px 12px rgba(247,147,26,.2)',
             }}
               onMouseEnter={e => (e.currentTarget.style.transform = 'rotate(180deg)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'rotate(0deg)')}
@@ -553,10 +553,10 @@ const SwapUI: React.FC = () => {
           </div>
 
           {/* To */}
-          <div style={{ padding: '14px', background: 'rgba(255,255,255,.03)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)', marginTop: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>To (estimated)</span>
-              <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>Balance: {fmtBal(toBal, to.decimals)}</span>
+          <div style={{ padding: '16px', background: 'rgba(255,255,255,.025)', borderRadius: 16, border: '1px solid rgba(255,255,255,.05)', marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '.62rem', color: 'var(--t4)', fontWeight: 500 }}>To (estimated)</span>
+              <span style={{ fontSize: '.62rem', color: 'var(--t4)' }}>Balance: {fmtBal(toBal, to.decimals)}</span>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div style={{ flex: 1, fontSize: '1.4rem', fontFamily: 'var(--fm)', fontWeight: 700, color: toVal > 0 ? 'var(--w)' : 'var(--t4)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -648,8 +648,11 @@ const SwapUI: React.FC = () => {
         </div>
 
         {/* Live contracts */}
-        <div className="P" style={{ marginTop: 14, padding: 14, border: '1px solid rgba(247,147,26,.15)', background: 'rgba(247,147,26,.03)' }}>
-          <div className="Lb" style={{ marginBottom: 8, color: 'var(--o)' }}>Live Contracts — OPNet Testnet</div>
+        <div style={{ marginTop: 14, padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+          <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Tokens</span>
+            <span style={{ fontSize: '.48rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(247,147,26,.08)', color: '#F7931A', fontWeight: 700 }}>TESTNET</span>
+          </div>
           {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => {
             const onChainSupply = tokenSupplies[sym];
             const supplyHuman = onChainSupply != null
@@ -697,52 +700,52 @@ const SwapUI: React.FC = () => {
         </div>
 
         {/* Pool info */}
-        <div className="P" style={{ marginTop: 14, padding: 16, fontSize: '.75rem', color: 'var(--t3)', lineHeight: 1.5 }}>
-          <div className="Lb">Liquidity Pool (SimplePool AMM)</div>
-          <p>Constant-product AMM (x·y=k) for MINE/VIBE with 0.3% fee. Swap executes <strong>real on-chain transactions</strong>: approve + swap via the pool contract.</p>
+        <div style={{ marginTop: 14, padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+          <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>Pool — SimplePool AMM</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div style={{ padding: '10px', background: 'rgba(255,255,255,.02)', borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4, fontWeight: 600 }}>MINE</div>
+              <div style={{ fontFamily: 'var(--fm)', fontSize: '.78rem', fontWeight: 700, color: '#fff' }}>{reserveA.toLocaleString()}</div>
+            </div>
+            <div style={{ padding: '10px', background: 'rgba(255,255,255,.02)', borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4, fontWeight: 600 }}>VIBE</div>
+              <div style={{ fontFamily: 'var(--fm)', fontSize: '.78rem', fontWeight: 700, color: '#fff' }}>{reserveB.toLocaleString()}</div>
+            </div>
+            <div style={{ padding: '10px', background: 'rgba(255,255,255,.02)', borderRadius: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4, fontWeight: 600 }}>RATE</div>
+              <div style={{ fontFamily: 'var(--fm)', fontSize: '.78rem', fontWeight: 700, color: '#F7931A' }}>1:{(reserveB / reserveA).toFixed(1)}</div>
+            </div>
+          </div>
           {poolReady && (
-            <div style={{ marginTop: 6, padding: '6px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.62rem' }}>
-              <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 2 }}>Pool Contract Live</div>
-              <div style={{ fontFamily: 'var(--fm)', color: 'var(--t3)', wordBreak: 'break-all', fontSize: '.52rem' }}>{POOL_ADDRESS}</div>
+            <div style={{ padding: '8px 12px', background: 'rgba(16,185,129,.04)', border: '1px solid rgba(16,185,129,.1)', borderRadius: 10, fontSize: '.58rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                <span style={{ color: '#10b981', fontWeight: 600 }}>Pool Live</span>
+              </div>
               <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-                style={{ color: 'var(--c2)', fontSize: '.55rem' }}>View on OPScan ↗</a>
+                style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '.56rem' }}>OPScan ↗</a>
             </div>
           )}
           {!poolReady && (
-            <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(234,179,8,.08)', border: '1px solid rgba(234,179,8,.2)', borderRadius: 8, fontSize: '.62rem', color: 'var(--y)' }}>
-              Pool contract deployment in progress...
+            <div style={{ padding: '8px 12px', background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.12)', borderRadius: 10, fontSize: '.6rem', color: '#f59e0b' }}>
+              Pool deploying...
             </div>
           )}
-          <div style={{ marginTop: 10, padding: '10px', background: 'var(--bg3)', borderRadius: 'var(--rad)', fontSize: '.7rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span>MINE Reserve</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>{reserveA.toLocaleString()}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span>VIBE Reserve</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>{reserveB.toLocaleString()}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Rate</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--o)' }}>1 MINE = {(reserveB / reserveA).toFixed(1)} VIBE</span>
-            </div>
-          </div>
-          {btcPrice > 0 && <div style={{ marginTop: 6, fontSize: '.6rem', color: 'var(--t4)' }}>BTC: ${btcPrice.toLocaleString()}</div>}
-          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>OPScan Explorer →</a>
-            <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Docs →</a>
-          </div>
+          {btcPrice > 0 && <div style={{ marginTop: 8, fontSize: '.58rem', color: '#3d4555' }}>BTC: ${btcPrice.toLocaleString()}</div>}
         </div>
 
-        {/* Pool share info (compact) */}
+        {/* Pool share info */}
         {lpUserMine > 0 && (
-          <div className="P" style={{ marginTop: 14, padding: 14 }}>
+          <div style={{ marginTop: 14, padding: '16px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(14,165,233,.08)', backdropFilter: 'blur(16px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: '.65rem', color: 'var(--t4)', marginBottom: 2 }}>Your Pool Position</div>
-                <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--w)' }}>{lpUserMine.toLocaleString()} MINE + {lpUserVibe.toLocaleString()} VIBE</div>
+                <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>Your Position</div>
+                <div style={{ fontSize: '.82rem', fontWeight: 700, color: '#fff' }}>{lpUserMine.toLocaleString()} MINE + {lpUserVibe.toLocaleString()} VIBE</div>
               </div>
               {reserveA > 0 && (
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '.55rem', color: 'var(--t4)' }}>Pool Share</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>{((lpUserMine / reserveA) * 100).toFixed(2)}%</div>
+                  <div style={{ fontSize: '.5rem', color: '#5a6578', marginBottom: 2 }}>Share</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0ea5e9', fontFamily: "'JetBrains Mono', monospace" }}>{((lpUserMine / reserveA) * 100).toFixed(2)}%</div>
                 </div>
               )}
             </div>
@@ -751,20 +754,20 @@ const SwapUI: React.FC = () => {
 
         {/* Transaction History */}
         {history.length > 0 && (
-          <div className="P" style={{ marginTop: 14, padding: 16 }}>
-            <div className="Lb">Transaction History</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ marginTop: 14, padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+            <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>History</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {history.slice(0, 10).map(tx => (
-                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8, fontSize: '.72rem' }}>
-                  <span style={{ fontSize: '.9rem', width: 22, textAlign: 'center' }}>{tx.type === 'swap' ? '🔄' : '🎁'}</span>
+                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)', fontSize: '.72rem' }}>
+                  <span style={{ fontSize: '.85rem', width: 22, textAlign: 'center' }}>{tx.type === 'swap' ? '🔄' : '🎁'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--w)' }}>
+                    <div style={{ fontWeight: 700, color: '#fff', fontSize: '.72rem' }}>
                       {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : `Claimed ${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
                     </div>
-                    <div style={{ fontSize: '.58rem', color: 'var(--t4)' }}>{formatTimeAgo(tx.ts)}</div>
+                    <div style={{ fontSize: '.55rem', color: '#3d4555' }}>{formatTimeAgo(tx.ts)}</div>
                   </div>
                   {tx.txHash && (
-                    <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.56rem', color: 'var(--c2)', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
+                    <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.54rem', color: '#38bdf8', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
                   )}
                 </div>
               ))}

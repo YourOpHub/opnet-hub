@@ -131,9 +131,8 @@ const TokenGallery: React.FC = () => {
         throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const receipt = await (sim as CallResult).sendTransaction({
-        signer: null,
-        mldsaSigner: null,
         refundTo: walletAddress!,
         maximumAllowedSatToSpend: 100_000n,
         network: NETWORK,
@@ -141,7 +140,7 @@ const TokenGallery: React.FC = () => {
         priorityFee: 50_000n,
         revealMLDSAPublicKey: true,
         linkMLDSAPublicKeyToAddress: true,
-      });
+      } as any);
 
       const txHash = receipt.transactionId || '';
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });

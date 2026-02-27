@@ -172,20 +172,21 @@ const TokenLauncher: React.FC = () => {
         linkMLDSAPublicKeyToAddress: true,
       });
 
-      // 5. Broadcast both funding + deployment transactions
+      // 5. Broadcast via RPC provider (wallet doesn't support broadcast method)
       setDeployStep('Broadcasting transactions...');
       const [fundingTxHex, deployTxHex] = result.transaction;
       console.log('[Deploy] Contract address:', result.contractAddress);
       console.log('[Deploy] Funding TX hex length:', fundingTxHex?.length);
       console.log('[Deploy] Deploy TX hex length:', deployTxHex?.length);
 
-      const txsToBroadcast = [];
-      if (fundingTxHex) txsToBroadcast.push({ raw: fundingTxHex, psbt: false });
-      if (deployTxHex) txsToBroadcast.push({ raw: deployTxHex, psbt: false });
-
-      if (txsToBroadcast.length > 0 && web3.broadcast) {
-        const broadcastResults = await web3.broadcast(txsToBroadcast);
-        console.log('[Deploy] Broadcast results:', broadcastResults);
+      // Broadcast funding TX first, then deployment TX
+      if (fundingTxHex) {
+        const fundResult = await provider.sendRawTransaction(fundingTxHex, false);
+        console.log('[Deploy] Funding TX broadcast:', fundResult);
+      }
+      if (deployTxHex) {
+        const deployResult = await provider.sendRawTransaction(deployTxHex, false);
+        console.log('[Deploy] Deploy TX broadcast:', deployResult);
       }
 
       // Compute real txid from raw transaction hex

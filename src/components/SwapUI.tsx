@@ -188,9 +188,8 @@ const SwapUI: React.FC = () => {
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
       const minOut = BigInt(Math.floor(toVal * (1 - slippage / 100) * Math.pow(10, to.decimals)));
 
-      const txParams = {
-        signer: null as null,
-        mldsaSigner: null as null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const txParams: any = {
         refundTo: walletAddress!,
         maximumAllowedSatToSpend: 100_000n,
         network: NETWORK,
@@ -216,8 +215,9 @@ const SwapUI: React.FC = () => {
       const approveReceipt = await approveSim.sendTransaction(txParams);
       console.log('[Swap] Approve TX:', approveReceipt.transactionId);
 
-      // Brief wait for approval to propagate
-      await new Promise(r => setTimeout(r, 4000));
+      // Wait for approval to propagate on-chain
+      setSwapStep('Waiting for approval confirmation...');
+      await new Promise(r => setTimeout(r, 10000));
 
       // STEP 2: Call swap on pool
       setSwapStep('Executing swap on pool...');

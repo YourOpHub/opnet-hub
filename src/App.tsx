@@ -26,7 +26,6 @@ const LazyFallback = () => (
 
 const TABS = [
     { id: 'home', i: '🏠', l: 'Home' },
-    { id: 'portfolio', i: '💼', l: 'Portfolio' },
     { id: 'bob', i: '🤖', l: 'Bob AI' },
     { id: 'tools', i: '🛠️', l: 'Tools' },
     { id: 'swap', i: '🔄', l: 'Swap' },

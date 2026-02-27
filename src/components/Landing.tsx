@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS } from '../contracts';
+import { TESTNET_CONTRACTS, POOL_ADDRESS } from '../contracts';
 
 const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   const [p, setP] = useState<{ usd: number; usd_24h_change: number; usd_market_cap: number } | null>(null);
@@ -9,6 +9,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   const [epochNum, setEpochNum] = useState<number | null>(null);
   const [blockLog, setBlockLog] = useState<Array<{ height: number; time: Date; epoch: number }>>([]);
   const [gasParams, setGasParams] = useState<{ conservative?: number } | null>(null);
+  const [poolRate, setPoolRate] = useState<number | null>(null);
   const [ld, setLd] = useState(true);
   const [pulse, setPulse] = useState(false);
   const pulseRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -30,6 +31,19 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
         const gp = await opnet.getGasParameters();
         if (!cancelled && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative) });
       } catch { /* gas optional */ }
+
+      // Fetch pool reserves for MINE/VIBE price
+      try {
+        const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');
+        if (!cancelled && res) {
+          const hex = res.startsWith('0x') ? res.slice(2) : res;
+          if (hex.length >= 128) {
+            const r0 = Number(BigInt('0x' + hex.slice(0, 64))) / 1e8;
+            const r1 = Number(BigInt('0x' + hex.slice(64, 128))) / 1e8;
+            if (r0 > 0 && r1 > 0) setPoolRate(r1 / r0); // VIBE per MINE
+          }
+        }
+      } catch { /* pool optional */ }
 
       if (!cancelled) {
         setP(priceInfo);
@@ -117,7 +131,13 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
           </div>
           <div className="met-l">Gas (conservative)</div>
         </div>
-        <div className="P met"><div className="met-i">📦</div><div className="met-v" style={{ color: 'var(--g)' }}>26+</div><div className="met-l">dApps Live</div></div>
+        <div className="P met" onClick={() => onNav('swap')} style={{ cursor: 'pointer' }}>
+          <div className="met-i">�</div>
+          <div className="met-v" style={{ color: 'var(--p)', fontSize: '.9rem' }}>
+            {poolRate ? `1 MINE = ${poolRate.toFixed(1)} VIBE` : '—'}
+          </div>
+          <div className="met-l">Pool Rate</div>
+        </div>
         <div className="P met"><div className="met-i">🔗</div>
           <div className="met-v" style={{ fontSize: '1rem' }}>
             <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)', textDecoration: 'none', fontWeight: 700 }}>OPScan ↗</a>
@@ -172,9 +192,9 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
 
       <div className="fgrid">
         {[
+          { i: '🔄', t: 'Swap', d: 'Trade MINE/VIBE tokens on our SimplePool AMM.', tab: 'swap' },
           { i: '🤖', t: 'Bob AI Agent', d: 'OP_NET knowledge copilot — consensus, tokens, DeFi strategy.', tab: 'bob' },
           { i: '🚀', t: 'Token Launcher', d: 'Deploy OP-20 contracts directly on Bitcoin L1.', tab: 'launch' },
-          { i: '💼', t: 'Portfolio', d: 'Consensus-verified OP-20 holdings with live data.', tab: 'portfolio' },
           { i: '🛠️', t: 'Tools', d: 'Token explorer, converter, gas & mempool analytics.', tab: 'tools' },
           { i: '⛏️', t: 'Epoch Miner', d: 'Learn OP_NET epochs through interactive gameplay.', tab: 'game' },
           { i: '📰', t: 'News & Updates', d: 'Latest OP_NET protocol news and ecosystem developments.', tab: 'news' },

@@ -15,6 +15,7 @@ const SatoshiMiner = lazy(() => import('./components/SatoshiMiner'));
 const EcosystemDir = lazy(() => import('./components/EcosystemDir'));
 const Portfolio = lazy(() => import('./components/Portfolio'));
 const TokenLauncher = lazy(() => import('./components/TokenLauncher'));
+const Launchpad = lazy(() => import('./components/Launchpad'));
 const SwapUI = lazy(() => import('./components/SwapUI'));
 const TokenGallery = lazy(() => import('./components/TokenGallery'));
 const Analytics = lazy(() => import('./components/Analytics'));
@@ -114,7 +115,7 @@ const App: React.FC = () => {
             case 'swap': return <SwapUI />;
             case 'staking': return <Staking />;
             case 'analytics': return <Analytics />;
-            case 'launch': return <TokenLauncher />;
+            case 'launch': return <Launchpad />;
             case 'gallery': return <TokenGallery />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;

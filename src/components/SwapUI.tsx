@@ -60,8 +60,6 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
-    signer: null,
-    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 100_000n,
     network: NETWORK,
@@ -516,11 +514,12 @@ const SwapUI: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, alignItems: 'flex-end' }}>
                   <button onClick={() => claimTokens(sym)} disabled={claiming === sym}
                     style={{
-                      padding: '4px 10px', borderRadius: 6, border: 'none', cursor: claiming === sym ? 'wait' : 'pointer',
-                      background: 'linear-gradient(135deg, var(--o), var(--o2))', color: '#000',
-                      fontSize: '.58rem', fontWeight: 700, fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
+                      padding: '5px 12px', borderRadius: 6, border: 'none', cursor: claiming === sym ? 'wait' : 'pointer',
+                      background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: 'white',
+                      fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 8px rgba(168,85,247,.25)',
                     }}>
-                    {claiming === sym ? 'Claiming...' : `Get ${sym}`}
+                    {claiming === sym ? 'Claiming...' : `🎁 Claim ${sym}`}
                   </button>
                   <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize: '.54rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
@@ -538,7 +537,7 @@ const SwapUI: React.FC = () => {
             </div>
           )}
           <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)' }}>
-            Click <strong>Get</strong> to receive free tokens from our faucet. 5 min cooldown per token.
+            Click <strong>Claim</strong> to receive free testnet tokens from the faucet. 5 min cooldown per token.
           </div>
         </div>
 

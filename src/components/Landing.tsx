@@ -113,7 +113,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
         <div className="P met">
           <div className="met-i">⛽</div>
           <div className="met-v" style={{ color: 'var(--c)', fontSize: '1rem' }}>
-            {gasParams?.conservative ? `${(gasParams.conservative / 1e8).toFixed(6)} BTC` : '—'}
+            {gasParams?.conservative ? `${gasParams.conservative} sat/vB` : '—'}
           </div>
           <div className="met-l">Gas (conservative)</div>
         </div>
@@ -204,8 +204,12 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
               <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', wordBreak: 'break-all', marginBottom: 4 }}>{tok.address}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>Supply: {tok.supply.toLocaleString()}</span>
-                <a href={`https://testnet.opnet.org/tx/${tok.symbol === 'MINE' ? '1a50546bf161d8aa623201d5bd812ea42b9a151b4373a62bf746243181902c59' : 'bf65f4f7e87088953ae1ac1447765a4a364f1751d9bfaa761231dd739d0ab0d7'}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>Deploy TX ↗</a>
+                {tok.publicMint && <span style={{ fontSize: '.5rem', background: 'rgba(168,85,247,.12)', color: '#a855f7', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>MINTABLE</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                {tok.publicMint && <button className="btn-p" onClick={() => onNav('gallery')} style={{ fontSize: '.62rem', padding: '6px 14px' }}>🪙 Mint</button>}
+                <a href={`https://testnet.opnet.org/tx/${tok.deployTxid}`} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none', padding: '6px 10px' }}>TX ↗</a>
               </div>
             </div>
           ))}

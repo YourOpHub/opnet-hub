@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, DEPLOYER_ADDRESS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX, getContractOpscanUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
+import { TESTNET_CONTRACTS, DEPLOYER_ADDRESS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
+import { getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 
 function detectNetwork(addr: string): opnet.Network | null {
   if (addr.startsWith('opt1')) return 'testnet';
@@ -48,18 +49,11 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
       .catch(() => { if (!cancelled) setBtcSats(null); })
       .finally(() => { if (!cancelled) setBtcLoading(false); });
 
-    // Fetch OP-20 token balances via btc_call balanceOf
-    const isDeployer = walletAddress === DEPLOYER_ADDRESS;
-    const mldsaHex = isDeployer ? DEPLOYER_MLDSA_HEX : undefined;
-    const tweakedHex = isDeployer ? DEPLOYER_TWEAKED_HEX : undefined;
-
+    // Fetch OP-20 token balances via btc_call balanceOf for ANY wallet
     const tokenEntries = Object.entries(TESTNET_CONTRACTS);
     tokenEntries.forEach(([sym, tok]) => {
       setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
-      const fetchBal = mldsaHex
-        ? opnet.getTokenBalance(tok.address, mldsaHex, tweakedHex)
-        : Promise.resolve(0n);
-      fetchBal
+      opnet.getTokenBalance(tok.address, walletAddress)
         .then(bal => { if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: bal, loading: false, error: false } })); })
         .catch(() => { if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } })); });
     });
@@ -67,6 +61,7 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
     return () => { cancelled = true; };
   }, [walletAddress]);
 
+  const history = walletAddress ? getTxHistory(walletAddress) : [];
   const btcAmount = btcSats != null ? Number(btcSats) / 1e8 : 0;
   const btcUsd = btcAmount * btcPrice;
   const tot = btcUsd;
@@ -178,6 +173,29 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
           </div>
         )}
       </div>
+
+      {/* Transaction History */}
+      {history.length > 0 && (
+        <div className="P" style={{ marginTop: 14 }}>
+          <div className="Lb">📝 Transaction History</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {history.slice(0, 20).map(tx => (
+              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8, fontSize: '.72rem' }}>
+                <span style={{ fontSize: '.9rem', width: 22, textAlign: 'center' }}>{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--w)' }}>
+                    {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : tx.type === 'mint' ? `Minted ${Number(tx.amountA||0).toLocaleString()} ${tx.tokenA}` : `Claimed ${Number(tx.amountA||0).toLocaleString()} ${tx.tokenA}`}
+                  </div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--t4)' }}>{formatTimeAgo(tx.ts)}</div>
+                </div>
+                {tx.txHash && (
+                  <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.56rem', color: 'var(--c2)', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -34,8 +34,6 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
-    signer: null,
-    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 100_000n,
     network: NETWORK,
@@ -127,6 +125,7 @@ const TokenGallery: React.FC = () => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
     const amt = parseFloat(featMintAmt);
     if (!amt || amt <= 0) { setFeatMintResult({ ok: false, msg: 'Enter a valid amount' }); return; }
+    if (amt > 1000) { setFeatMintResult({ ok: false, msg: 'Max 1,000 per mint' }); return; }
     if (!senderAddr) { setFeatMintResult({ ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
     setFeatMinting(true); setFeatMintResult(null);
     try {
@@ -215,9 +214,9 @@ const TokenGallery: React.FC = () => {
   return (
     <div>
       <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>Token Gallery</div>
+        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>🪙 Tokens</div>
         <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 480, margin: '0 auto' }}>
-          Browse tokens on OPNet testnet. Mint public tokens directly from your wallet.
+          OPNet testnet tokens. Mint directly from your wallet — max 1,000 per transaction.
         </div>
       </div>
 
@@ -260,10 +259,12 @@ const TokenGallery: React.FC = () => {
                     style={{ fontSize: '.56rem', color: 'var(--c2)', textAlign: 'center' }}>Deploy TX</a>
                   {tok.publicMint && (
                     <button onClick={() => setFeatMintSym(featMintSym === tok.symbol ? null : tok.symbol)} style={{
-                      padding: '5px 8px', borderRadius: 'var(--rad)', fontSize: '.58rem', fontWeight: 700,
-                      background: featMintSym === tok.symbol ? 'rgba(168,85,247,.15)' : 'rgba(168,85,247,.08)',
-                      border: '1px solid rgba(168,85,247,.2)', color: '#a855f7', cursor: 'pointer', fontFamily: 'var(--ff)',
-                    }}>{featMintSym === tok.symbol ? 'Close' : 'Mint'}</button>
+                      padding: '8px 14px', borderRadius: 'var(--rad)', fontSize: '.7rem', fontWeight: 800,
+                      background: featMintSym === tok.symbol ? 'rgba(168,85,247,.2)' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                      border: 'none', color: featMintSym === tok.symbol ? '#a855f7' : 'white',
+                      cursor: 'pointer', fontFamily: 'var(--ff)', letterSpacing: '.02em',
+                      boxShadow: featMintSym === tok.symbol ? 'none' : '0 2px 12px rgba(168,85,247,.3)',
+                    }}>{featMintSym === tok.symbol ? 'Close' : '🪙 Mint'}</button>
                   )}
                 </div>
               </div>
@@ -271,11 +272,18 @@ const TokenGallery: React.FC = () => {
               {featMintSym === tok.symbol && tok.publicMint && (
                 <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)' }}>
                   <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 6 }}>Public Mint — ${tok.symbol}</div>
-                  <div style={{ fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: {tok.maxMintPerTx.toLocaleString()}</div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <input style={{ ...inputStyle, flex: 1 }} type="text" inputMode="decimal"
-                      value={featMintAmt} onChange={e => setFeatMintAmt(e.target.value)}
-                      placeholder={`Amount of ${tok.symbol}`} />
+                  <div style={{ fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: 1,000 {tok.symbol}</div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <input style={{ ...inputStyle, width: '100%', paddingRight: 48 }} type="text" inputMode="decimal"
+                        value={featMintAmt} onChange={e => { const v = e.target.value; if (v === '' || (Number(v) >= 0 && Number(v) <= 1000)) setFeatMintAmt(v); }}
+                        placeholder={`Amount (max 1,000)`} />
+                      <button onClick={() => setFeatMintAmt('1000')} style={{
+                        position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                        padding: '3px 6px', fontSize: '.52rem', fontWeight: 700, background: 'rgba(168,85,247,.15)',
+                        border: 'none', borderRadius: 4, color: '#a855f7', cursor: 'pointer', fontFamily: 'var(--ff)',
+                      }}>MAX</button>
+                    </div>
                     {connected ? (
                       <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} style={{
                         padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.75rem',
@@ -311,7 +319,7 @@ const TokenGallery: React.FC = () => {
                 <div style={{ fontWeight: 800, fontSize: '.9rem', color: 'var(--w)' }}>MINE/VIBE Liquidity Pool</div>
                 <div style={{ fontSize: '.65rem', color: 'var(--t3)', marginTop: 2 }}>SimplePool AMM · 0.3% fee · 5M MINE / 25M VIBE</div>
                 <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', marginTop: 2, wordBreak: 'break-all' }}>
-                  {TESTNET_CONTRACTS.MINE.address ? 'opt1sqq9f2hgrvpmls9yl9nqmmpmgjlt9pep50smqj2u9' : 'Deploying...'}
+                  {'opt1sqqslqmts6wcchuh55f7hf6hurux2d4363cthz9p0'}
                 </div>
               </div>
             </div>

@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { networks } from '@btc-vision/bitcoin';
-import { Address } from '@btc-vision/transaction';
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
@@ -47,6 +46,7 @@ const App: React.FC = () => {
         disconnect,
         walletAddress,
         connecting,
+        address: senderAddr,
     } = useWalletConnect();
 
     // Сохраняем адрес в localStorage для SatoshiMiner
@@ -71,9 +71,8 @@ const App: React.FC = () => {
 
     // Fetch balances when dropdown opens — use opnet SDK for accurate results
     useEffect(() => {
-        if (!wDrop || !wAddr) return;
+        if (!wDrop || !wAddr || !senderAddr) return;
         let cancelled = false;
-        const senderAddr = Address.fromString(wAddr);
         Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
             (async () => {
                 try {
@@ -87,7 +86,7 @@ const App: React.FC = () => {
             })();
         });
         return () => { cancelled = true; };
-    }, [wDrop, wAddr, sdkProvider]);
+    }, [wDrop, wAddr, senderAddr, sdkProvider]);
 
     const handleWallet = useCallback(() => {
         if (wOn) {
@@ -105,7 +104,7 @@ const App: React.FC = () => {
     const P = () => {
         switch (tab) {
             case 'home': return <Landing onNav={navigate} />;
-            case 'portfolio': return <Portfolio walletAddress={wAddr} />;
+            case 'portfolio': return <Portfolio walletAddress={wAddr} senderAddress={senderAddr} />;
             case 'bob': return <BobChat />;
             case 'tools': return <TokenTools />;
             case 'swap': return <SwapUI />;

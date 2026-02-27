@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address } from '@btc-vision/transaction';
 import { networks } from '@btc-vision/bitcoin';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes,
+  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import * as opnetRpc from '../opnet';
@@ -72,6 +72,8 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
+    signer: null,
+    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 100_000n,
     network: NETWORK,
@@ -299,7 +301,7 @@ const SwapUI: React.FC = () => {
     try {
       const tok = TESTNET_CONTRACTS[sym as keyof typeof TESTNET_CONTRACTS];
       if (!tok) throw new Error('Unknown token');
-      const rawAmount = BigInt(MINT_AMOUNT) * BigInt(Math.pow(10, tok.decimals));
+      const rawAmount = BitcoinUtils.expandToDecimals(MINT_AMOUNT, tok.decimals);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
       const sim = await contract.publicMint(rawAmount);

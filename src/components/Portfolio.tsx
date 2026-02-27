@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { networks } from '@btc-vision/bitcoin';
-import { Address } from '@btc-vision/transaction';
 import {
   JSONRpcProvider, getContract, OP_20_ABI,
   type IOP20Contract,
@@ -27,7 +26,8 @@ interface TokenBalance {
   error: boolean;
 }
 
-const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ walletAddress, senderAddress }) => {
   const [btcSats, setBtcSats] = useState<bigint | null>(null);
   const [btcLoading, setBtcLoading] = useState(false);
   const [btcPrice, setBtcPrice] = useState(0);
@@ -60,24 +60,24 @@ const Portfolio: React.FC<{ walletAddress?: string }> = ({ walletAddress }) => {
       .finally(() => { if (!cancelled) setBtcLoading(false); });
 
     // Fetch OP-20 token balances via opnet SDK (getContract + balanceOf)
-    const senderAddr = Address.fromString(walletAddress);
-    Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
-      setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
-      (async () => {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
-          const sim = await op20.balanceOf(senderAddr as any);
-          const bal = sim?.properties?.balance ?? 0n;
-          if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: BigInt(bal.toString()), loading: false, error: false } }));
-        } catch {
-          if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } }));
-        }
-      })();
-    });
+    if (senderAddress) {
+      Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
+        setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
+        (async () => {
+          try {
+            const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, provider, NETWORK, senderAddress);
+            const sim = await op20.balanceOf(senderAddress);
+            const bal = sim?.properties?.balance ?? 0n;
+            if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: BigInt(bal.toString()), loading: false, error: false } }));
+          } catch {
+            if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } }));
+          }
+        })();
+      });
+    }
 
     return () => { cancelled = true; };
-  }, [walletAddress]);
+  }, [walletAddress, senderAddress]);
 
   const history = walletAddress ? getTxHistory(walletAddress) : [];
   const btcAmount = btcSats != null ? Number(btcSats) / 1e8 : 0;

@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import type { Address } from '@btc-vision/transaction';
 import { networks } from '@btc-vision/bitcoin';
 import {
-  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes,
+  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import * as opnet from '../opnet';
@@ -34,6 +34,8 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
+    signer: null,
+    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 100_000n,
     network: NETWORK,
@@ -129,7 +131,7 @@ const TokenGallery: React.FC = () => {
     if (!senderAddr) { setFeatMintResult({ ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
     setFeatMinting(true); setFeatMintResult(null);
     try {
-      const rawAmount = BigInt(Math.floor(amt * Math.pow(10, tok.decimals)));
+      const rawAmount = BitcoinUtils.expandToDecimals(amt, tok.decimals);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
       const sim = await contract.publicMint(rawAmount);

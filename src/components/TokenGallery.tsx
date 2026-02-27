@@ -8,6 +8,7 @@ import {
 } from 'opnet';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
@@ -33,6 +34,8 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
+    signer: null,
+    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 100_000n,
     network: NETWORK,
@@ -77,6 +80,12 @@ const TokenGallery: React.FC = () => {
   const [featMintAmt, setFeatMintAmt] = useState('');
   const [featMinting, setFeatMinting] = useState(false);
   const [featMintResult, setFeatMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [mintHistory, setMintHistory] = useState<TxRecord[]>([]);
+  const [histRefresh, setHistRefresh] = useState(0);
+
+  useEffect(() => {
+    if (walletAddress) setMintHistory(getTxHistory(walletAddress).filter(r => r.type === 'mint'));
+  }, [walletAddress, histRefresh]);
 
   // Load user-deployed tokens from localStorage
   useEffect(() => {
@@ -130,6 +139,8 @@ const TokenGallery: React.FC = () => {
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
       setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}! TX: ${txHash}` });
+      addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress! });
+      setHistRefresh(k => k + 1);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
       if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs. Get testnet BTC: ${FAUCET}`;
@@ -181,6 +192,8 @@ const TokenGallery: React.FC = () => {
 
       const txHash = receipt.transactionId || '';
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });
+      addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress! });
+      setHistRefresh(k => k + 1);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
       if (msg.toLowerCase().includes('no utxo')) {
@@ -421,9 +434,32 @@ const TokenGallery: React.FC = () => {
         </div>
       )}
 
+      {/* Mint History */}
+      {mintHistory.length > 0 && (
+        <div className="P" style={{ marginTop: 14, padding: 16 }}>
+          <div className="Lb">Mint History</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {mintHistory.slice(0, 10).map(tx => (
+              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8, fontSize: '.72rem' }}>
+                <span style={{ fontSize: '.9rem', width: 22, textAlign: 'center' }}>🪙</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--w)' }}>
+                    Minted {Number(tx.amountA || 0).toLocaleString()} {tx.tokenA}
+                  </div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--t4)' }}>{formatTimeAgo(tx.ts)}</div>
+                </div>
+                {tx.txHash && (
+                  <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.56rem', color: 'var(--c2)', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Info section */}
       <div className="P" style={{ marginTop: 14, padding: 16, fontSize: '.72rem', color: 'var(--t3)', lineHeight: 1.5 }}>
-        <div className="Lb">About Token Gallery</div>
+        <div className="Lb">About Tokens</div>
         <p>Tokens deployed via <strong>Token Launcher</strong> appear in "My Tokens" automatically. Featured tokens are pre-deployed by the OPNet Hub team.</p>
         <p style={{ marginTop: 6 }}>
           <strong>Mintable tokens</strong> with public mint enabled allow anyone to mint directly from this page using their OP_WALLET.

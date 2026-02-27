@@ -8,6 +8,7 @@ import {
 } from 'opnet';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
+import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import {
   TESTNET_CONTRACTS,
   POOL_ADDRESS, POOL_PUBKEY,
@@ -17,7 +18,7 @@ import {
 /** OPNet testnet network config */
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
-const FAUCET_URL = 'http://188.137.250.160:3456';
+const FAUCET_URL = 'https://188-137-250-160.sslip.io/faucet';
 
 /** Custom ABI for SimplePool contract */
 const POOL_ABI: BitcoinInterfaceAbi = [
@@ -59,6 +60,8 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
+    signer: null,
+    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 100_000n,
     network: NETWORK,
@@ -116,6 +119,11 @@ const SwapUI: React.FC = () => {
   const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
+  const [history, setHistory] = useState<TxRecord[]>([]);
+
+  useEffect(() => {
+    if (walletAddress) setHistory(getTxHistory(walletAddress).filter(r => r.type === 'swap' || r.type === 'claim'));
+  }, [walletAddress, balRefreshKey]);
 
   const poolReady = !!POOL_ADDRESS;
 
@@ -230,9 +238,9 @@ const SwapUI: React.FC = () => {
       const approveReceipt = await approveSim.sendTransaction(txParams);
       console.log('[Swap] Approve TX:', approveReceipt.transactionId);
 
-      // Wait for approval to propagate on-chain
-      setSwapStep('Waiting for approval confirmation...');
-      await new Promise(r => setTimeout(r, 10000));
+      // Wait for approval to propagate on-chain (needs block confirmation)
+      setSwapStep('Waiting for approval confirmation (~30s)...');
+      await new Promise(r => setTimeout(r, 30000));
 
       // STEP 2: Call swap on pool
       setSwapStep('Executing swap on pool...');
@@ -255,6 +263,7 @@ const SwapUI: React.FC = () => {
         type: 'success', hash: txHash,
         amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }),
       });
+      addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: walletAddress! });
       localStorage.setItem('hub_swapped', '1');
       // Refresh balances after swap
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
@@ -285,6 +294,7 @@ const SwapUI: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Claim failed');
       setClaimResult({ sym, ok: true, msg: data.message || `Claimed ${sym}!` });
+      addTxRecord({ type: 'claim', txHash: '', tokenA: sym, amountA: sym === 'MINE' ? '100000' : '500000', status: 'confirmed', wallet: walletAddress! });
       setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Claim failed';
@@ -566,6 +576,29 @@ const SwapUI: React.FC = () => {
             <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Docs →</a>
           </div>
         </div>
+
+        {/* Transaction History */}
+        {history.length > 0 && (
+          <div className="P" style={{ marginTop: 14, padding: 16 }}>
+            <div className="Lb">Transaction History</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {history.slice(0, 10).map(tx => (
+                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8, fontSize: '.72rem' }}>
+                  <span style={{ fontSize: '.9rem', width: 22, textAlign: 'center' }}>{tx.type === 'swap' ? '🔄' : '🎁'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--w)' }}>
+                      {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : `Claimed ${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
+                    </div>
+                    <div style={{ fontSize: '.58rem', color: 'var(--t4)' }}>{formatTimeAgo(tx.ts)}</div>
+                  </div>
+                  {tx.txHash && (
+                    <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.56rem', color: 'var(--c2)', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -194,7 +194,10 @@ const Staking: React.FC = () => {
           const elapsed = Math.round((Date.now() - pollStart) / 1000);
           setStep(`Waiting for approval confirmation... (${elapsed}s)`);
         }
-        if (!confirmed) throw new Error('Approval timeout — TX may still be pending. Try staking again in ~1 min.');
+        if (!confirmed) {
+          console.warn('[Staking] Allowance not yet visible on-chain, attempting stake anyway...');
+          setStep('Approval pending — trying stake...');
+        }
       }
 
       // 4. Stake — rebuild txParams (UTXOs changed after approve)

@@ -30,7 +30,7 @@ const POOL_ABI: BitcoinInterfaceAbi = [
       { name: 'amountIn', type: ABIDataTypes.UINT256 },
       { name: 'minAmountOut', type: ABIDataTypes.UINT256 },
     ],
-    outputs: [],
+    outputs: [{ name: 'amountOut', type: ABIDataTypes.UINT256 }],
     type: BitcoinAbiTypes.Function,
   },
   {
@@ -46,7 +46,7 @@ const POOL_ABI: BitcoinInterfaceAbi = [
   {
     name: 'sync',
     inputs: [],
-    outputs: [],
+    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
     type: BitcoinAbiTypes.Function,
   },
 ];
@@ -299,12 +299,12 @@ const SwapUI: React.FC = () => {
         const txParams1 = await buildTxParams(provider, walletAddress!);
         await (approveSim as CallResult).sendTransaction(txParams1);
 
-        // Poll for allowance confirmation
+        // Poll for allowance confirmation (120s max, 10s interval per Bob's docs)
         setSwapStep('Waiting for approval confirmation...');
         const pollStart = Date.now();
         let confirmed = false;
-        while (Date.now() - pollStart < 90_000) {
-          await new Promise(r => setTimeout(r, 5_000));
+        while (Date.now() - pollStart < 120_000) {
+          await new Promise(r => setTimeout(r, 10_000));
           try {
             const checkRes = await tokenContract.allowance(senderAddr as any, poolAddr);
             if (!(checkRes as CallResult).revert) {
@@ -315,7 +315,11 @@ const SwapUI: React.FC = () => {
           } catch { /* retry */ }
           setSwapStep(`Waiting for approval confirmation... (${Math.round((Date.now() - pollStart) / 1000)}s)`);
         }
-        if (!confirmed) throw new Error('Approval timeout — try swapping again in ~1 min.');
+        // If not confirmed yet, still try the swap — it may succeed if the read is lagging
+        if (!confirmed) {
+          console.warn('[Swap] Allowance not yet visible on-chain, attempting swap anyway...');
+          setSwapStep('Approval pending — trying swap...');
+        }
       }
 
       // STEP 2: Call swap on pool — rebuild txParams (UTXOs changed)
@@ -347,6 +351,7 @@ const SwapUI: React.FC = () => {
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Swap failed';
       if (msg.toLowerCase().includes('no utxo')) msg = 'Your wallet has no BTC UTXOs. Get testnet BTC first: https://faucet.opnet.org';
+      else if (msg.toLowerCase().includes('insufficient allowance') || msg.toLowerCase().includes('allowance')) msg = 'Allowance not yet confirmed on-chain. Please wait ~1 min and try again (approval already sent).';
       else if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('fetch')) msg = 'Network timeout — try again in a few seconds.';
       else if (msg.toLowerCase().includes('revert')) msg += ' (Try again — testnet can be flaky)';
       console.error('[Swap]', e);

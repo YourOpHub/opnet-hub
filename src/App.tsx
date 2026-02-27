@@ -16,6 +16,8 @@ const Portfolio = lazy(() => import('./components/Portfolio'));
 const TokenLauncher = lazy(() => import('./components/TokenLauncher'));
 const SwapUI = lazy(() => import('./components/SwapUI'));
 const TokenGallery = lazy(() => import('./components/TokenGallery'));
+const Analytics = lazy(() => import('./components/Analytics'));
+const Staking = lazy(() => import('./components/Staking'));
 
 const LazyFallback = () => (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--t3)' }}>
@@ -26,11 +28,13 @@ const LazyFallback = () => (
 
 const TABS = [
     { id: 'home', i: '🏠', l: 'Home' },
+    { id: 'swap', i: '🔄', l: 'Swap' },
+    { id: 'staking', i: '🏦', l: 'Staking' },
+    { id: 'analytics', i: '�', l: 'Analytics' },
+    { id: 'gallery', i: '🪙', l: 'Tokens' },
+    { id: 'launch', i: '🚀', l: 'Launcher' },
     { id: 'bob', i: '🤖', l: 'Bob AI' },
     { id: 'tools', i: '🛠️', l: 'Tools' },
-    { id: 'swap', i: '🔄', l: 'Swap' },
-    { id: 'launch', i: '🚀', l: 'Launcher' },
-    { id: 'gallery', i: '🪙', l: 'Tokens' },
     { id: 'game', i: '⛏️', l: 'Epoch Miner' },
     { id: 'news', i: '📰', l: 'News' },
     { id: 'eco', i: '🔗', l: 'Ecosystem' },
@@ -107,6 +111,8 @@ const App: React.FC = () => {
             case 'bob': return <BobChat />;
             case 'tools': return <TokenTools />;
             case 'swap': return <SwapUI />;
+            case 'staking': return <Staking />;
+            case 'analytics': return <Analytics />;
             case 'launch': return <TokenLauncher />;
             case 'gallery': return <TokenGallery />;
             case 'game': return <SatoshiMiner />;

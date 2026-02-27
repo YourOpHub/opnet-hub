@@ -132,6 +132,12 @@ const SwapUI: React.FC = () => {
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
   const [history, setHistory] = useState<TxRecord[]>([]);
+  const [showLiquidity, setShowLiquidity] = useState(false);
+  const [lpMineAmt, setLpMineAmt] = useState('');
+  const [lpVibeAmt, setLpVibeAmt] = useState('');
+  const [addingLP, setAddingLP] = useState(false);
+  const [lpStep, setLpStep] = useState('');
+  const [lpResult, setLpResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     if (walletAddress) setHistory(getTxHistory(walletAddress).filter(r => r.type === 'swap' || r.type === 'mint' || r.type === 'claim'));
@@ -320,6 +326,82 @@ const SwapUI: React.FC = () => {
       setMinting(null);
     }
   }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr]);
+
+  /** Add Liquidity: transfer MINE + VIBE to pool → call sync() */
+  const addLiquidity = useCallback(async () => {
+    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    const mineAmt = parseFloat(lpMineAmt);
+    const vibeAmt = parseFloat(lpVibeAmt);
+    if (!mineAmt || !vibeAmt || mineAmt <= 0 || vibeAmt <= 0) {
+      setLpResult({ ok: false, msg: 'Enter both MINE and VIBE amounts' });
+      return;
+    }
+    if (!senderAddr) { setLpResult({ ok: false, msg: 'Wallet public key not available' }); return; }
+
+    setAddingLP(true);
+    setLpResult(null);
+    try {
+      const txParams = await buildTxParams(provider, walletAddress);
+      const poolAddr = Address.fromString(POOL_PUBKEY) as any;
+
+      // 1. Transfer MINE to pool
+      setLpStep('Transferring MINE to pool...');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mineContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
+      const mineRaw = BitcoinUtils.expandToDecimals(mineAmt, 8);
+      const mineSim = await mineContract.transfer(poolAddr, mineRaw);
+      if (mineSim.revert) throw new Error(`MINE transfer failed: ${mineSim.revert}`);
+      const mineReceipt = await mineSim.sendTransaction(txParams);
+      console.log('[LP] MINE transfer TX:', mineReceipt.transactionId);
+
+      // Wait for confirmation
+      setLpStep('Waiting for MINE transfer (~30s)...');
+      await new Promise(r => setTimeout(r, 30000));
+
+      // 2. Transfer VIBE to pool
+      setLpStep('Transferring VIBE to pool...');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vibeContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
+      const vibeRaw = BitcoinUtils.expandToDecimals(vibeAmt, 8);
+      const vibeSim = await vibeContract.transfer(poolAddr, vibeRaw);
+      if (vibeSim.revert) throw new Error(`VIBE transfer failed: ${vibeSim.revert}`);
+      const vibeReceipt = await vibeSim.sendTransaction(txParams);
+      console.log('[LP] VIBE transfer TX:', vibeReceipt.transactionId);
+
+      // Wait for confirmation
+      setLpStep('Waiting for VIBE transfer (~30s)...');
+      await new Promise(r => setTimeout(r, 30000));
+
+      // 3. Call sync() on pool
+      setLpStep('Syncing pool reserves...');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
+      const syncSim = await poolContract.sync();
+      if ((syncSim as CallResult).revert) throw new Error(`Sync failed: ${(syncSim as CallResult).revert}`);
+      const syncReceipt = await (syncSim as CallResult).sendTransaction(txParams);
+
+      setLpStep('');
+      setLpResult({ ok: true, msg: `Liquidity added! ${mineAmt} MINE + ${vibeAmt} VIBE. Sync TX: ${syncReceipt.transactionId}` });
+      addTxRecord({ type: 'mint', txHash: syncReceipt.transactionId || '', tokenA: 'LP', amountA: `${mineAmt}+${vibeAmt}`, status: 'confirmed', wallet: walletAddress });
+      setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
+    } catch (e) {
+      let msg = e instanceof Error ? e.message : 'Add liquidity failed';
+      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC: https://faucet.opnet.org';
+      setLpStep('');
+      setLpResult({ ok: false, msg });
+    } finally {
+      setAddingLP(false);
+    }
+  }, [walletAddress, walletInstance, lpMineAmt, lpVibeAmt, provider, senderAddr, openConnectModal]);
+
+  /** Auto-calculate VIBE amount based on current pool ratio */
+  useEffect(() => {
+    const mineAmt = parseFloat(lpMineAmt);
+    if (mineAmt > 0 && reserveA > 0 && reserveB > 0) {
+      const vibeNeeded = mineAmt * (reserveB / reserveA);
+      setLpVibeAmt(vibeNeeded.toFixed(2));
+    }
+  }, [lpMineAmt, reserveA, reserveB]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -593,6 +675,66 @@ const SwapUI: React.FC = () => {
             <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>OPScan Explorer →</a>
             <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Docs →</a>
           </div>
+        </div>
+
+        {/* Add Liquidity */}
+        <div className="P" style={{ marginTop: 14, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+            onClick={() => setShowLiquidity(!showLiquidity)}>
+            <div className="Lb" style={{ marginBottom: 0 }}>💧 Add Liquidity</div>
+            <span style={{ color: 'var(--t3)', fontSize: '.8rem', transition: 'transform .2s', transform: showLiquidity ? 'rotate(180deg)' : 'none' }}>▼</span>
+          </div>
+          {showLiquidity && (
+            <div style={{ marginTop: 12 }}>
+              <p style={{ fontSize: '.7rem', color: 'var(--t3)', marginBottom: 12, lineHeight: 1.5 }}>
+                Add liquidity to the MINE/VIBE pool to increase reserves. Amounts are auto-balanced
+                to the current pool ratio ({reserveA > 0 ? `1 MINE = ${(reserveB / reserveA).toFixed(1)} VIBE` : '...'}).
+              </p>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>⛏️ MINE Amount</div>
+                  <input type="number" value={lpMineAmt} onChange={e => setLpMineAmt(e.target.value)}
+                    placeholder="0" style={{
+                      width: '100%', padding: '10px', borderRadius: 8, border: '1px solid var(--bd)',
+                      background: 'var(--bg3)', color: 'var(--w)', fontSize: '.85rem', fontFamily: 'var(--fm)',
+                      outline: 'none', boxSizing: 'border-box',
+                    }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>⚡ VIBE Amount (auto)</div>
+                  <input type="number" value={lpVibeAmt} readOnly
+                    style={{
+                      width: '100%', padding: '10px', borderRadius: 8, border: '1px solid var(--bd)',
+                      background: 'rgba(255,255,255,.02)', color: 'var(--t2)', fontSize: '.85rem', fontFamily: 'var(--fm)',
+                      outline: 'none', boxSizing: 'border-box',
+                    }} />
+                </div>
+              </div>
+              <button onClick={addLiquidity} disabled={addingLP || !lpMineAmt}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: addingLP ? 'var(--bg4)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                  color: '#fff', fontWeight: 700, fontSize: '.82rem', fontFamily: 'var(--ff)',
+                  opacity: addingLP || !lpMineAmt ? 0.6 : 1, transition: 'all .2s',
+                }}>
+                {addingLP ? (lpStep || 'Processing...') : 'Add Liquidity'}
+              </button>
+              {lpResult && (
+                <div style={{
+                  marginTop: 10, padding: '10px 12px', borderRadius: 8,
+                  background: lpResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
+                  border: `1px solid ${lpResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+                  fontSize: '.7rem', color: lpResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
+                }}>
+                  {lpResult.msg}
+                </div>
+              )}
+              <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: 8, fontSize: '.58rem', color: 'var(--t3)', lineHeight: 1.5 }}>
+                Liquidity is added by transferring tokens to the pool and calling <code>sync()</code>.
+                This pool uses a simple constant-product model. Requires 3 on-chain transactions (MINE transfer + VIBE transfer + sync).
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Transaction History */}

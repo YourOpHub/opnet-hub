@@ -1,0 +1,20 @@
+{
+  "pool": {
+    "address": "opt1sqz9tzjlyxdazhqpml7rkdgel8skf7w88aus4l30h",
+    "pubkey": "0x549207340cf9a94d1e98d8f8c6cb7e223670e23f520df39f5972f5d208fe3d12",
+    "tokenA": "opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa",
+    "tokenB": "opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802",
+    "reserveA": 5000000,
+    "reserveB": 25000000
+  },
+  "selectors": {
+    "sync": "0x4ffcd515",
+    "addLiquidity": "0xe4e35d85",
+    "removeLiquidity": "0x4847feb8",
+    "liquidityOf": "0x28703b84",
+    "swap": "0xc345780b",
+    "getReserves": "0x06374bfc",
+    "getTokens": "0xf68958f1"
+  },
+  "deployedAt": "2026-02-27T22:53:51.398Z"
+}

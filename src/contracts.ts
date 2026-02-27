@@ -43,13 +43,17 @@ export const VIBE_DEPLOY_TXID = 'bfbe3f54be4f56069976e3511ab4a4834462c28469412e1
 /** SimplePool AMM contract — MINE/VIBE liquidity pool */
 // Pool address will be set after deployment. For now, use empty string.
 // Update this after running: OPNET_MNEMONIC="..." node deploy/deploy-pool.mjs
-export const POOL_ADDRESS = 'opt1sqqslqmts6wcchuh55f7hf6hurux2d4363cthz9p0';
-export const POOL_PUBKEY = '0x33da0b2ad35343e3ad782e9bd01e28887bb97888e6a6556a3cd16cc53e5adf9e';
+export const POOL_ADDRESS = 'opt1sqz9tzjlyxdazhqpml7rkdgel8skf7w88aus4l30h';
+export const POOL_PUBKEY = '0x549207340cf9a94d1e98d8f8c6cb7e223670e23f520df39f5972f5d208fe3d12';
+export const POOL_HEX = '549207340cf9a94d1e98d8f8c6cb7e223670e23f520df39f5972f5d208fe3d12';
 
-/** SimplePool selectors (from opnet-transform build output) */
+/** SimplePool v2 selectors (from opnet-transform build output) */
 export const POOL_SELECTORS = {
     sync: 0x4ffcd515,
-    swap: 0xc345780b,        // swap(address,uint256,uint256)
+    addLiquidity: 0xe4e35d85,    // addLiquidity(uint256,uint256)
+    removeLiquidity: 0x4847feb8, // removeLiquidity(uint256,uint256)
+    liquidityOf: 0x28703b84,     // liquidityOf(address)
+    swap: 0xc345780b,            // swap(address,uint256,uint256)
     getReserves: 0x06374bfc,
     getTokens: 0xf68958f1,
 } as const;

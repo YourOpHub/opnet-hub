@@ -48,18 +48,23 @@ const POOL_ABI: BitcoinInterfaceAbi = [
   },
 ];
 
-/** ABI for publicMint on mintable tokens (MINE & VIBE) */
-const MINT_ABI: BitcoinInterfaceAbi = [
-  {
-    name: 'publicMint',
-    inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }],
-    outputs: [],
-    type: BitcoinAbiTypes.Function,
-  },
-];
-
-/** Claim amount per click (human-readable) */
-const CLAIM_AMOUNT: Record<string, number> = { MINE: 100_000, VIBE: 500_000 };
+/** Fetch network gas parameters and build proper tx params */
+async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
+  const gas = await provider.gasParameters();
+  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
+  // priorityFee = baseGas converted to sats via gasPerSat, capped at reasonable range
+  const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
+  const priorityFeeSats = gas.baseGas / gasPerSat;
+  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return {
+    refundTo,
+    maximumAllowedSatToSpend: 100_000n,
+    network: NETWORK,
+    feeRate,
+    priorityFee,
+  } as any;
+}
 
 interface IPoolContract {
   swap(tokenIn: Address, amountIn: bigint, minAmountOut: bigint): Promise<CallResult>;
@@ -105,8 +110,6 @@ const SwapUI: React.FC = () => {
   const [balances, setBalances] = useState<Record<string, bigint>>({});
   const [balLoading, setBalLoading] = useState(false);
   const [balRefreshKey, setBalRefreshKey] = useState(0);
-  const [claiming, setClaiming] = useState<string | null>(null);
-  const [claimResult, setClaimResult] = useState<{sym: string; ok: boolean; msg: string} | null>(null);
   const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
@@ -204,14 +207,9 @@ const SwapUI: React.FC = () => {
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
       const minOut = BigInt(Math.floor(toVal * (1 - slippage / 100) * Math.pow(10, to.decimals)));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const txParams: any = {
-        refundTo: walletAddress!,
-        maximumAllowedSatToSpend: 10_000n,
-        network: NETWORK,
-        feeRate: 10,
-        priorityFee: 10_000n,
-      };
+      // Fetch real gas parameters from the network
+      setSwapStep('Fetching gas parameters...');
+      const txParams = await buildTxParams(provider, walletAddress!);
 
       // STEP 1: Approve pool to spend token-in
       setSwapStep('Approving token spend...');
@@ -269,41 +267,6 @@ const SwapUI: React.FC = () => {
       setSwapping(false);
     }
   }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal, provider, senderAddr]);
-
-  /** Claim (publicMint) tokens so anyone can get MINE/VIBE to try swapping */
-  const claimTokens = useCallback(async (sym: string) => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
-    if (!senderAddr) { setClaimResult({ sym, ok: false, msg: 'Wallet address not available. Reconnect.' }); return; }
-
-    const tok = TESTNET_CONTRACTS[sym as keyof typeof TESTNET_CONTRACTS];
-    if (!tok) return;
-    const amt = CLAIM_AMOUNT[sym] || 100_000;
-    const rawAmount = BigInt(amt) * (10n ** BigInt(tok.decimals));
-
-    setClaiming(sym);
-    setClaimResult(null);
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(tok.address, MINT_ABI, provider, NETWORK, senderAddr as any);
-      const sim = await contract.publicMint(rawAmount);
-      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (sim as CallResult).sendTransaction({
-        refundTo: walletAddress,
-        maximumAllowedSatToSpend: 10_000n,
-        network: NETWORK,
-        feeRate: 10,
-        priorityFee: 10_000n,
-      } as any);
-      setClaimResult({ sym, ok: true, msg: `Claimed ${amt.toLocaleString()} ${sym}!` });
-      setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Claim failed';
-      setClaimResult({ sym, ok: false, msg });
-    } finally {
-      setClaiming(null);
-    }
-  }, [walletAddress, walletInstance, senderAddr, openConnectModal, provider]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -514,33 +477,19 @@ const SwapUI: React.FC = () => {
                   <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
                   <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, alignItems: 'flex-end' }}>
-                  <button onClick={() => claimTokens(sym)} disabled={claiming === sym}
-                    style={{
-                      padding: '4px 10px', borderRadius: 6, border: 'none', cursor: claiming === sym ? 'wait' : 'pointer',
-                      background: 'linear-gradient(135deg, var(--o), var(--o2))', color: '#000',
-                      fontSize: '.58rem', fontWeight: 700, fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
-                    }}>
-                    {claiming === sym ? '...' : `Claim ${(CLAIM_AMOUNT[sym] || 100000).toLocaleString()}`}
-                  </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
                   <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: '.54rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
+                    style={{ fontSize: '.58rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
+                  <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Deploy TX ↗</a>
                 </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Claim result */}
-        {claimResult && (
-          <div style={{ marginTop: 8, padding: '8px 12px',
-            background: claimResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-            border: `1px solid ${claimResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
-            borderRadius: 'var(--rad)', fontSize: '.7rem',
-            color: claimResult.ok ? 'var(--g)' : '#ef4444' }}>
-            {claimResult.msg}
+          <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)' }}>
+            Want tokens to swap? Deploy a <strong>Mintable</strong> token via the Token Launcher — anyone can then mint and trade it.
           </div>
-        )}
+        </div>
 
         {/* Pool info */}
         <div className="P" style={{ marginTop: 14, padding: 16, fontSize: '.75rem', color: 'var(--t3)', lineHeight: 1.5 }}>

@@ -24,6 +24,23 @@ const MINTABLE_ABI: BitcoinInterfaceAbi = [
 
 const FAUCET = 'https://faucet.opnet.org';
 
+/** Fetch network gas parameters and build proper tx params */
+async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
+  const gas = await provider.gasParameters();
+  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
+  const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
+  const priorityFeeSats = gas.baseGas / gasPerSat;
+  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return {
+    refundTo,
+    maximumAllowedSatToSpend: 100_000n,
+    network: NETWORK,
+    feeRate,
+    priorityFee,
+  } as any;
+}
+
 interface DeployedToken {
   address: string;
   txid: string;
@@ -131,14 +148,8 @@ const TokenGallery: React.FC = () => {
         throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const receipt = await (sim as CallResult).sendTransaction({
-        refundTo: walletAddress!,
-        maximumAllowedSatToSpend: 10_000n,
-        network: NETWORK,
-        feeRate: 10,
-        priorityFee: 10_000n,
-      } as any);
+      const txParams = await buildTxParams(provider, walletAddress!);
+      const receipt = await (sim as CallResult).sendTransaction(txParams);
 
       const txHash = receipt.transactionId || '';
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });

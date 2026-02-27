@@ -78,7 +78,7 @@ const TOKENS: Token[] = [
 type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 
 const SwapUI: React.FC = () => {
-  const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, openConnectModal } = useWalletConnect();
+  const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
 
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(1);
@@ -155,14 +155,7 @@ const SwapUI: React.FC = () => {
   /** Create opnet provider (memoized) */
   const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
 
-  /** Build sender Address from wallet publicKey */
-  const senderAddr = useMemo(() => {
-    if (!publicKey) return undefined;
-    try {
-      const hex = publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`;
-      return Address.fromString(hex);
-    } catch { return undefined; }
-  }, [publicKey]);
+  // senderAddr comes directly from useWalletConnect() as 'address'
 
   /**
    * Execute a REAL on-chain swap via SimplePool AMM:

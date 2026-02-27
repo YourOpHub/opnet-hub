@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { Address } from '@btc-vision/transaction';
+import type { Address } from '@btc-vision/transaction';
 import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes,
@@ -48,7 +48,7 @@ const genLogo = (sym: string): string => {
 };
 
 const TokenGallery: React.FC = () => {
-  const { walletAddress, walletInstance, publicKey, openConnectModal } = useWalletConnect();
+  const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const [tokens, setTokens] = useState<DeployedToken[]>([]);
   const [chainInfo, setChainInfo] = useState<Record<string, { totalSupply: bigint; confirmed: boolean }>>({});
   const [mintAddr, setMintAddr] = useState<string | null>(null);
@@ -96,14 +96,7 @@ const TokenGallery: React.FC = () => {
   };
 
   const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
-
-  const senderAddr = useMemo(() => {
-    if (!publicKey) return undefined;
-    try {
-      const hex = publicKey.startsWith('0x') ? publicKey : `0x${publicKey}`;
-      return Address.fromString(hex);
-    } catch { return undefined; }
-  }, [publicKey]);
+  // senderAddr comes directly from useWalletConnect() as 'address'
 
   const doMint = useCallback(async (token: DeployedToken) => {
     if (!walletAddress || !walletInstance) {

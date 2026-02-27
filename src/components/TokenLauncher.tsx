@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { BinaryWriter } from '@btc-vision/transaction';
-import { networks } from '@btc-vision/bitcoin';
+import { networks, Transaction } from '@btc-vision/bitcoin';
 import { JSONRpcProvider } from 'opnet';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
@@ -172,10 +172,38 @@ const TokenLauncher: React.FC = () => {
         linkMLDSAPublicKeyToAddress: true,
       });
 
+      // 5. Broadcast both funding + deployment transactions
+      setDeployStep('Broadcasting transactions...');
+      const [fundingTxHex, deployTxHex] = result.transaction;
+      console.log('[Deploy] Contract address:', result.contractAddress);
+      console.log('[Deploy] Funding TX hex length:', fundingTxHex?.length);
+      console.log('[Deploy] Deploy TX hex length:', deployTxHex?.length);
+
+      const txsToBroadcast = [];
+      if (fundingTxHex) txsToBroadcast.push({ raw: fundingTxHex, psbt: false });
+      if (deployTxHex) txsToBroadcast.push({ raw: deployTxHex, psbt: false });
+
+      if (txsToBroadcast.length > 0 && web3.broadcast) {
+        const broadcastResults = await web3.broadcast(txsToBroadcast);
+        console.log('[Deploy] Broadcast results:', broadcastResults);
+      }
+
+      // Compute real txid from raw transaction hex
+      let txid = '';
+      try {
+        const rawHex = deployTxHex || fundingTxHex || '';
+        if (rawHex) {
+          txid = Transaction.fromHex(rawHex).getId();
+        }
+      } catch (txErr) {
+        console.warn('[Deploy] Could not compute txid from raw tx:', txErr);
+        txid = result.contractPubKey || result.contractAddress || '';
+      }
+
       setDeployStep('');
       setDeployResult({
         contractAddress: result.contractAddress || '',
-        txid: result.transaction?.[1] || result.transaction?.[0] || '',
+        txid,
       });
       localStorage.setItem('hub_token_launched', '1');
 
@@ -183,7 +211,7 @@ const TokenLauncher: React.FC = () => {
       const deployed = JSON.parse(localStorage.getItem('hub_deployed_tokens') || '[]');
       deployed.push({
         address: result.contractAddress || '',
-        txid: result.transaction?.[1] || result.transaction?.[0] || '',
+        txid,
         name: tokenName.trim(),
         symbol: tokenSymbol.trim().toUpperCase(),
         supply: tokenSupply,

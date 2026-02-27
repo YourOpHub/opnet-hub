@@ -1,0 +1,30 @@
+{
+  "network": "testnet",
+  "deployer": "opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my",
+  "tokenType": "MintableToken",
+  "tokens": {
+    "MINE": {
+      "address": "opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa",
+      "pubkey": "0x64adc4c6cb9a05553363ffa544b32d6668d8e1ce02311c72915dc18c3603f397",
+      "symbol": "MINE",
+      "name": "Mine Token",
+      "decimals": 8,
+      "maxSupply": "21000000",
+      "initialMintPct": 50,
+      "publicMint": true,
+      "maxMintPerTx": "1000000"
+    },
+    "VIBE": {
+      "address": "opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802",
+      "pubkey": "0x818ecc6e52aa04e57e641a7bec673f33517a70b00ff1604c5e05296674760df1",
+      "symbol": "VIBE",
+      "name": "Vibe Token",
+      "decimals": 8,
+      "maxSupply": "100000000",
+      "initialMintPct": 50,
+      "publicMint": true,
+      "maxMintPerTx": "5000000"
+    }
+  },
+  "deployedAt": "2026-02-27T05:03:38.006Z"
+}

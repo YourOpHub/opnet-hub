@@ -22,7 +22,7 @@ import { networks } from '@btc-vision/bitcoin';
 
 const PORT = parseInt(process.env.PORT || '3456');
 const RPC_URL = 'https://testnet.opnet.org';
-const network = networks.opnetTestnet;
+const network = { ...networks.testnet, bech32: networks.testnet.bech32Opnet };
 
 // ── Deployer wallet ───────────────────────────────────────────────────────────
 const phrase = process.env.OPNET_MNEMONIC;
@@ -38,13 +38,13 @@ const factory = new TransactionFactory();
 // These will be loaded from env or config file
 const TOKENS = {
     MINE: {
-        address: process.env.MINE_ADDRESS || 'opt1sqr6qp5spthha0cyrhj6qh3wrgn9kj06c4up68dmz',
+        address: process.env.MINE_ADDRESS || 'opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa',
         decimals: 8,
         claimAmount: 100_000,      // 100K MINE per claim
         symbol: 'MINE',
     },
     VIBE: {
-        address: process.env.VIBE_ADDRESS || 'opt1sqzm99nspva6lqk8e7am34ewpcmyheydzsqu4df3m',
+        address: process.env.VIBE_ADDRESS || 'opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802',
         decimals: 8,
         claimAmount: 500_000,      // 500K VIBE per claim
         symbol: 'VIBE',

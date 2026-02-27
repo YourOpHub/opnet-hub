@@ -27,17 +27,17 @@ const LazyFallback = () => (
 );
 
 const TABS = [
-    { id: 'home', i: '🏠', l: 'Home' },
-    { id: 'swap', i: '🔄', l: 'Swap' },
-    { id: 'staking', i: '🏦', l: 'Staking' },
-    { id: 'analytics', i: '�', l: 'Analytics' },
-    { id: 'gallery', i: '🪙', l: 'Tokens' },
-    { id: 'launch', i: '🚀', l: 'Launcher' },
-    { id: 'bob', i: '🤖', l: 'Bob AI' },
-    { id: 'tools', i: '🛠️', l: 'Tools' },
-    { id: 'game', i: '⛏️', l: 'Epoch Miner' },
-    { id: 'news', i: '📰', l: 'News' },
-    { id: 'eco', i: '🔗', l: 'Ecosystem' },
+    { id: 'home', l: 'Home' },
+    { id: 'swap', l: 'Swap' },
+    { id: 'staking', l: 'Stake' },
+    { id: 'analytics', l: 'Analytics' },
+    { id: 'gallery', l: 'Tokens' },
+    { id: 'launch', l: 'Launch' },
+    { id: 'bob', l: 'Bob AI' },
+    { id: 'tools', l: 'Tools' },
+    { id: 'game', l: 'Miner' },
+    { id: 'news', l: 'News' },
+    { id: 'eco', l: 'Ecosystem' },
 ];
 
 const App: React.FC = () => {
@@ -131,11 +131,9 @@ const App: React.FC = () => {
                 <div className="Hi">
                     <div className="Lo" onClick={() => navigate('home')}>
                         <div className="Lm">⚡</div>
-                        <span style={{ letterSpacing: '-.02em' }}>OPNet<span style={{ color: 'var(--t3)', fontWeight: 500, marginLeft: 4 }}>Hub</span></span>
+                        <span style={{ letterSpacing: '-.02em' }}>OPNet<span style={{ color: '#4a5568', fontWeight: 500, marginLeft: 4, fontSize: '.85rem' }}>Hub</span></span>
                     </div>
                     <div className="Hr">
-                        <a className="Ha" href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">Docs</a>
-                        <a className="Ha" href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">Vibecode</a>
                         <div ref={dropRef} style={{ position: 'relative' }}
                             onMouseEnter={wOn ? openDrop : undefined}
                             onMouseLeave={wOn ? closeDrop : undefined}
@@ -144,31 +142,30 @@ const App: React.FC = () => {
                                 onClick={wOn ? () => setWDrop(v => !v) : handleWallet}
                                 disabled={connecting}
                             >
-                                {connecting ? '⏳ Connecting…' : wOn ? `✓ ${wAddr.slice(0, 8)}…` : 'Connect Wallet'}
+                                {connecting ? 'Connecting…' : wOn ? `${wAddr.slice(0, 6)}…${wAddr.slice(-4)}` : 'Connect'}
                             </button>
                             {wDrop && wOn && (
                                 <div style={{
-                                    position: 'absolute', top: '110%', right: 0, width: 280, zIndex: 999,
-                                    background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 12,
-                                    boxShadow: '0 12px 40px rgba(0,0,0,.5)', padding: 14,
+                                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 260, zIndex: 999,
+                                    background: 'rgba(10,10,18,.96)', border: '1px solid rgba(255,255,255,.06)',
+                                    borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,.6)',
+                                    backdropFilter: 'blur(24px)', padding: '14px 16px',
                                 }}>
-                                    <div style={{ fontSize: '.62rem', color: 'var(--t4)', fontFamily: 'var(--fm)', marginBottom: 10, wordBreak: 'break-all' }}>{wAddr}</div>
-                                    <div style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--t2)', marginBottom: 6 }}>Balances</div>
+                                    <div style={{ fontSize: '.55rem', color: '#2d3548', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10, wordBreak: 'break-all' }}>{wAddr}</div>
                                     {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => (
-                                        <div key={sym} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '.72rem' }}>
-                                            <span>{tok.icon} {sym}</span>
-                                            <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)' }}>{balances[sym] ?? '…'}</span>
+                                        <div key={sym} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '.72rem', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
+                                            <span style={{ color: '#7a8494' }}>{tok.icon} {sym}</span>
+                                            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 600 }}>{balances[sym] ?? '…'}</span>
                                         </div>
                                     ))}
-                                    <div style={{ borderTop: '1px solid var(--bd)', margin: '10px 0 8px' }} />
-                                    <div style={{ display: 'flex', gap: 6 }}>
+                                    <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
                                         <button onClick={() => { navigate('portfolio'); setWDrop(false); }}
-                                            style={{ flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--o), var(--o2))', color: '#000', fontWeight: 700, fontSize: '.7rem', fontFamily: 'var(--ff)' }}>
-                                            💼 Portfolio
+                                            style={{ flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #F7931A, #ffab40)', color: '#000', fontWeight: 700, fontSize: '.68rem', fontFamily: "'Inter', sans-serif" }}>
+                                            Portfolio
                                         </button>
                                         <button onClick={() => { disconnect(); setWDrop(false); }}
-                                            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,.3)', background: 'transparent', cursor: 'pointer', color: '#ef4444', fontSize: '.7rem', fontFamily: 'var(--ff)' }}>
-                                            Disconnect
+                                            style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', cursor: 'pointer', color: '#ef4444', fontSize: '.68rem', fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>
+                                            Exit
                                         </button>
                                     </div>
                                 </div>
@@ -182,7 +179,7 @@ const App: React.FC = () => {
                 <div className="Ni">
                     {TABS.map(t => (
                         <button key={t.id} className={`Nt ${tab === t.id ? 'on' : ''}`} onClick={() => navigate(t.id)}>
-                            <span>{t.i}</span>{t.l}
+                            {t.l}
                         </button>
                     ))}
                 </div>
@@ -191,30 +188,24 @@ const App: React.FC = () => {
             <main className="M" key={tab}><Suspense fallback={<LazyFallback />}>{P()}</Suspense></main>
 
             <footer style={{
-                marginTop: 'auto', padding: '32px 32px 28px', textAlign: 'center',
-                borderTop: '1px solid rgba(255,255,255,.04)', color: '#3d4555',
-                fontSize: '.72rem', background: 'rgba(5,5,8,.7)', backdropFilter: 'blur(20px)',
-                letterSpacing: '-.01em',
+                marginTop: 'auto', padding: '20px 32px', textAlign: 'center',
+                borderTop: '1px solid rgba(255,255,255,.03)', color: '#2d3548',
+                fontSize: '.65rem', background: 'rgba(6,6,11,.8)',
             }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap', marginBottom: 8 }}>
                     {[
                         ['Docs', 'https://docs.opnet.org'],
-                        ['Bob AI', 'https://ai.opnet.org'],
                         ['OPScan', 'https://opscan.org'],
-                        ['Motoswap', 'https://motoswap.org'],
-                        ['Vibecode', 'https://vibecode.finance'],
                         ['GitHub', 'https://github.com/YourOpHub/opnet-hub'],
                     ].map(([l, u]) => (
                         <a key={l} href={u} target="_blank" rel="noopener noreferrer"
-                            style={{ color: '#5a6578', textDecoration: 'none', fontWeight: 500, transition: 'color .2s' }}
+                            style={{ color: '#4a5568', textDecoration: 'none', fontWeight: 500, transition: 'color .2s', fontSize: '.65rem' }}
                             onMouseEnter={e => (e.currentTarget.style.color = '#F7931A')}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#5a6578')}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#4a5568')}
                         >{l}</a>
                     ))}
                 </div>
-                <div style={{ color: '#2a3040', fontSize: '.65rem' }}>
-                    <strong style={{ color: '#3d4555' }}>OPNet Hub</strong> — Mission Control for Programmable Bitcoin
-                </div>
+                <div style={{ color: '#1e2432' }}>OPNet Hub · Bitcoin L1 DeFi</div>
             </footer>
 
             <button className="q-fab" onClick={() => setQOpen(!qOpen)}>

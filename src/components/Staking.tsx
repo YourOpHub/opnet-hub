@@ -236,6 +236,9 @@ const Staking: React.FC = () => {
 
       setStep('');
       setResult({ type: 'success', msg: `Rewards claimed! TX: ${receipt.transactionId}` });
+      const ts = Date.now();
+      setLastClaimTs(ts);
+      try { localStorage.setItem(claimKey, String(ts)); } catch {}
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -256,9 +259,22 @@ const Staking: React.FC = () => {
   // Bitcoin: ~144 blocks/day → ~52,560/year
   const BLOCKS_PER_YEAR = 52_560;
   const rateNum = Number(rewardRate) / 1e8;
-  const projectedAPR = totalStakedNum > 0 && rateNum > 0
-    ? Math.min((rateNum * BLOCKS_PER_YEAR / totalStakedNum) * 100, 999_999)
+  const rawAPR = totalStakedNum > 0 && rateNum > 0
+    ? (rateNum * BLOCKS_PER_YEAR / totalStakedNum) * 100
     : 0;
+  // Cap display — testnet rate is intentionally high for testing
+  const projectedAPR = Math.min(rawAPR, 999);
+
+  // Claim cooldown: 5 min between claims per wallet
+  const CLAIM_COOLDOWN_MS = 5 * 60 * 1000;
+  const claimKey = `hub_last_claim_${walletAddress || ''}`;
+  const [lastClaimTs, setLastClaimTs] = useState<number>(() => {
+    try { return Number(localStorage.getItem(claimKey) || '0'); } catch { return 0; }
+  });
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(iv); }, []);
+  const cooldownLeft = Math.max(0, CLAIM_COOLDOWN_MS - (now - lastClaimTs));
+  const canClaim = cooldownLeft === 0 && userRewardsNum > 0.01;
 
   return (
     <div>
@@ -390,18 +406,27 @@ const Staking: React.FC = () => {
           </>
         )}
 
-        {/* Claim button */}
+        {/* Claim button with cooldown */}
         {STAKING_DEPLOYED && userRewardsNum > 0 && (
-          <button onClick={doClaim} disabled={busy}
-            style={{
-              width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer',
-              background: busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #10b981, #059669)', color: '#000',
-              fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
-              opacity: busy ? 0.5 : 1, transition: 'all .2s',
-              boxShadow: !busy ? '0 4px 16px rgba(16,185,129,.2)' : 'none',
-            }}>
-            {claiming ? (step || 'Claiming...') : `Claim ${fmtToken(userRewards)} MINE Rewards`}
-          </button>
+          <div>
+            <button onClick={doClaim} disabled={busy || !canClaim}
+              style={{
+                width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: canClaim ? 'pointer' : 'not-allowed',
+                background: !canClaim ? 'rgba(30,30,50,.8)' : busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #10b981, #059669)', color: canClaim && !busy ? '#000' : '#5a6578',
+                fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
+                opacity: busy || !canClaim ? 0.5 : 1, transition: 'all .2s',
+                boxShadow: canClaim && !busy ? '0 4px 16px rgba(16,185,129,.2)' : 'none',
+              }}>
+              {claiming ? (step || 'Claiming...') : cooldownLeft > 0
+                ? `Cooldown ${Math.ceil(cooldownLeft / 1000)}s`
+                : `Claim ${fmtToken(userRewards)} MINE Rewards`}
+            </button>
+            {cooldownLeft > 0 && (
+              <div style={{ marginTop: 6, fontSize: '.58rem', color: '#5a6578', textAlign: 'center' }}>
+                Next claim available in {Math.floor(cooldownLeft / 60000)}:{String(Math.floor((cooldownLeft % 60000) / 1000)).padStart(2, '0')}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Result */}
@@ -418,51 +443,12 @@ const Staking: React.FC = () => {
         )}
       </div>
 
-      {/* Token Verification */}
-      <div style={{ padding: '18px 20px', marginBottom: 16, borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-        <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>Token Verification</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[
-            { label: 'Mint (publicMint)', addr: TESTNET_CONTRACTS.MINE.address },
-            { label: 'Swap Pool (MINE/VIBE)', addr: TESTNET_CONTRACTS.MINE.address },
-            { label: 'Staking', addr: STAKING_TOKEN.address },
-          ].map(item => (
-            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
-              <span style={{ fontSize: '.65rem', color: '#10b981' }}>✓</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '.68rem', fontWeight: 600, color: '#fff' }}>{item.label}</div>
-                <div style={{ fontSize: '.48rem', fontFamily: "'JetBrains Mono', monospace", color: '#3d4555', wordBreak: 'break-all' }}>{item.addr}</div>
-              </div>
-              <a href={getContractOpscanUrl(item.addr)} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '.5rem', color: '#38bdf8', textDecoration: 'none' }}>OPScan ↗</a>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* How it works */}
-      <div style={{ padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-        <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>How It Works</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            { step: '1', title: 'Approve & Stake', desc: 'Approve the staking contract to spend your MINE, then stake' },
-            { step: '2', title: 'Earn Rewards', desc: 'Rewards accumulate every block, proportional to your stake' },
-            { step: '3', title: 'Claim or Unstake', desc: 'Claim MINE rewards anytime, or unstake to withdraw' },
-          ].map(s => (
-            <div key={s.step} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <div style={{
-                minWidth: 26, height: 26, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #a78bfa, #7c3aed)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: '.7rem', color: '#fff', flexShrink: 0,
-              }}>{s.step}</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 2, color: '#fff' }}>{s.title}</div>
-                <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>{s.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Contract link */}
+      <div style={{ textAlign: 'center', padding: '12px 0' }}>
+        <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: '.6rem', color: '#4a5568', textDecoration: 'none' }}>
+          View staking contract on OPScan ↗
+        </a>
       </div>
     </div>
   );

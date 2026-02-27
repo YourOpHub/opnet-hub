@@ -647,131 +647,66 @@ const SwapUI: React.FC = () => {
           )}
         </div>
 
-        {/* Live contracts */}
-        <div style={{ marginTop: 14, padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-          <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>Tokens</span>
-            <span style={{ fontSize: '.48rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(247,147,26,.08)', color: '#F7931A', fontWeight: 700 }}>TESTNET</span>
+        {/* Mint tokens */}
+        <div style={{ marginTop: 14, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,.015)', border: '1px solid rgba(255,255,255,.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: '.52rem', color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Mint Testnet Tokens</span>
           </div>
-          {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => {
-            const onChainSupply = tokenSupplies[sym];
-            const supplyHuman = onChainSupply != null
-              ? (Number(onChainSupply) / Math.pow(10, tok.decimals)).toLocaleString()
-              : tok.supply.toLocaleString();
-            return (
-              <div key={tok.symbol} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: '1rem', width: 20, flexShrink: 0 }}>{tok.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.78rem' }}>{tok.symbol}</span>
-                    {onChainSupply != null && <span style={{ fontSize: '.48rem', background: 'var(--gG)', color: 'var(--g)', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>ON-CHAIN</span>}
-                  </div>
-                  <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
-                  <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, alignItems: 'flex-end' }}>
-                  <button onClick={() => mintTokens(sym)} disabled={minting === sym}
-                    style={{
-                      padding: '5px 12px', borderRadius: 6, border: 'none', cursor: minting === sym ? 'wait' : 'pointer',
-                      background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: 'white',
-                      fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 8px rgba(168,85,247,.25)',
-                    }}>
-                    {minting === sym ? 'Minting...' : `🪙 Mint 1K ${sym}`}
-                  </button>
-                  <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: '.54rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
-                </div>
-              </div>
-            );
-          })}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {Object.entries(TESTNET_CONTRACTS).map(([sym]) => (
+              <button key={sym} onClick={() => mintTokens(sym)} disabled={minting === sym}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: minting === sym ? 'wait' : 'pointer',
+                  background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff',
+                  fontSize: '.68rem', fontWeight: 700, fontFamily: "'Inter', sans-serif", opacity: minting === sym ? .5 : 1,
+                }}>
+                {minting === sym ? '...' : `1K ${sym}`}
+              </button>
+            ))}
+          </div>
           {mintResult && (
-            <div style={{ marginTop: 8, padding: '8px 12px',
-              background: mintResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-              border: `1px solid ${mintResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
-              borderRadius: 'var(--rad)', fontSize: '.7rem',
-              color: mintResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all' }}>
+            <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, fontSize: '.65rem', wordBreak: 'break-all',
+              background: mintResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+              color: mintResult.ok ? '#10b981' : '#ef4444' }}>
               {mintResult.msg}
             </div>
           )}
-          <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)' }}>
-            Click <strong>Mint</strong> to receive 1,000 tokens via on-chain <code>publicMint</code>. Requires testnet BTC for gas.
+        </div>
+
+        {/* Pool reserves + LP position compact */}
+        <div style={{ marginTop: 10, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,.015)', border: '1px solid rgba(255,255,255,.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.68rem' }}>
+            <span style={{ color: '#4a5568' }}>Pool</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 600 }}>
+              {reserveA.toLocaleString()} / {reserveB.toLocaleString()}
+            </span>
+          </div>
+          {lpUserMine > 0 && reserveA > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.68rem', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.03)' }}>
+              <span style={{ color: '#4a5568' }}>Your LP</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#0ea5e9', fontWeight: 700 }}>
+                {((lpUserMine / reserveA) * 100).toFixed(2)}%
+              </span>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.58rem', marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.03)' }}>
+            <span style={{ color: '#2d3548' }}>{poolReady ? 'Live' : 'Deploying...'}</span>
+            <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
+              style={{ color: '#4a5568', textDecoration: 'none' }}>OPScan ↗</a>
           </div>
         </div>
 
-        {/* Pool info */}
-        <div style={{ marginTop: 14, padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-          <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>Pool — SimplePool AMM</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
-            <div style={{ padding: '10px', background: 'rgba(255,255,255,.02)', borderRadius: 12, textAlign: 'center' }}>
-              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4, fontWeight: 600 }}>MINE</div>
-              <div style={{ fontFamily: 'var(--fm)', fontSize: '.78rem', fontWeight: 700, color: '#fff' }}>{reserveA.toLocaleString()}</div>
-            </div>
-            <div style={{ padding: '10px', background: 'rgba(255,255,255,.02)', borderRadius: 12, textAlign: 'center' }}>
-              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4, fontWeight: 600 }}>VIBE</div>
-              <div style={{ fontFamily: 'var(--fm)', fontSize: '.78rem', fontWeight: 700, color: '#fff' }}>{reserveB.toLocaleString()}</div>
-            </div>
-            <div style={{ padding: '10px', background: 'rgba(255,255,255,.02)', borderRadius: 12, textAlign: 'center' }}>
-              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4, fontWeight: 600 }}>RATE</div>
-              <div style={{ fontFamily: 'var(--fm)', fontSize: '.78rem', fontWeight: 700, color: '#F7931A' }}>1:{(reserveB / reserveA).toFixed(1)}</div>
-            </div>
-          </div>
-          {poolReady && (
-            <div style={{ padding: '8px 12px', background: 'rgba(16,185,129,.04)', border: '1px solid rgba(16,185,129,.1)', borderRadius: 10, fontSize: '.58rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                <span style={{ color: '#10b981', fontWeight: 600 }}>Pool Live</span>
-              </div>
-              <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-                style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '.56rem' }}>OPScan ↗</a>
-            </div>
-          )}
-          {!poolReady && (
-            <div style={{ padding: '8px 12px', background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.12)', borderRadius: 10, fontSize: '.6rem', color: '#f59e0b' }}>
-              Pool deploying...
-            </div>
-          )}
-          {btcPrice > 0 && <div style={{ marginTop: 8, fontSize: '.58rem', color: '#3d4555' }}>BTC: ${btcPrice.toLocaleString()}</div>}
-        </div>
-
-        {/* Pool share info */}
-        {lpUserMine > 0 && (
-          <div style={{ marginTop: 14, padding: '16px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(14,165,233,.08)', backdropFilter: 'blur(16px)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>Your Position</div>
-                <div style={{ fontSize: '.82rem', fontWeight: 700, color: '#fff' }}>{lpUserMine.toLocaleString()} MINE + {lpUserVibe.toLocaleString()} VIBE</div>
-              </div>
-              {reserveA > 0 && (
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '.5rem', color: '#5a6578', marginBottom: 2 }}>Share</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0ea5e9', fontFamily: "'JetBrains Mono', monospace" }}>{((lpUserMine / reserveA) * 100).toFixed(2)}%</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Transaction History */}
+        {/* Recent tx — compact */}
         {history.length > 0 && (
-          <div style={{ marginTop: 14, padding: '18px 20px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-            <div style={{ fontSize: '.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', color: '#5a6578', marginBottom: 12 }}>History</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {history.slice(0, 10).map(tx => (
-                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)', fontSize: '.72rem' }}>
-                  <span style={{ fontSize: '.85rem', width: 22, textAlign: 'center' }}>{tx.type === 'swap' ? '🔄' : '🎁'}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, color: '#fff', fontSize: '.72rem' }}>
-                      {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : `Claimed ${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
-                    </div>
-                    <div style={{ fontSize: '.55rem', color: '#3d4555' }}>{formatTimeAgo(tx.ts)}</div>
-                  </div>
-                  {tx.txHash && (
-                    <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.54rem', color: '#38bdf8', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
-                  )}
-                </div>
-              ))}
-            </div>
+          <div style={{ marginTop: 10 }}>
+            {history.slice(0, 5).map(tx => (
+              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.65rem' }}>
+                <span style={{ color: '#7a8494', fontWeight: 600 }}>
+                  {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : `+${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
+                </span>
+                <span style={{ color: '#2d3548', fontSize: '.55rem' }}>{formatTimeAgo(tx.ts)}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>

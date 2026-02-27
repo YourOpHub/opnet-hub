@@ -380,8 +380,8 @@ a:hover {
 }
 
 .P:hover {
-  border-color: var(--bd2);
-  box-shadow: var(--shadow-md);
+  border-color: rgba(255,255,255,.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
   transform: translateY(-1px)
 }
 
@@ -390,19 +390,19 @@ a:hover {
   background: rgba(10, 10, 18, .5);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--bd);
-  border-radius: var(--radl);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
   padding: 24px;
   position: relative;
   overflow: hidden;
-  transition: all .3s var(--ease)
+  transition: all .3s ease
 }
 
 .Pg::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: var(--radl);
+  border-radius: 20px;
   padding: 1px;
   background: linear-gradient(135deg, rgba(247, 147, 26, .2), rgba(14, 165, 233, .12), rgba(167, 139, 250, .08));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -410,12 +410,12 @@ a:hover {
   mask-composite: exclude;
   pointer-events: none;
   opacity: .4;
-  transition: opacity .3s var(--ease)
+  transition: opacity .3s ease
 }
 
 .Pg:hover {
   border-color: transparent;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
   transform: translateY(-1px)
 }
 
@@ -428,7 +428,7 @@ a:hover {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .1em;
-  color: var(--t3);
+  color: #B9B9D2;
   margin-bottom: 14px;
   display: flex;
   align-items: center;
@@ -438,19 +438,19 @@ a:hover {
 .tag {
   font-size: .55rem;
   padding: 2px 7px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   font-weight: 700
 }
 
 .tag-g {
-  background: var(--gG);
-  color: var(--g);
-  border: 1px solid var(--gB)
+  background: rgba(16,185,129,.06);
+  color: #0AA95F;
+  border: 1px solid rgba(16,185,129,.15)
 }
 
 .tag-o {
-  background: var(--oG);
-  color: var(--o);
+  background: rgba(247,147,26,.08);
+  color: #F7931A;
   border: 1px solid rgba(247, 147, 26, .15)
 }
 
@@ -461,8 +461,8 @@ a:hover {
   background: rgba(10, 10, 18, .4);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--bd);
-  border-radius: var(--radl);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
   margin-bottom: 24px;
   position: relative;
   overflow: hidden
@@ -516,10 +516,10 @@ a:hover {
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   background: rgba(247, 147, 26, .06);
   border: 1px solid rgba(247, 147, 26, .12);
-  color: var(--o);
+  color: #F7931A;
   font-size: .75rem;
   font-weight: 600;
   margin-bottom: 28px;
@@ -531,9 +531,9 @@ a:hover {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--g);
+  background: #0AA95F;
   animation: blink 2s infinite;
-  box-shadow: 0 0 8px var(--g)
+  box-shadow: 0 0 8px #0AA95F
 }
 
 @keyframes blink {
@@ -554,7 +554,7 @@ a:hover {
   letter-spacing: -.045em;
   line-height: 1.05;
   margin-bottom: 20px;
-  color: var(--w)
+  color: #FFFFFF
 }
 
 @media(max-width:768px) {
@@ -563,7 +563,7 @@ a:hover {
 }
 
 .hero-ac {
-  background: linear-gradient(135deg, var(--o), var(--y), var(--o2));
+  background: linear-gradient(135deg, #F7931A, #F2C464, #F7B955);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -583,7 +583,7 @@ a:hover {
 
 .hero-p {
   font-size: .95rem;
-  color: var(--t2);
+  color: #B9B9D2;
   max-width: 540px;
   margin: 0 auto 32px;
   line-height: 1.7;
@@ -600,15 +600,15 @@ a:hover {
 
 .btn-p {
   padding: 13px 30px;
-  border-radius: var(--rr);
-  background: linear-gradient(135deg, var(--o), var(--o2));
+  border-radius: 999px;
+  background: linear-gradient(135deg, #F7931A, #F7B955);
   border: none;
   color: #000;
   font-weight: 700;
   font-size: .85rem;
   cursor: pointer;
-  transition: all .25s var(--ease);
-  font-family: var(--ff);
+  transition: all .25s ease;
+  font-family: 'Inter', sans-serif;
   letter-spacing: -.01em;
   box-shadow: 0 4px 20px rgba(247, 147, 26, .2), inset 0 1px 0 rgba(255,255,255,.2)
 }
@@ -620,24 +620,24 @@ a:hover {
 
 .btn-s {
   padding: 13px 30px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   background: rgba(255,255,255,.03);
   backdrop-filter: blur(12px);
-  border: 1px solid var(--bd2);
-  color: var(--t1);
+  border: 1px solid rgba(255,255,255,.1);
+  color: #B9B9D2;
   font-weight: 600;
   font-size: .85rem;
   cursor: pointer;
-  transition: all .25s var(--ease);
-  font-family: var(--ff);
+  transition: all .25s ease;
+  font-family: 'Inter', sans-serif;
   letter-spacing: -.01em
 }
 
 .btn-s:hover {
-  border-color: var(--bd3);
+  border-color: rgba(255,255,255,.15);
   background: rgba(255, 255, 255, .06);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm)
+  box-shadow: 0 2px 8px rgba(0,0,0,.25)
 }
 
 .pillars {
@@ -659,16 +659,16 @@ a:hover {
   padding: 28px 20px;
   background: rgba(255, 255, 255, .02);
   backdrop-filter: blur(12px);
-  border: 1px solid var(--bd);
+  border: 1px solid rgba(255,255,255,.1);
   border-radius: 20px;
-  transition: all .3s var(--ease)
+  transition: all .3s ease
 }
 
 .pillar:hover {
-  border-color: var(--bd2);
+  border-color: rgba(255,255,255,.1);
   background: rgba(255, 255, 255, .04);
   transform: translateY(-3px);
-  box-shadow: var(--shadow-md)
+  box-shadow: 0 8px 32px rgba(0,0,0,.35)
 }
 
 .pillar-i {
@@ -680,13 +680,13 @@ a:hover {
 .pillar-t {
   font-weight: 700;
   font-size: .9rem;
-  color: var(--w);
+  color: #FFFFFF;
   margin-bottom: 6px
 }
 
 .pillar-d {
   font-size: .78rem;
-  color: var(--t3);
+  color: #B9B9D2;
   line-height: 1.5
 }
 
@@ -698,7 +698,7 @@ a:hover {
   gap: 28px;
   padding: 20px 28px;
   background: rgba(255, 255, 255, .02);
-  border: 1px solid var(--bd);
+  border: 1px solid rgba(255,255,255,.1);
   border-radius: 20px;
   flex-wrap: wrap;
   backdrop-filter: blur(12px)
@@ -710,17 +710,17 @@ a:hover {
 
 .tk-l {
   font-size: .58rem;
-  color: var(--t3);
+  color: #B9B9D2;
   text-transform: uppercase;
   letter-spacing: .05em;
   font-weight: 600
 }
 
 .tk-v {
-  font-family: var(--fm);
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: .95rem;
-  color: var(--w)
+  color: #FFFFFF
 }
 
 .tk-c {
@@ -729,17 +729,17 @@ a:hover {
 }
 
 .tk-c.u {
-  color: var(--g)
+  color: #0AA95F
 }
 
 .tk-c.d {
-  color: var(--r)
+  color: #FF3737
 }
 
 .tk-s {
   width: 1px;
   height: 26px;
-  background: var(--bd)
+  background: rgba(255,255,255,.1)
 }
 
 .fgrid {
@@ -764,13 +764,13 @@ a:hover {
 .fc {
   padding: 28px 24px;
   cursor: pointer;
-  transition: all .3s var(--ease)
+  transition: all .3s ease
 }
 
 .fc:hover {
-  border-color: var(--bd2);
+  border-color: rgba(255,255,255,.1);
   transform: translateY(-4px);
-  box-shadow: var(--shadow-lg)
+  box-shadow: 0 16px 64px rgba(0,0,0,.45)
 }
 
 .fc-i {
@@ -782,22 +782,22 @@ a:hover {
 .fc-t {
   font-weight: 700;
   font-size: .95rem;
-  color: var(--w);
+  color: #FFFFFF;
   margin-bottom: 6px;
   letter-spacing: -.01em
 }
 
 .fc-d {
   font-size: .8rem;
-  color: var(--t3);
+  color: #B9B9D2;
   line-height: 1.5
 }
 
 .eco-bn {
   background: rgba(10, 10, 18, .4);
   backdrop-filter: blur(20px);
-  border: 1px solid var(--bd);
-  border-radius: var(--radl);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
   padding: 32px;
   display: flex;
   align-items: center;
@@ -850,8 +850,8 @@ a:hover {
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--bg3), var(--bg));
-  border: 2px solid var(--bd2);
+  background: radial-gradient(circle, #10101c, #06060b);
+  border: 2px solid rgba(255,255,255,.1);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -868,7 +868,7 @@ a:hover {
   position: absolute;
   inset: -12px;
   border-radius: 50%;
-  border: 1px solid var(--oG);
+  border: 1px solid rgba(247,147,26,.08);
   animation: ringPulse 2s ease-in-out infinite;
   pointer-events: none
 }
@@ -898,21 +898,21 @@ a:hover {
 }
 
 .pb:hover {
-  border-color: var(--o);
-  box-shadow: 0 0 40px var(--oG)
+  border-color: #F7931A;
+  box-shadow: 0 0 40px rgba(247,147,26,.08)
 }
 
 .pb:hover::before {
-  border-color: var(--oS)
+  border-color: rgba(247,147,26,.2)
 }
 
 .pb:active {
   transform: scale(.9);
-  box-shadow: 0 0 60px var(--oS)
+  box-shadow: 0 0 60px rgba(247,147,26,.2)
 }
 
 .pb.gl {
-  border-color: var(--y);
+  border-color: #F2C464;
   box-shadow: 0 0 60px rgba(234, 179, 8, .2)
 }
 
@@ -923,7 +923,7 @@ a:hover {
 
 .pb-h {
   font-size: .55rem;
-  color: var(--t4);
+  color: #B9B9D2;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -936,10 +936,10 @@ a:hover {
 }
 
 .sd-b {
-  font-family: var(--fm);
+  font-family: 'Inter', sans-serif;
   font-size: 2.2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--o), var(--y));
+  background: linear-gradient(135deg, #F7931A, #F2C464);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -948,13 +948,13 @@ a:hover {
 
 .sd-s {
   font-size: .72rem;
-  color: var(--t3)
+  color: #B9B9D2
 }
 
 .sd-r {
-  font-family: var(--fm);
+  font-family: 'Inter', sans-serif;
   font-size: .82rem;
-  color: var(--g);
+  color: #0AA95F;
   margin-top: 3px;
   font-weight: 600
 }
@@ -962,10 +962,10 @@ a:hover {
 .flu {
   position: absolute;
   pointer-events: none;
-  font-family: var(--fm);
+  font-family: 'Inter', sans-serif;
   font-weight: 800;
   font-size: .95rem;
-  color: var(--o);
+  color: #F7931A;
   animation: fU .8s ease-out forwards;
   z-index: 10;
   text-shadow: 0 0 8px rgba(247, 147, 26, .5)
@@ -988,15 +988,15 @@ a:hover {
   gap: 14px;
   margin-top: 14px;
   font-size: .7rem;
-  color: var(--t3);
+  color: #B9B9D2;
   flex-wrap: wrap;
   justify-content: center
 }
 
 .hb {
-  background: var(--bg3);
-  border: 1px solid var(--bd);
-  border-radius: var(--rr);
+  background: #10101c;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 999px;
   height: 5px;
   overflow: hidden;
   width: 100%;
@@ -1006,8 +1006,8 @@ a:hover {
 
 .hf {
   height: 100%;
-  border-radius: var(--rr);
-  background: linear-gradient(90deg, var(--o), var(--y));
+  border-radius: 999px;
+  background: linear-gradient(90deg, #F7931A, #F2C464);
   transition: .4s;
   box-shadow: 0 0 6px rgba(247, 147, 26, .3)
 }
@@ -1021,10 +1021,10 @@ a:hover {
 }
 
 .uc {
-  background: var(--glass);
+  background: rgba(12,12,20,.55);
   backdrop-filter: blur(8px);
-  border: 1px solid var(--bd);
-  border-radius: var(--rad);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
   padding: 10px 11px;
   cursor: pointer;
   transition: .15s;
@@ -1083,9 +1083,9 @@ a:hover {
   font-size: .5rem;
   color: var(--o);
   font-weight: 700;
-  background: var(--oG);
+  background: rgba(247,147,26,.08);
   padding: 1px 5px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   border: 1px solid rgba(247, 147, 26, .12)
 }
 
@@ -1095,7 +1095,8 @@ a:hover {
   color: var(--t4);
   text-transform: uppercase;
   letter-spacing: .07em;
-  padding: 6px 2px 2px
+  padding: 6px 2px 2px;
+  margin-top: 10px
 }
 
 .ar {
@@ -1107,19 +1108,19 @@ a:hover {
 
 .ach {
   padding: 3px 8px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   font-size: .62rem;
   font-weight: 600;
   background: rgba(255, 255, 255, .02);
-  border: 1px solid var(--bd);
-  color: var(--t4);
+  border: 1px solid rgba(255,255,255,.05);
+  color: #2d3548;
   transition: .15s
 }
 
 .ach.on {
-  background: var(--oG);
+  background: rgba(247,147,26,.08);
   border-color: rgba(247, 147, 26, .2);
-  color: var(--o);
+  color: #F7931A;
   box-shadow: 0 0 8px rgba(247, 147, 26, .1)
 }
 
@@ -1142,7 +1143,7 @@ a:hover {
 .bub {
   max-width: 80%;
   padding: 14px 18px;
-  border-radius: var(--rad);
+  border-radius: 14px;
   font-size: .88rem;
   line-height: 1.6;
   backdrop-filter: blur(12px)
@@ -1186,9 +1187,9 @@ a:hover {
 .chip {
   padding: 6px 12px;
   background: rgba(255, 255, 255, .03);
-  border: 1px solid var(--bd);
-  border-radius: var(--rr);
-  color: var(--t2);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 999px;
+  color: #7a8494;
   font-size: .72rem;
   font-weight: 500;
   cursor: pointer;
@@ -1207,16 +1208,16 @@ a:hover {
   display: flex;
   gap: 6px;
   padding-top: 10px;
-  border-top: 1px solid var(--bd)
+  border-top: 1px solid rgba(255,255,255,.05)
 }
 
 .chat-i {
   flex: 1;
   padding: 10px 14px;
   background: rgba(255, 255, 255, .04);
-  border: 1px solid var(--bd);
-  border-radius: var(--rad);
-  color: var(--w);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 14px;
+  color: #fff;
   font-family: var(--ff);
   font-size: .85rem;
   outline: none;
@@ -1224,19 +1225,19 @@ a:hover {
 }
 
 .chat-i:focus {
-  border-color: var(--c);
+  border-color: #0ea5e9;
   box-shadow: 0 0 12px rgba(14, 165, 233, .1)
 }
 
 .chat-i::placeholder {
-  color: var(--t4)
+  color: #2d3548
 }
 
 .snd {
   padding: 10px 20px;
   background: linear-gradient(135deg, var(--c), #0284c7);
   border: none;
-  border-radius: var(--rad);
+  border-radius: 14px;
   color: #fff;
   font-weight: 700;
   font-size: .82rem;
@@ -1290,9 +1291,9 @@ a:hover {
 }
 
 .nc:hover {
-  border-color: var(--bd2);
+  border-color: rgba(255,255,255,.1);
   transform: translateY(-3px);
-  box-shadow: var(--shadow-md)
+  box-shadow: 0 8px 32px rgba(0,0,0,.35)
 }
 
 .ns {
@@ -1326,8 +1327,8 @@ a:hover {
 .ntag {
   font-size: .55rem;
   padding: 2px 7px;
-  border-radius: var(--rr);
-  background: var(--oG);
+  border-radius: 999px;
+  background: rgba(247,147,26,.08);
   color: var(--o);
   font-weight: 600;
   border: 1px solid rgba(247, 147, 26, .12)
@@ -1343,7 +1344,7 @@ a:hover {
   padding: 6px 14px;
   background: rgba(255, 255, 255, .03);
   border: 1px solid var(--bd);
-  border-radius: var(--rr);
+  border-radius: 999px;
   color: var(--t3);
   font-family: var(--ff);
   font-size: .75rem;
@@ -1354,13 +1355,13 @@ a:hover {
 
 .fbn:hover {
   color: var(--t1);
-  border-color: var(--bd2)
+  border-color: rgba(255,255,255,.1)
 }
 
 .fbn.on {
   color: var(--o);
   border-color: var(--o);
-  background: var(--oG)
+  background: rgba(247,147,26,.08)
 }
 
 /* ═══ TOOLS ═══ */
@@ -1387,7 +1388,7 @@ a:hover {
   padding: 10px 14px;
   background: rgba(255, 255, 255, .04);
   border: 1px solid var(--bd);
-  border-radius: var(--rad);
+  border-radius: 14px;
   color: var(--w);
   font-family: var(--fm);
   font-size: .8rem;
@@ -1409,7 +1410,7 @@ a:hover {
   padding: 10px 18px;
   background: linear-gradient(135deg, var(--o), var(--o2));
   border: none;
-  border-radius: var(--rad);
+  border-radius: 14px;
   color: #000;
   font-weight: 700;
   font-size: .8rem;
@@ -1426,7 +1427,7 @@ a:hover {
 .rb {
   background: rgba(255, 255, 255, .03);
   border: 1px solid var(--bd);
-  border-radius: var(--rad);
+  border-radius: 14px;
   overflow: hidden
 }
 
@@ -1458,7 +1459,7 @@ a:hover {
   padding: 18px;
   background: rgba(255, 255, 255, .03);
   border: 1px solid var(--bd);
-  border-radius: var(--rad)
+  border-radius: 14px
 }
 
 .cr-b {
@@ -1487,9 +1488,9 @@ a:hover {
 }
 
 .ei:hover {
-  border-color: var(--bd2);
+  border-color: rgba(255,255,255,.1);
   transform: translateY(-3px);
-  box-shadow: var(--shadow-md)
+  box-shadow: 0 8px 32px rgba(0,0,0,.35)
 }
 
 .ei-t {
@@ -1509,13 +1510,13 @@ a:hover {
   font-size: .55rem;
   font-weight: 700;
   padding: 2px 7px;
-  border-radius: var(--rr)
+  border-radius: 999px
 }
 
 .ei-s.lv {
-  background: var(--gG);
+  background: rgba(16,185,129,.06);
   color: var(--g);
-  border: 1px solid var(--gB)
+  border: 1px solid rgba(16,185,129,.15)
 }
 
 .ei-s.wp {
@@ -1540,8 +1541,8 @@ a:hover {
 .ei-g {
   font-size: .55rem;
   padding: 2px 7px;
-  border-radius: var(--rr);
-  background: var(--pG);
+  border-radius: 999px;
+  background: rgba(167,139,250,.06);
   color: var(--p);
   font-weight: 600;
   border: 1px solid rgba(167, 139, 250, .12)
@@ -1650,7 +1651,7 @@ a:hover {
   padding: 10px 14px;
   background: rgba(255, 255, 255, .04);
   border: 1px solid var(--bd);
-  border-radius: var(--rad);
+  border-radius: 14px;
   color: var(--w);
   font-family: var(--ff);
   font-size: .85rem;
@@ -1668,7 +1669,7 @@ a:hover {
   padding: 13px;
   background: linear-gradient(135deg, var(--o), var(--o2));
   border: none;
-  border-radius: var(--rad);
+  border-radius: 14px;
   color: #000;
   font-weight: 700;
   font-size: .92rem;
@@ -1685,8 +1686,8 @@ a:hover {
 
 .upload-zone {
   grid-column: 1/-1;
-  border: 2px dashed var(--bd2);
-  border-radius: var(--rad);
+  border: 2px dashed rgba(255,255,255,.1);
+  border-radius: 14px;
   padding: 22px;
   text-align: center;
   cursor: pointer;
@@ -1697,7 +1698,7 @@ a:hover {
 
 .upload-zone:hover {
   border-color: var(--o);
-  background: var(--oG)
+  background: rgba(247,147,26,.08)
 }
 
 .upload-zone input {
@@ -1713,7 +1714,7 @@ a:hover {
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 6px;
-  border: 2px solid var(--bd2)
+  border: 2px solid rgba(255,255,255,.1)
 }
 
 /* ═══ QUESTS ═══ */
@@ -1729,7 +1730,7 @@ a:hover {
 }
 
 .q-card:hover {
-  border-color: var(--bd2);
+  border-color: rgba(255,255,255,.1);
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .3)
 }
@@ -1759,9 +1760,9 @@ a:hover {
   font-size: .65rem;
   font-weight: 700;
   color: var(--y);
-  background: var(--yG);
+  background: rgba(245,158,11,.06);
   padding: 3px 8px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   border: 1px solid rgba(234, 179, 8, .15)
 }
 
@@ -1769,7 +1770,7 @@ a:hover {
   padding: 8px 16px;
   background: linear-gradient(135deg, var(--o), var(--o2));
   border: none;
-  border-radius: var(--rad);
+  border-radius: 14px;
   color: #000;
   font-weight: 700;
   font-size: .75rem;
@@ -1796,9 +1797,9 @@ a:hover {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: var(--oG);
+  background: rgba(247,147,26,.08);
   border: 1px solid rgba(247, 147, 26, .15);
-  border-radius: var(--rr);
+  border-radius: 999px;
   font-size: .65rem;
   font-weight: 600;
   color: var(--o);
@@ -1837,7 +1838,7 @@ a:hover {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--bd);
-  border-radius: var(--radl);
+  border-radius: 20px;
   margin-bottom: 20px;
   position: relative;
   overflow: hidden
@@ -1896,20 +1897,20 @@ a:hover {
   font-size: .78rem;
   font-weight: 600;
   padding: 5px 14px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   margin-top: 8px
 }
 
 .pill-u {
-  background: var(--gG);
+  background: rgba(16,185,129,.06);
   color: var(--g);
-  border: 1px solid var(--gB)
+  border: 1px solid rgba(16,185,129,.15)
 }
 
 .pill-d {
-  background: var(--rG);
+  background: rgba(239,68,68,.06);
   color: var(--r);
-  border: 1px solid var(--rB)
+  border: 1px solid rgba(239,68,68,.15)
 }
 
 .mets {
@@ -1977,7 +1978,7 @@ a:hover {
   right: -360px;
   width: 340px;
   height: 100vh;
-  background: var(--glass2);
+  background: rgba(8,8,14,.82);
   backdrop-filter: blur(24px) saturate(1.8);
   border-left: 1px solid var(--bd);
   z-index: 201;
@@ -2016,7 +2017,7 @@ a:hover {
 
 .qp-close:hover {
   color: var(--w);
-  border-color: var(--bd2)
+  border-color: rgba(255,255,255,.1)
 }
 
 .qp-stats {
@@ -2030,7 +2031,7 @@ a:hover {
   text-align: center;
   padding: 8px;
   background: rgba(255, 255, 255, .03);
-  border-radius: var(--rad);
+  border-radius: 14px;
   border: 1px solid var(--bd)
 }
 
@@ -2061,7 +2062,7 @@ a:hover {
   align-items: center;
   gap: 8px;
   padding: 10px 10px;
-  border-radius: var(--rad);
+  border-radius: 14px;
   border: 1px solid var(--bd);
   cursor: pointer;
   transition: .15s;
@@ -2109,9 +2110,9 @@ a:hover {
   font-size: .62rem;
   font-weight: 700;
   color: var(--y);
-  background: var(--yG);
+  background: rgba(245,158,11,.06);
   padding: 2px 6px;
-  border-radius: var(--rr);
+  border-radius: 999px;
   flex-shrink: 0
 }
 

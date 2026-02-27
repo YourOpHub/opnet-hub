@@ -147,16 +147,21 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh]);
 
   const removeLiquidity = useCallback(() => {
-    if (!walletAddress || !hasLP) return;
-    const prevM = lpMine, prevV = lpVibe;
+    if (!walletAddress) return;
+    // Use manually entered values if provided, else fall back to localStorage tracked amounts
+    const m = parseFloat(mineAmt) || lpMine;
+    const v = parseFloat(vibeAmt) || lpVibe;
+    if (m <= 0 && v <= 0) { setResult({ ok: false, msg: 'Enter the amounts you added to the pool' }); return; }
     localStorage.setItem('hub_lp_mine', '0');
     localStorage.setItem('hub_lp_vibe', '0');
     setLpMine(0);
     setLpVibe(0);
-    setResult({ ok: true, msg: `Removed ${prevM.toLocaleString()} MINE + ${prevV.toLocaleString()} VIBE position` });
-    addTxRecord({ type: 'claim', txHash: '', tokenA: 'LP', amountA: `${prevM}+${prevV}`, status: 'confirmed', wallet: walletAddress });
+    setMineAmt('');
+    setVibeAmt('');
+    setResult({ ok: true, msg: `Removed ${m.toLocaleString()} MINE + ${v.toLocaleString()} VIBE position record` });
+    addTxRecord({ type: 'claim', txHash: '', tokenA: 'LP', amountA: `${m}+${v}`, status: 'confirmed', wallet: walletAddress });
     setTimeout(onRefresh, 2000);
-  }, [walletAddress, lpMine, lpVibe, hasLP, onRefresh]);
+  }, [walletAddress, mineAmt, vibeAmt, lpMine, lpVibe, onRefresh]);
 
   if (!open) return null;
 
@@ -300,42 +305,75 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {/* REMOVE TAB */}
         {tab === 'remove' && (
           <div>
-            {hasLP ? (
-              <>
-                <div style={{ padding: '16px', background: 'rgba(255,255,255,.025)', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', marginBottom: 14 }}>
-                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>Your Position</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: '.75rem', color: '#8b95a9' }}>MINE</span>
-                    <span style={{ fontSize: '.85rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpMine.toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: '.75rem', color: '#8b95a9' }}>VIBE</span>
-                    <span style={{ fontSize: '.85rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpVibe.toLocaleString()}</span>
-                  </div>
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+            {/* Position summary if tracked in localStorage */}
+            {hasLP && (
+              <div style={{ padding: '12px 14px', background: 'rgba(14,165,233,.04)', borderRadius: 14, border: '1px solid rgba(14,165,233,.1)', marginBottom: 12 }}>
+                <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>Detected Position</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: '.72rem', color: '#8b95a9' }}>MINE</span>
+                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpMine.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: '.72rem', color: '#8b95a9' }}>VIBE</span>
+                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpVibe.toLocaleString()}</span>
+                </div>
+                {poolShare > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 6, marginTop: 4 }}>
                     <span style={{ fontSize: '.58rem', color: '#5a6578' }}>Pool Share</span>
-                    <span style={{ fontSize: '.88rem', fontWeight: 800, color: '#0ea5e9', fontFamily: "'JetBrains Mono', monospace" }}>{poolShare.toFixed(2)}%</span>
+                    <span style={{ fontSize: '.75rem', fontWeight: 800, color: '#0ea5e9', fontFamily: "'JetBrains Mono', monospace" }}>{poolShare.toFixed(2)}%</span>
                   </div>
-                </div>
-
-                <button onClick={removeLiquidity} disabled={busy} style={{
-                  width: '100%', padding: '15px', borderRadius: 14,
-                  border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)',
-                  color: '#ef4444', fontWeight: 700, fontSize: '.82rem', cursor: 'pointer',
-                  fontFamily: 'var(--ff)', opacity: busy ? 0.5 : 1, transition: 'all .2s',
-                }}>
-                  Remove Full Position
-                </button>
-
-                <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.04)', borderRadius: 10, border: '1px solid rgba(234,179,8,.08)', fontSize: '.58rem', color: '#f59e0b' }}>
-                  SimplePool v1 — positions tracked locally. On-chain LP tokens in v2.
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: 20, textAlign: 'center', color: 'var(--t3)', fontSize: '.82rem' }}>
-                No liquidity positions to remove.
+                )}
               </div>
             )}
+
+            {/* Manual entry — always shown */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 8, fontWeight: 600 }}>
+                {hasLP ? 'Or enter amount manually:' : 'Enter your position to remove:'}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4 }}>MINE amount</div>
+                  <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
+                    placeholder={lpMine > 0 ? String(lpMine) : '0'}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
+                      border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
+                      fontSize: '.8rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none',
+                    }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4 }}>VIBE amount</div>
+                  <input type="number" value={vibeAmt} onChange={e => setVibeAmt(e.target.value)}
+                    placeholder={lpVibe > 0 ? String(lpVibe) : '0'}
+                    style={{
+                      width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
+                      border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
+                      fontSize: '.8rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none',
+                    }} />
+                </div>
+              </div>
+              {hasLP && (
+                <button onClick={() => { setMineAmt(String(lpMine)); setVibeAmt(String(lpVibe)); }} style={{
+                  padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(14,165,233,.2)',
+                  background: 'rgba(14,165,233,.06)', color: '#0ea5e9', cursor: 'pointer',
+                  fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)',
+                }}>Use detected amounts</button>
+              )}
+            </div>
+
+            <button onClick={removeLiquidity} disabled={busy} style={{
+              width: '100%', padding: '15px', borderRadius: 14,
+              border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)',
+              color: '#ef4444', fontWeight: 700, fontSize: '.82rem', cursor: 'pointer',
+              fontFamily: 'var(--ff)', opacity: busy ? 0.5 : 1, transition: 'all .2s',
+            }}>
+              Remove Position
+            </button>
+
+            <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.04)', borderRadius: 10, border: '1px solid rgba(234,179,8,.08)', fontSize: '.58rem', color: '#f59e0b' }}>
+              SimplePool v1 — positions tracked locally. If you don't see your position, enter amounts manually.
+            </div>
           </div>
         )}
 

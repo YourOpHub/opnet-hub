@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { getContract, OP_20_ABI } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import { Address, BinaryWriter } from '@btc-vision/transaction';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, DEPLOYER_ADDRESS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX, getTxUrl } from '../contracts';
+import {
+  TESTNET_CONTRACTS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX,
+  POOL_ADDRESS, POOL_SELECTORS, OP20_SELECTORS,
+  getTxUrl, getContractOpscanUrl,
+} from '../contracts';
 
-/** Constant-product AMM pool for MINE/VIBE. x * y = k, 0.3% LP fee */
-const POOLS: Record<string, { reserveA: number; reserveB: number; symbolA: string; symbolB: string }> = {
-  'MINE/VIBE': { reserveA: 5_000_000, reserveB: 25_000_000, symbolA: 'MINE', symbolB: 'VIBE' },
-  'VIBE/MINE': { reserveA: 25_000_000, reserveB: 5_000_000, symbolA: 'VIBE', symbolB: 'MINE' },
-};
+/** Initial pool reserves (will be read from chain once pool is deployed) */
+const INIT_RESERVE_A = 5_000_000;  // MINE
+const INIT_RESERVE_B = 25_000_000; // VIBE
 
 function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): { out: number; impact: number } {
   const fee = amountIn * 0.003;
@@ -39,12 +40,17 @@ const SwapUI: React.FC = () => {
   const [fromAmt, setFromAmt] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [swapping, setSwapping] = useState(false);
+  const [swapStep, setSwapStep] = useState('');
   const [swapResult, setSwapResult] = useState<SwapResultType | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [btcPrice, setBtcPrice] = useState(0);
   const [balances, setBalances] = useState<Record<string, bigint>>({});
   const [balLoading, setBalLoading] = useState(false);
   const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
+  const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
+  const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
+
+  const poolReady = !!POOL_ADDRESS;
 
   useEffect(() => { fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); }); }, []);
 
@@ -57,7 +63,7 @@ const SwapUI: React.FC = () => {
     });
   }, []);
 
-  // Fetch balances: if connected wallet has MLDSA, use it; otherwise use deployer keys for demo
+  // Fetch balances
   useEffect(() => {
     if (!walletAddress) { setBalances({}); return; }
     opnet.setNetwork('testnet');
@@ -83,13 +89,16 @@ const SwapUI: React.FC = () => {
   const from = TOKENS[fromIdx] || TOKENS[0];
   const to = TOKENS[toIdx] || TOKENS[1];
   const fromVal = parseFloat(fromAmt) || 0;
-  const poolKey = `${from.symbol}/${to.symbol}`;
-  const pool = POOLS[poolKey];
-  const hasPool = !!pool;
-  const quote = hasPool && fromVal > 0 ? getAmountOut(fromVal, pool.reserveA, pool.reserveB) : null;
+
+  // Determine reserves based on direction
+  const isAToB = from.symbol === 'MINE';
+  const rIn = isAToB ? reserveA : reserveB;
+  const rOut = isAToB ? reserveB : reserveA;
+  const hasPool = rIn > 0 && rOut > 0;
+  const quote = hasPool && fromVal > 0 ? getAmountOut(fromVal, rIn, rOut) : null;
   const toVal = quote?.out ?? 0;
   const priceImpact = quote?.impact ?? 0;
-  const rate = hasPool ? pool.reserveB / pool.reserveA : 0;
+  const rate = hasPool ? rOut / rIn : 0;
   const fee = fromVal * 0.003;
 
   const fromBal = balances[from.symbol];
@@ -98,12 +107,46 @@ const SwapUI: React.FC = () => {
 
   const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
 
-  /** Execute a REAL on-chain OP-20 transfer via Web3Provider or opnet SDK */
+  /** Helper: send interaction via web3 provider */
+  const sendInteraction = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    web3: any, to: string, calldata: Uint8Array, utxos: unknown[],
+  ) => {
+    const [, tx] = await web3.signAndBroadcastInteraction({
+      calldata,
+      to,
+      utxos: utxos || [],
+      feeRate: 10,
+      priorityFee: 10_000n,
+      gasSatFee: 100_000n,
+      revealMLDSAPublicKey: true,
+      linkMLDSAPublicKeyToAddress: true,
+    });
+    return tx?.result || '';
+  };
+
+  /**
+   * Execute a REAL on-chain swap via SimplePool AMM:
+   * Step 1: increaseAllowance(poolAddress, amountIn) on token-in
+   * Step 2: swap(tokenIn, amountIn, minAmountOut) on pool contract
+   */
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
 
-    if (!walletAddress || !walletInstance || !provider || !signer || !wcAddress || !wcNetwork) {
+    if (!walletAddress || !walletInstance || !provider || !signer) {
       openConnectModal();
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const web3 = (walletInstance as any).web3;
+    if (!web3?.signAndBroadcastInteraction) {
+      setSwapResult({ type: 'error', error: 'Wallet does not support Web3 API. Use OP_WALLET.' });
+      return;
+    }
+
+    if (!poolReady) {
+      setSwapResult({ type: 'error', error: 'Pool contract not yet deployed. Coming soon!' });
       return;
     }
 
@@ -111,77 +154,57 @@ const SwapUI: React.FC = () => {
     setSwapResult(null);
 
     try {
-      // 1. Create OP-20 contract instance & encode calldata
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tokenContract = getContract<any>(
-        from.address, OP_20_ABI,
-        provider as any, wcNetwork as any, wcAddress as any,
-      );
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
-      const recipient = Address.fromString(DEPLOYER_ADDRESS);
+      const minOut = BigInt(Math.floor(toVal * (1 - slippage / 100) * Math.pow(10, to.decimals)));
 
-      // 2. ALWAYS simulate before sending (audit requirement)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const simulation = await (tokenContract as any).transfer(recipient, rawAmount);
-      if (simulation.revert) throw new Error(`Simulation reverted: ${simulation.revert}`);
+      const utxos = await (provider as any).utxoManager?.getUTXOs?.({
+        address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
+      }).catch(() => []) || [];
 
-      // 3. Try Web3Provider (OP_WALLET native) — wallet handles signing, MLDSA, challenge
+      // STEP 1: Approve pool to spend token-in
+      setSwapStep('Approving token spend...');
+      const approveWriter = new BinaryWriter();
+      approveWriter.writeSelector(OP20_SELECTORS.increaseAllowance);
+      approveWriter.writeAddress(Address.fromString(POOL_ADDRESS));
+      approveWriter.writeU256(rawAmount);
+
+      await sendInteraction(web3, from.address, approveWriter.getBuffer(), utxos);
+
+      // Brief wait for approval to propagate
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Refresh UTXOs after approval tx
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const web3 = (walletInstance as any).web3;
-      if (web3?.signAndBroadcastInteraction) {
-        const calldata = simulation.calldata instanceof Uint8Array
-          ? simulation.calldata
-          : tokenContract.encodeCalldata('transfer', [recipient, rawAmount]);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const utxos = await (provider as any).utxoManager.getUTXOs({
-          address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
-        }).catch(() => []);
+      const utxos2 = await (provider as any).utxoManager?.getUTXOs?.({
+        address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
+      }).catch(() => []) || [];
 
-        const [, interactionTx] = await web3.signAndBroadcastInteraction({
-          calldata: calldata instanceof Uint8Array ? calldata : new Uint8Array(calldata),
-          to: from.address,
-          utxos: utxos || [],
-          feeRate: 10,
-          priorityFee: 10_000n,
-          gasSatFee: 100_000n,
-          revealMLDSAPublicKey: true,
-          linkMLDSAPublicKeyToAddress: true,
-        });
+      // STEP 2: Call swap on pool
+      setSwapStep('Executing swap on pool...');
+      const swapWriter = new BinaryWriter();
+      swapWriter.writeSelector(POOL_SELECTORS.swap);
+      swapWriter.writeAddress(Address.fromString(from.address));
+      swapWriter.writeU256(rawAmount);
+      swapWriter.writeU256(minOut);
 
-        const txHash = interactionTx?.result || '';
-        setSwapResult({
-          type: 'success', hash: txHash,
-          amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }),
-        });
-        localStorage.setItem('hub_swapped', '1');
-        return;
-      }
+      const txHash = await sendInteraction(web3, POOL_ADDRESS, swapWriter.getBuffer(), utxos2);
 
-      // 4. Fallback: sendTransaction — frontend uses signer=null, wallet handles signing
-      const receipt = await simulation.sendTransaction({
-        signer: null,
-        mldsaSigner: null,
-        refundTo: signer.p2tr,
-        maximumAllowedSatToSpend: 100_000n,
-        feeRate: 10,
-        network: wcNetwork,
-        linkMLDSAPublicKeyToAddress: true,
-        revealMLDSAPublicKey: true,
-      });
-
+      setSwapStep('');
       setSwapResult({
-        type: 'success', hash: receipt.transactionId,
+        type: 'success', hash: txHash,
         amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }),
       });
       localStorage.setItem('hub_swapped', '1');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Swap failed';
       console.error('[Swap]', e);
+      setSwapStep('');
       setSwapResult({ type: 'error', error: msg });
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, provider, signer, wcAddress, wcNetwork, from, toVal, openConnectModal]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, provider, signer, from, to, toVal, slippage, poolReady, openConnectModal]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -319,8 +342,8 @@ const SwapUI: React.FC = () => {
           {/* Pool badge */}
           {hasPool && (
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: '.6rem', color: 'var(--t4)' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--g)', display: 'inline-block' }} />
-              Pool: {pool.reserveA.toLocaleString()} {pool.symbolA} / {pool.reserveB.toLocaleString()} {pool.symbolB}
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: poolReady ? 'var(--g)' : 'var(--y)', display: 'inline-block' }} />
+              Pool: {reserveA.toLocaleString()} MINE / {reserveB.toLocaleString()} VIBE {poolReady ? '(on-chain)' : '(deploying)'}
             </div>
           )}
 
@@ -338,7 +361,7 @@ const SwapUI: React.FC = () => {
                 boxShadow: fromVal > 0 && hasPool ? '0 4px 16px rgba(247, 147, 26, .25)' : 'none',
                 opacity: swapping ? 0.7 : 1
               }}>
-              {swapping ? '🔄 Signing & Broadcasting…' : !hasPool ? 'No pool for this pair' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}` : 'Enter an amount'}
+              {swapping ? (swapStep || 'Processing...') : !poolReady ? 'Pool deploying soon...' : !hasPool ? 'No pool for this pair' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}` : 'Enter an amount'}
             </button>
           ) : (
             <button onClick={openConnectModal} style={{
@@ -375,7 +398,7 @@ const SwapUI: React.FC = () => {
 
         {/* Live contracts */}
         <div className="P" style={{ marginTop: 14, padding: 14, border: '1px solid rgba(247,147,26,.15)', background: 'rgba(247,147,26,.03)' }}>
-          <div className="Lb" style={{ marginBottom: 8, color: 'var(--o)' }}>⛓ Live Contracts — OPNet Testnet</div>
+          <div className="Lb" style={{ marginBottom: 8, color: 'var(--o)' }}>Live Contracts — OPNet Testnet</div>
           {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => {
             const onChainSupply = tokenSupplies[sym];
             const supplyHuman = onChainSupply != null
@@ -392,8 +415,12 @@ const SwapUI: React.FC = () => {
                   <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
                   <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
                 </div>
-                <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '.6rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none', flexShrink: 0 }}>Deploy TX ↗</a>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                  <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '.58rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
+                  <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Deploy TX ↗</a>
+                </div>
               </div>
             );
           })}
@@ -401,22 +428,35 @@ const SwapUI: React.FC = () => {
 
         {/* Pool info */}
         <div className="P" style={{ marginTop: 14, padding: 16, fontSize: '.75rem', color: 'var(--t3)', lineHeight: 1.5 }}>
-          <div className="Lb">💧 Liquidity Pool</div>
-          <p>Constant-product AMM (x·y=k) for MINE/VIBE. Swap executes a <strong>real on-chain OP-20 transfer</strong> signed by your wallet.</p>
+          <div className="Lb">Liquidity Pool (SimplePool AMM)</div>
+          <p>Constant-product AMM (x·y=k) for MINE/VIBE with 0.3% fee. Swap executes <strong>real on-chain transactions</strong>: approve + swap via the pool contract.</p>
+          {poolReady && (
+            <div style={{ marginTop: 6, padding: '6px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.62rem' }}>
+              <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 2 }}>Pool Contract Live</div>
+              <div style={{ fontFamily: 'var(--fm)', color: 'var(--t3)', wordBreak: 'break-all', fontSize: '.52rem' }}>{POOL_ADDRESS}</div>
+              <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
+                style={{ color: 'var(--c2)', fontSize: '.55rem' }}>View on OPScan ↗</a>
+            </div>
+          )}
+          {!poolReady && (
+            <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(234,179,8,.08)', border: '1px solid rgba(234,179,8,.2)', borderRadius: 8, fontSize: '.62rem', color: 'var(--y)' }}>
+              Pool contract deployment in progress...
+            </div>
+          )}
           <div style={{ marginTop: 10, padding: '10px', background: 'var(--bg3)', borderRadius: 'var(--rad)', fontSize: '.7rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span>⛏ MINE Reserve</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>5,000,000</span>
+              <span>MINE Reserve</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>{reserveA.toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span>⚡ VIBE Reserve</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>25,000,000</span>
+              <span>VIBE Reserve</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>{reserveB.toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Rate</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--o)' }}>1 MINE = 5 VIBE</span>
+              <span>Rate</span><span style={{ fontFamily: 'var(--fm)', color: 'var(--o)' }}>1 MINE = {(reserveB / reserveA).toFixed(1)} VIBE</span>
             </div>
           </div>
           {btcPrice > 0 && <div style={{ marginTop: 6, fontSize: '.6rem', color: 'var(--t4)' }}>BTC: ${btcPrice.toLocaleString()}</div>}
           <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href="https://motoswap.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Motoswap DEX →</a>
+            <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>OPScan Explorer →</a>
             <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '8px 16px' }}>Docs →</a>
           </div>
         </div>

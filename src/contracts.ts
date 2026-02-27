@@ -36,7 +36,33 @@ export const DEPLOYER_TWEAKED_HEX = '0fb4ee127879ea8e617377fc250f362f8ffab443284
 export const MINE_DEPLOY_TXID = '1a50546bf161d8aa623201d5bd812ea42b9a151b4373a62bf746243181902c59';
 export const VIBE_DEPLOY_TXID = 'bf65f4f7e87088953ae1ac1447765a4a364f1751d9bfaa761231dd739d0ab0d7';
 
-/** OPNet testnet explorer base */
+/** SimplePool AMM contract — MINE/VIBE liquidity pool */
+// Pool address will be set after deployment. For now, use empty string.
+// Update this after running: OPNET_MNEMONIC="..." node deploy/deploy-pool.mjs
+export const POOL_ADDRESS = 'opt1sqq9f2hgrvpmls9yl9nqmmpmgjlt9pep50smqj2u9';
+export const POOL_PUBKEY = '0x168d49557dd14bf7096887c09e431a1e4a266a22faf25bab375ca278b4950989';
+
+/** SimplePool selectors (from opnet-transform build output) */
+export const POOL_SELECTORS = {
+    sync: 0x4ffcd515,
+    swap: 0xc345780b,        // swap(address,uint256,uint256)
+    getReserves: 0x06374bfc,
+    getTokens: 0xf68958f1,
+} as const;
+
+/** OP-20 selectors (OPNet sha256-based, NOT EVM keccak256) */
+export const OP20_SELECTORS = {
+    transfer: 0x3b88ef57,
+    transferFrom: 0x4b6685e7,
+    balanceOf: 0x5b46f8f6,
+    increaseAllowance: 0x8d645723,
+    allowance: 0xd864b7ca,
+} as const;
+
+/** OPScan explorer — works for testnet contract inspection */
+const OPSCAN = 'https://opscan.org';
+
+/** OPNet testnet explorer for TXs */
 const EXPLORER = 'https://testnet.opnet.org';
 
 export function getTxUrl(txid: string): string {
@@ -44,10 +70,9 @@ export function getTxUrl(txid: string): string {
 }
 
 export function getContractOpscanUrl(address: string): string {
-    // Contract pages on testnet.opnet.org are not yet live; link to address lookup
-    return `${EXPLORER}/address/${address}`;
+    return `${OPSCAN}/accounts/${address}?network=op_testnet`;
 }
 
 export function getAddressUrl(address: string): string {
-    return `${EXPLORER}/address/${address}`;
+    return `${OPSCAN}/accounts/${address}?network=op_testnet`;
 }

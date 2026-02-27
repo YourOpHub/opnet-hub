@@ -73,7 +73,7 @@ const App: React.FC = () => {
             case 'portfolio': return <Portfolio walletAddress={wAddr} />;
             case 'bob': return <BobChat />;
             case 'tools': return <TokenTools />;
-            case 'swap': return <SwapUI walletAddress={wAddr} />;
+            case 'swap': return <SwapUI />;
             case 'launch': return <TokenLauncher />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;

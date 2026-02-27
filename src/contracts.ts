@@ -34,10 +34,18 @@ export const DEPLOYER_TWEAKED_HEX = '0fb4ee127879ea8e617377fc250f362f8ffab443284
 export const MINE_DEPLOY_TXID = '1a50546bf161d8aa623201d5bd812ea42b9a151b4373a62bf746243181902c59';
 export const VIBE_DEPLOY_TXID = 'bf65f4f7e87088953ae1ac1447765a4a364f1751d9bfaa761231dd739d0ab0d7';
 
-export function getOpscanUrl(address: string): string {
-    return `https://testnet.opnet.org/tx/${address}`;
+/** OPNet testnet explorer base */
+const EXPLORER = 'https://testnet.opnet.org';
+
+export function getTxUrl(txid: string): string {
+    return `${EXPLORER}/tx/${txid}`;
 }
 
 export function getContractOpscanUrl(address: string): string {
-    return `https://testnet.opnet.org/contract/${address}`;
+    // Contract pages on testnet.opnet.org are not yet live; link to address lookup
+    return `${EXPLORER}/address/${address}`;
+}
+
+export function getAddressUrl(address: string): string {
+    return `${EXPLORER}/address/${address}`;
 }

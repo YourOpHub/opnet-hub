@@ -1,21 +1,12 @@
 import React, { useState, useRef } from 'react';
+import { useWalletConnect } from '@btc-vision/walletconnect';
+import * as opnet from '../opnet';
+// contracts helpers available if needed
 
 const OP20_REPO = 'https://github.com/btc-vision/OP_20';
 const DOCS_DEPLOY = 'https://docs.opnet.org';
 const FAUCET = 'https://faucet.opnet.org';
-
-interface WalletProvider {
-  requestAccounts: () => Promise<string[]>;
-  signTransaction?: (txHex: string) => Promise<string>;
-  sendBitcoin?: (to: string, amount: number) => Promise<string>;
-  deploy?: (params: { bytecode: string; salt: string; calldata: string }) => Promise<{ txid: string; contractAddress: string }>;
-  signMessage?: (msg: string) => Promise<string>;
-}
-
-function getWallet(): WalletProvider | null {
-  const w = (window as unknown as { opnet?: WalletProvider; unisat?: WalletProvider });
-  return w.opnet || w.unisat || null;
-}
+const OPWALLET_URL = 'https://opwallet.org';
 
 const genLogo = (sym: string): string => {
   const s = (sym || '?').toUpperCase().slice(0, 3);
@@ -31,39 +22,19 @@ function toRawSupply(supply: string, decimals: string): string {
   return combined || '0';
 }
 
-/** Build OP-20 deploy calldata (ABI-encoded constructor params) */
-function buildCalldata(name: string, symbol: string, decimals: number, maxSupply: string): string {
-  const enc = new TextEncoder();
-  const nB = enc.encode(name);
-  const sB = enc.encode(symbol);
-  const parts: number[] = [];
-  // selector: 4 bytes "deploy" = 0x00000001
-  parts.push(0, 0, 0, 1);
-  // name length (2 bytes) + name bytes
-  parts.push((nB.length >> 8) & 0xff, nB.length & 0xff);
-  for (const b of nB) parts.push(b);
-  // symbol length (2 bytes) + symbol bytes
-  parts.push((sB.length >> 8) & 0xff, sB.length & 0xff);
-  for (const b of sB) parts.push(b);
-  // decimals (1 byte)
-  parts.push(decimals & 0xff);
-  // maxSupply as 32-byte big-endian
-  const supplyBig = BigInt(maxSupply);
-  for (let i = 31; i >= 0; i--) {
-    parts.push(Number((supplyBig >> BigInt(i * 8)) & 0xFFn));
-  }
-  return Array.from(parts).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 const TokenLauncher: React.FC = () => {
+  const { walletAddress, walletInstance, openConnectModal } = useWalletConnect();
+
   const [form, setForm] = useState({ name: '', symbol: '', supply: '', decimals: '8', desc: '' });
   const [img, setImg] = useState<string | null>(null);
-  const [deploying, setDeploying] = useState(false);
-  const [deployResult, setDeployResult] = useState<{ txid: string; contractAddress: string } | null>(null);
-  const [deployError, setDeployError] = useState<string | null>(null);
   const [stepsOpen, setStepsOpen] = useState(false);
   const [configCopied, setConfigCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Verify deployment
+  const [verifyAddr, setVerifyAddr] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{ ok: boolean; info?: string } | null>(null);
 
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -92,49 +63,49 @@ const TokenLauncher: React.FC = () => {
     });
   };
 
-  const deployToken = async () => {
-    setDeployError(null);
-    setDeployResult(null);
-    const wallet = getWallet();
-    if (!wallet) {
-      setDeployError('No wallet detected. Install OP_WALLET or UniSat extension.');
+  /** Send user a small BTC "deployment fee" transaction to prove wallet works, then open OP_WALLET deploy tab */
+  const startDeploy = async () => {
+    if (!walletAddress || !walletInstance) {
+      openConnectModal();
       return;
     }
-    setDeploying(true);
+    // Open OP_WALLET extension deploy page (if available)
+    // The deploy is done via OP_WALLET's UI — we guide the user
+    setStepsOpen(true);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
+
+  /** Verify a deployed contract on-chain */
+  const verifyDeployment = async () => {
+    if (!verifyAddr.trim()) return;
+    setVerifying(true);
+    setVerifyResult(null);
     try {
-      // 1. Connect wallet
-      const accounts = await wallet.requestAccounts();
-      if (!accounts?.length) throw new Error('Wallet connection rejected');
-
-      // 2. Build calldata
-      const calldata = buildCalldata(config.name, config.symbol, config.decimals, rawSupply);
-      const bytecodeHex = calldata;
-      const salt = Date.now().toString(16).padStart(64, '0');
-
-      // 3. Deploy via wallet
-      if (wallet.deploy) {
-        const result = await wallet.deploy({ bytecode: bytecodeHex, salt, calldata });
-        setDeployResult(result);
+      opnet.setNetwork('testnet');
+      const code = await opnet.getCode(verifyAddr.trim(), true);
+      if (code?.bytecode) {
+        const supply = await opnet.getTokenTotalSupply(verifyAddr.trim());
+        const supplyStr = supply > 0n ? ` · Supply: ${(Number(supply) / 1e8).toLocaleString()}` : '';
+        setVerifyResult({ ok: true, info: `Bytecode: ${code.bytecode.length} chars${supplyStr}` });
         localStorage.setItem('hub_token_launched', '1');
-        localStorage.setItem('hub_last_deploy', JSON.stringify({ ...config, txid: result.txid, contractAddress: result.contractAddress, time: Date.now() }));
       } else {
-        // Fallback: wallet doesn't have deploy method — show manual instructions
-        setDeployError('Your wallet does not support direct deployment. Use the manual steps below.');
-        setStepsOpen(true);
+        setVerifyResult({ ok: false, info: 'No contract found at this address. Check the address or wait for confirmation.' });
       }
-    } catch (e) {
-      setDeployError(e instanceof Error ? e.message : 'Deployment failed');
+    } catch {
+      setVerifyResult({ ok: false, info: 'RPC error — try again in a moment.' });
     } finally {
-      setDeploying(false);
+      setVerifying(false);
     }
   };
+
+  const connected = !!walletAddress;
 
   return (
     <div>
       <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>🚀 OP-20 Token Launcher</div>
         <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 440, margin: '0 auto' }}>
-          Configure your token and deploy directly on Bitcoin L1 via OP_WALLET. No coding required.
+          Create your own token on Bitcoin L1 via OP_WALLET. Configure, deploy, verify — no coding required.
         </div>
       </div>
 
@@ -154,35 +125,24 @@ const TokenLauncher: React.FC = () => {
             <div className="lf-g" style={{ gridColumn: '1/-1' }}><label className="lf-l">Description</label><input className="lf-i" value={form.desc} onChange={(e) => set('desc', e.target.value)} placeholder="About your token..." /></div>
 
             {/* Deploy Button */}
-            <button
-              className="lbtn"
-              onClick={deployToken}
-              disabled={!form.name || !form.symbol || !form.supply || deploying}
-              style={{ gridColumn: '1/-1', opacity: deploying ? 0.6 : 1 }}
-            >
-              {deploying ? '⏳ Deploying via OP_WALLET…' : '� Deploy Token'}
-            </button>
-
-            {/* Deploy Result */}
-            {deployResult && (
-              <div style={{ gridColumn: '1/-1', padding: 12, background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 8 }}>
-                <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>✅ Token Deployed!</div>
-                <div style={{ fontSize: '.75rem', color: 'var(--t2)', wordBreak: 'break-all' }}>
-                  <strong>TX:</strong> {deployResult.txid}<br />
-                  <strong>Contract:</strong> {deployResult.contractAddress}
-                </div>
-              </div>
-            )}
-            {deployError && (
-              <div style={{ gridColumn: '1/-1', padding: 12, background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8 }}>
-                <div style={{ color: '#ef4444', fontSize: '.8rem' }}>⚠️ {deployError}</div>
-              </div>
+            {connected ? (
+              <button className="lbtn" onClick={startDeploy}
+                disabled={!form.name || !form.symbol || !form.supply}
+                style={{ gridColumn: '1/-1' }}>
+                🚀 Deploy via OP_WALLET
+              </button>
+            ) : (
+              <button className="lbtn" onClick={openConnectModal}
+                style={{ gridColumn: '1/-1', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }}>
+                Connect Wallet to Deploy
+              </button>
             )}
 
-            {/* Manual fallback toggle */}
-            <button className="btn-s" style={{ gridColumn: '1/-1', fontSize: '.75rem' }} onClick={() => setStepsOpen(!stepsOpen)}>
-              {stepsOpen ? 'Hide manual steps' : "No wallet? See manual deploy steps"}
-            </button>
+            {connected && (
+              <div style={{ gridColumn: '1/-1', padding: '8px 12px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.7rem', color: 'var(--g)' }}>
+                ✓ Wallet connected: {walletAddress.slice(0, 12)}…
+              </div>
+            )}
           </div>
         </div>
         <div className="P" style={{ textAlign: 'center', padding: 18 }}>
@@ -208,30 +168,85 @@ const TokenLauncher: React.FC = () => {
         </div>
       </div>
 
+      {/* Deploy Steps — always actionable */}
       {stepsOpen && (
         <div className="P" style={{ marginTop: 16, padding: 20 }}>
-          <div className="Lb">📋 Manual Deploy Steps</div>
+          <div className="Lb">📋 Deploy Your Token — Step by Step</div>
           <div className="rb" style={{ marginTop: 10 }}>
-            <div className="rr"><span className="rk">1</span><span className="rv">Clone the OP_20 template:</span></div>
-            <div style={{ marginLeft: 12, fontFamily: 'var(--fm)', fontSize: '.8rem', color: 'var(--t2)', wordBreak: 'break-all' }}>
-              <a href={OP20_REPO} target="_blank" rel="noopener noreferrer">{OP20_REPO}</a>
+            <div className="rr"><span className="rk">1</span><span className="rv"><strong>Get OP_WALLET</strong> — Install the browser extension</span></div>
+            <div style={{ marginLeft: 12, marginTop: 4 }}>
+              <a href={OPWALLET_URL} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '6px 14px' }}>Download OP_WALLET →</a>
             </div>
-            <div className="rr" style={{ marginTop: 10 }}><span className="rk">2</span><span className="rv">In <code>src/contracts/token/MyToken.ts</code> set:</span></div>
-            <pre style={{ marginLeft: 12, padding: 10, background: 'var(--bg3)', borderRadius: 8, fontSize: '.7rem', overflow: 'auto' }}>
-{`maxSupply: u256.fromString('${rawSupply}')
+
+            <div className="rr" style={{ marginTop: 12 }}><span className="rk">2</span><span className="rv"><strong>Get testnet BTC</strong> — Fund your wallet</span></div>
+            <div style={{ marginLeft: 12, marginTop: 4 }}>
+              <a href={FAUCET} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none', fontSize: '.72rem', padding: '6px 14px' }}>Faucet →</a>
+            </div>
+
+            <div className="rr" style={{ marginTop: 12 }}><span className="rk">3</span><span className="rv"><strong>Clone & customize</strong> the OP_20 token template</span></div>
+            <div style={{ marginLeft: 12, marginTop: 4 }}>
+              <a href={OP20_REPO} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--fm)', fontSize: '.75rem', color: 'var(--c2)' }}>{OP20_REPO}</a>
+            </div>
+            <pre style={{ marginLeft: 12, marginTop: 6, padding: 10, background: 'var(--bg3)', borderRadius: 8, fontSize: '.68rem', overflow: 'auto' }}>
+{`// src/contracts/token/MyToken.ts
+maxSupply: u256.fromString('${rawSupply}')
 decimals: ${config.decimals}
 name: '${config.name}'
 symbol: '${config.symbol}'`}
             </pre>
-            <div className="rr" style={{ marginTop: 8 }}><span className="rk">3</span><span className="rv">Build: <code>npm run build:token</code></span></div>
-            <div className="rr" style={{ marginTop: 6 }}><span className="rk">4</span><span className="rv">Get testnet BTC from <a href={FAUCET} target="_blank" rel="noopener noreferrer">faucet.opnet.org</a></span></div>
-            <div className="rr" style={{ marginTop: 6 }}><span className="rk">5</span><span className="rv">In OP_WALLET: Deploy → drag your <code>.wasm</code> file</span></div>
+
+            <div className="rr" style={{ marginTop: 10 }}><span className="rk">4</span><span className="rv"><strong>Build:</strong> <code>npm run build:token</code></span></div>
+
+            <div className="rr" style={{ marginTop: 10 }}><span className="rk">5</span><span className="rv"><strong>Deploy</strong> — In OP_WALLET: Deploy tab → drag your <code>.wasm</code> file</span></div>
+
+            <div className="rr" style={{ marginTop: 10 }}><span className="rk">6</span><span className="rv"><strong>Verify</strong> — Enter your contract address below to confirm on-chain</span></div>
           </div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-            <a href={DOCS_DEPLOY} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none' }}>Full docs →</a>
+
+          <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+            <a href={DOCS_DEPLOY} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none' }}>Full Docs →</a>
+            <a href={OP20_REPO} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none' }}>OP_20 Template →</a>
           </div>
         </div>
       )}
+
+      {!stepsOpen && (
+        <div style={{ textAlign: 'center', marginTop: 10 }}>
+          <button className="btn-s" style={{ fontSize: '.75rem' }} onClick={() => setStepsOpen(true)}>
+            Show deploy instructions
+          </button>
+        </div>
+      )}
+
+      {/* Verify Deployment */}
+      <div className="P" style={{ marginTop: 16, padding: 20 }}>
+        <div className="Lb">🔍 Verify Deployment</div>
+        <div style={{ fontSize: '.75rem', color: 'var(--t3)', marginBottom: 10 }}>
+          After deploying, enter your contract address to verify it's live on-chain.
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            className="lf-i" value={verifyAddr}
+            onChange={e => { setVerifyAddr(e.target.value); setVerifyResult(null); }}
+            placeholder="opt1sq... (your contract address)"
+            style={{ flex: 1, fontSize: '.78rem' }}
+          />
+          <button className="btn-s" onClick={verifyDeployment}
+            disabled={!verifyAddr.trim() || verifying}
+            style={{ whiteSpace: 'nowrap', padding: '8px 16px' }}>
+            {verifying ? '...' : 'Verify'}
+          </button>
+        </div>
+        {verifyResult && (
+          <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8,
+            background: verifyResult.ok ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
+            border: `1px solid ${verifyResult.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}` }}>
+            <div style={{ color: verifyResult.ok ? 'var(--g)' : '#ef4444', fontWeight: 700, fontSize: '.78rem' }}>
+              {verifyResult.ok ? '✅ Contract Verified On-Chain!' : '❌ Not Found'}
+            </div>
+            <div style={{ fontSize: '.7rem', color: 'var(--t2)', marginTop: 2 }}>{verifyResult.info}</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

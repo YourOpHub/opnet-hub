@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as opnet from '../opnet';
+import { fetchBtcPrice } from '../btc-price';
 
 const TokenTools: React.FC = () => {
   const [network, setNetwork] = useState<opnet.Network>(opnet.getNetwork());
@@ -55,10 +56,7 @@ const TokenTools: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
-      .then((r) => r.json())
-      .then((d) => { if (!cancelled && d?.bitcoin?.usd) setBp(d.bitcoin.usd); })
-      .catch(() => {});
+    fetchBtcPrice().then(p => { if (!cancelled && p.usd > 0) setBp(p.usd); }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 

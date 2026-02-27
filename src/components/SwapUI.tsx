@@ -4,7 +4,7 @@ import { getContract, OP_20_ABI } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, DEPLOYER_ADDRESS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { TESTNET_CONTRACTS, DEPLOYER_ADDRESS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX, getTxUrl } from '../contracts';
 
 /** Constant-product AMM pool for MINE/VIBE. x * y = k, 0.3% LP fee */
 const POOLS: Record<string, { reserveA: number; reserveB: number; symbolA: string; symbolB: string }> = {
@@ -32,7 +32,7 @@ const TOKENS: Token[] = [
 type SwapResultType = { type: 'success' | 'demo' | 'error'; hash?: string; amtOut?: string; error?: string };
 
 const SwapUI: React.FC = () => {
-  const { provider, signer, walletAddress, address: wcAddress, network: wcNetwork, openConnectModal } = useWalletConnect();
+  const { provider, signer, walletAddress, walletInstance, address: wcAddress, network: wcNetwork, openConnectModal } = useWalletConnect();
 
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(1);
@@ -98,12 +98,12 @@ const SwapUI: React.FC = () => {
 
   const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
 
-  /** Execute a REAL on-chain OP-20 transfer via WalletConnect signer */
+  /** Execute a REAL on-chain OP-20 transfer via Web3Provider or opnet SDK */
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
 
     // If no wallet — demo mode
-    if (!walletAddress || !provider || !signer || !wcAddress || !wcNetwork) {
+    if (!walletAddress || !walletInstance || !provider || !signer || !wcAddress || !wcNetwork) {
       setSwapping(true);
       setSwapResult(null);
       await new Promise(r => setTimeout(r, 800));
@@ -116,36 +116,56 @@ const SwapUI: React.FC = () => {
     setSwapResult(null);
 
     try {
-      // 1. Create real OP-20 contract instance via opnet SDK
+      // 1. Create OP-20 contract instance & encode calldata
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // provider from WalletConnect may come from a different opnet copy — cast to any
       const tokenContract = getContract<any>(
-        from.address,
-        OP_20_ABI,
-        provider as any,
-        wcNetwork as any,
-        wcAddress as any,
+        from.address, OP_20_ABI,
+        provider as any, wcNetwork as any, wcAddress as any,
       );
-
-      // 2. Compute amount in smallest units (8 decimals)
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
-
-      // 3. Recipient: deployer pool address
       const recipient = Address.fromString(DEPLOYER_ADDRESS);
 
-      // 4. Simulate transfer — this calls btc_call on-chain
+      // 2. Try Web3Provider (OP_WALLET native) — wallet handles signing, MLDSA, challenge
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const simulation = await (tokenContract as any).transfer(recipient, rawAmount);
+      const web3 = (walletInstance as any).web3;
+      if (web3?.signAndBroadcastInteraction) {
+        // Encode calldata for transfer(ADDRESS, UINT256)
+        const calldata = tokenContract.encodeCalldata('transfer', [recipient, rawAmount]);
+        // Fetch UTXOs for the user
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const utxos = await (provider as any).utxoManager.getUTXOs({
+          address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
+        }).catch(() => []);
 
-      if (simulation.revert) {
-        throw new Error(`Simulation reverted: ${simulation.revert}`);
+        const [, interactionTx] = await web3.signAndBroadcastInteraction({
+          calldata: calldata instanceof Uint8Array ? calldata : new Uint8Array(calldata),
+          to: from.address,
+          utxos: utxos || [],
+          feeRate: 10,
+          priorityFee: 10_000n,
+          gasSatFee: 100_000n,
+          revealMLDSAPublicKey: true,
+          linkMLDSAPublicKeyToAddress: true,
+        });
+
+        const txHash = interactionTx?.result || '';
+        setSwapResult({
+          type: 'success', hash: txHash,
+          amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }),
+        });
+        localStorage.setItem('hub_swapped', '1');
+        return;
       }
 
-      // 5. Send REAL transaction — wallet popup for signing
+      // 3. Fallback: simulate + sendTransaction with UnisatSigner
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const simulation = await (tokenContract as any).transfer(recipient, rawAmount);
+      if (simulation.revert) throw new Error(`Simulation reverted: ${simulation.revert}`);
+
       const receipt = await simulation.sendTransaction({
-        signer: signer,          // UnisatSigner implements Signer
-        mldsaSigner: null,       // OP_WALLET handles MLDSA internally
-        refundTo: signer.p2tr,   // change goes back to user
+        signer: signer,
+        mldsaSigner: null,
+        refundTo: signer.p2tr,
         maximumAllowedSatToSpend: 100_000n,
         feeRate: 10,
         network: wcNetwork,
@@ -154,8 +174,7 @@ const SwapUI: React.FC = () => {
       });
 
       setSwapResult({
-        type: 'success',
-        hash: receipt.transactionId,
+        type: 'success', hash: receipt.transactionId,
         amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }),
       });
       localStorage.setItem('hub_swapped', '1');
@@ -166,7 +185,7 @@ const SwapUI: React.FC = () => {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, provider, signer, wcAddress, wcNetwork, from, toVal]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, provider, signer, wcAddress, wcNetwork, from, toVal]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -384,8 +403,8 @@ const SwapUI: React.FC = () => {
                   <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
                   <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
                 </div>
-                <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '.6rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none', flexShrink: 0 }}>Explorer ↗</a>
+                <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '.6rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none', flexShrink: 0 }}>Deploy TX ↗</a>
               </div>
             );
           })}

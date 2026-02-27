@@ -204,8 +204,8 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
               <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', wordBreak: 'break-all', marginBottom: 4 }}>{tok.address}</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>Supply: {tok.supply.toLocaleString()}</span>
-                <a href={`https://testnet.opnet.org/contract/${tok.address}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>View ↗</a>
+                <a href={`https://testnet.opnet.org/tx/${tok.symbol === 'MINE' ? '1a50546bf161d8aa623201d5bd812ea42b9a151b4373a62bf746243181902c59' : 'bf65f4f7e87088953ae1ac1447765a4a364f1751d9bfaa761231dd739d0ab0d7'}`} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>Deploy TX ↗</a>
               </div>
             </div>
           ))}

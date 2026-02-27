@@ -261,7 +261,7 @@ const Analytics: React.FC = () => {
       {/* Pool Details */}
       <div className="P" style={{ padding: 16, marginBottom: 16 }}>
         <div className="Lb" style={{ marginBottom: 10 }}>💱 Pool Details — MINE/VIBE SimplePool</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
           <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
             <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>MINE Reserve</div>
             <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)' }}>

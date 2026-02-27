@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
+import logoUrl from './assets/logo.png';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { networks } from '@btc-vision/bitcoin';
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
@@ -130,7 +131,7 @@ const App: React.FC = () => {
             <header className="H">
                 <div className="Hi">
                     <div className="Lo" onClick={() => navigate('home')}>
-                        <img src="/logo.png" alt="OPNet Hub" style={{ height: 32, objectFit: 'contain' }} />
+                        <img src={logoUrl} alt="OPNet Hub" style={{ height: 32, objectFit: 'contain' }} />
                     </div>
                     <div className="Hr">
                         <div ref={dropRef} style={{ position: 'relative' }}
@@ -187,7 +188,7 @@ const App: React.FC = () => {
             <main className="M" key={tab}><Suspense fallback={<LazyFallback />}>{P()}</Suspense></main>
 
             <footer style={{
-                marginTop: 'auto', padding: '20px 32px', textAlign: 'center',
+                marginTop: 'auto', padding: '16px 16px', textAlign: 'center',
                 borderTop: '1px solid rgba(255,255,255,.03)', color: '#2d3548',
                 fontSize: '.65rem', background: 'rgba(6,6,11,.8)',
             }}>

@@ -279,6 +279,7 @@ a:hover {
   margin: 0 auto;
   padding: 0 32px;
   display: flex;
+  justify-content: center;
   overflow-x: auto;
   scrollbar-width: none;
   gap: 1px
@@ -293,7 +294,7 @@ a:hover {
   padding: 13px 14px;
   background: none;
   border: none;
-  color: var(--t4);
+  color: var(--t1);
   font-family: var(--ff);
   font-size: .75rem;
   font-weight: 500;
@@ -308,8 +309,8 @@ a:hover {
 }
 
 .Nt:hover {
-  color: var(--t1);
-  background: rgba(255,255,255,.02)
+  color: var(--w);
+  background: rgba(255,255,255,.04)
 }
 
 .Nt.on {
@@ -939,11 +940,9 @@ a:hover {
   font-family: 'Inter', sans-serif;
   font-size: 2.2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #F7931A, #F2C464);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 10px rgba(247, 147, 26, .3))
+  line-height: 1.1;
+  text-shadow: 0 0 12px currentColor;
+  letter-spacing: -.02em
 }
 
 .sd-s {
@@ -2189,6 +2188,47 @@ a:hover {
     height: 46px;
     font-size: 1.1rem
   }
+}
+
+/* ═══ COMPREHENSIVE MOBILE ═══ */
+@media(max-width:480px) {
+  html { font-size: 14px }
+  .M { padding: 10px }
+  .Hi { padding: 0 12px; height: 50px }
+  .Lo img { height: 26px !important }
+  .Wb { padding: 6px 14px; font-size: .65rem }
+  .Ni { padding: 0 8px; gap: 0 }
+  .Nt { padding: 10px 8px; font-size: .65rem }
+  .P { padding: 16px; border-radius: 16px }
+  .Pg { padding: 16px; border-radius: 16px }
+  .sd-b { font-size: 1.6rem }
+  .pb { width: 110px; height: 110px }
+  .pb-i { font-size: 2.6rem }
+  .gs { font-size: .6rem; gap: 8px }
+  .mz { padding: 24px 10px; min-height: 360px }
+  .mg { gap: 10px }
+  .ucol { max-height: 340px }
+  .uc { padding: 8px 9px; border-radius: 12px }
+  .hero-l { padding: 32px 16px 28px; border-radius: 16px }
+  .hero-h1 { font-size: 1.8rem }
+  .hero-sub { font-size: .8rem }
+  .hero-ctas { gap: 8px }
+  .btn-p, .btn-s { padding: 12px 20px; font-size: .78rem }
+  .pillars { gap: 10px }
+  .fgrid { gap: 10px }
+  .fc { padding: 18px 16px }
+  .fc-i { font-size: 1.6rem }
+  .fc-t { font-size: .82rem }
+  .fc-d { font-size: .72rem }
+  .eco-bn { padding: 16px; border-radius: 16px }
+  .launch-grid { gap: 10px }
+  .tg { gap: 10px }
+  .chat-w { height: 420px }
+  .bub { max-width: 90%; padding: 10px 14px; font-size: .8rem }
+  .ar { gap: 3px }
+  .ach { padding: 2px 6px; font-size: .55rem }
+  .hb { max-width: 200px }
+  .ticker { padding: 10px; gap: 8px }
 }
 
 /* ═══ BOB ANIMATION (auto-miners) ═══ */

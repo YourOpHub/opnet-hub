@@ -57,12 +57,24 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const [step, setStep] = useState('');
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const [lpMine, setLpMine] = useState(() => { try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch { return 0; } });
-  const [lpVibe, setLpVibe] = useState(() => { try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch { return 0; } });
+  const [lpMine, setLpMine] = useState(0);
+  const [lpVibe, setLpVibe] = useState(0);
 
   const hasLP = lpMine > 0 || lpVibe > 0;
   const poolShare = reserveA > 0 ? (lpMine / reserveA) * 100 : 0;
   const ratio = reserveA > 0 ? reserveB / reserveA : 0;
+
+  // Re-read localStorage every time modal opens
+  useEffect(() => {
+    if (open) {
+      try { setLpMine(Number(localStorage.getItem('hub_lp_mine') || '0')); } catch { setLpMine(0); }
+      try { setLpVibe(Number(localStorage.getItem('hub_lp_vibe') || '0')); } catch { setLpVibe(0); }
+      setResult(null);
+      setStep('');
+      setMineAmt('');
+      setVibeAmt('');
+    }
+  }, [open]);
 
   // Auto-calculate VIBE based on pool ratio
   useEffect(() => {
@@ -72,12 +84,12 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     }
   }, [mineAmt, ratio, tab]);
 
-  // Reset on open/tab change
+  // Reset on tab change
   useEffect(() => {
     setResult(null);
     setStep('');
     if (tab === 'add') { setMineAmt(''); setVibeAmt(''); }
-  }, [tab, open]);
+  }, [tab]);
 
   const addLiquidity = useCallback(async () => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }

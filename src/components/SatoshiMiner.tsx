@@ -402,10 +402,7 @@ const SatoshiMiner: React.FC = () => {
 
                     {/* Sats display */}
                     <div className="sd" style={{ marginTop: 16 }}>
-                        <div className="sd-b" style={{
-                            background: `linear-gradient(135deg,${stage.color},var(--y))`,
-                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'
-                        }}>{fs(sats)}</div>
+                        <div className="sd-b" style={{ color: stage.color }}>{fs(sats)}</div>
                         <div className="sd-s">satoshis</div>
                         {sps > 0 && <div className="sd-r">+{fs(sps)}/sec</div>}
                     </div>

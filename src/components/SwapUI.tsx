@@ -107,22 +107,24 @@ const SwapUI: React.FC = () => {
 
   const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
 
-  /** Helper: send interaction via web3 provider */
+  /** Helper: send interaction via OP_WALLET web3 API */
   const sendInteraction = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    web3: any, to: string, calldata: Uint8Array, utxos: unknown[],
+    web3: any, contractAddr: string, calldata: Uint8Array,
   ) => {
-    const [, tx] = await web3.signAndBroadcastInteraction({
+    const result = await web3.signAndBroadcastInteraction({
       calldata,
-      to,
-      utxos: utxos || [],
+      to: contractAddr,
+      from: walletAddress!,
       feeRate: 10,
       priorityFee: 10_000n,
       gasSatFee: 100_000n,
       revealMLDSAPublicKey: true,
       linkMLDSAPublicKeyToAddress: true,
     });
-    return tx?.result || '';
+    // Returns [fundingResult, interactionResult, UTXOs, txHex]
+    const tx = Array.isArray(result) ? result[1] : result;
+    return tx?.result || tx?.transactionId || '';
   };
 
   /**
@@ -133,13 +135,14 @@ const SwapUI: React.FC = () => {
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
 
-    if (!walletAddress || !walletInstance || !provider || !signer) {
+    if (!walletAddress || !walletInstance) {
       openConnectModal();
       return;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const web3 = (walletInstance as any).web3;
+    const inst = walletInstance as any;
+    const web3 = inst.web3 || inst;
     if (!web3?.signAndBroadcastInteraction) {
       setSwapResult({ type: 'error', error: 'Wallet does not support Web3 API. Use OP_WALLET.' });
       return;
@@ -157,11 +160,6 @@ const SwapUI: React.FC = () => {
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
       const minOut = BigInt(Math.floor(toVal * (1 - slippage / 100) * Math.pow(10, to.decimals)));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const utxos = await (provider as any).utxoManager?.getUTXOs?.({
-        address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
-      }).catch(() => []) || [];
-
       // STEP 1: Approve pool to spend token-in
       setSwapStep('Approving token spend...');
       const approveWriter = new BinaryWriter();
@@ -169,16 +167,10 @@ const SwapUI: React.FC = () => {
       approveWriter.writeAddress(Address.fromString(POOL_ADDRESS));
       approveWriter.writeU256(rawAmount);
 
-      await sendInteraction(web3, from.address, approveWriter.getBuffer(), utxos);
+      await sendInteraction(web3, from.address, approveWriter.getBuffer());
 
       // Brief wait for approval to propagate
-      await new Promise(r => setTimeout(r, 2000));
-
-      // Refresh UTXOs after approval tx
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const utxos2 = await (provider as any).utxoManager?.getUTXOs?.({
-        address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
-      }).catch(() => []) || [];
+      await new Promise(r => setTimeout(r, 3000));
 
       // STEP 2: Call swap on pool
       setSwapStep('Executing swap on pool...');
@@ -188,7 +180,7 @@ const SwapUI: React.FC = () => {
       swapWriter.writeU256(rawAmount);
       swapWriter.writeU256(minOut);
 
-      const txHash = await sendInteraction(web3, POOL_ADDRESS, swapWriter.getBuffer(), utxos2);
+      const txHash = await sendInteraction(web3, POOL_ADDRESS, swapWriter.getBuffer());
 
       setSwapStep('');
       setSwapResult({
@@ -204,7 +196,7 @@ const SwapUI: React.FC = () => {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, provider, signer, from, to, toVal, slippage, poolReady, openConnectModal]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);

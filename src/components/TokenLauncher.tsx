@@ -21,7 +21,7 @@ const genLogo = (sym: string): string => {
 };
 
 const TokenLauncher: React.FC = () => {
-  const { walletAddress, walletInstance, provider, signer, openConnectModal } = useWalletConnect();
+  const { walletAddress, walletInstance, openConnectModal } = useWalletConnect();
 
   // Token parameters — user fills these in
   const [tokenName, setTokenName] = useState('My Token');
@@ -85,7 +85,7 @@ const TokenLauncher: React.FC = () => {
 
   /** Deploy token: fetch GenericToken.wasm + encode calldata → Web3Provider.deployContract() */
   const deployToken = async () => {
-    if (!walletAddress || !walletInstance || !provider || !signer) {
+    if (!walletAddress || !walletInstance) {
       openConnectModal();
       return;
     }
@@ -96,7 +96,8 @@ const TokenLauncher: React.FC = () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const web3 = (walletInstance as any).web3;
+    const inst = walletInstance as any;
+    const web3 = inst.web3 || inst;
     if (!web3?.deployContract) {
       setDeployError('Your wallet does not support Web3 deployment API. Please use OP_WALLET.');
       return;
@@ -123,19 +124,12 @@ const TokenLauncher: React.FC = () => {
       setDeployStep('Encoding token parameters...');
       const calldata = encodeCalldata();
 
-      // 3. Fetch UTXOs
-      setDeployStep('Fetching UTXOs...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const utxos = await (provider as any).utxoManager.getUTXOs({
-        address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
-      }).catch(() => []);
-
-      // 4. Deploy via Web3Provider — wallet handles signer + MLDSA + challenge
+      // 3. Deploy via Web3Provider — wallet handles signer, UTXOs, MLDSA, challenge
       setDeployStep('Sign the transaction in your wallet...');
       const result = await web3.deployContract({
         bytecode,
         calldata,
-        utxos: utxos || [],
+        from: walletAddress,
         feeRate: 10,
         priorityFee: 10_000n,
         gasSatFee: 100_000n,

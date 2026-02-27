@@ -131,8 +131,7 @@ const App: React.FC = () => {
                 <div className="Hi">
                     <div className="Lo" onClick={() => navigate('home')}>
                         <div className="Lm">⚡</div>
-                        <span>OPNet Hub</span>
-                        <span className="s">Consensus Layer</span>
+                        <span style={{ letterSpacing: '-.02em' }}>OPNet<span style={{ color: 'var(--t3)', fontWeight: 500, marginLeft: 4 }}>Hub</span></span>
                     </div>
                     <div className="Hr">
                         <a className="Ha" href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">Docs</a>
@@ -191,16 +190,31 @@ const App: React.FC = () => {
 
             <main className="M" key={tab}><Suspense fallback={<LazyFallback />}>{P()}</Suspense></main>
 
-            <footer className="F">
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
-                    <a href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">Docs</a>
-                    <a href="https://ai.opnet.org" target="_blank" rel="noopener noreferrer">Bob AI</a>
-                    <a href="https://opscan.org" target="_blank" rel="noopener noreferrer">OPScan</a>
-                    <a href="https://motoswap.org" target="_blank" rel="noopener noreferrer">Motoswap</a>
-                    <a href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">Vibecode</a>
-                    <a href="https://github.com/YourOpHub/opnet-hub" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <footer style={{
+                marginTop: 'auto', padding: '32px 32px 28px', textAlign: 'center',
+                borderTop: '1px solid rgba(255,255,255,.04)', color: '#3d4555',
+                fontSize: '.72rem', background: 'rgba(5,5,8,.7)', backdropFilter: 'blur(20px)',
+                letterSpacing: '-.01em',
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {[
+                        ['Docs', 'https://docs.opnet.org'],
+                        ['Bob AI', 'https://ai.opnet.org'],
+                        ['OPScan', 'https://opscan.org'],
+                        ['Motoswap', 'https://motoswap.org'],
+                        ['Vibecode', 'https://vibecode.finance'],
+                        ['GitHub', 'https://github.com/YourOpHub/opnet-hub'],
+                    ].map(([l, u]) => (
+                        <a key={l} href={u} target="_blank" rel="noopener noreferrer"
+                            style={{ color: '#5a6578', textDecoration: 'none', fontWeight: 500, transition: 'color .2s' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#F7931A')}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#5a6578')}
+                        >{l}</a>
+                    ))}
                 </div>
-                <strong>OPNet Hub</strong> — Mission Control for Programmable Bitcoin · Built for the <a href="https://vibecode.finance/challenge" target="_blank" rel="noopener noreferrer">#opnetvibecode</a> Challenge
+                <div style={{ color: '#2a3040', fontSize: '.65rem' }}>
+                    <strong style={{ color: '#3d4555' }}>OPNet Hub</strong> — Mission Control for Programmable Bitcoin
+                </div>
             </footer>
 
             <button className="q-fab" onClick={() => setQOpen(!qOpen)}>

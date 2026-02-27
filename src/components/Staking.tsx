@@ -6,6 +6,7 @@ import {
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { Address } from '@btc-vision/transaction';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
   TESTNET_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
   getContractOpscanUrl,
@@ -26,32 +27,6 @@ const STAKING_ABI: BitcoinInterfaceAbi = [
   { name: 'totalStaked', inputs: [], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'getRewardRate', inputs: [], outputs: [{ name: 'rate', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<any> {
-  const gas = await provider.gasParameters();
-  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
-  const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
-  const priorityFeeSats = gas.baseGas / gasPerSat;
-  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  return {
-    signer: null, mldsaSigner: null, refundTo,
-    maximumAllowedSatToSpend: 250_000n, network: NETWORK, feeRate, priorityFee,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any;
-}
-
-/** Retry wrapper for flaky RPC simulations */
-async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
-  for (let i = 0; i <= retries; i++) {
-    try { return await fn(); }
-    catch (e) {
-      if (i === retries) throw e;
-      await new Promise(r => setTimeout(r, delayMs));
-    }
-  }
-  throw new Error('Retry exhausted');
-}
 
 /** The staking token is MINE — same token used in swap pool and minting */
 const STAKING_TOKEN = TESTNET_CONTRACTS.MINE;
@@ -149,78 +124,29 @@ const Staking: React.FC = () => {
     setResult(null);
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stakingAddr = Address.fromString(STAKING_PUBKEY) as any;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tokenContract = getContract<IOP20Contract>(STAKING_TOKEN.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
 
-      // 1. Check current allowance — skip approval if already sufficient
-      setStep('Checking allowance...');
-      let needsApproval = true;
-      try {
-        const allowanceRes = await tokenContract.allowance(senderAddr as any, stakingAddr);
-        if (!(allowanceRes as CallResult).revert) {
-          const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
-          const currentAllowance = props?.remaining ? BigInt(String(props.remaining)) : 0n;
-          if (currentAllowance >= rawAmount) needsApproval = false;
-        }
-      } catch { /* if check fails, proceed with approval */ }
+      // 1. Ensure allowance (check → approve → wait for block)
+      await ensureAllowance(
+        STAKING_TOKEN.address, STAKING_PUBKEY, rawAmount,
+        provider, senderAddr as unknown as string, walletAddress!, setStep, 'MINE',
+      );
 
-      if (needsApproval) {
-        // 2. Approve max uint256 (Bob MCP recommendation) — approve once forever
-        setStep('Approving MINE spend...');
-        const approveAmount = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-        const approveSim = await withRetry(() => tokenContract.increaseAllowance(stakingAddr, approveAmount));
-        if ((approveSim as CallResult).revert) throw new Error(`Approval failed: ${(approveSim as CallResult).revert}`);
-        const txParams1 = await buildTxParams(provider, walletAddress);
-        await (approveSim as CallResult).sendTransaction(txParams1);
-
-        // 3. Poll for allowance confirmation instead of blind timeout
-        setStep('Waiting for approval confirmation...');
-        const pollStart = Date.now();
-        const POLL_TIMEOUT = 90_000; // 90s max
-        const POLL_INTERVAL = 5_000; // check every 5s
-        let confirmed = false;
-        while (Date.now() - pollStart < POLL_TIMEOUT) {
-          await new Promise(r => setTimeout(r, POLL_INTERVAL));
-          try {
-            const checkRes = await tokenContract.allowance(senderAddr as any, stakingAddr);
-            if (!(checkRes as CallResult).revert) {
-              const props = (checkRes as CallResult).properties as Record<string, unknown>;
-              const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
-              if (cur >= rawAmount) { confirmed = true; break; }
-            }
-          } catch { /* retry */ }
-          const elapsed = Math.round((Date.now() - pollStart) / 1000);
-          setStep(`Waiting for approval confirmation... (${elapsed}s)`);
-        }
-        if (!confirmed) {
-          console.warn('[Staking] Allowance not yet visible on-chain, attempting stake anyway...');
-          setStep('Approval pending — trying stake...');
-        }
-      }
-
-      // 4. Stake — rebuild txParams (UTXOs changed after approve)
+      // 2. Stake
       setStep('Staking MINE tokens...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
       const stakeSim = await withRetry(() => stakingContract.stake(rawAmount));
       if ((stakeSim as CallResult).revert) throw new Error(`Stake failed: ${(stakeSim as CallResult).revert}`);
-      const txParams2 = await buildTxParams(provider, walletAddress);
-      const receipt = await (stakeSim as CallResult).sendTransaction(txParams2);
+      const txParams = await buildTxParams(provider, walletAddress!);
+      const receipt = await (stakeSim as CallResult).sendTransaction(txParams);
 
       setStep('');
       setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE! TX: ${receipt.transactionId}` });
       addTxRecord({ type: 'mint', txHash: receipt.transactionId || '', tokenA: 'MINE', amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Staking failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC first.';
-      else if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('fetch')) msg = 'Network timeout — try again in a few seconds.';
-      else if (msg.toLowerCase().includes('insufficient allowance')) msg = 'Allowance not yet confirmed on-chain. Please wait ~1 min and try again.';
-      else if (msg.toLowerCase().includes('revert')) msg += ' (Try again — testnet can be flaky)';
       setStep('');
-      setResult({ type: 'error', msg });
+      setResult({ type: 'error', msg: formatTxError(e) });
     } finally {
       setStaking(false);
     }

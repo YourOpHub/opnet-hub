@@ -6,6 +6,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl } from '../contracts';
@@ -21,24 +22,6 @@ const POOL_ABI: BitcoinInterfaceAbi = [
   { name: 'liquidityOf', constant: true, inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<any> {
-  const gas = await provider.gasParameters();
-  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
-  const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
-  const priorityFeeSats = gas.baseGas / gasPerSat;
-  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: 250_000n, network: NETWORK, feeRate, priorityFee } as any;
-}
-
-async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
-  for (let i = 0; i <= retries; i++) {
-    try { return await fn(); }
-    catch (e) { if (i === retries) throw e; await new Promise(r => setTimeout(r, delayMs)); }
-  }
-  throw new Error('Retry exhausted');
-}
 
 interface Props {
   open: boolean;
@@ -115,39 +98,31 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     setBusy(true);
     setResult(null);
     try {
-      const poolAddr = Address.fromString(POOL_PUBKEY) as any;
       const mineRaw = BitcoinUtils.expandToDecimals(mAmt, 8);
       const vibeRaw = BitcoinUtils.expandToDecimals(vAmt, 8);
-      const mineContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
-      const vibeContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
-      const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
 
-      // Step 1: increaseAllowance MINE
-      setStep('Approving MINE for pool...');
-      const approveMine = await withRetry(() => mineContract.increaseAllowance(poolAddr, mineRaw));
-      if (approveMine.revert) throw new Error(`MINE approve failed: ${approveMine.revert}`);
-      const tp1 = await buildTxParams(provider, walletAddress);
-      await approveMine.sendTransaction(tp1);
+      // Step 1: Ensure MINE allowance (check → approve → wait for block)
+      const mineApproved = await ensureAllowance(
+        TESTNET_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
+        provider, senderAddr as unknown as string, walletAddress!, setStep, 'MINE',
+      );
 
-      setStep('Waiting for MINE approval (~30s)...');
-      await new Promise(r => setTimeout(r, 30000));
-
-      // Step 2: increaseAllowance VIBE
-      setStep('Approving VIBE for pool...');
-      const approveVibe = await withRetry(() => vibeContract.increaseAllowance(poolAddr, vibeRaw));
-      if (approveVibe.revert) throw new Error(`VIBE approve failed: ${approveVibe.revert}`);
-      const tp2 = await buildTxParams(provider, walletAddress);
-      await approveVibe.sendTransaction(tp2);
-
-      setStep('Waiting for VIBE approval (~30s)...');
-      await new Promise(r => setTimeout(r, 30000));
+      // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
+      if (mineApproved) await waitForNextBlock(provider, setStep);
+      const vibeApproved = await ensureAllowance(
+        TESTNET_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
+        provider, senderAddr as unknown as string, walletAddress!, setStep, 'VIBE',
+      );
+      if (vibeApproved) await waitForNextBlock(provider, setStep);
 
       // Step 3: addLiquidity on pool
       setStep('Adding liquidity to pool...');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
       const addSim = await withRetry(() => poolContract.addLiquidity(mineRaw, vibeRaw));
       if ((addSim as CallResult).revert) throw new Error(`addLiquidity failed: ${(addSim as CallResult).revert}`);
-      const tp3 = await buildTxParams(provider, walletAddress);
-      const addReceipt = await (addSim as CallResult).sendTransaction(tp3);
+      const tp = await buildTxParams(provider, walletAddress!);
+      const addReceipt = await (addSim as CallResult).sendTransaction(tp);
 
       setStep('');
       setResult({ ok: true, msg: `Added ${mAmt.toLocaleString()} MINE + ${vAmt.toLocaleString()} VIBE on-chain!` });
@@ -156,10 +131,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       addTxRecord({ type: 'mint', txHash: addReceipt.transactionId || '', tokenA: 'LP', amountA: `${mAmt}+${vAmt}`, status: 'confirmed', wallet: walletAddress });
       setTimeout(onRefresh, 3000);
     } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC first.';
       setStep('');
-      setResult({ ok: false, msg });
+      setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
   }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh]);
 
@@ -192,11 +165,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       addTxRecord({ type: 'claim', txHash: receipt.transactionId || '', tokenA: 'LP', amountA: `${m}+${v}`, status: 'confirmed', wallet: walletAddress });
       setTimeout(onRefresh, 3000);
     } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC first.';
-      if (msg.toLowerCase().includes('insufficient lp')) msg = 'Insufficient LP balance on-chain. Check your position.';
       setStep('');
-      setResult({ ok: false, msg });
+      setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
   }, [walletAddress, walletInstance, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh]);
 

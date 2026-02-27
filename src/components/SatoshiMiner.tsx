@@ -1,4 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useWalletConnect } from '@btc-vision/walletconnect';
+import { networks } from '@btc-vision/bitcoin';
+import {
+  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
+  type BitcoinInterfaceAbi, type CallResult,
+} from 'opnet';
+import { buildTxParams, withRetry } from '../txUtils';
+import { TESTNET_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
 import * as api from '../api';
 
@@ -39,7 +47,12 @@ const MINE_GAME_POOL = 10_500_000;
 const MINE_DAILY_BASE = 350_000;
 const MINE_HALVING_DAYS = 7;
 const MINE_DECIMALS = 8;
-const MINE_CONTRACT = 'bcrt1p_mine_token_placeholder'; // testnet deployment target
+const MINE_CONTRACT = TESTNET_CONTRACTS.MINE.address;
+const GAME_NETWORK = networks.testnet;
+const GAME_RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
+const MINTABLE_ABI: BitcoinInterfaceAbi = [
+  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
+];
 /** Calculate current daily emission with weekly halving */
 const getMineEmission = (daysSinceStart: number): number => {
     const halvings = Math.floor(daysSinceStart / MINE_HALVING_DAYS);
@@ -68,6 +81,8 @@ const SPRITE_HIT = `${BASE}miner-hit.png`;
 const SPRITE_RIG = `${BASE}mining-rig.png`;
 
 const SatoshiMiner: React.FC = () => {
+    const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
+    const gameProvider = React.useMemo(() => new JSONRpcProvider(GAME_RPC_URL, GAME_NETWORK), []);
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
     const [tot, setTot] = useState<number>(() => ld('sm_t', 0));
     const [ups, setUps] = useState<Up[]>(() => ld('sm_u', UPS));
@@ -479,16 +494,37 @@ const SatoshiMiner: React.FC = () => {
                     </div>
                     <button
                         onClick={async () => {
-                            if (claimStatus === 'idle' && mineBalance >= 1) {
-                                setClaimStatus('syncing');
-                                const addr = localStorage.getItem('hub_wallet') || localStorage.getItem('hub_wallet_anon') || '';
-                                if (!addr) { setShowClaim(true); setClaimStatus('idle'); return; }
-                                await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps });
+                            if (claimStatus !== 'idle' || mineBalance < 1) return;
+                            if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+                            if (!senderAddr) { setShowClaim(true); return; }
+
+                            const claimAmount = Math.min(Math.floor(mineBalance), 1_000_000);
+                            if (claimAmount < 1) return;
+
+                            setClaimStatus('syncing');
+                            try {
+                                // Sync game state to server first
+                                const addr = walletAddress || localStorage.getItem('hub_wallet') || '';
+                                await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps }).catch(() => {});
+
+                                // On-chain publicMint via wallet
                                 setClaimStatus('claiming');
-                                const res = await api.claimTokens(addr, mineBalance);
-                                if (res?.ok) { setClaimStatus('done'); setMineBalance(0); setTimeout(() => setClaimStatus('idle'), 3000); }
-                                else { setClaimStatus('error'); setTimeout(() => setClaimStatus('idle'), 3000); }
-                            } else { setShowClaim(true); }
+                                const rawAmount = BitcoinUtils.expandToDecimals(claimAmount, MINE_DECIMALS);
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const contract = getContract<any>(MINE_CONTRACT, MINTABLE_ABI, gameProvider, GAME_NETWORK, senderAddr as any);
+                                const sim = await withRetry(() => contract.publicMint(rawAmount));
+                                if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
+                                const txParams = await buildTxParams(gameProvider, walletAddress!);
+                                await (sim as CallResult).sendTransaction(txParams);
+
+                                setClaimStatus('done');
+                                setMineBalance(prev => Math.max(0, prev - claimAmount));
+                                setTimeout(() => setClaimStatus('idle'), 3000);
+                            } catch (e) {
+                                console.error('[Claim]', e);
+                                setClaimStatus('error');
+                                setTimeout(() => setClaimStatus('idle'), 4000);
+                            }
                         }}
                         disabled={mineBalance < 1 || claimStatus === 'syncing' || claimStatus === 'claiming'}
                         style={{
@@ -500,15 +536,15 @@ const SatoshiMiner: React.FC = () => {
                             transition: '.2s'
                         }}
                     >
-                        {claimStatus === 'syncing' ? 'Syncing...' : claimStatus === 'claiming' ? 'Claiming...' : claimStatus === 'done' ? 'Claimed!' : claimStatus === 'error' ? 'Error — retry' : mineBalance >= 1 ? `Claim ${mineBalance.toFixed(0)} MINE` : 'Mine to earn $MINE'}
+                        {claimStatus === 'syncing' ? 'Syncing...' : claimStatus === 'claiming' ? 'Minting on-chain...' : claimStatus === 'done' ? 'Minted!' : claimStatus === 'error' ? 'Error — retry' : !walletAddress ? 'Connect Wallet to Claim' : mineBalance >= 1 ? `Claim ${Math.min(Math.floor(mineBalance), 1_000_000).toLocaleString()} MINE` : 'Mine to earn $MINE'}
                     </button>
                     {showClaim && (
                         <div style={{ marginTop: 8, padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: '14px', fontSize: '.62rem', color: 'var(--t3)', lineHeight: 1.5 }}>
-                            <strong style={{ color: 'var(--y)' }}>Claim via OP_WALLET</strong><br />
+                            <strong style={{ color: 'var(--y)' }}>On-Chain Claim via publicMint</strong><br />
                             Token: <span style={{ fontFamily: 'var(--fm)', color: 'var(--c)' }}>$MINE (OP-20)</span><br />
-                            Supply: {MINE_TOTAL_SUPPLY.toLocaleString()} | Decimals: {MINE_DECIMALS}<br />
+                            Max per TX: 1,000,000 MINE | Decimals: {MINE_DECIMALS}<br />
                             Contract: <span style={{ fontFamily: 'var(--fm)', fontSize: '.55rem' }}>{MINE_CONTRACT}</span><br />
-                            <span style={{ color: 'var(--t4)' }}>Connect OP_WALLET → Sign ML-DSA tx → Tokens sent on Bitcoin L1</span>
+                            <span style={{ color: 'var(--t4)' }}>Connect OP_WALLET → Sign ML-DSA tx → Tokens minted on Bitcoin L1</span>
                             <button onClick={() => setShowClaim(false)} style={{ marginTop: 4, background: 'none', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t3)', fontSize: '.55rem', padding: '2px 8px', cursor: 'pointer' }}>Close</button>
                         </div>
                     )}

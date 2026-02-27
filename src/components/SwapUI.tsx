@@ -6,6 +6,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -62,38 +63,6 @@ const MINTABLE_ABI: BitcoinInterfaceAbi = [
 ];
 
 const MINT_AMOUNT = 1000; // Fixed 1000 tokens per mint
-
-/** Fetch network gas parameters and build proper tx params */
-async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
-  const gas = await provider.gasParameters();
-  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
-  // priorityFee = baseGas converted to sats via gasPerSat, capped at reasonable range
-  const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
-  const priorityFeeSats = gas.baseGas / gasPerSat;
-  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return {
-    signer: null,
-    mldsaSigner: null,
-    refundTo,
-    maximumAllowedSatToSpend: 250_000n,
-    network: NETWORK,
-    feeRate,
-    priorityFee,
-  } as any;
-}
-
-/** Retry wrapper for flaky RPC simulations */
-async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
-  for (let i = 0; i <= retries; i++) {
-    try { return await fn(); }
-    catch (e) {
-      if (i === retries) throw e;
-      await new Promise(r => setTimeout(r, delayMs));
-    }
-  }
-  throw new Error('Retry exhausted');
-}
 
 interface IPoolContract {
   swap(tokenIn: Address, amountIn: bigint, minAmountOut: bigint): Promise<CallResult>;
@@ -273,56 +242,13 @@ const SwapUI: React.FC = () => {
       const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
       const minOut = BitcoinUtils.expandToDecimals(toVal * (1 - slippage / 100), to.decimals);
 
-      // STEP 1: Check allowance — skip approval if already sufficient
-      setSwapStep('Checking allowance...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tokenContract = getContract<IOP20Contract>(
-        from.address, OP_20_ABI, provider, NETWORK, senderAddr as any,
+      // STEP 1: Ensure allowance (check → approve → wait for block)
+      await ensureAllowance(
+        from.address, POOL_PUBKEY, rawAmount,
+        provider, senderAddr as unknown as string, walletAddress!, setSwapStep, from.symbol,
       );
-      const poolAddr = Address.fromString(POOL_PUBKEY) as any;
 
-      let needsApproval = true;
-      try {
-        const allowanceRes = await tokenContract.allowance(senderAddr as any, poolAddr);
-        if (!(allowanceRes as CallResult).revert) {
-          const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
-          const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
-          if (cur >= rawAmount) needsApproval = false;
-        }
-      } catch { /* proceed with approval */ }
-
-      if (needsApproval) {
-        setSwapStep('Approving token spend...');
-        const approveAmount = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-        const approveSim = await withRetry(() => tokenContract.increaseAllowance(poolAddr, approveAmount));
-        if ((approveSim as CallResult).revert) throw new Error(`Approval reverted: ${(approveSim as CallResult).revert}`);
-        const txParams1 = await buildTxParams(provider, walletAddress!);
-        await (approveSim as CallResult).sendTransaction(txParams1);
-
-        // Poll for allowance confirmation (120s max, 10s interval per Bob's docs)
-        setSwapStep('Waiting for approval confirmation...');
-        const pollStart = Date.now();
-        let confirmed = false;
-        while (Date.now() - pollStart < 120_000) {
-          await new Promise(r => setTimeout(r, 10_000));
-          try {
-            const checkRes = await tokenContract.allowance(senderAddr as any, poolAddr);
-            if (!(checkRes as CallResult).revert) {
-              const props = (checkRes as CallResult).properties as Record<string, unknown>;
-              const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
-              if (cur >= rawAmount) { confirmed = true; break; }
-            }
-          } catch { /* retry */ }
-          setSwapStep(`Waiting for approval confirmation... (${Math.round((Date.now() - pollStart) / 1000)}s)`);
-        }
-        // If not confirmed yet, still try the swap — it may succeed if the read is lagging
-        if (!confirmed) {
-          console.warn('[Swap] Allowance not yet visible on-chain, attempting swap anyway...');
-          setSwapStep('Approval pending — trying swap...');
-        }
-      }
-
-      // STEP 2: Call swap on pool — rebuild txParams (UTXOs changed)
+      // STEP 2: Call swap on pool
       setSwapStep('Executing swap on pool...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const poolContract = getContract<any>(
@@ -349,14 +275,9 @@ const SwapUI: React.FC = () => {
       // Refresh balances after swap
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
     } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Swap failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = 'Your wallet has no BTC UTXOs. Get testnet BTC first: https://faucet.opnet.org';
-      else if (msg.toLowerCase().includes('insufficient allowance') || msg.toLowerCase().includes('allowance')) msg = 'Allowance not yet confirmed on-chain. Please wait ~1 min and try again (approval already sent).';
-      else if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('fetch')) msg = 'Network timeout — try again in a few seconds.';
-      else if (msg.toLowerCase().includes('revert')) msg += ' (Try again — testnet can be flaky)';
       console.error('[Swap]', e);
       setSwapStep('');
-      setSwapResult({ type: 'error', error: msg });
+      setSwapResult({ type: 'error', error: formatTxError(e) });
     } finally {
       setSwapping(false);
     }

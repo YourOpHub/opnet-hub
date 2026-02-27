@@ -125,13 +125,18 @@ const SwapUI: React.FC = () => {
       const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
       const recipient = Address.fromString(DEPLOYER_ADDRESS);
 
-      // 2. Try Web3Provider (OP_WALLET native) — wallet handles signing, MLDSA, challenge
+      // 2. ALWAYS simulate before sending (audit requirement)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const simulation = await (tokenContract as any).transfer(recipient, rawAmount);
+      if (simulation.revert) throw new Error(`Simulation reverted: ${simulation.revert}`);
+
+      // 3. Try Web3Provider (OP_WALLET native) — wallet handles signing, MLDSA, challenge
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const web3 = (walletInstance as any).web3;
       if (web3?.signAndBroadcastInteraction) {
-        // Encode calldata for transfer(ADDRESS, UINT256)
-        const calldata = tokenContract.encodeCalldata('transfer', [recipient, rawAmount]);
-        // Fetch UTXOs for the user
+        const calldata = simulation.calldata instanceof Uint8Array
+          ? simulation.calldata
+          : tokenContract.encodeCalldata('transfer', [recipient, rawAmount]);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const utxos = await (provider as any).utxoManager.getUTXOs({
           address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
@@ -157,13 +162,9 @@ const SwapUI: React.FC = () => {
         return;
       }
 
-      // 3. Fallback: simulate + sendTransaction with UnisatSigner
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const simulation = await (tokenContract as any).transfer(recipient, rawAmount);
-      if (simulation.revert) throw new Error(`Simulation reverted: ${simulation.revert}`);
-
+      // 4. Fallback: sendTransaction — frontend uses signer=null, wallet handles signing
       const receipt = await simulation.sendTransaction({
-        signer: signer,
+        signer: null,
         mldsaSigner: null,
         refundTo: signer.p2tr,
         maximumAllowedSatToSpend: 100_000n,

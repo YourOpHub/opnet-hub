@@ -21,7 +21,18 @@ const MAX_SNAPSHOTS = 200;
 function loadSnapshots(): PoolSnapshot[] {
   try {
     const raw = localStorage.getItem(SNAPSHOT_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    // Validate each snapshot
+    return arr.filter((s: unknown) => {
+      if (!s || typeof s !== 'object') return false;
+      const snap = s as Record<string, unknown>;
+      return typeof snap.ts === 'number' && !isNaN(snap.ts)
+        && typeof snap.reserveMINE === 'number' && !isNaN(snap.reserveMINE)
+        && typeof snap.reserveVIBE === 'number' && !isNaN(snap.reserveVIBE)
+        && typeof snap.rate === 'number' && !isNaN(snap.rate);
+    }) as PoolSnapshot[];
   } catch { return []; }
 }
 
@@ -103,6 +114,9 @@ const Analytics: React.FC = () => {
   const [gasParams, setGasParams] = useState<{ conservative?: number } | null>(null);
   const [mempoolInfo, setMempoolInfo] = useState<{ count?: number; opnetCount?: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [poolError, setPoolError] = useState(false);
+  const [supplyError, setSupplyError] = useState(false);
+  const [chainError, setChainError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,39 +131,44 @@ const Analytics: React.FC = () => {
             const r1 = Number(BigInt('0x' + hex.slice(64, 128))) / 1e8;
             if (r0 > 0 && r1 > 0) {
               setReserves({ mine: r0, vibe: r1 });
+              setPoolError(false);
               const snap: PoolSnapshot = { ts: Date.now(), reserveMINE: r0, reserveVIBE: r1, rate: r1 / r0 };
               saveSnapshot(snap);
               setSnapshots(loadSnapshots());
             }
           }
         }
-      } catch { /* pool optional */ }
+      } catch { if (!cancelled) setPoolError(true); }
 
       // Token supplies
+      let supplyFail = false;
       for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
         try {
           const supply = await opnetRpc.getTokenTotalSupply(tok.address);
           if (!cancelled) setSupplies(prev => ({ ...prev, [sym]: supply }));
-        } catch { /* ignore */ }
+        } catch { supplyFail = true; }
       }
+      if (!cancelled) setSupplyError(supplyFail);
 
       // Block height
+      let chainFail = false;
       try {
         const h = await opnetRpc.getBlockHeight();
         if (!cancelled) setBlockHeight(h);
-      } catch { /* ignore */ }
+      } catch { chainFail = true; }
 
       // Gas
       try {
         const gp = await opnetRpc.getGasParameters();
         if (!cancelled && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative) });
-      } catch { /* ignore */ }
+      } catch { chainFail = true; }
 
       // Mempool
       try {
         const mp = await opnetRpc.getMempoolInfo();
         if (!cancelled && mp) setMempoolInfo(mp);
-      } catch { /* ignore */ }
+      } catch { chainFail = true; }
+      if (!cancelled) setChainError(chainFail);
 
       if (!cancelled) setLoading(false);
     };
@@ -176,6 +195,18 @@ const Analytics: React.FC = () => {
       </div>
 
       {loading && <div style={{ textAlign: 'center', padding: 30, color: 'var(--t4)' }}>Loading analytics...</div>}
+
+      {/* Error banners */}
+      {poolError && !loading && (
+        <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)', fontSize: '.68rem', color: '#ef4444' }}>
+          ⚠️ Pool data unavailable — reserves may be stale
+        </div>
+      )}
+      {chainError && !loading && (
+        <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)', fontSize: '.68rem', color: 'var(--y)' }}>
+          ⚠️ Some chain metrics unavailable — RPC may be slow
+        </div>
+      )}
 
       {/* Key Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>

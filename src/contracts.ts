@@ -63,6 +63,24 @@ export const OP20_SELECTORS = {
     allowance: 0xd864b7ca,
 } as const;
 
+/** SimpleStaking contract — MINE staking with rewards */
+// Deploy via: OPNET_MNEMONIC="..." node deploy/deploy-staking.mjs
+// Update these after deployment
+export const STAKING_ADDRESS = '';
+export const STAKING_PUBKEY = '';
+export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
+
+/** Staking selectors (from opnet-transform) */
+export const STAKING_SELECTORS = {
+    stake: 0x0, // will be set after build
+    unstake: 0x0,
+    claim: 0x0,
+    stakedAmount: 0x0,
+    stakedReward: 0x0,
+    totalStaked: 0x0,
+    getRewardRate: 0x0,
+} as const;
+
 /** OPScan explorer — works for testnet contract/tx inspection */
 const OPSCAN = 'https://opscan.org';
 

@@ -227,8 +227,8 @@ const SwapUI: React.FC = () => {
     setSwapResult(null);
 
     try {
-      const rawAmount = BigInt(Math.floor(fromVal * Math.pow(10, from.decimals)));
-      const minOut = BigInt(Math.floor(toVal * (1 - slippage / 100) * Math.pow(10, to.decimals)));
+      const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
+      const minOut = BitcoinUtils.expandToDecimals(toVal * (1 - slippage / 100), to.decimals);
 
       // Fetch real gas parameters from the network
       setSwapStep('Fetching gas parameters...');

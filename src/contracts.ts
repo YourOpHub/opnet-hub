@@ -66,8 +66,8 @@ export const OP20_SELECTORS = {
 /** SimpleStaking contract — MINE staking with rewards */
 // Deploy via: OPNET_MNEMONIC="..." node deploy/deploy-staking.mjs
 // Update these after deployment
-export const STAKING_ADDRESS = '';
-export const STAKING_PUBKEY = '';
+export const STAKING_ADDRESS = 'opt1sqpxk2hqaux0upqyz7wz3egnv8rfjrusj058388t8';
+export const STAKING_PUBKEY = '0xb921bda1595223005ff40de0bcb50572bd9401865a5b67f5383d48f877143928';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
 /** Staking selectors (from opnet-transform) */

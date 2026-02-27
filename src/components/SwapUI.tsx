@@ -138,9 +138,12 @@ const SwapUI: React.FC = () => {
   const [addingLP, setAddingLP] = useState(false);
   const [lpStep, setLpStep] = useState('');
   const [lpResult, setLpResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [lpUserMine, setLpUserMine] = useState(0);
-  const [lpUserVibe, setLpUserVibe] = useState(0);
-  const [lpTab, setLpTab] = useState<'add' | 'info'>('add');
+  const [lpUserMine, setLpUserMine] = useState(() => {
+    try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch { return 0; }
+  });
+  const [lpUserVibe, setLpUserVibe] = useState(() => {
+    try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch { return 0; }
+  });
 
   useEffect(() => {
     if (walletAddress) setHistory(getTxHistory(walletAddress).filter(r => r.type === 'swap' || r.type === 'mint' || r.type === 'claim'));
@@ -404,8 +407,8 @@ const SwapUI: React.FC = () => {
       setLpStep('');
       setLpResult({ ok: true, msg: `Liquidity added! ${mineAmt} MINE + ${vibeAmt} VIBE. Sync TX: ${syncReceipt.transactionId}` });
       addTxRecord({ type: 'mint', txHash: syncReceipt.transactionId || '', tokenA: 'LP', amountA: `${mineAmt}+${vibeAmt}`, status: 'confirmed', wallet: walletAddress });
-      setLpUserMine(prev => prev + mineAmt);
-      setLpUserVibe(prev => prev + vibeAmt);
+      setLpUserMine(prev => { const v = prev + mineAmt; localStorage.setItem('hub_lp_mine', String(v)); return v; });
+      setLpUserVibe(prev => { const v = prev + vibeAmt; localStorage.setItem('hub_lp_vibe', String(v)); return v; });
       // Refresh reserves + balances after LP
       setTimeout(() => { fetchReserves(); setBalRefreshKey(k => k + 1); }, 3000);
     } catch (e) {
@@ -460,7 +463,11 @@ const SwapUI: React.FC = () => {
             <div className="Lb" style={{ marginBottom: 0 }}>Swap</div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {connected && <span style={{ fontSize: '.55rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>LIVE</span>}
-              <button onClick={() => setShowSettings(!showSettings)} style={{
+              <button onClick={() => { setShowLiquidity(!showLiquidity); setShowSettings(false); }} style={{
+                background: showLiquidity ? 'rgba(14,165,233,.12)' : 'none', border: '1px solid ' + (showLiquidity ? 'rgba(14,165,233,.3)' : 'var(--bd)'), borderRadius: 'var(--rad)',
+                color: showLiquidity ? '#0ea5e9' : 'var(--t3)', padding: '4px 10px', fontSize: '.7rem', cursor: 'pointer', fontFamily: 'var(--ff)'
+              }}>💧</button>
+              <button onClick={() => { setShowSettings(!showSettings); setShowLiquidity(false); }} style={{
                 background: 'none', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
                 color: 'var(--t3)', padding: '4px 10px', fontSize: '.7rem', cursor: 'pointer', fontFamily: 'var(--ff)'
               }}>⚙️ {slippage}%</button>
@@ -481,6 +488,84 @@ const SwapUI: React.FC = () => {
                   }}>{s}%</button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Inline Add Liquidity panel */}
+          {showLiquidity && (
+            <div style={{ marginBottom: 12, padding: '12px', background: 'rgba(14,165,233,.04)', borderRadius: 'var(--rad)', border: '1px solid rgba(14,165,233,.15)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: '.72rem', fontWeight: 700, color: '#0ea5e9' }}>💧 Add Liquidity</span>
+                {lpUserMine > 0 && reserveA > 0 && (
+                  <span style={{ fontSize: '.58rem', color: 'var(--p)', fontWeight: 700, fontFamily: 'var(--fm)' }}>Your share: {((lpUserMine / reserveA) * 100).toFixed(2)}%</span>
+                )}
+              </div>
+              <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 6 }}>Ratio: {reserveA > 0 ? `1 MINE = ${(reserveB / reserveA).toFixed(2)} VIBE` : '...'}</div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: '.55rem', color: 'var(--t4)' }}>⛏️ MINE</span>
+                    {connected && balances['MINE'] != null && balances['MINE'] > 0n && (
+                      <button onClick={() => setLpMineAmt((Number(balances['MINE']) / 1e8).toString())}
+                        style={{ fontSize: '.48rem', color: 'var(--o)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--ff)' }}>MAX</button>
+                    )}
+                  </div>
+                  <input type="number" value={lpMineAmt} onChange={e => setLpMineAmt(e.target.value)}
+                    placeholder="0.0" style={{
+                      width: '100%', padding: '8px', borderRadius: 8, border: '1px solid var(--bd)',
+                      background: 'var(--bg3)', color: 'var(--w)', fontSize: '.8rem', fontFamily: 'var(--fm)',
+                      outline: 'none', boxSizing: 'border-box',
+                    }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', padding: '0 2px 8px', color: 'var(--t4)', fontSize: '.8rem' }}>+</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 2 }}>⚡ VIBE (auto)</div>
+                  <input type="number" value={lpVibeAmt} readOnly
+                    style={{
+                      width: '100%', padding: '8px', borderRadius: 8, border: '1px solid var(--bd)',
+                      background: 'rgba(255,255,255,.02)', color: 'var(--t2)', fontSize: '.8rem', fontFamily: 'var(--fm)',
+                      outline: 'none', boxSizing: 'border-box',
+                    }} />
+                </div>
+              </div>
+              {parseFloat(lpMineAmt) > 0 && reserveA > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6, padding: '4px 0' }}>
+                  <span>New share: <strong style={{ color: '#0ea5e9' }}>{((parseFloat(lpMineAmt) / (reserveA + parseFloat(lpMineAmt))) * 100).toFixed(2)}%</strong></span>
+                  <span>Reserves: {(reserveA + parseFloat(lpMineAmt)).toLocaleString(undefined, {maximumFractionDigits: 0})} / {(reserveB + parseFloat(lpVibeAmt || '0')).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                </div>
+              )}
+              {connected ? (
+                <button onClick={addLiquidity} disabled={addingLP || !lpMineAmt}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: addingLP ? 'var(--bg4)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                    color: '#fff', fontWeight: 700, fontSize: '.78rem', fontFamily: 'var(--ff)',
+                    opacity: addingLP || !lpMineAmt ? 0.6 : 1, transition: 'all .2s',
+                  }}>
+                  {addingLP ? (lpStep || 'Processing...') : '💧 Add Liquidity'}
+                </button>
+              ) : (
+                <button onClick={openConnectModal} style={{
+                  width: '100%', padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
+                  fontWeight: 700, fontSize: '.78rem', fontFamily: 'var(--ff)',
+                }}>Connect Wallet</button>
+              )}
+              {lpResult && (
+                <div style={{
+                  marginTop: 6, padding: '6px 10px', borderRadius: 6,
+                  background: lpResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
+                  border: `1px solid ${lpResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+                  fontSize: '.62rem', color: lpResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
+                }}>
+                  {lpResult.msg}
+                </div>
+              )}
+              {lpUserMine > 0 && (
+                <div style={{ marginTop: 6, display: 'flex', gap: 8, fontSize: '.55rem', color: 'var(--t4)' }}>
+                  <span>Your LP: {lpUserMine.toLocaleString()} MINE + {lpUserVibe.toLocaleString()} VIBE</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -701,208 +786,23 @@ const SwapUI: React.FC = () => {
           </div>
         </div>
 
-        {/* Add Liquidity */}
-        <div className="P" style={{ marginTop: 14, padding: 0, overflow: 'hidden' }}>
-          {/* LP Header with tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)' }}>
-            <button onClick={() => { setShowLiquidity(true); setLpTab('add'); }}
-              style={{
-                flex: 1, padding: '12px', border: 'none', cursor: 'pointer', fontFamily: 'var(--ff)',
-                background: showLiquidity && lpTab === 'add' ? 'rgba(14,165,233,.08)' : 'transparent',
-                color: showLiquidity && lpTab === 'add' ? '#0ea5e9' : 'var(--t3)',
-                fontWeight: 700, fontSize: '.78rem', borderBottom: showLiquidity && lpTab === 'add' ? '2px solid #0ea5e9' : '2px solid transparent',
-              }}>💧 Add Liquidity</button>
-            <button onClick={() => { setShowLiquidity(true); setLpTab('info'); }}
-              style={{
-                flex: 1, padding: '12px', border: 'none', cursor: 'pointer', fontFamily: 'var(--ff)',
-                background: showLiquidity && lpTab === 'info' ? 'rgba(168,85,247,.08)' : 'transparent',
-                color: showLiquidity && lpTab === 'info' ? 'var(--p)' : 'var(--t3)',
-                fontWeight: 700, fontSize: '.78rem', borderBottom: showLiquidity && lpTab === 'info' ? '2px solid var(--p)' : '2px solid transparent',
-              }}>📊 Pool Share</button>
-            {showLiquidity && (
-              <button onClick={() => setShowLiquidity(false)}
-                style={{ padding: '12px 14px', border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--t4)', fontSize: '.8rem' }}>✕</button>
-            )}
+        {/* Pool share info (compact) */}
+        {lpUserMine > 0 && (
+          <div className="P" style={{ marginTop: 14, padding: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '.65rem', color: 'var(--t4)', marginBottom: 2 }}>Your Pool Position</div>
+                <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--w)' }}>{lpUserMine.toLocaleString()} MINE + {lpUserVibe.toLocaleString()} VIBE</div>
+              </div>
+              {reserveA > 0 && (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '.55rem', color: 'var(--t4)' }}>Pool Share</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>{((lpUserMine / reserveA) * 100).toFixed(2)}%</div>
+                </div>
+              )}
+            </div>
           </div>
-
-          {showLiquidity && lpTab === 'add' && (
-            <div style={{ padding: 16 }}>
-              {/* User balances */}
-              {connected && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                  <div style={{ flex: 1, padding: '10px 12px', background: 'rgba(247,147,26,.05)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 2 }}>⛏️ MINE Balance</div>
-                    <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)', fontSize: '.85rem' }}>
-                      {balLoading ? '...' : fmtBal(balances['MINE'], 8)}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, padding: '10px 12px', background: 'rgba(14,165,233,.05)', border: '1px solid rgba(14,165,233,.12)', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 2 }}>⚡ VIBE Balance</div>
-                    <div style={{ fontWeight: 700, color: '#0ea5e9', fontFamily: 'var(--fm)', fontSize: '.85rem' }}>
-                      {balLoading ? '...' : fmtBal(balances['VIBE'], 8)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Pool ratio info */}
-              <div style={{ padding: '8px 12px', background: 'var(--bg3)', borderRadius: 8, marginBottom: 12, fontSize: '.68rem', color: 'var(--t3)', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Current ratio:</span>
-                <span style={{ fontWeight: 600, color: 'var(--o)', fontFamily: 'var(--fm)' }}>
-                  {reserveA > 0 ? `1 MINE = ${(reserveB / reserveA).toFixed(2)} VIBE` : '...'}
-                </span>
-              </div>
-
-              {/* MINE input */}
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '.62rem', color: 'var(--t4)' }}>⛏️ MINE Amount</span>
-                  {connected && balances['MINE'] != null && balances['MINE'] > 0n && (
-                    <button onClick={() => setLpMineAmt((Number(balances['MINE']) / 1e8).toString())}
-                      style={{ fontSize: '.55rem', color: 'var(--o)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--ff)' }}>MAX</button>
-                  )}
-                </div>
-                <input type="number" value={lpMineAmt} onChange={e => setLpMineAmt(e.target.value)}
-                  placeholder="0.0" style={{
-                    width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--bd)',
-                    background: 'var(--bg3)', color: 'var(--w)', fontSize: '.9rem', fontFamily: 'var(--fm)',
-                    outline: 'none', boxSizing: 'border-box',
-                  }} />
-              </div>
-
-              {/* Plus icon */}
-              <div style={{ textAlign: 'center', margin: '4px 0', color: 'var(--t4)', fontSize: '1rem' }}>+</div>
-
-              {/* VIBE input (auto) */}
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>⚡ VIBE Amount (auto-calculated)</div>
-                <input type="number" value={lpVibeAmt} readOnly
-                  style={{
-                    width: '100%', padding: '12px', borderRadius: 10, border: '1px solid var(--bd)',
-                    background: 'rgba(255,255,255,.02)', color: 'var(--t2)', fontSize: '.9rem', fontFamily: 'var(--fm)',
-                    outline: 'none', boxSizing: 'border-box',
-                  }} />
-              </div>
-
-              {/* Estimated pool share after adding */}
-              {parseFloat(lpMineAmt) > 0 && reserveA > 0 && (
-                <div style={{ padding: '10px 12px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.12)', borderRadius: 8, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginBottom: 4 }}>
-                    <span style={{ color: 'var(--t3)' }}>Your share of pool</span>
-                    <span style={{ fontWeight: 700, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>
-                      {((parseFloat(lpMineAmt) / (reserveA + parseFloat(lpMineAmt))) * 100).toFixed(2)}%
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem' }}>
-                    <span style={{ color: 'var(--t4)' }}>New MINE reserve</span>
-                    <span style={{ color: 'var(--t3)', fontFamily: 'var(--fm)' }}>{(reserveA + parseFloat(lpMineAmt)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem' }}>
-                    <span style={{ color: 'var(--t4)' }}>New VIBE reserve</span>
-                    <span style={{ color: 'var(--t3)', fontFamily: 'var(--fm)' }}>{(reserveB + parseFloat(lpVibeAmt || '0')).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Add Liquidity button */}
-              {connected ? (
-                <button onClick={addLiquidity} disabled={addingLP || !lpMineAmt}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                    background: addingLP ? 'var(--bg4)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-                    color: '#fff', fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
-                    opacity: addingLP || !lpMineAmt ? 0.6 : 1, transition: 'all .2s',
-                    boxShadow: !addingLP && lpMineAmt ? '0 4px 16px rgba(14,165,233,.25)' : 'none',
-                  }}>
-                  {addingLP ? (lpStep || 'Processing...') : '💧 Add Liquidity'}
-                </button>
-              ) : (
-                <button onClick={openConnectModal} style={{
-                  width: '100%', padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
-                  fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
-                }}>Connect Wallet</button>
-              )}
-
-              {lpResult && (
-                <div style={{
-                  marginTop: 10, padding: '10px 12px', borderRadius: 8,
-                  background: lpResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-                  border: `1px solid ${lpResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
-                  fontSize: '.7rem', color: lpResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
-                }}>
-                  {lpResult.msg}
-                </div>
-              )}
-
-              <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8, fontSize: '.56rem', color: 'var(--t4)', lineHeight: 1.5 }}>
-                Adds liquidity via 3 on-chain TXs: MINE transfer → VIBE transfer → sync(). Amounts auto-balanced to pool ratio.
-              </div>
-            </div>
-          )}
-
-          {showLiquidity && lpTab === 'info' && (
-            <div style={{ padding: 16 }}>
-              <div className="Lb" style={{ marginBottom: 10 }}>Your Pool Position</div>
-
-              {/* User's LP position */}
-              {lpUserMine > 0 || lpUserVibe > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-                  <div style={{ padding: 12, background: 'rgba(247,147,26,.05)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 2 }}>Your MINE in Pool</div>
-                    <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)', fontSize: '.9rem' }}>{lpUserMine.toLocaleString()}</div>
-                  </div>
-                  <div style={{ padding: 12, background: 'rgba(14,165,233,.05)', border: '1px solid rgba(14,165,233,.12)', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 2 }}>Your VIBE in Pool</div>
-                    <div style={{ fontWeight: 700, color: '#0ea5e9', fontFamily: 'var(--fm)', fontSize: '.9rem' }}>{lpUserVibe.toLocaleString()}</div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: 16, textAlign: 'center', color: 'var(--t4)', fontSize: '.72rem', marginBottom: 14 }}>
-                  No liquidity added yet. Add MINE + VIBE to earn LP fees.
-                </div>
-              )}
-
-              {/* Pool share percentage */}
-              {lpUserMine > 0 && reserveA > 0 && (
-                <div style={{ padding: '14px', background: 'linear-gradient(135deg, rgba(14,165,233,.08), rgba(168,85,247,.08))', border: '1px solid rgba(14,165,233,.15)', borderRadius: 10, textAlign: 'center', marginBottom: 14 }}>
-                  <div style={{ fontSize: '.6rem', color: 'var(--t3)', marginBottom: 4 }}>Your Pool Share</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>
-                    {((lpUserMine / reserveA) * 100).toFixed(2)}%
-                  </div>
-                  <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginTop: 2 }}>of total MINE/VIBE pool</div>
-                </div>
-              )}
-
-              {/* Current pool stats */}
-              <div style={{ padding: '12px', background: 'var(--bg3)', borderRadius: 8 }}>
-                <div style={{ fontSize: '.65rem', fontWeight: 600, color: 'var(--t2)', marginBottom: 8 }}>Current Pool Reserves</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--t3)' }}>⛏️ MINE</span>
-                  <span style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)' }}>{reserveA.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--t3)' }}>⚡ VIBE</span>
-                  <span style={{ fontWeight: 700, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>{reserveB.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--t3)' }}>Rate</span>
-                  <span style={{ fontWeight: 600, color: 'var(--o)', fontFamily: 'var(--fm)' }}>1 MINE = {reserveA > 0 ? (reserveB / reserveA).toFixed(2) : '—'} VIBE</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem' }}>
-                  <span style={{ color: 'var(--t3)' }}>Fee</span>
-                  <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>0.3%</span>
-                </div>
-              </div>
-
-              <button onClick={() => fetchReserves()} style={{
-                width: '100%', padding: '10px', marginTop: 10, borderRadius: 8,
-                border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
-                fontSize: '.72rem', cursor: 'pointer', fontFamily: 'var(--ff)',
-              }}>🔄 Refresh Pool Data</button>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Transaction History */}
         {history.length > 0 && (

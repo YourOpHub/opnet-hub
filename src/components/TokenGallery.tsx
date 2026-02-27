@@ -37,7 +37,7 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
     signer: null,
     mldsaSigner: null,
     refundTo,
-    maximumAllowedSatToSpend: 100_000n,
+    maximumAllowedSatToSpend: 250_000n,
     network: NETWORK,
     feeRate,
     priorityFee,

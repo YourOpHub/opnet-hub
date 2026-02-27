@@ -15,10 +15,6 @@ const TokenTools: React.FC = () => {
   const [tl, setTl] = useState(false);
   const [terr, setTerr] = useState('');
 
-  const [wa, setWa] = useState('');
-  const [wr, setWr] = useState<{ btc: string; sats: string } | null>(null);
-  const [wl, setWl] = useState(false);
-  const [werr, setWerr] = useState('');
 
   const [gas, setGas] = useState<opnet.GasParams | null>(null);
   const [mempool, setMempool] = useState<{ count?: number; sizeBytes?: number } | null>(null);
@@ -111,24 +107,6 @@ const TokenTools: React.FC = () => {
     }
   };
 
-  const check = async () => {
-    if (!wa.trim()) return;
-    setWerr('');
-    setWr(null);
-    setWl(true);
-    try {
-      const addr = wa.trim();
-      const balance = await opnet.getBalance(addr);
-      const sats = balance.toString();
-      const btc = (Number(balance) / 1e8).toFixed(8);
-      setWr({ btc, sats });
-    } catch (e) {
-      setWerr(e instanceof Error ? e.message : 'Inspect failed');
-      setWr(null);
-    } finally {
-      setWl(false);
-    }
-  };
 
   function formatBigNum(s: string): string {
     const n = BigInt(s);
@@ -143,21 +121,6 @@ const TokenTools: React.FC = () => {
 
   return (
     <div className="tg">
-      <div className="Pg" style={{ marginBottom: 8, padding: '10px 14px' }}>
-        <div className="Lb" style={{ marginBottom: 6 }}>🌐 Network</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {(['regtest', 'testnet', 'mainnet'] as const).map((n) => (
-            <button
-              key={n}
-              className={`fbn ${network === n ? 'on' : ''}`}
-              onClick={() => setNetwork(n)}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="Pg">
         <div className="Lb">💱 BTC ↔ Sats ↔ USD</div>
         <div className="ir">
@@ -224,35 +187,21 @@ const TokenTools: React.FC = () => {
       </div>
 
       <div className="Pg">
-        <div className="Lb">💰 Wallet Inspector <span className="tag tag-g">Live RPC</span></div>
-        <div className="ir">
-          <input
-            className="ti"
-            value={wa}
-            onChange={(e) => setWa(e.target.value)}
-            placeholder="Address (bcrt1... / tb1... / bc1...)"
-          />
-          <button className="tb" onClick={check} disabled={wl}>
-            {wl ? '…' : 'Inspect'}
-          </button>
-        </div>
-        {werr && <div style={{ fontSize: '.75rem', color: 'var(--r)', marginTop: 6 }}>{werr}</div>}
-        {wr && (
-          <div className="rb">
-            <div className="rr">
-              <span className="rk">BTC</span>
-              <span className="rv" style={{ color: 'var(--o)' }}>{wr.btc} ₿</span>
-            </div>
-            <div className="rr">
-              <span className="rk">Satoshis</span>
-              <span className="rv">{Number(wr.sats).toLocaleString()}</span>
-            </div>
+        <div className="Lb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>⛽ Gas &amp; Mempool <span className="tag tag-g">Live RPC</span></span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['regtest', 'testnet', 'mainnet'] as const).map((n) => (
+              <button
+                key={n}
+                className={`fbn ${network === n ? 'on' : ''}`}
+                style={{ padding: '3px 10px', fontSize: '.65rem' }}
+                onClick={() => setNetwork(n)}
+              >
+                {n}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-
-      <div className="Pg">
-        <div className="Lb">⛽ Gas &amp; Mempool <span className="tag tag-g">Live RPC</span></div>
+        </div>
         {gas ? (
           <div className="rb">
             <div className="rr">

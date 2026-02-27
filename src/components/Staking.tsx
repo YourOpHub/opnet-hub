@@ -149,21 +149,55 @@ const Staking: React.FC = () => {
     setResult(null);
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stakingAddr = Address.fromString(STAKING_PUBKEY) as any;
-
-      // 1. Approve staking contract
-      setStep('Approving MINE spend...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tokenContract = getContract<IOP20Contract>(STAKING_TOKEN.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
-      const approveSim = await withRetry(() => tokenContract.increaseAllowance(stakingAddr, rawAmount));
-      if (approveSim.revert) throw new Error(`Approval failed: ${approveSim.revert}`);
-      const txParams1 = await buildTxParams(provider, walletAddress);
-      await approveSim.sendTransaction(txParams1);
 
-      setStep('Waiting for approval (~30s)...');
-      await new Promise(r => setTimeout(r, 30000));
+      // 1. Check current allowance — skip approval if already sufficient
+      setStep('Checking allowance...');
+      let needsApproval = true;
+      try {
+        const allowanceRes = await tokenContract.allowance(senderAddr as any, stakingAddr);
+        if (!(allowanceRes as CallResult).revert) {
+          const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
+          const currentAllowance = props?.remaining ? BigInt(String(props.remaining)) : 0n;
+          if (currentAllowance >= rawAmount) needsApproval = false;
+        }
+      } catch { /* if check fails, proceed with approval */ }
 
-      // 2. Stake — rebuild txParams (UTXOs changed after approve)
+      if (needsApproval) {
+        // 2. Approve with generous amount (10x requested) to avoid repeat approvals
+        setStep('Approving MINE spend...');
+        const approveAmount = rawAmount * 10n > rawAmount ? rawAmount * 10n : rawAmount;
+        const approveSim = await withRetry(() => tokenContract.increaseAllowance(stakingAddr, approveAmount));
+        if ((approveSim as CallResult).revert) throw new Error(`Approval failed: ${(approveSim as CallResult).revert}`);
+        const txParams1 = await buildTxParams(provider, walletAddress);
+        await (approveSim as CallResult).sendTransaction(txParams1);
+
+        // 3. Poll for allowance confirmation instead of blind timeout
+        setStep('Waiting for approval confirmation...');
+        const pollStart = Date.now();
+        const POLL_TIMEOUT = 90_000; // 90s max
+        const POLL_INTERVAL = 5_000; // check every 5s
+        let confirmed = false;
+        while (Date.now() - pollStart < POLL_TIMEOUT) {
+          await new Promise(r => setTimeout(r, POLL_INTERVAL));
+          try {
+            const checkRes = await tokenContract.allowance(senderAddr as any, stakingAddr);
+            if (!(checkRes as CallResult).revert) {
+              const props = (checkRes as CallResult).properties as Record<string, unknown>;
+              const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
+              if (cur >= rawAmount) { confirmed = true; break; }
+            }
+          } catch { /* retry */ }
+          const elapsed = Math.round((Date.now() - pollStart) / 1000);
+          setStep(`Waiting for approval confirmation... (${elapsed}s)`);
+        }
+        if (!confirmed) throw new Error('Approval timeout — TX may still be pending. Try staking again in ~1 min.');
+      }
+
+      // 4. Stake — rebuild txParams (UTXOs changed after approve)
       setStep('Staking MINE tokens...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
@@ -180,6 +214,7 @@ const Staking: React.FC = () => {
       let msg = e instanceof Error ? e.message : 'Staking failed';
       if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC first.';
       else if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('fetch')) msg = 'Network timeout — try again in a few seconds.';
+      else if (msg.toLowerCase().includes('insufficient allowance')) msg = 'Allowance not yet confirmed on-chain. Please wait ~1 min and try again.';
       else if (msg.toLowerCase().includes('revert')) msg += ' (Try again — testnet can be flaky)';
       setStep('');
       setResult({ type: 'error', msg });

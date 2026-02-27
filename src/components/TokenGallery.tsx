@@ -73,6 +73,10 @@ const TokenGallery: React.FC = () => {
   const [minting, setMinting] = useState(false);
   const [mintResult, setMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [tab, setTab] = useState<'user' | 'featured'>('featured');
+  const [featMintSym, setFeatMintSym] = useState<string | null>(null);
+  const [featMintAmt, setFeatMintAmt] = useState('');
+  const [featMinting, setFeatMinting] = useState(false);
+  const [featMintResult, setFeatMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Load user-deployed tokens from localStorage
   useEffect(() => {
@@ -104,16 +108,40 @@ const TokenGallery: React.FC = () => {
     decimals: tok.decimals,
     deployTxid: tok.deployTxid,
     description: tok.description,
+    publicMint: tok.publicMint,
+    maxMintPerTx: tok.maxMintPerTx,
   }));
+
+  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+
+  const doFeaturedMint = useCallback(async (tok: typeof featured[0]) => {
+    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    const amt = parseFloat(featMintAmt);
+    if (!amt || amt <= 0) { setFeatMintResult({ ok: false, msg: 'Enter a valid amount' }); return; }
+    if (!senderAddr) { setFeatMintResult({ ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
+    setFeatMinting(true); setFeatMintResult(null);
+    try {
+      const rawAmount = BigInt(Math.floor(amt * Math.pow(10, tok.decimals)));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      const sim = await contract.publicMint(rawAmount);
+      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
+      const txParams = await buildTxParams(provider, walletAddress!);
+      const receipt = await (sim as CallResult).sendTransaction(txParams);
+      const txHash = receipt.transactionId || '';
+      setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}! TX: ${txHash}` });
+    } catch (e) {
+      let msg = e instanceof Error ? e.message : 'Mint failed';
+      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs. Get testnet BTC: ${FAUCET}`;
+      setFeatMintResult({ ok: false, msg });
+    } finally { setFeatMinting(false); }
+  }, [walletAddress, walletInstance, featMintAmt, openConnectModal, provider, senderAddr]);
 
   const removeToken = (addr: string) => {
     const updated = tokens.filter(t => t.address !== addr);
     setTokens(updated);
     localStorage.setItem('hub_deployed_tokens', JSON.stringify(updated));
   };
-
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
-  // senderAddr comes directly from useWalletConnect() as 'address'
 
   const doMint = useCallback(async (token: DeployedToken) => {
     if (!walletAddress || !walletInstance) {
@@ -217,8 +245,48 @@ const TokenGallery: React.FC = () => {
                     className="btn-s" style={{ textDecoration: 'none', fontSize: '.62rem', padding: '6px 10px', textAlign: 'center' }}>OPScan</a>
                   <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize: '.56rem', color: 'var(--c2)', textAlign: 'center' }}>Deploy TX</a>
+                  {tok.publicMint && (
+                    <button onClick={() => setFeatMintSym(featMintSym === tok.symbol ? null : tok.symbol)} style={{
+                      padding: '5px 8px', borderRadius: 'var(--rad)', fontSize: '.58rem', fontWeight: 700,
+                      background: featMintSym === tok.symbol ? 'rgba(168,85,247,.15)' : 'rgba(168,85,247,.08)',
+                      border: '1px solid rgba(168,85,247,.2)', color: '#a855f7', cursor: 'pointer', fontFamily: 'var(--ff)',
+                    }}>{featMintSym === tok.symbol ? 'Close' : 'Mint'}</button>
+                  )}
                 </div>
               </div>
+              {/* Featured mint panel */}
+              {featMintSym === tok.symbol && tok.publicMint && (
+                <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)' }}>
+                  <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 6 }}>Public Mint — ${tok.symbol}</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: {tok.maxMintPerTx.toLocaleString()}</div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input style={{ ...inputStyle, flex: 1 }} type="text" inputMode="decimal"
+                      value={featMintAmt} onChange={e => setFeatMintAmt(e.target.value)}
+                      placeholder={`Amount of ${tok.symbol}`} />
+                    {connected ? (
+                      <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} style={{
+                        padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.75rem',
+                        background: 'linear-gradient(135deg, #a855f7, #7c3aed)', border: 'none',
+                        color: 'white', cursor: featMinting ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
+                        opacity: featMinting ? 0.6 : 1, whiteSpace: 'nowrap',
+                      }}>{featMinting ? 'Minting...' : 'Mint'}</button>
+                    ) : (
+                      <button onClick={openConnectModal} style={{
+                        padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.72rem',
+                        background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none',
+                        color: 'white', cursor: 'pointer', fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
+                      }}>Connect</button>
+                    )}
+                  </div>
+                  {featMintResult && (
+                    <div style={{ padding: '8px 10px', borderRadius: 6, fontSize: '.68rem',
+                      background: featMintResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
+                      border: `1px solid ${featMintResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+                      color: featMintResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
+                    }}>{featMintResult.msg}</div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
 
@@ -294,7 +362,7 @@ const TokenGallery: React.FC = () => {
                           <a href={getTxUrl(tok.txid)} target="_blank" rel="noopener noreferrer"
                             style={{ fontSize: '.54rem', color: 'var(--c2)', textAlign: 'center' }}>TX</a>
                         )}
-                        {tok.publicMint && isConfirmed && (
+                        {tok.publicMint && (
                           <button onClick={() => setMintAddr(isMintOpen ? null : tok.address)} style={{
                             padding: '5px 8px', borderRadius: 'var(--rad)', fontSize: '.58rem', fontWeight: 700,
                             background: isMintOpen ? 'rgba(168,85,247,.15)' : 'rgba(168,85,247,.08)',

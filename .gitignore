@@ -3,6 +3,7 @@ dist/
 .env
 .env.local
 .env.*.local
+vps_key
 *.log
 npm-debug.log*
 .DS_Store

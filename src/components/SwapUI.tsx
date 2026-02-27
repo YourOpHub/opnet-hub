@@ -17,6 +17,7 @@ import {
 /** OPNet testnet network config */
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
+const FAUCET_URL = 'http://188.137.250.160:3456';
 
 /** Custom ABI for SimplePool contract */
 const POOL_ABI: BitcoinInterfaceAbi = [
@@ -110,6 +111,8 @@ const SwapUI: React.FC = () => {
   const [balances, setBalances] = useState<Record<string, bigint>>({});
   const [balLoading, setBalLoading] = useState(false);
   const [balRefreshKey, setBalRefreshKey] = useState(0);
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [claimResult, setClaimResult] = useState<{sym: string; ok: boolean; msg: string} | null>(null);
   const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
@@ -267,6 +270,29 @@ const SwapUI: React.FC = () => {
       setSwapping(false);
     }
   }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal, provider, senderAddr]);
+
+  /** Claim tokens via VPS faucet (transfers from deployer wallet) */
+  const claimTokens = useCallback(async (sym: string) => {
+    if (!walletAddress) { openConnectModal(); return; }
+    setClaiming(sym);
+    setClaimResult(null);
+    try {
+      const res = await fetch(`${FAUCET_URL}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sym, address: walletAddress }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Claim failed');
+      setClaimResult({ sym, ok: true, msg: data.message || `Claimed ${sym}!` });
+      setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Claim failed';
+      setClaimResult({ sym, ok: false, msg });
+    } finally {
+      setClaiming(null);
+    }
+  }, [walletAddress, openConnectModal]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -477,17 +503,32 @@ const SwapUI: React.FC = () => {
                   <div style={{ fontFamily: 'var(--fm)', fontSize: '.52rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
                   <div style={{ fontSize: '.55rem', color: 'var(--t3)', marginTop: 1 }}>Supply: {supplyHuman}</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0, alignItems: 'flex-end' }}>
+                  <button onClick={() => claimTokens(sym)} disabled={claiming === sym}
+                    style={{
+                      padding: '4px 10px', borderRadius: 6, border: 'none', cursor: claiming === sym ? 'wait' : 'pointer',
+                      background: 'linear-gradient(135deg, var(--o), var(--o2))', color: '#000',
+                      fontSize: '.58rem', fontWeight: 700, fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
+                    }}>
+                    {claiming === sym ? 'Claiming...' : `Get ${sym}`}
+                  </button>
                   <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: '.58rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
-                  <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'nowrap', textDecoration: 'none' }}>Deploy TX ↗</a>
+                    style={{ fontSize: '.54rem', color: 'var(--c2)', whiteSpace: 'nowrap', textDecoration: 'none' }}>OPScan ↗</a>
                 </div>
               </div>
             );
           })}
+          {claimResult && (
+            <div style={{ marginTop: 8, padding: '8px 12px',
+              background: claimResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
+              border: `1px solid ${claimResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+              borderRadius: 'var(--rad)', fontSize: '.7rem',
+              color: claimResult.ok ? 'var(--g)' : '#ef4444' }}>
+              {claimResult.msg}
+            </div>
+          )}
           <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)' }}>
-            Want tokens to swap? Deploy a <strong>Mintable</strong> token via the Token Launcher — anyone can then mint and trade it.
+            Click <strong>Get</strong> to receive free tokens from our faucet. 5 min cooldown per token.
           </div>
         </div>
 

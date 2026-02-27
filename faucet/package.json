@@ -1,0 +1,16 @@
+{
+  "name": "opnet-faucet",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "OPNet testnet token faucet — runs on VPS, transfers MINE/VIBE to requesters",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@btc-vision/transaction": "^1.0.0",
+    "@btc-vision/bitcoin": "^1.0.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5"
+  }
+}

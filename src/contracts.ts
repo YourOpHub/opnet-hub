@@ -14,6 +14,8 @@ export const TESTNET_CONTRACTS = {
         icon: '⛏️',
         description: 'OPNet Hub game token — earned by Epoch Miners',
         deployTxid: '1a50546bf161d8aa623201d5bd812ea42b9a151b4373a62bf746243181902c59',
+        publicMint: false,       // Will be true after MintableToken redeploy
+        maxMintPerTx: 1_000_000, // 1M MINE per tx
     },
     VIBE: {
         address: 'opt1sqzm99nspva6lqk8e7am34ewpcmyheydzsqu4df3m',
@@ -25,6 +27,8 @@ export const TESTNET_CONTRACTS = {
         icon: '⚡',
         description: 'Vibecoding Challenge token — built for #opnetvibecode',
         deployTxid: 'bf65f4f7e87088953ae1ac1447765a4a364f1751d9bfaa761231dd739d0ab0d7',
+        publicMint: false,       // Will be true after MintableToken redeploy
+        maxMintPerTx: 5_000_000, // 5M VIBE per tx
     },
 } as const;
 

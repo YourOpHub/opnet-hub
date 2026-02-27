@@ -4,8 +4,8 @@ import { Address, BinaryWriter } from '@btc-vision/transaction';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import {
-  TESTNET_CONTRACTS, DEPLOYER_MLDSA_HEX, DEPLOYER_TWEAKED_HEX,
-  POOL_ADDRESS, POOL_SELECTORS, OP20_SELECTORS,
+  TESTNET_CONTRACTS,
+  POOL_ADDRESS, POOL_PUBKEY, POOL_SELECTORS, OP20_SELECTORS,
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
 
@@ -23,17 +23,17 @@ function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): 
   return { out, impact };
 }
 
-interface Token { symbol: string; name: string; icon: string; decimals: number; address: string; }
+interface Token { symbol: string; name: string; icon: string; decimals: number; address: string; pubkey: string; }
 
 const TOKENS: Token[] = [
-  { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, decimals: 8, address: TESTNET_CONTRACTS.MINE.address },
-  { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address },
+  { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, decimals: 8, address: TESTNET_CONTRACTS.MINE.address, pubkey: TESTNET_CONTRACTS.MINE.pubkey },
+  { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address, pubkey: TESTNET_CONTRACTS.VIBE.pubkey },
 ];
 
 type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 
 const SwapUI: React.FC = () => {
-  const { provider, signer, walletAddress, walletInstance, address: wcAddress, network: wcNetwork, openConnectModal } = useWalletConnect();
+  const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, openConnectModal } = useWalletConnect();
 
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(1);
@@ -65,11 +65,11 @@ const SwapUI: React.FC = () => {
 
   // Fetch balances
   useEffect(() => {
-    if (!walletAddress) { setBalances({}); return; }
+    if (!walletAddress || !hashedMLDSAKey) { setBalances({}); return; }
     opnet.setNetwork('testnet');
     setBalLoading(true);
-    const mldsa = DEPLOYER_MLDSA_HEX;
-    const tweaked = DEPLOYER_TWEAKED_HEX;
+    const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
+    const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
     const jobs: Promise<void>[] = [];
     for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
       jobs.push(
@@ -84,7 +84,7 @@ const SwapUI: React.FC = () => {
         .catch(() => {})
     );
     Promise.allSettled(jobs).finally(() => setBalLoading(false));
-  }, [walletAddress]);
+  }, [walletAddress, hashedMLDSAKey, publicKey]);
 
   const from = TOKENS[fromIdx] || TOKENS[0];
   const to = TOKENS[toIdx] || TOKENS[1];
@@ -164,7 +164,7 @@ const SwapUI: React.FC = () => {
       setSwapStep('Approving token spend...');
       const approveWriter = new BinaryWriter();
       approveWriter.writeSelector(OP20_SELECTORS.increaseAllowance);
-      approveWriter.writeAddress(Address.fromString(POOL_ADDRESS));
+      approveWriter.writeAddress(Address.fromString(POOL_PUBKEY));
       approveWriter.writeU256(rawAmount);
 
       await sendInteraction(web3, from.address, approveWriter.getBuffer());
@@ -176,7 +176,7 @@ const SwapUI: React.FC = () => {
       setSwapStep('Executing swap on pool...');
       const swapWriter = new BinaryWriter();
       swapWriter.writeSelector(POOL_SELECTORS.swap);
-      swapWriter.writeAddress(Address.fromString(from.address));
+      swapWriter.writeAddress(Address.fromString(from.pubkey));
       swapWriter.writeU256(rawAmount);
       swapWriter.writeU256(minOut);
 
@@ -189,7 +189,10 @@ const SwapUI: React.FC = () => {
       });
       localStorage.setItem('hub_swapped', '1');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Swap failed';
+      let msg = e instanceof Error ? e.message : 'Swap failed';
+      if (msg.toLowerCase().includes('no utxo')) {
+        msg = 'Your wallet has no BTC UTXOs. Get testnet BTC first: https://faucet.opnet.org';
+      }
       console.error('[Swap]', e);
       setSwapStep('');
       setSwapResult({ type: 'error', error: msg });

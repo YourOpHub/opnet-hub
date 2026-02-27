@@ -11,6 +11,7 @@ const EcosystemDir = lazy(() => import('./components/EcosystemDir'));
 const Portfolio = lazy(() => import('./components/Portfolio'));
 const TokenLauncher = lazy(() => import('./components/TokenLauncher'));
 const SwapUI = lazy(() => import('./components/SwapUI'));
+const TokenGallery = lazy(() => import('./components/TokenGallery'));
 
 const LazyFallback = () => (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--t3)' }}>
@@ -26,6 +27,7 @@ const TABS = [
     { id: 'tools', i: '🛠️', l: 'Tools' },
     { id: 'swap', i: '🔄', l: 'Swap' },
     { id: 'launch', i: '🚀', l: 'Launcher' },
+    { id: 'gallery', i: '🪙', l: 'Gallery' },
     { id: 'game', i: '⛏️', l: 'Epoch Miner' },
     { id: 'news', i: '📰', l: 'News' },
     { id: 'eco', i: '🔗', l: 'Ecosystem' },
@@ -75,6 +77,7 @@ const App: React.FC = () => {
             case 'tools': return <TokenTools />;
             case 'swap': return <SwapUI />;
             case 'launch': return <TokenLauncher />;
+            case 'gallery': return <TokenGallery />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;
             case 'eco': return <EcosystemDir />;

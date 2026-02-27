@@ -6,6 +6,9 @@ import { getTxUrl } from '../contracts';
 
 const FAUCET = 'https://faucet.opnet.org';
 const GENERIC_WASM = 'GenericToken.wasm';
+const MINTABLE_WASM = 'MintableToken.wasm';
+
+type TokenMode = 'standard' | 'mintable';
 
 const PRESETS = [
   { name: 'Meme Coin', symbol: 'MEME', supply: '1000000000', decimals: 8, desc: 'Billion-supply meme token' },
@@ -28,6 +31,12 @@ const TokenLauncher: React.FC = () => {
   const [tokenSymbol, setTokenSymbol] = useState('MTK');
   const [tokenSupply, setTokenSupply] = useState('1000000');
   const [tokenDecimals, setTokenDecimals] = useState(8);
+
+  // Token mode: standard (all to deployer) vs mintable (split + public mint)
+  const [tokenMode, setTokenMode] = useState<TokenMode>('standard');
+  const [initialMintPct, setInitialMintPct] = useState(100); // % of supply minted to deployer
+  const [publicMintEnabled, setPublicMintEnabled] = useState(true);
+  const [maxMintPerTx, setMaxMintPerTx] = useState('10000'); // max tokens per public mint tx
 
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<{ contractAddress: string; txid: string } | null>(null);
@@ -70,16 +79,24 @@ const TokenLauncher: React.FC = () => {
     setCustomWasm(null);
   };
 
-  /** Encode deployment calldata: u256 maxSupply, u8 decimals, string name, string symbol */
+  /** Encode deployment calldata based on token mode */
   const encodeCalldata = (): Uint8Array => {
     const writer = new BinaryWriter();
-    // maxSupply = supply * 10^decimals as bigint
     const supplyNum = parseFloat(tokenSupply) || 0;
     const maxSupply = BigInt(Math.floor(supplyNum)) * (10n ** BigInt(tokenDecimals));
     writer.writeU256(maxSupply);
     writer.writeU8(tokenDecimals);
     writer.writeStringWithLength(tokenName.trim() || 'Token');
     writer.writeStringWithLength(tokenSymbol.trim().toUpperCase() || 'TKN');
+
+    if (tokenMode === 'mintable') {
+      // MintableToken extra fields: initialMintAmount, publicMintEnabled, maxMintPerTx
+      const initialMintAmount = (maxSupply * BigInt(initialMintPct)) / 100n;
+      writer.writeU256(initialMintAmount);
+      writer.writeBoolean(publicMintEnabled);
+      const maxPerTx = BigInt(Math.floor(parseFloat(maxMintPerTx) || 0)) * (10n ** BigInt(tokenDecimals));
+      writer.writeU256(maxPerTx);
+    }
     return writer.getBuffer();
   };
 
@@ -114,9 +131,10 @@ const TokenLauncher: React.FC = () => {
       if (customWasm) {
         bytecode = customWasm;
       } else {
+        const wasmFile = tokenMode === 'mintable' ? MINTABLE_WASM : GENERIC_WASM;
         const base = import.meta.env.BASE_URL || '/';
-        const resp = await fetch(`${base}wasm/${GENERIC_WASM}`);
-        if (!resp.ok) throw new Error(`Failed to fetch ${GENERIC_WASM}: ${resp.status}`);
+        const resp = await fetch(`${base}wasm/${wasmFile}`);
+        if (!resp.ok) throw new Error(`Failed to fetch ${wasmFile}: ${resp.status}`);
         bytecode = new Uint8Array(await resp.arrayBuffer());
       }
 
@@ -143,8 +161,29 @@ const TokenLauncher: React.FC = () => {
         txid: result.transaction?.[1] || result.transaction?.[0] || '',
       });
       localStorage.setItem('hub_token_launched', '1');
+
+      // Save deployed token to gallery
+      const deployed = JSON.parse(localStorage.getItem('hub_deployed_tokens') || '[]');
+      deployed.push({
+        address: result.contractAddress || '',
+        txid: result.transaction?.[1] || result.transaction?.[0] || '',
+        name: tokenName.trim(),
+        symbol: tokenSymbol.trim().toUpperCase(),
+        supply: tokenSupply,
+        decimals: tokenDecimals,
+        mode: tokenMode,
+        publicMint: tokenMode === 'mintable' && publicMintEnabled,
+        maxMintPerTx: tokenMode === 'mintable' ? maxMintPerTx : '0',
+        initialMintPct,
+        deployedAt: Date.now(),
+        deployer: walletAddress,
+      });
+      localStorage.setItem('hub_deployed_tokens', JSON.stringify(deployed));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Deployment failed';
+      let msg = e instanceof Error ? e.message : 'Deployment failed';
+      if (msg.toLowerCase().includes('no utxo')) {
+        msg = 'Your wallet has no BTC UTXOs. Get testnet BTC from the faucet first: https://faucet.opnet.org';
+      }
       console.error('[Deploy]', e);
       setDeployError(msg);
       setDeployStep('');
@@ -239,6 +278,72 @@ const TokenLauncher: React.FC = () => {
               </select>
             </div>
           </div>
+
+          {/* Token Mode: Standard vs Mintable */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 6, display: 'block' }}>Token Type</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([['standard', 'Standard', 'All supply minted to you on deploy'], ['mintable', 'Mintable', 'Split: you + public mint']] as const).map(([mode, label, desc]) => (
+                <button key={mode} onClick={() => setTokenMode(mode)} style={{
+                  flex: 1, padding: '10px 6px', borderRadius: 'var(--rad)',
+                  background: tokenMode === mode ? (mode === 'standard' ? 'var(--oG)' : 'rgba(168,85,247,.12)') : 'var(--bg3)',
+                  border: `1px solid ${tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.3)' : 'rgba(168,85,247,.3)') : 'var(--bd)'}`,
+                  color: tokenMode === mode ? (mode === 'standard' ? 'var(--o)' : '#a855f7') : 'var(--t2)',
+                  fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
+                }}>
+                  <div>{mode === 'standard' ? '🔒' : '🌐'} {label}</div>
+                  <div style={{ fontSize: '.52rem', fontWeight: 400, marginTop: 2, color: 'var(--t3)' }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mintable mode settings */}
+          {tokenMode === 'mintable' && (
+            <div style={{ marginBottom: 12, padding: 12, background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)' }}>
+              <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 8 }}>Mint Allocation</div>
+
+              {/* Initial mint % slider */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.64rem', color: 'var(--t3)', marginBottom: 4 }}>
+                  <span>Initial mint to you</span>
+                  <span style={{ fontWeight: 700, color: 'var(--w)' }}>{initialMintPct}%</span>
+                </div>
+                <input type="range" min={0} max={100} step={5} value={initialMintPct}
+                  onChange={e => setInitialMintPct(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: '#a855f7' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.56rem', color: 'var(--t4)' }}>
+                  <span>You get: {((parseFloat(tokenSupply) || 0) * initialMintPct / 100).toLocaleString()}</span>
+                  <span>Public mint: {((parseFloat(tokenSupply) || 0) * (100 - initialMintPct) / 100).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Public mint toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
+                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: publicMintEnabled ? '#a855f7' : 'var(--bg3)',
+                  position: 'relative', transition: 'background .2s',
+                }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', background: 'white',
+                    position: 'absolute', top: 2, left: publicMintEnabled ? 18 : 2, transition: 'left .2s',
+                  }} />
+                </button>
+                <span style={{ fontSize: '.66rem', color: 'var(--t2)' }}>Anyone can mint (public mint)</span>
+              </div>
+
+              {/* Max mint per tx */}
+              {publicMintEnabled && (
+                <div>
+                  <label style={{ fontSize: '.62rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Max tokens per mint tx (0 = unlimited)</label>
+                  <input style={{ ...inputStyle, fontSize: '.74rem' }} type="text" inputMode="numeric"
+                    value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="10000" />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Token logo */}
           <div className="upload-zone" onClick={() => fileRef.current?.click()} style={{ marginBottom: 14, padding: '10px' }}>

@@ -75,11 +75,23 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
     signer: null,
     mldsaSigner: null,
     refundTo,
-    maximumAllowedSatToSpend: 100_000n,
+    maximumAllowedSatToSpend: 250_000n,
     network: NETWORK,
     feeRate,
     priorityFee,
   } as any;
+}
+
+/** Retry wrapper for flaky RPC simulations */
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try { return await fn(); }
+    catch (e) {
+      if (i === retries) throw e;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error('Retry exhausted');
 }
 
 interface IPoolContract {
@@ -260,10 +272,6 @@ const SwapUI: React.FC = () => {
       const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
       const minOut = BitcoinUtils.expandToDecimals(toVal * (1 - slippage / 100), to.decimals);
 
-      // Fetch real gas parameters from the network
-      setSwapStep('Fetching gas parameters...');
-      const txParams = await buildTxParams(provider, walletAddress!);
-
       // STEP 1: Approve pool to spend token-in
       setSwapStep('Approving token spend...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -271,33 +279,35 @@ const SwapUI: React.FC = () => {
         from.address, OP_20_ABI, provider, NETWORK, senderAddr as any,
       );
       const poolAddr = Address.fromString(POOL_PUBKEY) as any;
-      const approveSim = await tokenContract.increaseAllowance(poolAddr, rawAmount);
+      const approveSim = await withRetry(() => tokenContract.increaseAllowance(poolAddr, rawAmount));
 
       if (approveSim.revert) {
         throw new Error(`Approval simulation reverted: ${approveSim.revert}`);
       }
 
-      const approveReceipt = await approveSim.sendTransaction(txParams);
+      const txParams1 = await buildTxParams(provider, walletAddress!);
+      const approveReceipt = await approveSim.sendTransaction(txParams1);
       console.log('[Swap] Approve TX:', approveReceipt.transactionId);
 
       // Wait for approval to propagate on-chain (needs block confirmation)
       setSwapStep('Waiting for approval confirmation (~30s)...');
       await new Promise(r => setTimeout(r, 30000));
 
-      // STEP 2: Call swap on pool
+      // STEP 2: Call swap on pool — rebuild txParams (UTXOs changed)
       setSwapStep('Executing swap on pool...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const poolContract = getContract<any>(
         POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any,
       ) as unknown as IPoolContract;
       const tokenInAddr = Address.fromString(from.pubkey);
-      const swapSim = await poolContract.swap(tokenInAddr, rawAmount, minOut);
+      const swapSim = await withRetry(() => poolContract.swap(tokenInAddr, rawAmount, minOut));
 
       if ((swapSim as CallResult).revert) {
         throw new Error(`Swap simulation reverted: ${(swapSim as CallResult).revert}`);
       }
 
-      const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams);
+      const txParams2 = await buildTxParams(provider, walletAddress!);
+      const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
       const txHash = swapReceipt.transactionId || '';
 
       setSwapStep('');
@@ -311,9 +321,9 @@ const SwapUI: React.FC = () => {
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Swap failed';
-      if (msg.toLowerCase().includes('no utxo')) {
-        msg = 'Your wallet has no BTC UTXOs. Get testnet BTC first: https://faucet.opnet.org';
-      }
+      if (msg.toLowerCase().includes('no utxo')) msg = 'Your wallet has no BTC UTXOs. Get testnet BTC first: https://faucet.opnet.org';
+      else if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('fetch')) msg = 'Network timeout — try again in a few seconds.';
+      else if (msg.toLowerCase().includes('revert')) msg += ' (Try again — testnet can be flaky)';
       console.error('[Swap]', e);
       setSwapStep('');
       setSwapResult({ type: 'error', error: msg });
@@ -334,7 +344,7 @@ const SwapUI: React.FC = () => {
       const rawAmount = BitcoinUtils.expandToDecimals(MINT_AMOUNT, tok.decimals);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
-      const sim = await contract.publicMint(rawAmount);
+      const sim = await withRetry(() => contract.publicMint(rawAmount));
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
       const receipt = await (sim as CallResult).sendTransaction(txParams);
@@ -365,7 +375,6 @@ const SwapUI: React.FC = () => {
     setAddingLP(true);
     setLpResult(null);
     try {
-      const txParams = await buildTxParams(provider, walletAddress);
       const poolAddr = Address.fromString(POOL_PUBKEY) as any;
 
       // 1. Transfer MINE to pool
@@ -373,36 +382,39 @@ const SwapUI: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mineContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
       const mineRaw = BitcoinUtils.expandToDecimals(mineAmt, 8);
-      const mineSim = await mineContract.transfer(poolAddr, mineRaw);
+      const mineSim = await withRetry(() => mineContract.transfer(poolAddr, mineRaw));
       if (mineSim.revert) throw new Error(`MINE transfer failed: ${mineSim.revert}`);
-      const mineReceipt = await mineSim.sendTransaction(txParams);
+      const txParams1 = await buildTxParams(provider, walletAddress);
+      const mineReceipt = await mineSim.sendTransaction(txParams1);
       console.log('[LP] MINE transfer TX:', mineReceipt.transactionId);
 
       // Wait for confirmation
       setLpStep('Waiting for MINE transfer (~30s)...');
       await new Promise(r => setTimeout(r, 30000));
 
-      // 2. Transfer VIBE to pool
+      // 2. Transfer VIBE to pool — fresh txParams (UTXOs changed)
       setLpStep('Transferring VIBE to pool...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const vibeContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
       const vibeRaw = BitcoinUtils.expandToDecimals(vibeAmt, 8);
-      const vibeSim = await vibeContract.transfer(poolAddr, vibeRaw);
+      const vibeSim = await withRetry(() => vibeContract.transfer(poolAddr, vibeRaw));
       if (vibeSim.revert) throw new Error(`VIBE transfer failed: ${vibeSim.revert}`);
-      const vibeReceipt = await vibeSim.sendTransaction(txParams);
+      const txParams2 = await buildTxParams(provider, walletAddress);
+      const vibeReceipt = await vibeSim.sendTransaction(txParams2);
       console.log('[LP] VIBE transfer TX:', vibeReceipt.transactionId);
 
       // Wait for confirmation
       setLpStep('Waiting for VIBE transfer (~30s)...');
       await new Promise(r => setTimeout(r, 30000));
 
-      // 3. Call sync() on pool
+      // 3. Call sync() on pool — fresh txParams again
       setLpStep('Syncing pool reserves...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
-      const syncSim = await poolContract.sync();
+      const syncSim = await withRetry(() => poolContract.sync());
       if ((syncSim as CallResult).revert) throw new Error(`Sync failed: ${(syncSim as CallResult).revert}`);
-      const syncReceipt = await (syncSim as CallResult).sendTransaction(txParams);
+      const txParams3 = await buildTxParams(provider, walletAddress);
+      const syncReceipt = await (syncSim as CallResult).sendTransaction(txParams3);
 
       setLpStep('');
       setLpResult({ ok: true, msg: `Liquidity added! ${mineAmt} MINE + ${vibeAmt} VIBE. Sync TX: ${syncReceipt.transactionId}` });

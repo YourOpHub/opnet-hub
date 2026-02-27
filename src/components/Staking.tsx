@@ -36,9 +36,21 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promi
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   return {
     signer: null, mldsaSigner: null, refundTo,
-    maximumAllowedSatToSpend: 100_000n, network: NETWORK, feeRate, priorityFee,
+    maximumAllowedSatToSpend: 250_000n, network: NETWORK, feeRate, priorityFee,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
+}
+
+/** Retry wrapper for flaky RPC simulations */
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try { return await fn(); }
+    catch (e) {
+      if (i === retries) throw e;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error('Retry exhausted');
 }
 
 /** The staking token is MINE — same token used in swap pool and minting */
@@ -131,7 +143,6 @@ const Staking: React.FC = () => {
     setStaking(true);
     setResult(null);
     try {
-      const txParams = await buildTxParams(provider, walletAddress);
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
       const stakingAddr = Address.fromString(STAKING_PUBKEY) as any;
 
@@ -139,20 +150,22 @@ const Staking: React.FC = () => {
       setStep('Approving MINE spend...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tokenContract = getContract<IOP20Contract>(STAKING_TOKEN.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
-      const approveSim = await tokenContract.increaseAllowance(stakingAddr, rawAmount);
+      const approveSim = await withRetry(() => tokenContract.increaseAllowance(stakingAddr, rawAmount));
       if (approveSim.revert) throw new Error(`Approval failed: ${approveSim.revert}`);
-      await approveSim.sendTransaction(txParams);
+      const txParams1 = await buildTxParams(provider, walletAddress);
+      await approveSim.sendTransaction(txParams1);
 
       setStep('Waiting for approval (~30s)...');
       await new Promise(r => setTimeout(r, 30000));
 
-      // 2. Stake
+      // 2. Stake — rebuild txParams (UTXOs changed after approve)
       setStep('Staking MINE tokens...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
-      const stakeSim = await stakingContract.stake(rawAmount);
+      const stakeSim = await withRetry(() => stakingContract.stake(rawAmount));
       if ((stakeSim as CallResult).revert) throw new Error(`Stake failed: ${(stakeSim as CallResult).revert}`);
-      const receipt = await (stakeSim as CallResult).sendTransaction(txParams);
+      const txParams2 = await buildTxParams(provider, walletAddress);
+      const receipt = await (stakeSim as CallResult).sendTransaction(txParams2);
 
       setStep('');
       setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE! TX: ${receipt.transactionId}` });
@@ -161,6 +174,8 @@ const Staking: React.FC = () => {
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Staking failed';
       if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC first.';
+      else if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('fetch')) msg = 'Network timeout — try again in a few seconds.';
+      else if (msg.toLowerCase().includes('revert')) msg += ' (Try again — testnet can be flaky)';
       setStep('');
       setResult({ type: 'error', msg });
     } finally {
@@ -178,13 +193,13 @@ const Staking: React.FC = () => {
     setUnstaking(true);
     setResult(null);
     try {
-      const txParams = await buildTxParams(provider, walletAddress);
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
       setStep('Unstaking MINE tokens...');
-      const sim = await stakingContract.unstake(rawAmount);
+      const sim = await withRetry(() => stakingContract.unstake(rawAmount));
       if ((sim as CallResult).revert) throw new Error(`Unstake failed: ${(sim as CallResult).revert}`);
+      const txParams = await buildTxParams(provider, walletAddress);
       const receipt = await (sim as CallResult).sendTransaction(txParams);
 
       setStep('');
@@ -206,12 +221,12 @@ const Staking: React.FC = () => {
     setClaiming(true);
     setResult(null);
     try {
-      const txParams = await buildTxParams(provider, walletAddress);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
       setStep('Claiming rewards...');
-      const sim = await stakingContract.claim();
+      const sim = await withRetry(() => stakingContract.claim());
       if ((sim as CallResult).revert) throw new Error(`Claim failed: ${(sim as CallResult).revert}`);
+      const txParams = await buildTxParams(provider, walletAddress);
       const receipt = await (sim as CallResult).sendTransaction(txParams);
 
       setStep('');

@@ -474,21 +474,10 @@ const TokenLauncher: React.FC = () => {
           <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 4 }}>Supply: {Number(tokenSupply || 0).toLocaleString()}</div>
           <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · Testnet</div>
 
-          {/* Estimated deploy cost */}
-          <div style={{ marginTop: 12, padding: '8px 10px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: 'var(--rad)', fontSize: '.64rem' }}>
-            <div style={{ fontWeight: 700, color: 'var(--o)', marginBottom: 3 }}>Estimated Deploy Cost</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--t2)', marginBottom: 2 }}>
-              <span>Network fee (2 txs)</span><span style={{ fontFamily: 'var(--fm)' }}>~5,000–15,000 sats</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--t2)', marginBottom: 2 }}>
-              <span>Gas (contract execution)</span><span style={{ fontFamily: 'var(--fm)' }}>~100,000 sats</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--w)', fontWeight: 700, borderTop: '1px solid var(--bd)', paddingTop: 3, marginTop: 3 }}>
-              <span>Total estimate</span><span style={{ fontFamily: 'var(--fm)' }}>~0.001–0.002 BTC</span>
-            </div>
-            <div style={{ fontSize: '.54rem', color: 'var(--t4)', marginTop: 3 }}>
-              Actual cost depends on network conditions. Get free testnet BTC from the faucet.
-            </div>
+          {/* Deploy cost — compact */}
+          <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: 'var(--rad)', fontSize: '.66rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--t3)' }}>Deploy cost:</span>
+            <span style={{ fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>~110K sats (~0.0011 BTC)</span>
           </div>
 
           <div style={{ marginTop: 14, textAlign: 'left', padding: '10px', background: 'var(--bg3)', borderRadius: 'var(--rad)', fontSize: '.68rem', color: 'var(--t3)' }}>

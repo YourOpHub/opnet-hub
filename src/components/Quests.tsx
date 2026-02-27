@@ -71,7 +71,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
                 </div>
 
                 {done === quests.length ? (
-                    <div style={{ textAlign: 'center', padding: '16px', margin: '0 12px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 'var(--rad)', fontSize: '.78rem', color: 'var(--g)', fontWeight: 700 }}>
+                    <div style={{ textAlign: 'center', padding: '16px', margin: '0 12px 10px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', borderRadius: '14px', fontSize: '.78rem', color: 'var(--g)', fontWeight: 700 }}>
                         <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>🏆</div>
                         <div>OP_NET Master — All quests complete!</div>
                         <div style={{ fontSize: '.62rem', color: 'var(--t3)', fontWeight: 500, marginTop: 4 }}>You've proven deep knowledge of Bitcoin's consensus layer</div>
@@ -109,8 +109,8 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
 
                 <div style={{ padding: '12px 18px', borderTop: '1px solid var(--bd)', marginTop: 8 }}>
                     <a href="https://vibecode.finance/challenge" target="_blank" rel="noopener noreferrer" style={{
-                        display: 'block', textAlign: 'center', padding: '10px', background: 'var(--oG)', border: '1px solid rgba(247,147,26,.15)',
-                        borderRadius: 'var(--rad)', textDecoration: 'none', color: 'var(--o)', fontSize: '.72rem', fontWeight: 700
+                        display: 'block', textAlign: 'center', padding: '10px', background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)',
+                        borderRadius: '14px', textDecoration: 'none', color: 'var(--o)', fontSize: '.72rem', fontWeight: 700
                     }}>
                         🏆 Join the Vibecoding Challenge → win Motocats + $PILL
                     </a>

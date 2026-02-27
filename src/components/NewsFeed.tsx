@@ -39,7 +39,7 @@ const NewsFeed: React.FC = () => {
                             <div style={{ padding: '24px 22px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                     <span className="ns">{featured.src}</span>
-                                    <div style={{ display: 'flex', gap: 4 }}><span className="ntag">{featured.tag}</span><span className="ntag" style={{ background: 'var(--gG)', color: 'var(--g)', borderColor: 'var(--gB)' }}>Featured</span></div>
+                                    <div style={{ display: 'flex', gap: 4 }}><span className="ntag">{featured.tag}</span><span className="ntag" style={{ background: 'rgba(16,185,129,.06)', color: 'var(--g)', borderColor: 'rgba(16,185,129,.15)' }}>Featured</span></div>
                                 </div>
                                 <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--w)', lineHeight: 1.3, marginBottom: 6 }}>{featured.title}</div>
                                 <div style={{ fontSize: '.82rem', color: 'var(--t2)', lineHeight: 1.5 }}>{featured.desc}</div>

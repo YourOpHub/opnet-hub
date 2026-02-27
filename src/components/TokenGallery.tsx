@@ -208,7 +208,7 @@ const TokenGallery: React.FC = () => {
 
   const connected = !!walletAddress;
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '10px 12px', borderRadius: 'var(--rad)',
+    width: '100%', padding: '10px 12px', borderRadius: '14px',
     background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
     fontSize: '.82rem', fontFamily: 'var(--ff)', outline: 'none',
   };
@@ -226,8 +226,8 @@ const TokenGallery: React.FC = () => {
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
         {([['featured', 'Featured Tokens'], ['user', `My Tokens (${tokens.length})`]] as const).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
-            flex: 1, padding: '10px', borderRadius: 'var(--rad)',
-            background: tab === id ? 'var(--oG)' : 'var(--bg3)',
+            flex: 1, padding: '10px', borderRadius: '14px',
+            background: tab === id ? 'rgba(247,147,26,.08)' : 'var(--bg3)',
             border: `1px solid ${tab === id ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`,
             color: tab === id ? 'var(--o)' : 'var(--t2)',
             fontSize: '.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
@@ -246,7 +246,7 @@ const TokenGallery: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontWeight: 800, fontSize: '.95rem', color: 'var(--w)' }}>{tok.name}</span>
                     <span style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.78rem' }}>${tok.symbol}</span>
-                    <span style={{ fontSize: '.48rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 3, fontWeight: 700 }}>ON-CHAIN</span>
+                    <span style={{ fontSize: '.48rem', background: 'rgba(16,185,129,.06)', color: 'var(--g)', padding: '2px 6px', borderRadius: 3, fontWeight: 700 }}>ON-CHAIN</span>
                   </div>
                   <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 2 }}>{tok.description}</div>
                   <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginTop: 4 }}>
@@ -261,7 +261,7 @@ const TokenGallery: React.FC = () => {
                     style={{ fontSize: '.56rem', color: 'var(--c2)', textAlign: 'center' }}>Deploy TX</a>
                   {tok.publicMint && (
                     <button onClick={() => setFeatMintSym(featMintSym === tok.symbol ? null : tok.symbol)} style={{
-                      padding: '8px 14px', borderRadius: 'var(--rad)', fontSize: '.7rem', fontWeight: 800,
+                      padding: '8px 14px', borderRadius: '14px', fontSize: '.7rem', fontWeight: 800,
                       background: featMintSym === tok.symbol ? 'rgba(168,85,247,.2)' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
                       border: 'none', color: featMintSym === tok.symbol ? '#a855f7' : 'white',
                       cursor: 'pointer', fontFamily: 'var(--ff)', letterSpacing: '.02em',
@@ -272,7 +272,7 @@ const TokenGallery: React.FC = () => {
               </div>
               {/* Featured mint panel */}
               {featMintSym === tok.symbol && tok.publicMint && (
-                <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)' }}>
+                <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: '14px' }}>
                   <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 6 }}>Public Mint — ${tok.symbol}</div>
                   <div style={{ fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: 1,000 {tok.symbol}</div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
@@ -288,14 +288,14 @@ const TokenGallery: React.FC = () => {
                     </div>
                     {connected ? (
                       <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} style={{
-                        padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.75rem',
+                        padding: '8px 16px', borderRadius: '14px', fontWeight: 700, fontSize: '.75rem',
                         background: 'linear-gradient(135deg, #a855f7, #7c3aed)', border: 'none',
                         color: 'white', cursor: featMinting ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
                         opacity: featMinting ? 0.6 : 1, whiteSpace: 'nowrap',
                       }}>{featMinting ? 'Minting...' : 'Mint'}</button>
                     ) : (
                       <button onClick={openConnectModal} style={{
-                        padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.72rem',
+                        padding: '8px 16px', borderRadius: '14px', fontWeight: 700, fontSize: '.72rem',
                         background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none',
                         color: 'white', cursor: 'pointer', fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
                       }}>Connect</button>
@@ -303,8 +303,8 @@ const TokenGallery: React.FC = () => {
                   </div>
                   {featMintResult && (
                     <div style={{ padding: '8px 10px', borderRadius: 6, fontSize: '.68rem',
-                      background: featMintResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-                      border: `1px solid ${featMintResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+                      background: featMintResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+                      border: `1px solid ${featMintResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`,
                       color: featMintResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
                     }}>{featMintResult.msg}</div>
                   )}
@@ -350,13 +350,13 @@ const TokenGallery: React.FC = () => {
                 return (
                   <div key={tok.address || idx} className="P" style={{ padding: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '2px solid var(--bd2)' }}
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '2px solid rgba(255,255,255,.08)' }}
                         dangerouslySetInnerHTML={{ __html: genLogo(tok.symbol) }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 800, fontSize: '.9rem', color: 'var(--w)' }}>{tok.name}</span>
                           <span style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.78rem' }}>${tok.symbol}</span>
-                          {isConfirmed && <span style={{ fontSize: '.48rem', background: 'var(--gG)', color: 'var(--g)', padding: '2px 6px', borderRadius: 3, fontWeight: 700 }}>ON-CHAIN</span>}
+                          {isConfirmed && <span style={{ fontSize: '.48rem', background: 'rgba(16,185,129,.06)', color: 'var(--g)', padding: '2px 6px', borderRadius: 3, fontWeight: 700 }}>ON-CHAIN</span>}
                           {!isConfirmed && tok.address && <span style={{ fontSize: '.48rem', background: 'rgba(234,179,8,.1)', color: 'var(--y)', padding: '2px 6px', borderRadius: 3, fontWeight: 700 }}>PENDING</span>}
                           {tok.mode === 'mintable' && <span style={{ fontSize: '.48rem', background: 'rgba(168,85,247,.1)', color: '#a855f7', padding: '2px 6px', borderRadius: 3, fontWeight: 700 }}>MINTABLE</span>}
                         </div>
@@ -387,7 +387,7 @@ const TokenGallery: React.FC = () => {
                         )}
                         {tok.publicMint && (
                           <button onClick={() => setMintAddr(isMintOpen ? null : tok.address)} style={{
-                            padding: '5px 8px', borderRadius: 'var(--rad)', fontSize: '.58rem', fontWeight: 700,
+                            padding: '5px 8px', borderRadius: '14px', fontSize: '.58rem', fontWeight: 700,
                             background: isMintOpen ? 'rgba(168,85,247,.15)' : 'rgba(168,85,247,.08)',
                             border: '1px solid rgba(168,85,247,.2)', color: '#a855f7', cursor: 'pointer', fontFamily: 'var(--ff)',
                           }}>{isMintOpen ? 'Close' : 'Mint'}</button>
@@ -402,7 +402,7 @@ const TokenGallery: React.FC = () => {
 
                     {/* Mint panel */}
                     {isMintOpen && tok.publicMint && (
-                      <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)' }}>
+                      <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: '14px' }}>
                         <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 8 }}>Public Mint — ${tok.symbol}</div>
                         {tok.maxMintPerTx && tok.maxMintPerTx !== '0' && (
                           <div style={{ fontSize: '.6rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: {Number(tok.maxMintPerTx).toLocaleString()}</div>
@@ -413,14 +413,14 @@ const TokenGallery: React.FC = () => {
                             placeholder={`Amount of ${tok.symbol} to mint`} />
                           {connected ? (
                             <button onClick={() => doMint(tok)} disabled={minting} style={{
-                              padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.75rem',
+                              padding: '8px 16px', borderRadius: '14px', fontWeight: 700, fontSize: '.75rem',
                               background: 'linear-gradient(135deg, #a855f7, #7c3aed)', border: 'none',
                               color: 'white', cursor: minting ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
                               opacity: minting ? 0.6 : 1, whiteSpace: 'nowrap',
                             }}>{minting ? 'Minting...' : 'Mint'}</button>
                           ) : (
                             <button onClick={openConnectModal} style={{
-                              padding: '8px 16px', borderRadius: 'var(--rad)', fontWeight: 700, fontSize: '.72rem',
+                              padding: '8px 16px', borderRadius: '14px', fontWeight: 700, fontSize: '.72rem',
                               background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none',
                               color: 'white', cursor: 'pointer', fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
                             }}>Connect</button>
@@ -429,8 +429,8 @@ const TokenGallery: React.FC = () => {
                         {mintResult && (
                           <div style={{
                             padding: '8px 10px', borderRadius: 6, fontSize: '.68rem',
-                            background: mintResult.ok ? 'var(--gG)' : 'rgba(239,68,68,.06)',
-                            border: `1px solid ${mintResult.ok ? 'var(--gB)' : 'rgba(239,68,68,.2)'}`,
+                            background: mintResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+                            border: `1px solid ${mintResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`,
                             color: mintResult.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
                           }}>{mintResult.msg}</div>
                         )}
@@ -474,7 +474,7 @@ const TokenGallery: React.FC = () => {
         <p style={{ marginTop: 6 }}>
           <strong>Mintable tokens</strong> with public mint enabled allow anyone to mint directly from this page using their OP_WALLET.
         </p>
-        <div style={{ marginTop: 8, padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: 'var(--rad)', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
+        <div style={{ marginTop: 8, padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: '14px', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
           Need testnet BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a>
         </div>
       </div>

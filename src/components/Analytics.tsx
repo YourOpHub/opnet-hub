@@ -262,13 +262,13 @@ const Analytics: React.FC = () => {
       <div className="P" style={{ padding: 16, marginBottom: 16 }}>
         <div className="Lb" style={{ marginBottom: 10 }}>💱 Pool Details — MINE/VIBE SimplePool</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: 'var(--rad)' }}>
+          <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
             <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>MINE Reserve</div>
             <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)' }}>
               {reserves ? reserves.mine.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
             </div>
           </div>
-          <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: 'var(--rad)' }}>
+          <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
             <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>VIBE Reserve</div>
             <div style={{ fontWeight: 700, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>
               {reserves ? reserves.vibe.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
@@ -293,7 +293,7 @@ const Analytics: React.FC = () => {
             const maxSupply = tok.supply;
             const pct = maxSupply > 0 ? (totalMinted / maxSupply) * 100 : 0;
             return (
-              <div key={sym} style={{ padding: 12, background: 'var(--bg3)', borderRadius: 'var(--rad)' }}>
+              <div key={sym} style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                   <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>
                   <span style={{ fontWeight: 700 }}>${sym}</span>
@@ -336,7 +336,7 @@ const Analytics: React.FC = () => {
             {txHistory.slice(0, 15).map((tx: TxRecord) => (
               <div key={tx.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', borderRadius: 'var(--rad)', fontSize: '.72rem',
+                padding: '8px 12px', borderRadius: '14px', fontSize: '.72rem',
                 background: 'rgba(255,255,255,.02)', border: '1px solid var(--bd)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

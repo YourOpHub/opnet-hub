@@ -130,8 +130,7 @@ const App: React.FC = () => {
             <header className="H">
                 <div className="Hi">
                     <div className="Lo" onClick={() => navigate('home')}>
-                        <div className="Lm">⚡</div>
-                        <span style={{ letterSpacing: '-.02em' }}>OPNet<span style={{ color: '#4a5568', fontWeight: 500, marginLeft: 4, fontSize: '.85rem' }}>Hub</span></span>
+                        <img src="/logo.png" alt="OPNet Hub" style={{ height: 32, objectFit: 'contain' }} />
                     </div>
                     <div className="Hr">
                         <div ref={dropRef} style={{ position: 'relative' }}

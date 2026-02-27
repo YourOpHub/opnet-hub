@@ -142,7 +142,7 @@ const BobChat: React.FC = () => {
             </div>
             <a href="https://ai.opnet.org" target="_blank" rel="noopener noreferrer" style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 10,
-                background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: 'var(--rad)',
+                background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)', borderRadius: '14px',
                 textDecoration: 'none', color: 'var(--c2)', fontSize: '.78rem', fontWeight: 600, transition: 'all .2s'
             }}>
                 <span style={{ fontSize: '1.2rem' }}>🔗</span>
@@ -154,7 +154,7 @@ const BobChat: React.FC = () => {
                     <div key={m.id} className={`bub ${m.role === 'bot' ? 'ai' : 'me'}`}>
                         <div className="bub-w" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             {m.role === 'bot' ? '🤖 Bob' : '👤 You'}
-                            {m.source === 'mcp' && <span style={{ fontSize: '.5rem', background: 'var(--gG)', color: 'var(--g)', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>MCP</span>}
+                            {m.source === 'mcp' && <span style={{ fontSize: '.5rem', background: 'rgba(16,185,129,.06)', color: 'var(--g)', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>MCP</span>}
                         </div>
                         <div>{bold(m.text)}</div>
                     </div>

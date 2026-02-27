@@ -273,26 +273,50 @@ const SwapUI: React.FC = () => {
       const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
       const minOut = BitcoinUtils.expandToDecimals(toVal * (1 - slippage / 100), to.decimals);
 
-      // STEP 1: Approve pool to spend token-in
-      setSwapStep('Approving token spend...');
+      // STEP 1: Check allowance — skip approval if already sufficient
+      setSwapStep('Checking allowance...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const tokenContract = getContract<IOP20Contract>(
         from.address, OP_20_ABI, provider, NETWORK, senderAddr as any,
       );
       const poolAddr = Address.fromString(POOL_PUBKEY) as any;
-      const approveSim = await withRetry(() => tokenContract.increaseAllowance(poolAddr, rawAmount));
 
-      if (approveSim.revert) {
-        throw new Error(`Approval simulation reverted: ${approveSim.revert}`);
+      let needsApproval = true;
+      try {
+        const allowanceRes = await tokenContract.allowance(senderAddr as any, poolAddr);
+        if (!(allowanceRes as CallResult).revert) {
+          const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
+          const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
+          if (cur >= rawAmount) needsApproval = false;
+        }
+      } catch { /* proceed with approval */ }
+
+      if (needsApproval) {
+        setSwapStep('Approving token spend...');
+        const approveAmount = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+        const approveSim = await withRetry(() => tokenContract.increaseAllowance(poolAddr, approveAmount));
+        if ((approveSim as CallResult).revert) throw new Error(`Approval reverted: ${(approveSim as CallResult).revert}`);
+        const txParams1 = await buildTxParams(provider, walletAddress!);
+        await (approveSim as CallResult).sendTransaction(txParams1);
+
+        // Poll for allowance confirmation
+        setSwapStep('Waiting for approval confirmation...');
+        const pollStart = Date.now();
+        let confirmed = false;
+        while (Date.now() - pollStart < 90_000) {
+          await new Promise(r => setTimeout(r, 5_000));
+          try {
+            const checkRes = await tokenContract.allowance(senderAddr as any, poolAddr);
+            if (!(checkRes as CallResult).revert) {
+              const props = (checkRes as CallResult).properties as Record<string, unknown>;
+              const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
+              if (cur >= rawAmount) { confirmed = true; break; }
+            }
+          } catch { /* retry */ }
+          setSwapStep(`Waiting for approval confirmation... (${Math.round((Date.now() - pollStart) / 1000)}s)`);
+        }
+        if (!confirmed) throw new Error('Approval timeout — try swapping again in ~1 min.');
       }
-
-      const txParams1 = await buildTxParams(provider, walletAddress!);
-      const approveReceipt = await approveSim.sendTransaction(txParams1);
-      console.log('[Swap] Approve TX:', approveReceipt.transactionId);
-
-      // Wait for approval to propagate on-chain (needs block confirmation)
-      setSwapStep('Waiting for approval confirmation (~30s)...');
-      await new Promise(r => setTimeout(r, 30000));
 
       // STEP 2: Call swap on pool — rebuild txParams (UTXOs changed)
       setSwapStep('Executing swap on pool...');
@@ -448,7 +472,7 @@ const SwapUI: React.FC = () => {
   }, [fromIdx, toIdx]);
 
   const selectStyle: React.CSSProperties = {
-    background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
+    background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: '14px',
     color: 'var(--w)', padding: '8px 12px', fontSize: '.82rem', fontWeight: 700,
     fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none',
     flexShrink: 0, minWidth: 120, maxWidth: 140, whiteSpace: 'nowrap',
@@ -487,13 +511,13 @@ const SwapUI: React.FC = () => {
           </div>
 
           {showSettings && (
-            <div style={{ marginBottom: 12, padding: '10px 12px', background: 'var(--bg3)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
+            <div style={{ marginBottom: 12, padding: '10px 12px', background: 'var(--bg3)', borderRadius: '14px', border: '1px solid var(--bd)' }}>
               <div style={{ fontSize: '.65rem', color: 'var(--t3)', marginBottom: 6, fontWeight: 600 }}>Slippage Tolerance</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[0.1, 0.5, 1.0, 3.0].map(s => (
                   <button key={s} onClick={() => { setSlippage(s); setShowSettings(false); }} style={{
-                    flex: 1, padding: '6px', borderRadius: 'var(--rad)',
-                    background: slippage === s ? 'var(--oG)' : 'rgba(255,255,255,.04)',
+                    flex: 1, padding: '6px', borderRadius: '14px',
+                    background: slippage === s ? 'rgba(247,147,26,.08)' : 'rgba(255,255,255,.04)',
                     border: `1px solid ${slippage === s ? 'rgba(247,147,26,.2)' : 'var(--bd)'}`,
                     color: slippage === s ? 'var(--o)' : 'var(--t2)', fontSize: '.75rem', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'var(--ff)'
@@ -570,7 +594,7 @@ const SwapUI: React.FC = () => {
 
           {/* Rate info */}
           {fromVal > 0 && hasPool && (
-            <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg3)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)', fontSize: '.72rem' }}>
+            <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg3)', borderRadius: '14px', border: '1px solid var(--bd)', fontSize: '.72rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ color: 'var(--t3)' }}>Rate</span>
                 <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>1 {from.symbol} = {rate.toLocaleString(undefined, { maximumFractionDigits: 4 })} {to.symbol}</span>
@@ -604,8 +628,8 @@ const SwapUI: React.FC = () => {
               disabled={!fromVal || fromVal <= 0 || swapping || !hasPool}
               style={{
                 width: '100%', padding: '14px', marginTop: 10,
-                background: fromVal > 0 && hasPool ? 'linear-gradient(135deg, var(--o), var(--o2))' : 'var(--bg4)',
-                border: 'none', borderRadius: 'var(--rad)',
+                background: fromVal > 0 && hasPool ? 'linear-gradient(135deg, var(--o), var(--o2))' : 'rgba(30,30,50,.8)',
+                border: 'none', borderRadius: '14px',
                 color: fromVal > 0 && hasPool ? '#000' : 'var(--t4)', fontWeight: 700, fontSize: '.92rem',
                 cursor: fromVal > 0 && hasPool ? 'pointer' : 'not-allowed',
                 fontFamily: 'var(--ff)', transition: 'all .2s',
@@ -617,7 +641,7 @@ const SwapUI: React.FC = () => {
           ) : (
             <button onClick={openConnectModal} style={{
               width: '100%', padding: '14px', marginTop: 10,
-              background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none', borderRadius: 'var(--rad)',
+              background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none', borderRadius: '14px',
               color: '#fff', fontWeight: 700, fontSize: '.92rem', cursor: 'pointer', fontFamily: 'var(--ff)'
             }}>Connect Wallet to Swap</button>
           )}
@@ -625,9 +649,9 @@ const SwapUI: React.FC = () => {
           {/* Result */}
           {swapResult && (
             <div style={{ marginTop: 12, padding: '10px 12px',
-              background: swapResult.type === 'error' ? 'rgba(239,68,68,.06)' : 'var(--gG)',
-              border: `1px solid ${swapResult.type === 'error' ? 'rgba(239,68,68,.2)' : 'var(--gB)'}`,
-              borderRadius: 'var(--rad)', fontSize: '.72rem' }}>
+              background: swapResult.type === 'error' ? 'rgba(239,68,68,.06)' : 'rgba(16,185,129,.06)',
+              border: `1px solid ${swapResult.type === 'error' ? 'rgba(239,68,68,.2)' : 'rgba(16,185,129,.15)'}`,
+              borderRadius: '14px', fontSize: '.72rem' }}>
               {swapResult.type === 'success' && (
                 <>
                   <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>✓ Swap Executed On-Chain</div>

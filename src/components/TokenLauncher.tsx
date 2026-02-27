@@ -264,7 +264,7 @@ const TokenLauncher: React.FC = () => {
   const connected = !!walletAddress;
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '10px 12px', borderRadius: 'var(--rad)',
+    width: '100%', padding: '10px 12px', borderRadius: '14px',
     background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
     fontSize: '.82rem', fontFamily: 'var(--ff)', outline: 'none',
   };
@@ -287,8 +287,8 @@ const TokenLauncher: React.FC = () => {
           <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
             {PRESETS.map(p => (
               <button key={p.symbol} onClick={() => applyPreset(p)} style={{
-                flex: 1, padding: '8px 4px', borderRadius: 'var(--rad)',
-                background: tokenSymbol === p.symbol && !customWasm ? 'var(--oG)' : 'var(--bg3)',
+                flex: 1, padding: '8px 4px', borderRadius: '14px',
+                background: tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.08)' : 'var(--bg3)',
                 border: `1px solid ${tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`,
                 color: tokenSymbol === p.symbol && !customWasm ? 'var(--o)' : 'var(--t2)',
                 fontSize: '.65rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
@@ -331,8 +331,8 @@ const TokenLauncher: React.FC = () => {
             <div style={{ display: 'flex', gap: 6 }}>
               {([['standard', 'Standard', 'All supply minted to you on deploy'], ['mintable', 'Mintable', 'Split: you + public mint']] as const).map(([mode, label, desc]) => (
                 <button key={mode} onClick={() => setTokenMode(mode)} style={{
-                  flex: 1, padding: '10px 6px', borderRadius: 'var(--rad)',
-                  background: tokenMode === mode ? (mode === 'standard' ? 'var(--oG)' : 'rgba(168,85,247,.12)') : 'var(--bg3)',
+                  flex: 1, padding: '10px 6px', borderRadius: '14px',
+                  background: tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.08)' : 'rgba(168,85,247,.12)') : 'var(--bg3)',
                   border: `1px solid ${tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.3)' : 'rgba(168,85,247,.3)') : 'var(--bd)'}`,
                   color: tokenMode === mode ? (mode === 'standard' ? 'var(--o)' : '#a855f7') : 'var(--t2)',
                   fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
@@ -346,7 +346,7 @@ const TokenLauncher: React.FC = () => {
 
           {/* Mintable mode settings */}
           {tokenMode === 'mintable' && (
-            <div style={{ marginBottom: 12, padding: 12, background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 'var(--rad)' }}>
+            <div style={{ marginBottom: 12, padding: 12, background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)', borderRadius: '14px' }}>
               <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 8 }}>Mint Allocation</div>
 
               {/* Initial mint % slider */}
@@ -401,7 +401,7 @@ const TokenLauncher: React.FC = () => {
           {/* Advanced: custom WASM */}
           <button onClick={() => setAdvancedOpen(!advancedOpen)} style={{
             width: '100%', padding: '6px', marginBottom: advancedOpen ? 8 : 14,
-            background: 'none', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
+            background: 'none', border: '1px solid var(--bd)', borderRadius: '14px',
             color: 'var(--t4)', fontSize: '.62rem', cursor: 'pointer', fontFamily: 'var(--ff)',
           }}>
             {advancedOpen ? '▾ Hide Advanced' : '▸ Advanced: upload custom .wasm'}
@@ -411,9 +411,9 @@ const TokenLauncher: React.FC = () => {
             <div style={{ marginBottom: 14 }}>
               <input ref={wasmRef} type="file" accept=".wasm" onChange={handleWasmUpload} style={{ display: 'none' }} />
               <button onClick={() => wasmRef.current?.click()} style={{
-                width: '100%', padding: '10px', borderRadius: 'var(--rad)',
-                background: customWasm ? 'var(--gG)' : 'var(--bg3)',
-                border: `1px solid ${customWasm ? 'var(--gB)' : 'var(--bd)'}`,
+                width: '100%', padding: '10px', borderRadius: '14px',
+                background: customWasm ? 'rgba(16,185,129,.06)' : 'var(--bg3)',
+                border: `1px solid ${customWasm ? 'rgba(16,185,129,.15)' : 'var(--bd)'}`,
                 color: customWasm ? 'var(--g)' : 'var(--t3)',
                 fontSize: '.72rem', cursor: 'pointer', fontFamily: 'var(--ff)',
               }}>
@@ -438,7 +438,7 @@ const TokenLauncher: React.FC = () => {
           )}
 
           {connected && (
-            <div style={{ marginTop: 8, padding: '6px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.68rem', color: 'var(--g)' }}>
+            <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', borderRadius: 8, fontSize: '.68rem', color: 'var(--g)' }}>
               Wallet: {walletAddress.slice(0, 16)}...
             </div>
           )}
@@ -466,7 +466,7 @@ const TokenLauncher: React.FC = () => {
         {/* Right: Preview */}
         <div className="P" style={{ textAlign: 'center', padding: 18 }}>
           <div className="Lb" style={{ justifyContent: 'center' }}>Live Preview</div>
-          <div style={{ width: 80, height: 80, margin: '8px auto', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--bd2)' }}>
+          <div style={{ width: 80, height: 80, margin: '8px auto', borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(255,255,255,.08)' }}>
             {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div dangerouslySetInnerHTML={{ __html: genLogo(tokenSymbol) }} />}
           </div>
           <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--w)', marginTop: 6 }}>{tokenName || 'Token Name'}</div>
@@ -475,12 +475,12 @@ const TokenLauncher: React.FC = () => {
           <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · Testnet</div>
 
           {/* Deploy cost — compact */}
-          <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: 'var(--rad)', fontSize: '.66rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: '14px', fontSize: '.66rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--t3)' }}>Deploy cost:</span>
             <span style={{ fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>~110K sats (~0.0011 BTC)</span>
           </div>
 
-          <div style={{ marginTop: 14, textAlign: 'left', padding: '10px', background: 'var(--bg3)', borderRadius: 'var(--rad)', fontSize: '.68rem', color: 'var(--t3)' }}>
+          <div style={{ marginTop: 14, textAlign: 'left', padding: '10px', background: 'var(--bg3)', borderRadius: '14px', fontSize: '.68rem', color: 'var(--t3)' }}>
             <div style={{ fontWeight: 700, color: 'var(--t2)', marginBottom: 4 }}>How it works:</div>
             <div>1. Fill in your token name, symbol & supply</div>
             <div>2. Connect your OP_WALLET</div>
@@ -491,7 +491,7 @@ const TokenLauncher: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ marginTop: 10, textAlign: 'left', padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: 'var(--rad)', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
+          <div style={{ marginTop: 10, textAlign: 'left', padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: '14px', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
             Need testnet BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a>
           </div>
         </div>

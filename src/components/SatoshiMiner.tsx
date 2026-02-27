@@ -301,9 +301,9 @@ const SatoshiMiner: React.FC = () => {
 
     return (
         <div className="mg">
-            <div className="mz-wrap" style={{ background: stage.bg, borderRadius: 'var(--radl)', border: '1px solid var(--bd)', overflow: 'hidden', position: 'relative' }}>
+            <div className="mz-wrap" style={{ background: stage.bg, borderRadius: '20px', border: '1px solid var(--bd)', overflow: 'hidden', position: 'relative' }}>
                 <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }} />
-                {flash && <div style={{ position: 'absolute', inset: 0, background: 'rgba(234,179,8,.1)', zIndex: 2, pointerEvents: 'none', borderRadius: 'var(--radl)', animation: 'fadeIn .15s ease' }} />}
+                {flash && <div style={{ position: 'absolute', inset: 0, background: 'rgba(234,179,8,.1)', zIndex: 2, pointerEvents: 'none', borderRadius: '20px', animation: 'fadeIn .15s ease' }} />}
 
                 <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 16px', minHeight: 460 }}>
                     {/* Stage label */}
@@ -496,8 +496,8 @@ const SatoshiMiner: React.FC = () => {
                         disabled={mineBalance < 1 || claimStatus === 'syncing' || claimStatus === 'claiming'}
                         style={{
                             marginTop: 8, width: '100%', padding: '8px 0',
-                            background: claimStatus === 'done' ? 'var(--gG)' : claimStatus === 'error' ? 'rgba(239,68,68,.15)' : mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)',
-                            border: 'none', borderRadius: 'var(--rad)',
+                            background: claimStatus === 'done' ? 'rgba(16,185,129,.06)' : claimStatus === 'error' ? 'rgba(239,68,68,.15)' : mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)',
+                            border: 'none', borderRadius: '14px',
                             color: claimStatus === 'done' ? 'var(--g)' : claimStatus === 'error' ? '#ef4444' : mineBalance >= 1 ? '#000' : 'var(--t4)',
                             fontWeight: 700, fontSize: '.75rem', cursor: mineBalance >= 1 ? 'pointer' : 'not-allowed',
                             transition: '.2s'
@@ -506,7 +506,7 @@ const SatoshiMiner: React.FC = () => {
                         {claimStatus === 'syncing' ? 'Syncing...' : claimStatus === 'claiming' ? 'Claiming...' : claimStatus === 'done' ? 'Claimed!' : claimStatus === 'error' ? 'Error — retry' : mineBalance >= 1 ? `Claim ${mineBalance.toFixed(0)} MINE` : 'Mine to earn $MINE'}
                     </button>
                     {showClaim && (
-                        <div style={{ marginTop: 8, padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: 'var(--rad)', fontSize: '.62rem', color: 'var(--t3)', lineHeight: 1.5 }}>
+                        <div style={{ marginTop: 8, padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: '14px', fontSize: '.62rem', color: 'var(--t3)', lineHeight: 1.5 }}>
                             <strong style={{ color: 'var(--y)' }}>Claim via OP_WALLET</strong><br />
                             Token: <span style={{ fontFamily: 'var(--fm)', color: 'var(--c)' }}>$MINE (OP-20)</span><br />
                             Supply: {MINE_TOTAL_SUPPLY.toLocaleString()} | Decimals: {MINE_DECIMALS}<br />

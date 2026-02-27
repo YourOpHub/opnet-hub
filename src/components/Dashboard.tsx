@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
             {blockLog.map((b, i) => (
               <div key={b.height + '-' + i} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                padding: '8px 12px', borderRadius: 'var(--rad)', fontSize: '.75rem',
+                padding: '8px 12px', borderRadius: '14px', fontSize: '.75rem',
                 background: i === 0 ? 'rgba(247,147,26,.04)' : 'rgba(255,255,255,.02)',
                 border: `1px solid ${i === 0 ? 'rgba(247,147,26,.12)' : 'var(--bd)'}`,
                 animation: i === 0 ? 'pageIn .3s ease' : 'none'

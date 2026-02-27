@@ -167,9 +167,9 @@ const Staking: React.FC = () => {
       } catch { /* if check fails, proceed with approval */ }
 
       if (needsApproval) {
-        // 2. Approve with generous amount (10x requested) to avoid repeat approvals
+        // 2. Approve max uint256 (Bob MCP recommendation) — approve once forever
         setStep('Approving MINE spend...');
-        const approveAmount = rawAmount * 10n > rawAmount ? rawAmount * 10n : rawAmount;
+        const approveAmount = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
         const approveSim = await withRetry(() => tokenContract.increaseAllowance(stakingAddr, approveAmount));
         if ((approveSim as CallResult).revert) throw new Error(`Approval failed: ${(approveSim as CallResult).revert}`);
         const txParams1 = await buildTxParams(provider, walletAddress);

@@ -1,16 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
+import { BinaryWriter } from '@btc-vision/transaction';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
 
-const OP20_REPO = 'https://github.com/btc-vision/OP_20';
-const DOCS_DEPLOY = 'https://docs.opnet.org';
 const FAUCET = 'https://faucet.opnet.org';
-const OPWALLET_URL = 'https://opwallet.org';
+const GENERIC_WASM = 'GenericToken.wasm';
 
-const WASM_TEMPLATES = [
-  { name: 'Mine Token', symbol: 'MINE', file: 'MineToken.wasm', supply: '21,000,000', desc: 'Game token template' },
-  { name: 'Vibe Token', symbol: 'VIBE', file: 'VibeToken.wasm', supply: '100,000,000', desc: 'Community token template' },
+const PRESETS = [
+  { name: 'Meme Coin', symbol: 'MEME', supply: '1000000000', decimals: 8, desc: 'Billion-supply meme token' },
+  { name: 'Game Gold', symbol: 'GOLD', supply: '21000000', decimals: 8, desc: 'Limited supply game token' },
+  { name: 'Community Token', symbol: 'COM', supply: '100000000', decimals: 18, desc: 'Community governance token' },
 ];
 
 const genLogo = (sym: string): string => {
@@ -23,14 +23,20 @@ const genLogo = (sym: string): string => {
 const TokenLauncher: React.FC = () => {
   const { walletAddress, walletInstance, provider, signer, openConnectModal } = useWalletConnect();
 
-  const [selectedTemplate, setSelectedTemplate] = useState(0);
-  const [customWasm, setCustomWasm] = useState<Uint8Array | null>(null);
-  const [customWasmName, setCustomWasmName] = useState('');
+  // Token parameters — user fills these in
+  const [tokenName, setTokenName] = useState('My Token');
+  const [tokenSymbol, setTokenSymbol] = useState('MTK');
+  const [tokenSupply, setTokenSupply] = useState('1000000');
+  const [tokenDecimals, setTokenDecimals] = useState(8);
+
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<{ contractAddress: string; txid: string } | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
+  const [deployStep, setDeployStep] = useState('');
   const [img, setImg] = useState<string | null>(null);
-  const [stepsOpen, setStepsOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [customWasm, setCustomWasm] = useState<Uint8Array | null>(null);
+  const [customWasmName, setCustomWasmName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const wasmRef = useRef<HTMLInputElement>(null);
 
@@ -56,10 +62,36 @@ const TokenLauncher: React.FC = () => {
     r.readAsArrayBuffer(f);
   };
 
-  /** Deploy token via Web3Provider.deployContract() — wallet handles signing, MLDSA, challenge */
+  const applyPreset = (p: typeof PRESETS[0]) => {
+    setTokenName(p.name);
+    setTokenSymbol(p.symbol);
+    setTokenSupply(p.supply);
+    setTokenDecimals(p.decimals);
+    setCustomWasm(null);
+  };
+
+  /** Encode deployment calldata: u256 maxSupply, u8 decimals, string name, string symbol */
+  const encodeCalldata = (): Uint8Array => {
+    const writer = new BinaryWriter();
+    // maxSupply = supply * 10^decimals as bigint
+    const supplyNum = parseFloat(tokenSupply) || 0;
+    const maxSupply = BigInt(Math.floor(supplyNum)) * (10n ** BigInt(tokenDecimals));
+    writer.writeU256(maxSupply);
+    writer.writeU8(tokenDecimals);
+    writer.writeStringWithLength(tokenName.trim() || 'Token');
+    writer.writeStringWithLength(tokenSymbol.trim().toUpperCase() || 'TKN');
+    return writer.getBuffer();
+  };
+
+  /** Deploy token: fetch GenericToken.wasm + encode calldata → Web3Provider.deployContract() */
   const deployToken = async () => {
     if (!walletAddress || !walletInstance || !provider || !signer) {
       openConnectModal();
+      return;
+    }
+
+    if (!tokenName.trim() || !tokenSymbol.trim() || !tokenSupply.trim()) {
+      setDeployError('Please fill in token name, symbol, and supply.');
       return;
     }
 
@@ -67,7 +99,6 @@ const TokenLauncher: React.FC = () => {
     const web3 = (walletInstance as any).web3;
     if (!web3?.deployContract) {
       setDeployError('Your wallet does not support Web3 deployment API. Please use OP_WALLET.');
-      setStepsOpen(true);
       return;
     }
 
@@ -76,27 +107,34 @@ const TokenLauncher: React.FC = () => {
     setDeployResult(null);
 
     try {
-      // 1. Get WASM bytecode — custom upload or template
+      // 1. Get WASM bytecode
+      setDeployStep('Loading contract bytecode...');
       let bytecode: Uint8Array;
       if (customWasm) {
         bytecode = customWasm;
       } else {
-        const tpl = WASM_TEMPLATES[selectedTemplate];
         const base = import.meta.env.BASE_URL || '/';
-        const resp = await fetch(`${base}wasm/${tpl.file}`);
-        if (!resp.ok) throw new Error(`Failed to fetch ${tpl.file}: ${resp.status}`);
+        const resp = await fetch(`${base}wasm/${GENERIC_WASM}`);
+        if (!resp.ok) throw new Error(`Failed to fetch ${GENERIC_WASM}: ${resp.status}`);
         bytecode = new Uint8Array(await resp.arrayBuffer());
       }
 
-      // 2. Fetch UTXOs
+      // 2. Encode deployment calldata with token params
+      setDeployStep('Encoding token parameters...');
+      const calldata = encodeCalldata();
+
+      // 3. Fetch UTXOs
+      setDeployStep('Fetching UTXOs...');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const utxos = await (provider as any).utxoManager.getUTXOs({
         address: signer.p2tr, optimize: true, mergePendingUTXOs: true, filterSpentUTXOs: true,
       }).catch(() => []);
 
-      // 3. Deploy via Web3Provider — wallet handles signer + MLDSA + challenge
+      // 4. Deploy via Web3Provider — wallet handles signer + MLDSA + challenge
+      setDeployStep('Sign the transaction in your wallet...');
       const result = await web3.deployContract({
         bytecode,
+        calldata,
         utxos: utxos || [],
         feeRate: 10,
         priorityFee: 10_000n,
@@ -105,8 +143,9 @@ const TokenLauncher: React.FC = () => {
         linkMLDSAPublicKeyToAddress: true,
       });
 
+      setDeployStep('');
       setDeployResult({
-        contractAddress: result.contractAddress,
+        contractAddress: result.contractAddress || '',
         txid: result.transaction?.[1] || result.transaction?.[0] || '',
       });
       localStorage.setItem('hub_token_launched', '1');
@@ -114,6 +153,7 @@ const TokenLauncher: React.FC = () => {
       const msg = e instanceof Error ? e.message : 'Deployment failed';
       console.error('[Deploy]', e);
       setDeployError(msg);
+      setDeployStep('');
     } finally {
       setDeploying(false);
     }
@@ -143,63 +183,107 @@ const TokenLauncher: React.FC = () => {
   };
 
   const connected = !!walletAddress;
-  const tpl = WASM_TEMPLATES[selectedTemplate];
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', borderRadius: 'var(--rad)',
+    background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
+    fontSize: '.82rem', fontFamily: 'var(--ff)', outline: 'none',
+  };
 
   return (
     <div>
       <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>🚀 OP-20 Token Launcher</div>
+        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>Token Launcher</div>
         <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 480, margin: '0 auto' }}>
-          Deploy your own token on Bitcoin L1. Connect wallet → pick template or upload WASM → deploy. Real on-chain deployment!
+          Create your own OP-20 token on Bitcoin L1. Fill in the details, connect your wallet, and deploy. You only sign the transaction — we handle everything else.
         </div>
       </div>
 
       <div className="launch-grid">
-        {/* Left: Deploy config */}
+        {/* Left: Token config */}
         <div className="P">
-          <div className="Lb">� Contract Template</div>
+          <div className="Lb">Token Details</div>
 
-          {/* Template selector */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            {WASM_TEMPLATES.map((t, i) => (
-              <button key={t.symbol} onClick={() => { setSelectedTemplate(i); setCustomWasm(null); }} style={{
-                flex: 1, padding: '10px', borderRadius: 'var(--rad)',
-                background: selectedTemplate === i && !customWasm ? 'var(--oG)' : 'var(--bg3)',
-                border: `1px solid ${selectedTemplate === i && !customWasm ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`,
-                color: selectedTemplate === i && !customWasm ? 'var(--o)' : 'var(--t2)',
-                fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
+          {/* Quick presets */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+            {PRESETS.map(p => (
+              <button key={p.symbol} onClick={() => applyPreset(p)} style={{
+                flex: 1, padding: '8px 4px', borderRadius: 'var(--rad)',
+                background: tokenSymbol === p.symbol && !customWasm ? 'var(--oG)' : 'var(--bg3)',
+                border: `1px solid ${tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`,
+                color: tokenSymbol === p.symbol && !customWasm ? 'var(--o)' : 'var(--t2)',
+                fontSize: '.65rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
               }}>
-                <div>{t.symbol}</div>
-                <div style={{ fontSize: '.6rem', fontWeight: 400, marginTop: 2 }}>{t.desc}</div>
+                <div>{p.symbol}</div>
+                <div style={{ fontSize: '.52rem', fontWeight: 400, marginTop: 2, color: 'var(--t3)' }}>{p.desc}</div>
               </button>
             ))}
           </div>
 
-          {/* Custom WASM upload */}
-          <div style={{ marginBottom: 12 }}>
-            <input ref={wasmRef} type="file" accept=".wasm" onChange={handleWasmUpload} style={{ display: 'none' }} />
-            <button onClick={() => wasmRef.current?.click()} style={{
-              width: '100%', padding: '10px', borderRadius: 'var(--rad)',
-              background: customWasm ? 'var(--gG)' : 'var(--bg3)',
-              border: `1px solid ${customWasm ? 'var(--gB)' : 'var(--bd)'}`,
-              color: customWasm ? 'var(--g)' : 'var(--t3)',
-              fontSize: '.75rem', cursor: 'pointer', fontFamily: 'var(--ff)',
-            }}>
-              {customWasm ? `✓ ${customWasmName} (${(customWasm.length / 1024).toFixed(1)} KB)` : '📁 Or upload your own .wasm contract'}
-            </button>
+          {/* Name */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Token Name</label>
+            <input style={inputStyle} value={tokenName} onChange={e => setTokenName(e.target.value)} placeholder="e.g. My Awesome Token" />
+          </div>
+
+          {/* Symbol */}
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Symbol (ticker)</label>
+            <input style={{ ...inputStyle, textTransform: 'uppercase' }} value={tokenSymbol} onChange={e => setTokenSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="e.g. MTK" maxLength={6} />
+          </div>
+
+          {/* Supply + Decimals row */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Total Supply</label>
+              <input style={inputStyle} type="text" inputMode="numeric" value={tokenSupply} onChange={e => setTokenSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Decimals</label>
+              <select style={{ ...inputStyle, cursor: 'pointer' }} value={tokenDecimals} onChange={e => setTokenDecimals(Number(e.target.value))}>
+                {[0, 2, 4, 6, 8, 18].map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* Token logo */}
-          <div className="upload-zone" onClick={() => fileRef.current?.click()} style={{ marginBottom: 12 }}>
+          <div className="upload-zone" onClick={() => fileRef.current?.click()} style={{ marginBottom: 14, padding: '10px' }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} />
-            {img ? <img src={img} alt="Logo" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ fontSize: '1.4rem' }}>📸</div>}
-            <div style={{ fontSize: '.68rem', color: 'var(--t3)' }}>{img ? 'Change logo' : 'Token logo (optional)'}</div>
+            {img ? <img src={img} alt="Logo" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ fontSize: '1.2rem' }}>+</div>}
+            <div style={{ fontSize: '.62rem', color: 'var(--t3)' }}>{img ? 'Change logo' : 'Logo (optional)'}</div>
           </div>
+
+          {/* Advanced: custom WASM */}
+          <button onClick={() => setAdvancedOpen(!advancedOpen)} style={{
+            width: '100%', padding: '6px', marginBottom: advancedOpen ? 8 : 14,
+            background: 'none', border: '1px solid var(--bd)', borderRadius: 'var(--rad)',
+            color: 'var(--t4)', fontSize: '.62rem', cursor: 'pointer', fontFamily: 'var(--ff)',
+          }}>
+            {advancedOpen ? '▾ Hide Advanced' : '▸ Advanced: upload custom .wasm'}
+          </button>
+
+          {advancedOpen && (
+            <div style={{ marginBottom: 14 }}>
+              <input ref={wasmRef} type="file" accept=".wasm" onChange={handleWasmUpload} style={{ display: 'none' }} />
+              <button onClick={() => wasmRef.current?.click()} style={{
+                width: '100%', padding: '10px', borderRadius: 'var(--rad)',
+                background: customWasm ? 'var(--gG)' : 'var(--bg3)',
+                border: `1px solid ${customWasm ? 'var(--gB)' : 'var(--bd)'}`,
+                color: customWasm ? 'var(--g)' : 'var(--t3)',
+                fontSize: '.72rem', cursor: 'pointer', fontFamily: 'var(--ff)',
+              }}>
+                {customWasm ? `${customWasmName} (${(customWasm.length / 1024).toFixed(1)} KB)` : 'Upload custom .wasm contract'}
+              </button>
+              <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
+                Override the default OP-20 template with your own compiled contract
+              </div>
+            </div>
+          )}
 
           {/* Deploy Button */}
           {connected ? (
             <button className="lbtn" onClick={deployToken} disabled={deploying} style={{ width: '100%', opacity: deploying ? 0.6 : 1 }}>
-              {deploying ? '⏳ Deploying on-chain…' : `🚀 Deploy ${customWasm ? customWasmName : tpl.symbol} Token`}
+              {deploying ? `${deployStep || 'Deploying...'}` : `Deploy $${tokenSymbol.trim() || 'TKN'} on Bitcoin L1`}
             </button>
           ) : (
             <button className="lbtn" onClick={openConnectModal}
@@ -210,14 +294,14 @@ const TokenLauncher: React.FC = () => {
 
           {connected && (
             <div style={{ marginTop: 8, padding: '6px 10px', background: 'var(--gG)', border: '1px solid var(--gB)', borderRadius: 8, fontSize: '.68rem', color: 'var(--g)' }}>
-              ✓ {walletAddress.slice(0, 16)}…
+              Wallet: {walletAddress.slice(0, 16)}...
             </div>
           )}
 
           {/* Deploy Result */}
           {deployResult && (
             <div style={{ marginTop: 10, padding: 12, background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 8 }}>
-              <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>✅ Token Deployed On-Chain!</div>
+              <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>Token Deployed On-Chain!</div>
               <div style={{ fontSize: '.72rem', color: 'var(--t2)', wordBreak: 'break-all' }}>
                 <strong>Contract:</strong> {deployResult.contractAddress}
               </div>
@@ -229,60 +313,42 @@ const TokenLauncher: React.FC = () => {
           )}
           {deployError && (
             <div style={{ marginTop: 10, padding: 12, background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8 }}>
-              <div style={{ color: '#ef4444', fontSize: '.78rem' }}>⚠️ {deployError}</div>
+              <div style={{ color: '#ef4444', fontSize: '.78rem' }}>{deployError}</div>
             </div>
           )}
         </div>
 
-        {/* Right: Preview + Info */}
+        {/* Right: Preview */}
         <div className="P" style={{ textAlign: 'center', padding: 18 }}>
-          <div className="Lb" style={{ justifyContent: 'center' }}>Preview</div>
+          <div className="Lb" style={{ justifyContent: 'center' }}>Live Preview</div>
           <div style={{ width: 80, height: 80, margin: '8px auto', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--bd2)' }}>
-            {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div dangerouslySetInnerHTML={{ __html: genLogo(customWasm ? 'CUSTOM' : tpl.symbol) }} />}
+            {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div dangerouslySetInnerHTML={{ __html: genLogo(tokenSymbol) }} />}
           </div>
-          <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--w)', marginTop: 6 }}>{customWasm ? customWasmName.replace('.wasm', '') : tpl.name}</div>
-          <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.82rem' }}>{customWasm ? 'CUSTOM' : tpl.symbol}</div>
-          {!customWasm && <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 4 }}>Supply: {tpl.supply}</div>}
-          <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>OP-20 · Bitcoin L1 · Testnet</div>
+          <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--w)', marginTop: 6 }}>{tokenName || 'Token Name'}</div>
+          <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.82rem' }}>${tokenSymbol || 'TKN'}</div>
+          <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 4 }}>Supply: {Number(tokenSupply || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · Testnet</div>
 
           <div style={{ marginTop: 14, textAlign: 'left', padding: '10px', background: 'var(--bg3)', borderRadius: 'var(--rad)', fontSize: '.68rem', color: 'var(--t3)' }}>
             <div style={{ fontWeight: 700, color: 'var(--t2)', marginBottom: 4 }}>How it works:</div>
-            <div>1. Pick a template or upload your compiled .wasm</div>
-            <div>2. Click Deploy — your wallet signs the transaction</div>
-            <div>3. Contract deploys to Bitcoin L1 via OPNet</div>
-            <div>4. You get a unique contract address</div>
+            <div>1. Fill in your token name, symbol & supply</div>
+            <div>2. Connect your OP_WALLET</div>
+            <div>3. Click Deploy — sign the transaction</div>
+            <div>4. Your token goes live on Bitcoin L1!</div>
+            <div style={{ marginTop: 6, fontSize: '.6rem', color: 'var(--t4)' }}>
+              We compile and package everything for you. You only sign the deployment transaction.
+            </div>
+          </div>
+
+          <div style={{ marginTop: 10, textAlign: 'left', padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: 'var(--rad)', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
+            Need testnet BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a>
           </div>
         </div>
       </div>
-
-      {/* Manual deploy steps */}
-      <div style={{ textAlign: 'center', marginTop: 10 }}>
-        <button className="btn-s" style={{ fontSize: '.72rem' }} onClick={() => setStepsOpen(!stepsOpen)}>
-          {stepsOpen ? 'Hide' : 'Show'} custom token guide (compile your own .wasm)
-        </button>
-      </div>
-
-      {stepsOpen && (
-        <div className="P" style={{ marginTop: 10, padding: 20 }}>
-          <div className="Lb">📋 Custom Token Guide</div>
-          <div className="rb" style={{ marginTop: 10 }}>
-            <div className="rr"><span className="rk">1</span><span className="rv"><strong>Install OP_WALLET</strong> — <a href={OPWALLET_URL} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>opwallet.org</a></span></div>
-            <div className="rr" style={{ marginTop: 8 }}><span className="rk">2</span><span className="rv"><strong>Get testnet BTC</strong> — <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>faucet.opnet.org</a></span></div>
-            <div className="rr" style={{ marginTop: 8 }}><span className="rk">3</span><span className="rv"><strong>Clone</strong> <a href={OP20_REPO} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>{OP20_REPO}</a></span></div>
-            <div className="rr" style={{ marginTop: 8 }}><span className="rk">4</span><span className="rv"><strong>Edit</strong> token name, symbol, supply in source</span></div>
-            <div className="rr" style={{ marginTop: 8 }}><span className="rk">5</span><span className="rv"><strong>Build:</strong> <code>npm run build:token</code></span></div>
-            <div className="rr" style={{ marginTop: 8 }}><span className="rk">6</span><span className="rv"><strong>Upload</strong> the .wasm above and click Deploy</span></div>
-          </div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-            <a href={DOCS_DEPLOY} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none' }}>Docs →</a>
-            <a href={OP20_REPO} target="_blank" rel="noopener noreferrer" className="btn-s" style={{ textDecoration: 'none' }}>Template →</a>
-          </div>
-        </div>
-      )}
 
       {/* Verify Deployment */}
       <div className="P" style={{ marginTop: 14, padding: 20 }}>
-        <div className="Lb">🔍 Verify Deployment</div>
+        <div className="Lb">Verify Deployment</div>
         <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginBottom: 8 }}>Enter your contract address to check if it's live on-chain.</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input className="lf-i" value={verifyAddr}
@@ -300,7 +366,7 @@ const TokenLauncher: React.FC = () => {
             background: verifyResult.ok ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
             border: `1px solid ${verifyResult.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}` }}>
             <div style={{ color: verifyResult.ok ? 'var(--g)' : '#ef4444', fontWeight: 700, fontSize: '.76rem' }}>
-              {verifyResult.ok ? '✅ Contract Verified On-Chain!' : '❌ Not Found'}
+              {verifyResult.ok ? 'Contract Verified On-Chain!' : 'Not Found'}
             </div>
             <div style={{ fontSize: '.68rem', color: 'var(--t2)', marginTop: 2 }}>{verifyResult.info}</div>
           </div>

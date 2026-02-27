@@ -29,7 +29,7 @@ const TOKENS: Token[] = [
   { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address },
 ];
 
-type SwapResultType = { type: 'success' | 'demo' | 'error'; hash?: string; amtOut?: string; error?: string };
+type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 
 const SwapUI: React.FC = () => {
   const { provider, signer, walletAddress, walletInstance, address: wcAddress, network: wcNetwork, openConnectModal } = useWalletConnect();
@@ -102,13 +102,8 @@ const SwapUI: React.FC = () => {
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
 
-    // If no wallet — demo mode
     if (!walletAddress || !walletInstance || !provider || !signer || !wcAddress || !wcNetwork) {
-      setSwapping(true);
-      setSwapResult(null);
-      await new Promise(r => setTimeout(r, 800));
-      setSwapResult({ type: 'demo', amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
-      setSwapping(false);
+      openConnectModal();
       return;
     }
 
@@ -186,7 +181,7 @@ const SwapUI: React.FC = () => {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, provider, signer, wcAddress, wcNetwork, from, toVal]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, provider, signer, wcAddress, wcNetwork, from, toVal, openConnectModal]);
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
@@ -366,13 +361,6 @@ const SwapUI: React.FC = () => {
                   <div style={{ fontFamily: 'var(--fm)', color: 'var(--t3)', wordBreak: 'break-all', fontSize: '.58rem', marginTop: 4 }}>tx: {swapResult.hash}</div>
                   <a href={getTxUrl(swapResult.hash!)} target="_blank" rel="noopener noreferrer"
                     style={{ color: 'var(--c2)', fontSize: '.65rem', marginTop: 4, display: 'block' }}>View on Explorer →</a>
-                </>
-              )}
-              {swapResult.type === 'demo' && (
-                <>
-                  <div style={{ color: 'var(--y)', fontWeight: 700, marginBottom: 4 }}>⚡ Demo — Connect wallet for real on-chain swap</div>
-                  <div style={{ color: 'var(--t2)', fontSize: '.7rem' }}>Would receive: {swapResult.amtOut} {to.symbol}</div>
-                  <div style={{ color: 'var(--t3)', fontSize: '.65rem', marginTop: 4 }}>Route: {from.symbol} → AMM Pool → {to.symbol} · 0.3% LP fee</div>
                 </>
               )}
               {swapResult.type === 'error' && (

@@ -2286,8 +2286,8 @@ a:hover {
 }
 
 .lp-sidebar {
-  width: 260px;
-  min-width: 260px;
+  width: 360px;
+  min-width: 360px;
   border-right: 1px solid var(--bd);
   display: flex;
   flex-direction: column;
@@ -2303,9 +2303,9 @@ a:hover {
 
 .lp-list-item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
   transition: background .15s;
   border-bottom: 1px solid rgba(255,255,255,.03);

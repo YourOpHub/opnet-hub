@@ -42,10 +42,10 @@ const TokenListItem: React.FC<{
   return (
     <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
       style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}` }}>
-      <img src={imgSrc} alt="" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0 }} />
+      <img src={imgSrc} alt="" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {token.symbol}
           </span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -53,18 +53,18 @@ const TokenListItem: React.FC<{
             {grad && <span style={{ fontSize: '.5rem', color: 'var(--g)', fontWeight: 700 }}>GRAD</span>}
           </div>
         </div>
-        <div style={{ fontSize: '.58rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: '.68rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {token.name}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-          <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+          <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 2,
               background: grad ? 'var(--g)' : `linear-gradient(90deg, ${c1}, ${c1}88)`,
               width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .3s',
             }} />
           </div>
-          <span style={{ fontSize: '.48rem', fontFamily: 'var(--fm)', color: 'var(--t4)', minWidth: 24, textAlign: 'right' }}>
+          <span style={{ fontSize: '.58rem', fontFamily: 'var(--fm)', color: 'var(--t4)', minWidth: 28, textAlign: 'right' }}>
             {(progress * 100).toFixed(0)}%
           </span>
         </div>
@@ -502,17 +502,17 @@ const Launchpad: React.FC = () => {
     <div className="lp-split">
       {/* ═══ LEFT SIDEBAR ═══ */}
       <div className="lp-sidebar">
-        <div style={{ padding: '12px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontWeight: 800, fontSize: '.82rem', color: 'var(--w)' }}>Contracts</span>
-            <span style={{ fontSize: '.54rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{tokens.length}</span>
+        <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Contracts</span>
+            <span style={{ fontSize: '.66rem', color: 'var(--t4)', fontFamily: 'var(--fm)', background: 'rgba(255,255,255,.05)', padding: '2px 8px', borderRadius: 6 }}>{tokens.length}</span>
           </div>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-            style={{ width: '100%', padding: '7px 10px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.7rem', fontFamily: 'var(--ff)', outline: 'none', boxSizing: 'border-box', marginBottom: 6 }} />
-          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-            {([['hot1h', '1H'], ['hot8h', '8H'], ['hot24h', '24H'], ['newest', 'New'], ['holders', 'Holders']] as [SortMode, string][]).map(([m, label]) => (
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or address..."
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.82rem', fontFamily: 'var(--ff)', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+          <div style={{ display: 'flex', gap: 4 }}>
+            {([['hot1h', '1H Hot'], ['hot8h', '8H Hot'], ['hot24h', '24H Hot'], ['newest', 'Newest'], ['holders', 'Holders']] as [SortMode, string][]).map(([m, label]) => (
               <button key={m} onClick={() => setSortMode(m)}
-                style={{ flex: 1, padding: '3px 0', borderRadius: 6, border: '1px solid ' + (sortMode === m ? 'rgba(247,147,26,.4)' : 'var(--bd)'), background: sortMode === m ? 'rgba(247,147,26,.1)' : 'transparent', color: sortMode === m ? 'var(--o)' : 'var(--t4)', fontSize: '.52rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>
+                style={{ flex: 1, padding: '6px 2px', borderRadius: 8, border: '1px solid ' + (sortMode === m ? 'rgba(247,147,26,.5)' : 'var(--bd)'), background: sortMode === m ? 'rgba(247,147,26,.15)' : 'rgba(255,255,255,.03)', color: sortMode === m ? 'var(--o)' : 'var(--t3)', fontSize: '.66rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 700, transition: 'all .15s' }}>
                 {label}
               </button>
             ))}
@@ -620,6 +620,40 @@ const Launchpad: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* ── Top Holders ── */}
+            {selected.trades.length > 0 && (() => {
+              const bals: Record<string, number> = {};
+              for (const tr of selected.trades) {
+                bals[tr.wallet] = (bals[tr.wallet] || 0) + tr.amount;
+              }
+              const sorted = Object.entries(bals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+              if (sorted.length === 0) return null;
+              return (
+                <div className="P" style={{ padding: 14, marginBottom: 12 }}>
+                  <div className="Lb" style={{ marginBottom: 8 }}>Top Holders ({sorted.length})</div>
+                  <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                    {sorted.map(([wallet, amount], i) => (
+                      <div key={wallet} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.66rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ color: 'var(--t4)', fontFamily: 'var(--fm)', minWidth: 20 }}>#{i + 1}</span>
+                          <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{wallet.length > 20 ? wallet.slice(0, 12) + '...' + wallet.slice(-6) : wallet}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600 }}>{fmtNum(amount)}</span>
+                          <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{selected.symbol}</span>
+                          {selected.publicMintSupply > 0 && (
+                            <span style={{ color: 'var(--t4)', fontSize: '.52rem', fontFamily: 'var(--fm)', minWidth: 40, textAlign: 'right' }}>
+                              {((amount / selected.publicMintSupply) * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* ── Mint Panel ── */}
             {!grad ? (

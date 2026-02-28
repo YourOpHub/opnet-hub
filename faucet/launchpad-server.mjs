@@ -136,28 +136,82 @@ app.post('/lp/like', (req, res) => {
 });
 
 // ═══ MARKETPLACE ENDPOINTS ═══
+// Orders support: sell (user lists tokens), buy (user wants tokens, offers sats)
+// Partial fills: amountFilled tracks progress, order stays active until fully filled
 
-app.get('/market/orders', (_req, res) => {
-  res.json({ orders: orders.sort((a, b) => b.createdAt - a.createdAt) });
+// List orders — optionally filter by token
+app.get('/market/orders', (req, res) => {
+  let filtered = orders;
+  if (req.query.token) {
+    const q = req.query.token.toLowerCase();
+    filtered = orders.filter(o =>
+      o.tokenAddress.toLowerCase() === q ||
+      o.tokenSymbol.toLowerCase().includes(q) ||
+      o.tokenName.toLowerCase().includes(q)
+    );
+  }
+  if (req.query.status) {
+    filtered = filtered.filter(o => o.status === req.query.status);
+  }
+  res.json({ orders: filtered.sort((a, b) => b.createdAt - a.createdAt) });
 });
 
-app.post('/market/create', (req, res) => {
-  const { seller, tokenAddress, tokenSymbol, tokenName, amount, pricePerToken, totalPrice } = req.body;
-  if (!seller || !tokenAddress || !amount || !pricePerToken) {
-    return res.status(400).json({ error: 'seller, tokenAddress, amount, pricePerToken required' });
+// List unique tokens that have orders
+app.get('/market/tokens', (_req, res) => {
+  const tokenMap = {};
+  for (const o of orders) {
+    if (!tokenMap[o.tokenAddress]) {
+      tokenMap[o.tokenAddress] = {
+        address: o.tokenAddress, symbol: o.tokenSymbol, name: o.tokenName,
+        sellCount: 0, buyCount: 0, totalVolume: 0,
+      };
+    }
+    const t = tokenMap[o.tokenAddress];
+    if (o.type === 'sell') t.sellCount++; else t.buyCount++;
+    t.totalVolume += o.amount;
   }
+  // Also include registered tokens from launchpad
+  for (const t of Object.values(tokens)) {
+    if (!tokenMap[t.address]) {
+      tokenMap[t.address] = {
+        address: t.address, symbol: t.symbol, name: t.name,
+        sellCount: 0, buyCount: 0, totalVolume: 0,
+      };
+    }
+  }
+  const list = Object.values(tokenMap).sort((a, b) => b.totalVolume - a.totalVolume);
+  res.json({ tokens: list });
+});
+
+// Create order (sell or buy)
+app.post('/market/create', (req, res) => {
+  const { type, creator, tokenAddress, tokenSymbol, tokenName, amount, pricePerToken } = req.body;
+  const orderType = type || 'sell';
+  if (!creator || !tokenAddress || !amount || !pricePerToken) {
+    return res.status(400).json({ error: 'creator, tokenAddress, amount, pricePerToken required' });
+  }
+  if (!['sell', 'buy'].includes(orderType)) {
+    return res.status(400).json({ error: 'type must be sell or buy' });
+  }
+
+  const amt = Number(amount);
+  const ppt = Number(pricePerToken);
+  if (amt <= 0 || ppt <= 0) return res.status(400).json({ error: 'amount and pricePerToken must be > 0' });
 
   const order = {
     id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    seller,
+    type: orderType,
+    creator,
     tokenAddress,
-    tokenSymbol: tokenSymbol || tokenAddress.slice(-6).toUpperCase(),
-    tokenName: tokenName || 'OP20 Token',
-    amount: Number(amount),
-    pricePerToken: Number(pricePerToken),
-    totalPrice: totalPrice || Math.floor(Number(amount) * Number(pricePerToken)),
+    tokenSymbol: tokenSymbol || (tokens[tokenAddress]?.symbol) || tokenAddress.slice(-6).toUpperCase(),
+    tokenName: tokenName || (tokens[tokenAddress]?.name) || 'OP20 Token',
+    amount: amt,
+    amountFilled: 0,
+    pricePerToken: ppt,
+    totalPrice: Math.round(amt * ppt),
     createdAt: Date.now(),
     status: 'active',
+    fills: [],
   };
 
   orders.push(order);
@@ -165,29 +219,47 @@ app.post('/market/create', (req, res) => {
   res.json({ ok: true, order });
 });
 
+// Fill order (partial or full)
 app.post('/market/fill', (req, res) => {
-  const { orderId, buyer } = req.body;
-  if (!orderId || !buyer) return res.status(400).json({ error: 'orderId, buyer required' });
+  const { orderId, filler, amount } = req.body;
+  if (!orderId || !filler) return res.status(400).json({ error: 'orderId, filler required' });
 
   const order = orders.find(o => o.id === orderId);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   if (order.status !== 'active') return res.status(400).json({ error: 'Order is not active' });
-  if (order.seller === buyer) return res.status(400).json({ error: 'Cannot buy your own order' });
+  if (order.creator === filler) return res.status(400).json({ error: 'Cannot fill your own order' });
 
-  order.status = 'filled';
-  order.buyer = buyer;
-  order.filledAt = Date.now();
+  const remaining = order.amount - order.amountFilled;
+  const fillAmt = amount ? Math.min(Number(amount), remaining) : remaining;
+  if (fillAmt <= 0) return res.status(400).json({ error: 'Nothing left to fill' });
+
+  order.amountFilled += fillAmt;
+  const fill = {
+    id: `fill_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    filler,
+    amount: fillAmt,
+    price: fillAmt * order.pricePerToken,
+    timestamp: Date.now(),
+  };
+  order.fills.push(fill);
+
+  if (order.amountFilled >= order.amount) {
+    order.status = 'filled';
+    order.filledAt = Date.now();
+  }
+
   persist();
-  res.json({ ok: true, order });
+  res.json({ ok: true, order, fill });
 });
 
+// Cancel order
 app.post('/market/cancel', (req, res) => {
-  const { orderId, seller } = req.body;
-  if (!orderId || !seller) return res.status(400).json({ error: 'orderId, seller required' });
+  const { orderId, creator } = req.body;
+  if (!orderId || !creator) return res.status(400).json({ error: 'orderId, creator required' });
 
   const order = orders.find(o => o.id === orderId);
   if (!order) return res.status(404).json({ error: 'Order not found' });
-  if (order.seller !== seller) return res.status(403).json({ error: 'Not your order' });
+  if (order.creator !== creator) return res.status(403).json({ error: 'Not your order' });
   if (order.status !== 'active') return res.status(400).json({ error: 'Order is not active' });
 
   order.status = 'cancelled';

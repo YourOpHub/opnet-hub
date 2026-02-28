@@ -1,17 +1,17 @@
 /**
- * Launchpad API client — connects to server for instant trades.
- * Falls back to localStorage when server unavailable.
+ * Launchpad API client — social layer + token registry.
+ * Trades happen on-chain via publicMint (not through this server).
+ * Server handles: token registry, replies, likes.
  */
-import type { LaunchToken, TradeRecord } from './types';
+import type { LaunchToken } from './types';
 
 // Server URL — configurable via env or fallback to VPS
 const LP_API = import.meta.env.VITE_LP_API || 'http://188.137.250.160:3457';
 
-let serverAvailable: boolean | null = null; // null = not checked yet
+let serverAvailable: boolean | null = null;
 let lastCheck = 0;
-const CHECK_INTERVAL = 30_000; // recheck every 30s
+const CHECK_INTERVAL = 30_000;
 
-/** Check if server is reachable */
 async function checkServer(): Promise<boolean> {
   if (serverAvailable !== null && Date.now() - lastCheck < CHECK_INTERVAL) return serverAvailable;
   try {
@@ -24,7 +24,6 @@ async function checkServer(): Promise<boolean> {
   return serverAvailable;
 }
 
-/** Generic API call */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function lpApi<T>(path: string, opts?: RequestInit): Promise<T | null> {
   try {
@@ -55,24 +54,11 @@ export interface ServerToken extends LaunchToken {
   mcap: number;
 }
 
-export interface BuyResult {
-  ok: boolean;
-  trade: TradeRecord;
-  token: ServerToken;
-  balance: number;
-}
-
-/** Fetch all tokens from server */
+/** Fetch all tokens from server (registry + social data) */
 export async function fetchTokens(): Promise<ServerToken[] | null> {
   if (!await checkServer()) return null;
   const data = await lpApi<{ tokens: ServerToken[] }>('/lp/tokens');
   return data?.tokens || null;
-}
-
-/** Fetch single token detail */
-export async function fetchToken(address: string): Promise<ServerToken | null> {
-  if (!await checkServer()) return null;
-  return lpApi<ServerToken>(`/lp/token/${address}`);
 }
 
 /** Register new token on server */
@@ -82,26 +68,6 @@ export async function registerToken(token: LaunchToken): Promise<boolean> {
     await lpApi('/lp/create', { method: 'POST', body: JSON.stringify(token) });
     return true;
   } catch { return false; }
-}
-
-/** Instant buy — server updates state immediately */
-export async function serverBuy(address: string, wallet: string, amount: number): Promise<BuyResult> {
-  const data = await lpApi<BuyResult>('/lp/buy', {
-    method: 'POST',
-    body: JSON.stringify({ address, wallet, amount }),
-  });
-  if (!data) throw new Error('Buy failed');
-  return data;
-}
-
-/** Instant sell */
-export async function serverSell(address: string, wallet: string, amount: number): Promise<BuyResult> {
-  const data = await lpApi<BuyResult>('/lp/sell', {
-    method: 'POST',
-    body: JSON.stringify({ address, wallet, amount }),
-  });
-  if (!data) throw new Error('Sell failed');
-  return data;
 }
 
 /** Post reply */
@@ -120,12 +86,4 @@ export async function serverLike(address: string): Promise<boolean> {
     await lpApi('/lp/like', { method: 'POST', body: JSON.stringify({ address }) });
     return true;
   } catch { return false; }
-}
-
-/** Get user account balances */
-export async function fetchAccount(wallet: string): Promise<{ address: string; symbol: string; amount: number; value: number }[] | null> {
-  if (!await checkServer()) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = await lpApi<any>(`/lp/account/${wallet}`);
-  return data?.balances || null;
 }

@@ -6,19 +6,22 @@ import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
-import { buildTxParams, withRetry } from '../txUtils';
+import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
 import {
   getPrice, getMarketCap, getProgress, isGraduated, getPriceAtPct,
   fmtMcap, fmtNum, hashColor, genLogo, timeAgo, GRADUATION_PCT,
 } from '../launchpad/types';
 import { loadTokens, saveTokens, addToken, addTrade, addReply, toggleLike } from '../launchpad/store';
-import { isServerAvailable, fetchTokens, serverBuy, serverSell, serverReply, serverLike, registerToken, fetchAccount } from '../launchpad/api';
+import { isServerAvailable, fetchTokens, serverReply, serverLike, registerToken } from '../launchpad/api';
 
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const MINTABLE_ABI: BitcoinInterfaceAbi = [
-  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
+  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
+  { name: 'totalSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'maximumSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'balanceOf', inputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'balance', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
 type View = 'grid' | 'detail' | 'create';
@@ -154,17 +157,15 @@ const DetailView: React.FC<{
   token: LaunchToken;
   onBack: () => void;
   onBuy: (amount: number) => Promise<void>;
-  onSell: (amount: number) => Promise<void>;
   onReply: (text: string) => void;
   onLike: () => void;
   buying: boolean;
   buyStep: string;
   userBalance: number;
   walletConnected: boolean;
-}> = ({ token, onBack, onBuy, onSell, onReply, onLike, buying, buyStep, userBalance, walletConnected }) => {
+}> = ({ token, onBack, onBuy, onReply, onLike, buying, buyStep, userBalance, walletConnected }) => {
   const [buyAmt, setBuyAmt] = useState('');
   const [replyText, setReplyText] = useState('');
-  const [tradeMode, setTradeMode] = useState<'buy' | 'sell'>('buy');
   const progress = getProgress(token);
   const mcap = getMarketCap(token);
   const price = getPrice(token.mintedSupply, token.publicMintSupply);
@@ -175,8 +176,7 @@ const DetailView: React.FC<{
   const handleTrade = async () => {
     const amt = parseFloat(buyAmt);
     if (!amt || amt <= 0) return;
-    if (tradeMode === 'buy') await onBuy(amt);
-    else await onSell(amt);
+    await onBuy(amt);
     setBuyAmt('');
   };
 
@@ -292,15 +292,7 @@ const DetailView: React.FC<{
               </div>
             ) : (
               <>
-                {/* Buy/Sell tabs */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-                  {(['buy', 'sell'] as const).map(m => (
-                    <button key={m} onClick={() => setTradeMode(m)}
-                      style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${tradeMode === m ? (m === 'buy' ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.3)') : 'var(--bd)'}`, background: tradeMode === m ? (m === 'buy' ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)') : 'var(--bg3)', color: tradeMode === m ? (m === 'buy' ? 'var(--g)' : '#ef4444') : 'var(--t3)', fontWeight: 700, fontSize: '.76rem', cursor: 'pointer', fontFamily: 'var(--ff)', textTransform: 'uppercase' }}>
-                      {m}
-                    </button>
-                  ))}
-                </div>
+                <div style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--g)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.5px' }}>Mint {token.symbol}</div>
                 {/* User balance */}
                 {walletConnected && userBalance > 0 && (
                   <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
@@ -309,31 +301,32 @@ const DetailView: React.FC<{
                 )}
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 4 }}>
-                    {tradeMode === 'buy' ? `Amount to buy (max ${fmtNum(token.maxMintPerTx)}/tx)` : `Amount to sell (have ${fmtNum(userBalance)})`}
+                    Amount to mint (max {fmtNum(token.maxMintPerTx)}/tx)
                   </div>
                   <input type="text" inputMode="numeric" value={buyAmt} onChange={e => setBuyAmt(e.target.value.replace(/[^0-9.]/g, ''))}
-                    placeholder={tradeMode === 'buy' ? `Max ${fmtNum(token.maxMintPerTx)}` : `Max ${fmtNum(userBalance)}`}
+                    placeholder={`Max ${fmtNum(token.maxMintPerTx)}`}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: 14, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.82rem', fontFamily: 'var(--fm)', outline: 'none' }} />
                 </div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-                  {(tradeMode === 'buy' ? [1000, 10000, 100000, token.maxMintPerTx] : [Math.floor(userBalance * 0.25), Math.floor(userBalance * 0.5), Math.floor(userBalance * 0.75), userBalance]).filter(v => v > 0).map((v, i) => (
+                  {[1000, 10000, 100000, token.maxMintPerTx].filter(v => v > 0).map((v, i) => (
                     <button key={i} onClick={() => setBuyAmt(String(v))}
                       style={{ flex: 1, padding: '5px 2px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
-                      {tradeMode === 'sell' && i < 3 ? `${[25, 50, 75][i]}%` : fmtNum(v)}
+                      {fmtNum(v)}
                     </button>
                   ))}
                 </div>
                 {buyAmt && parseFloat(buyAmt) > 0 && (
-                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '6px 8px', background: tradeMode === 'buy' ? 'rgba(247,147,26,.06)' : 'rgba(239,68,68,.06)', borderRadius: 8, border: `1px solid ${tradeMode === 'buy' ? 'rgba(247,147,26,.1)' : 'rgba(239,68,68,.1)'}` }}>
-                    {tradeMode === 'buy' ? '≈ Cost: ' : '≈ Receive: '}
-                    <strong style={{ color: tradeMode === 'buy' ? 'var(--o)' : '#ef4444' }}>{(parseFloat(buyAmt) * price).toFixed(2)} VIBE</strong>
-                    {tradeMode === 'buy' ? ' (virtual)' : ''}
+                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '6px 8px', background: 'rgba(16,185,129,.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,.1)' }}>
+                    Cost: <strong style={{ color: 'var(--o)' }}>BTC gas only (~1K sats)</strong> · Tokens minted to your wallet on-chain
                   </div>
                 )}
                 <button onClick={handleTrade} disabled={buying || !buyAmt}
-                  className="lbtn" style={{ width: '100%', opacity: buying ? 0.6 : 1, background: tradeMode === 'sell' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : undefined }}>
-                  {buying ? buyStep || (tradeMode === 'buy' ? 'Buying...' : 'Selling...') : `${tradeMode === 'buy' ? 'Buy' : 'Sell'} ${token.symbol}`}
+                  className="lbtn" style={{ width: '100%', opacity: buying ? 0.6 : 1 }}>
+                  {buying ? buyStep || 'Minting...' : walletConnected ? `Mint ${token.symbol} (on-chain)` : 'Connect Wallet'}
                 </button>
+                <div style={{ marginTop: 8, fontSize: '.56rem', color: 'var(--t4)', textAlign: 'center' }}>
+                  Real on-chain publicMint · Costs BTC gas · Tokens go directly to your wallet
+                </div>
               </>
             )}
           </div>
@@ -580,7 +573,7 @@ const Launchpad: React.FC = () => {
   const [useServer, setUseServer] = useState(false);
   const [userBalances, setUserBalances] = useState<Record<string, number>>({});
 
-  // Check server availability on mount + load from server if available
+  // Check server availability on mount + merge server tokens (social/registry)
   useEffect(() => {
     (async () => {
       const available = await isServerAvailable();
@@ -588,25 +581,72 @@ const Launchpad: React.FC = () => {
       if (available) {
         const serverTokens = await fetchTokens();
         if (serverTokens && serverTokens.length > 0) {
-          setTokens(serverTokens);
-          saveTokens(serverTokens);
+          // Merge server tokens with local (server has social data)
+          const local = loadTokens();
+          const merged = serverTokens.map(st => {
+            const lt = local.find(l => l.address === st.address);
+            return lt ? { ...lt, replies: st.replies || lt.replies, likes: st.likes || lt.likes } : st;
+          });
+          // Add any local-only tokens
+          local.forEach(lt => { if (!merged.find(m => m.address === lt.address)) merged.push(lt); });
+          setTokens(merged);
+          saveTokens(merged);
         }
       }
     })();
   }, []);
 
-  // Load user balances when wallet connected
-  useEffect(() => {
-    if (!walletAddress) return;
-    (async () => {
-      const acct = await fetchAccount(walletAddress);
-      if (acct) {
-        const bals: Record<string, number> = {};
-        acct.forEach(b => { bals[b.address] = b.amount; });
-        setUserBalances(bals);
+  // Sync on-chain state for real tokens (totalSupply → mintedSupply)
+  const syncTokenState = useCallback(async (tokenAddress: string) => {
+    if (!tokenAddress.startsWith('opt1sq') || tokenAddress.includes('_demo')) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(tokenAddress, MINTABLE_ABI, provider, NETWORK);
+      const [tsRes, msRes] = await Promise.all([
+        withRetry(() => contract.totalSupply()),
+        withRetry(() => contract.maximumSupply()),
+      ]);
+      if ((tsRes as CallResult).revert || (msRes as CallResult).revert) return;
+      const tsProp = (tsRes as CallResult).properties as Record<string, unknown>;
+      const msProp = (msRes as CallResult).properties as Record<string, unknown>;
+      const totalSupplyRaw = BigInt(String(tsProp?.supply || 0));
+      const maxSupplyRaw = BigInt(String(msProp?.supply || 0));
+      const halfMax = maxSupplyRaw / 2n;
+      const publicMinted = totalSupplyRaw > halfMax ? totalSupplyRaw - halfMax : 0n;
+      const mintedSupply = Number(publicMinted) / 1e8;
+      console.log(`[Launchpad] On-chain sync ${tokenAddress.slice(0, 15)}...: minted=${mintedSupply}`);
+      setTokens(prev => {
+        const copy = prev.map(t => t.address === tokenAddress ? { ...t, mintedSupply } : t);
+        saveTokens(copy);
+        return copy;
+      });
+      setSelected(prev => prev && prev.address === tokenAddress ? { ...prev, mintedSupply } : prev);
+    } catch (e) { console.warn('[Launchpad] On-chain sync failed:', e); }
+  }, [provider]);
+
+  // Sync user's on-chain balance for a token
+  const syncUserBalance = useCallback(async (tokenAddress: string) => {
+    if (!senderAddr || !tokenAddress.startsWith('opt1sq') || tokenAddress.includes('_demo')) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(tokenAddress, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res = await contract.balanceOf(senderAddr as any);
+      if (!(res as CallResult).revert) {
+        const prop = (res as CallResult).properties as Record<string, unknown>;
+        const bal = BigInt(String(prop?.balance || 0));
+        const balNum = Number(bal) / 1e8;
+        setUserBalances(prev => ({ ...prev, [tokenAddress]: balNum }));
       }
-    })();
-  }, [walletAddress, tokens]);
+    } catch { /* ignore */ }
+  }, [senderAddr, provider]);
+
+  // On-chain sync for selected token + user balance
+  useEffect(() => {
+    if (!selected) return;
+    syncTokenState(selected.address);
+    if (walletAddress) syncUserBalance(selected.address);
+  }, [selected?.address, walletAddress, syncTokenState, syncUserBalance]);
 
   // Refresh token list
   const refresh = useCallback(async () => {
@@ -647,99 +687,63 @@ const Launchpad: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // INSTANT BUY — server first, localStorage fallback
+  // ON-CHAIN BUY — real publicMint via wallet
   const handleBuy = useCallback(async (amount: number) => {
-    if (!walletAddress || !selected) { openConnectModal(); return; }
-    setBuying(true); setBuyStep('Processing...');
-    try {
-      if (useServer) {
-        // Server-side instant trade
-        const result = await serverBuy(selected.address, walletAddress, amount);
-        // Update state instantly from server response
-        setTokens(prev => prev.map(t => t.address === result.token.address ? result.token : t));
-        setSelected(result.token);
-        setUserBalances(prev => ({ ...prev, [selected.address]: result.balance }));
-        setBuyStep('');
-      } else {
-        // Optimistic localStorage update (instant UI)
-        const trade: TradeRecord = {
-          id: `t_${Date.now()}`, type: 'buy', amount,
-          price: getPrice(selected.mintedSupply, selected.publicMintSupply),
-          wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
-          txHash: '', timestamp: Date.now(),
-        };
-        const updated = addTrade(selected.address, trade);
-        setTokens(updated);
-        const refreshed = updated.find(t => t.address === selected.address);
-        if (refreshed) setSelected(refreshed);
-        setUserBalances(prev => ({ ...prev, [selected.address]: (prev[selected.address] || 0) + amount }));
-        setBuyStep('');
+    if (!walletAddress || !senderAddr) { openConnectModal(); return; }
+    if (!selected) return;
 
-        // Background on-chain publicMint (non-blocking)
-        if (senderAddr && selected.address.startsWith('opt1sq') && !selected.address.includes('_demo')) {
-          (async () => {
-            try {
-              const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const contract = getContract<any>(selected.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
-              const sim = await withRetry(() => contract.publicMint(rawAmount));
-              if (!(sim as CallResult).revert) {
-                const txParams = await buildTxParams(provider, walletAddress);
-                await (sim as CallResult).sendTransaction(txParams);
-                console.log('[Launchpad] On-chain mint confirmed');
-              }
-            } catch (e) { console.warn('[Launchpad] Background mint failed (state already updated):', e); }
-          })();
-        }
-      }
+    // Demo tokens can't be minted on-chain
+    if (!selected.address.startsWith('opt1sq') || selected.address.includes('_demo')) {
+      setBuyStep('Demo token — deploy a real token to mint on-chain');
+      setTimeout(() => setBuyStep(''), 3000);
+      return;
+    }
+
+    setBuying(true); setBuyStep('Preparing transaction...');
+    try {
+      const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(selected.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+
+      setBuyStep('Simulating publicMint...');
+      const sim = await withRetry(() => contract.publicMint(rawAmount));
+      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
+
+      setBuyStep('Sign transaction in your wallet...');
+      const txParams = await buildTxParams(provider, walletAddress);
+      const receipt = await (sim as CallResult).sendTransaction(txParams);
+      const txHash = receipt?.transactionId || '';
+
+      setBuyStep(`Broadcasting... TX: ${txHash ? txHash.slice(0, 16) + '...' : 'pending'}`);
+
+      // Record trade locally
+      const trade: TradeRecord = {
+        id: `t_${Date.now()}`, type: 'buy', amount,
+        price: getPrice(selected.mintedSupply, selected.publicMintSupply),
+        wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
+        txHash, timestamp: Date.now(),
+      };
+      const updated = addTrade(selected.address, trade);
+      setTokens(updated);
+      const refreshed = updated.find(t => t.address === selected.address);
+      if (refreshed) setSelected(refreshed);
+
+      setBuyStep('\u2713 Minted on-chain! Syncing state...');
+
+      // Sync on-chain state after confirmation
+      setTimeout(() => {
+        syncTokenState(selected.address);
+        syncUserBalance(selected.address);
+      }, 8000);
+      setTimeout(() => setBuyStep(''), 6000);
     } catch (e) {
       console.error('[Launchpad Buy]', e);
-      setBuyStep(e instanceof Error ? e.message : 'Buy failed');
-      setTimeout(() => setBuyStep(''), 4000);
+      setBuyStep(formatTxError(e));
+      setTimeout(() => setBuyStep(''), 6000);
     } finally {
       setBuying(false);
     }
-  }, [walletAddress, senderAddr, selected, provider, useServer, openConnectModal]);
-
-  // INSTANT SELL
-  const handleSell = useCallback(async (amount: number) => {
-    if (!walletAddress || !selected) { openConnectModal(); return; }
-    setBuying(true); setBuyStep('Selling...');
-    try {
-      if (useServer) {
-        const result = await serverSell(selected.address, walletAddress, amount);
-        setTokens(prev => prev.map(t => t.address === result.token.address ? result.token : t));
-        setSelected(result.token);
-        setUserBalances(prev => ({ ...prev, [selected.address]: result.balance }));
-      } else {
-        // Optimistic localStorage sell
-        const trade: TradeRecord = {
-          id: `t_${Date.now()}`, type: 'sell', amount,
-          price: getPrice(selected.mintedSupply, selected.publicMintSupply),
-          wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
-          txHash: '', timestamp: Date.now(),
-        };
-        // Decrease minted supply for sell
-        const toksCopy = loadTokens();
-        const tok = toksCopy.find(t => t.address === selected.address);
-        if (tok) {
-          tok.mintedSupply = Math.max(0, tok.mintedSupply - amount);
-          tok.trades.push(trade);
-          saveTokens(toksCopy);
-          setTokens(toksCopy);
-          setSelected(tok);
-        }
-        setUserBalances(prev => ({ ...prev, [selected.address]: Math.max(0, (prev[selected.address] || 0) - amount) }));
-      }
-      setBuyStep('');
-    } catch (e) {
-      console.error('[Launchpad Sell]', e);
-      setBuyStep(e instanceof Error ? e.message : 'Sell failed');
-      setTimeout(() => setBuyStep(''), 4000);
-    } finally {
-      setBuying(false);
-    }
-  }, [walletAddress, selected, useServer, openConnectModal]);
+  }, [walletAddress, senderAddr, selected, provider, openConnectModal, syncTokenState, syncUserBalance]);
 
   // Reply — server + localStorage
   const handleReply = useCallback((text: string) => {
@@ -780,7 +784,7 @@ const Launchpad: React.FC = () => {
       <div>
         <DetailView
           token={selected} onBack={() => { setView('grid'); refresh(); }}
-          onBuy={handleBuy} onSell={handleSell} onReply={handleReply} onLike={handleLike}
+          onBuy={handleBuy} onReply={handleReply} onLike={handleLike}
           buying={buying} buyStep={buyStep}
           userBalance={userBalances[selected.address] || 0}
           walletConnected={!!walletAddress}
@@ -812,8 +816,8 @@ const Launchpad: React.FC = () => {
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 8, fontSize: '.56rem', color: useServer ? 'var(--g)' : 'var(--t4)' }}>
-          {useServer ? '● Server mode — instant trades' : '● Local mode — trades update locally'}
+        <div style={{ marginTop: 8, fontSize: '.56rem', color: 'var(--g)' }}>
+          ● On-chain mode — real publicMint transactions on Bitcoin L1
         </div>
       </div>
 

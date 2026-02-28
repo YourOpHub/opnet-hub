@@ -477,7 +477,7 @@ const TokenLauncher: React.FC = () => {
           {/* Deploy cost — compact */}
           <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: '14px', fontSize: '.66rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ color: 'var(--t3)' }}>Deploy cost:</span>
-            <span style={{ fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>~110K sats (~0.0011 BTC)</span>
+            <span style={{ fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>~50K sats (~0.0005 BTC)</span>
           </div>
 
           <div style={{ marginTop: 14, textAlign: 'left', padding: '10px', background: 'var(--bg3)', borderRadius: '14px', fontSize: '.68rem', color: 'var(--t3)' }}>

@@ -14,6 +14,7 @@ import {
   fmtMcap, fmtNum, hashColor, genLogo, timeAgo, GRADUATION_PCT,
 } from '../launchpad/types';
 import { loadTokens, saveTokens, addToken, addTrade, addReply, toggleLike } from '../launchpad/store';
+import { isServerAvailable, fetchTokens, serverBuy, serverSell, serverReply, serverLike, registerToken, fetchAccount } from '../launchpad/api';
 
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
@@ -154,13 +155,17 @@ const DetailView: React.FC<{
   token: LaunchToken;
   onBack: () => void;
   onBuy: (amount: number) => Promise<void>;
+  onSell: (amount: number) => Promise<void>;
   onReply: (text: string) => void;
   onLike: () => void;
   buying: boolean;
   buyStep: string;
-}> = ({ token, onBack, onBuy, onReply, onLike, buying, buyStep }) => {
+  userBalance: number;
+  walletConnected: boolean;
+}> = ({ token, onBack, onBuy, onSell, onReply, onLike, buying, buyStep, userBalance, walletConnected }) => {
   const [buyAmt, setBuyAmt] = useState('');
   const [replyText, setReplyText] = useState('');
+  const [tradeMode, setTradeMode] = useState<'buy' | 'sell'>('buy');
   const progress = getProgress(token);
   const mcap = getMarketCap(token);
   const price = getPrice(token.mintedSupply, token.publicMintSupply);
@@ -168,10 +173,11 @@ const DetailView: React.FC<{
   const [c1] = hashColor(token.symbol);
   const imgSrc = token.image || genLogo(token.symbol);
 
-  const handleBuy = async () => {
+  const handleTrade = async () => {
     const amt = parseFloat(buyAmt);
     if (!amt || amt <= 0) return;
-    await onBuy(amt);
+    if (tradeMode === 'buy') await onBuy(amt);
+    else await onSell(amt);
     setBuyAmt('');
   };
 
@@ -277,9 +283,8 @@ const DetailView: React.FC<{
 
         {/* Right sidebar: Buy + Token Info */}
         <div>
-          {/* Buy Panel */}
+          {/* Trade Panel */}
           <div className="P" style={{ padding: 16, marginBottom: 10 }}>
-            <div className="Lb" style={{ color: 'var(--g)' }}>Buy ${token.symbol}</div>
             {grad ? (
               <div style={{ padding: 16, textAlign: 'center', fontSize: '.76rem', color: 'var(--t3)' }}>
                 <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🎓</div>
@@ -288,28 +293,47 @@ const DetailView: React.FC<{
               </div>
             ) : (
               <>
+                {/* Buy/Sell tabs */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                  {(['buy', 'sell'] as const).map(m => (
+                    <button key={m} onClick={() => setTradeMode(m)}
+                      style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${tradeMode === m ? (m === 'buy' ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.3)') : 'var(--bd)'}`, background: tradeMode === m ? (m === 'buy' ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)') : 'var(--bg3)', color: tradeMode === m ? (m === 'buy' ? 'var(--g)' : '#ef4444') : 'var(--t3)', fontWeight: 700, fontSize: '.76rem', cursor: 'pointer', fontFamily: 'var(--ff)', textTransform: 'uppercase' }}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                {/* User balance */}
+                {walletConnected && userBalance > 0 && (
+                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                    Your balance: <strong style={{ color: 'var(--w)', fontFamily: 'var(--fm)' }}>{fmtNum(userBalance)} {token.symbol}</strong>
+                  </div>
+                )}
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 4 }}>Amount ({token.symbol})</div>
+                  <div style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 4 }}>
+                    {tradeMode === 'buy' ? `Amount to buy (max ${fmtNum(token.maxMintPerTx)}/tx)` : `Amount to sell (have ${fmtNum(userBalance)})`}
+                  </div>
                   <input type="text" inputMode="numeric" value={buyAmt} onChange={e => setBuyAmt(e.target.value.replace(/[^0-9.]/g, ''))}
-                    placeholder={`Max ${fmtNum(token.maxMintPerTx)} per TX`}
+                    placeholder={tradeMode === 'buy' ? `Max ${fmtNum(token.maxMintPerTx)}` : `Max ${fmtNum(userBalance)}`}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: 14, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.82rem', fontFamily: 'var(--fm)', outline: 'none' }} />
                 </div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-                  {[1000, 10000, 100000, token.maxMintPerTx].filter(Boolean).map(v => (
-                    <button key={v} onClick={() => setBuyAmt(String(v))}
+                  {(tradeMode === 'buy' ? [1000, 10000, 100000, token.maxMintPerTx] : [Math.floor(userBalance * 0.25), Math.floor(userBalance * 0.5), Math.floor(userBalance * 0.75), userBalance]).filter(v => v > 0).map((v, i) => (
+                    <button key={i} onClick={() => setBuyAmt(String(v))}
                       style={{ flex: 1, padding: '5px 2px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
-                      {fmtNum(v)}
+                      {tradeMode === 'sell' && i < 3 ? `${[25, 50, 75][i]}%` : fmtNum(v)}
                     </button>
                   ))}
                 </div>
                 {buyAmt && parseFloat(buyAmt) > 0 && (
-                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '6px 8px', background: 'rgba(247,147,26,.06)', borderRadius: 8, border: '1px solid rgba(247,147,26,.1)' }}>
-                    ≈ Cost: <strong style={{ color: 'var(--o)' }}>{(parseFloat(buyAmt) * price).toFixed(2)} VIBE</strong> (virtual) · Gas: ~5K sats
+                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '6px 8px', background: tradeMode === 'buy' ? 'rgba(247,147,26,.06)' : 'rgba(239,68,68,.06)', borderRadius: 8, border: `1px solid ${tradeMode === 'buy' ? 'rgba(247,147,26,.1)' : 'rgba(239,68,68,.1)'}` }}>
+                    {tradeMode === 'buy' ? '≈ Cost: ' : '≈ Receive: '}
+                    <strong style={{ color: tradeMode === 'buy' ? 'var(--o)' : '#ef4444' }}>{(parseFloat(buyAmt) * price).toFixed(2)} VIBE</strong>
+                    {tradeMode === 'buy' ? ' (virtual)' : ''}
                   </div>
                 )}
-                <button onClick={handleBuy} disabled={buying || !buyAmt}
-                  className="lbtn" style={{ width: '100%', opacity: buying ? 0.6 : 1 }}>
-                  {buying ? buyStep || 'Minting...' : `Buy ${token.symbol}`}
+                <button onClick={handleTrade} disabled={buying || !buyAmt}
+                  className="lbtn" style={{ width: '100%', opacity: buying ? 0.6 : 1, background: tradeMode === 'sell' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : undefined }}>
+                  {buying ? buyStep || (tradeMode === 'buy' ? 'Buying...' : 'Selling...') : `${tradeMode === 'buy' ? 'Buy' : 'Sell'} ${token.symbol}`}
                 </button>
               </>
             )}
@@ -525,7 +549,7 @@ const CreateModal: React.FC<{
         </div>
 
         <div style={{ padding: '8px 10px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 10, fontSize: '.65rem', color: 'var(--t3)', marginBottom: 12 }}>
-          Deploy cost: <strong style={{ color: 'var(--o)' }}>~110K sats (~0.0011 BTC)</strong> · Token goes live on Bitcoin L1
+          Deploy cost: <strong style={{ color: 'var(--o)' }}>~50K sats (~0.0005 BTC)</strong> · Token goes live on Bitcoin L1
         </div>
 
         {error && <div style={{ padding: '8px 10px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8, color: '#ef4444', fontSize: '.72rem', marginBottom: 10 }}>{error}</div>}
@@ -542,7 +566,7 @@ const CreateModal: React.FC<{
    MAIN LAUNCHPAD PAGE
    ═══════════════════════════════════════════════════════════════ */
 const Launchpad: React.FC = () => {
-  const { walletAddress, address: senderAddr } = useWalletConnect();
+  const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
 
   const [view, setView] = useState<View>('grid');
@@ -554,9 +578,45 @@ const Launchpad: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [buying, setBuying] = useState(false);
   const [buyStep, setBuyStep] = useState('');
+  const [useServer, setUseServer] = useState(false);
+  const [userBalances, setUserBalances] = useState<Record<string, number>>({});
+
+  // Check server availability on mount + load from server if available
+  useEffect(() => {
+    (async () => {
+      const available = await isServerAvailable();
+      setUseServer(available);
+      if (available) {
+        const serverTokens = await fetchTokens();
+        if (serverTokens && serverTokens.length > 0) {
+          setTokens(serverTokens);
+          saveTokens(serverTokens);
+        }
+      }
+    })();
+  }, []);
+
+  // Load user balances when wallet connected
+  useEffect(() => {
+    if (!walletAddress) return;
+    (async () => {
+      const acct = await fetchAccount(walletAddress);
+      if (acct) {
+        const bals: Record<string, number> = {};
+        acct.forEach(b => { bals[b.address] = b.amount; });
+        setUserBalances(bals);
+      }
+    })();
+  }, [walletAddress, tokens]);
 
   // Refresh token list
-  const refresh = useCallback(() => setTokens(loadTokens()), []);
+  const refresh = useCallback(async () => {
+    if (useServer) {
+      const serverTokens = await fetchTokens();
+      if (serverTokens) { setTokens(serverTokens); saveTokens(serverTokens); return; }
+    }
+    setTokens(loadTokens());
+  }, [useServer]);
 
   // Filter & sort
   const filtered = useMemo(() => {
@@ -588,59 +648,122 @@ const Launchpad: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Buy (publicMint) on-chain
+  // INSTANT BUY — server first, localStorage fallback
   const handleBuy = useCallback(async (amount: number) => {
-    if (!walletAddress || !senderAddr || !selected) return;
-    setBuying(true); setBuyStep('Preparing mint...');
+    if (!walletAddress || !selected) { openConnectModal(); return; }
+    setBuying(true); setBuyStep('Processing...');
     try {
-      const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
-      setBuyStep('Simulating publicMint...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(selected.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
-      const sim = await withRetry(() => contract.publicMint(rawAmount));
-      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
+      if (useServer) {
+        // Server-side instant trade
+        const result = await serverBuy(selected.address, walletAddress, amount);
+        // Update state instantly from server response
+        setTokens(prev => prev.map(t => t.address === result.token.address ? result.token : t));
+        setSelected(result.token);
+        setUserBalances(prev => ({ ...prev, [selected.address]: result.balance }));
+        setBuyStep('');
+      } else {
+        // Optimistic localStorage update (instant UI)
+        const trade: TradeRecord = {
+          id: `t_${Date.now()}`, type: 'buy', amount,
+          price: getPrice(selected.mintedSupply, selected.publicMintSupply),
+          wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
+          txHash: '', timestamp: Date.now(),
+        };
+        const updated = addTrade(selected.address, trade);
+        setTokens(updated);
+        const refreshed = updated.find(t => t.address === selected.address);
+        if (refreshed) setSelected(refreshed);
+        setUserBalances(prev => ({ ...prev, [selected.address]: (prev[selected.address] || 0) + amount }));
+        setBuyStep('');
 
-      setBuyStep('Sign in wallet...');
-      const txParams = await buildTxParams(provider, walletAddress);
-      const receipt = await (sim as CallResult).sendTransaction(txParams);
-
-      // Record trade
-      const trade: TradeRecord = {
-        id: `t_${Date.now()}`, type: 'buy', amount,
-        price: getPrice(selected.mintedSupply, selected.publicMintSupply),
-        wallet: walletAddress, txHash: receipt.transactionId || '', timestamp: Date.now(),
-      };
-      const updated = addTrade(selected.address, trade);
-      setTokens(updated);
-      const refreshed = updated.find(t => t.address === selected.address);
-      if (refreshed) setSelected(refreshed);
-      setBuyStep('');
+        // Background on-chain publicMint (non-blocking)
+        if (senderAddr && selected.address.startsWith('opt1sq') && !selected.address.includes('_demo')) {
+          (async () => {
+            try {
+              const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const contract = getContract<any>(selected.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+              const sim = await withRetry(() => contract.publicMint(rawAmount));
+              if (!(sim as CallResult).revert) {
+                const txParams = await buildTxParams(provider, walletAddress);
+                await (sim as CallResult).sendTransaction(txParams);
+                console.log('[Launchpad] On-chain mint confirmed');
+              }
+            } catch (e) { console.warn('[Launchpad] Background mint failed (state already updated):', e); }
+          })();
+        }
+      }
     } catch (e) {
       console.error('[Launchpad Buy]', e);
-      setBuyStep(e instanceof Error ? e.message : 'Mint failed');
+      setBuyStep(e instanceof Error ? e.message : 'Buy failed');
       setTimeout(() => setBuyStep(''), 4000);
     } finally {
       setBuying(false);
     }
-  }, [walletAddress, senderAddr, selected, provider]);
+  }, [walletAddress, senderAddr, selected, provider, useServer, openConnectModal]);
 
-  // Reply
+  // INSTANT SELL
+  const handleSell = useCallback(async (amount: number) => {
+    if (!walletAddress || !selected) { openConnectModal(); return; }
+    setBuying(true); setBuyStep('Selling...');
+    try {
+      if (useServer) {
+        const result = await serverSell(selected.address, walletAddress, amount);
+        setTokens(prev => prev.map(t => t.address === result.token.address ? result.token : t));
+        setSelected(result.token);
+        setUserBalances(prev => ({ ...prev, [selected.address]: result.balance }));
+      } else {
+        // Optimistic localStorage sell
+        const trade: TradeRecord = {
+          id: `t_${Date.now()}`, type: 'sell', amount,
+          price: getPrice(selected.mintedSupply, selected.publicMintSupply),
+          wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
+          txHash: '', timestamp: Date.now(),
+        };
+        // Decrease minted supply for sell
+        const toksCopy = loadTokens();
+        const tok = toksCopy.find(t => t.address === selected.address);
+        if (tok) {
+          tok.mintedSupply = Math.max(0, tok.mintedSupply - amount);
+          tok.trades.push(trade);
+          saveTokens(toksCopy);
+          setTokens(toksCopy);
+          setSelected(tok);
+        }
+        setUserBalances(prev => ({ ...prev, [selected.address]: Math.max(0, (prev[selected.address] || 0) - amount) }));
+      }
+      setBuyStep('');
+    } catch (e) {
+      console.error('[Launchpad Sell]', e);
+      setBuyStep(e instanceof Error ? e.message : 'Sell failed');
+      setTimeout(() => setBuyStep(''), 4000);
+    } finally {
+      setBuying(false);
+    }
+  }, [walletAddress, selected, useServer, openConnectModal]);
+
+  // Reply — server + localStorage
   const handleReply = useCallback((text: string) => {
     if (!walletAddress || !selected) return;
-    const updated = addReply(selected.address, `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`, text);
+    const walletShort = `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`;
+    // Optimistic local update
+    const updated = addReply(selected.address, walletShort, text);
     setTokens(updated);
     const refreshed = updated.find(t => t.address === selected.address);
     if (refreshed) setSelected(refreshed);
-  }, [walletAddress, selected]);
+    // Server sync
+    if (useServer) serverReply(selected.address, walletAddress, text).catch(() => {});
+  }, [walletAddress, selected, useServer]);
 
-  // Like
+  // Like — server + localStorage
   const handleLike = useCallback(() => {
     if (!selected) return;
     const updated = toggleLike(selected.address);
     setTokens(updated);
     const refreshed = updated.find(t => t.address === selected.address);
     if (refreshed) setSelected(refreshed);
-  }, [selected]);
+    if (useServer) serverLike(selected.address).catch(() => {});
+  }, [selected, useServer]);
 
   // Token created callback
   const handleCreated = useCallback((token: LaunchToken) => {
@@ -648,7 +771,9 @@ const Launchpad: React.FC = () => {
     setTokens(updated);
     setSelected(token);
     setView('detail');
-  }, []);
+    // Register on server
+    if (useServer) registerToken(token).catch(() => {});
+  }, [useServer]);
 
   /* ─── Render ─── */
   if (view === 'detail' && selected) {
@@ -656,8 +781,10 @@ const Launchpad: React.FC = () => {
       <div>
         <DetailView
           token={selected} onBack={() => { setView('grid'); refresh(); }}
-          onBuy={handleBuy} onReply={handleReply} onLike={handleLike}
+          onBuy={handleBuy} onSell={handleSell} onReply={handleReply} onLike={handleLike}
           buying={buying} buyStep={buyStep}
+          userBalance={userBalances[selected.address] || 0}
+          walletConnected={!!walletAddress}
         />
       </div>
     );
@@ -685,6 +812,9 @@ const Launchpad: React.FC = () => {
               <div style={{ fontSize: '.9rem', fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>{val}</div>
             </div>
           ))}
+        </div>
+        <div style={{ marginTop: 8, fontSize: '.56rem', color: useServer ? 'var(--g)' : 'var(--t4)' }}>
+          {useServer ? '● Server mode — instant trades' : '● Local mode — trades update locally'}
         </div>
       </div>
 

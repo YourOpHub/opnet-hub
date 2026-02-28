@@ -17,12 +17,14 @@ const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffff
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<any> {
   const gas = await provider.gasParameters();
-  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
+  // Use low fee rate for testnet (cheaper, still confirms quickly)
+  const feeRate = gas.bitcoin.recommended.low || gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 2;
   const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
   const priorityFeeSats = gas.baseGas / gasPerSat;
-  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
+  // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
+  const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: 250_000n, network: NETWORK, feeRate, priorityFee } as any;
+  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {

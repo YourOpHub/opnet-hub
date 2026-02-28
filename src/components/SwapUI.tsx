@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { Address } from '@btc-vision/transaction';
-import { BinaryWriter } from '@btc-vision/transaction';
+import { Address, BinaryWriter } from '@btc-vision/transaction';
 import { networks, Transaction } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
@@ -19,8 +18,6 @@ import {
 import LiquidityModal from './LiquidityModal';
 
 type SwapMainTab = 'swap' | 'pools';
-
-const LP_API = import.meta.env.VITE_LP_API || 'http://188.137.250.160:3457';
 
 interface UserPool {
   address: string;

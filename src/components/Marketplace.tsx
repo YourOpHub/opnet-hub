@@ -8,7 +8,8 @@ import {
 } from 'opnet';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
-import { MARKET_ADDRESS, MARKET_PUBKEY, MARKET_HEX, MARKET_SELECTORS, getContractOpscanUrl } from '../contracts';
+import { MARKET_ADDRESS, MARKET_PUBKEY, MARKET_HEX, MARKET_SELECTORS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
@@ -112,26 +113,75 @@ const Marketplace: React.FC = () => {
 
   // Status messages
   const [msg, setMsg] = useState('');
+  const [lastTxId, setLastTxId] = useState<string | null>(null);
+
+  // Read orders directly from on-chain contract (fallback when LP_API unavailable)
+  const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK);
+      const nextIdResult = await market.getNextOrderId();
+      const nextId = Number(nextIdResult?.properties?.nextOrderId ?? 1n);
+      const chainOrders: Order[] = [];
+      for (let i = 1; i < nextId && i < 200; i++) {
+        try {
+          const r = await market.getOrder(BigInt(i));
+          if (!r?.properties) continue;
+          const p = r.properties;
+          const orderType = Number(p.orderType ?? 0n);
+          const status = Number(p.status ?? 0n);
+          if (status !== 1) continue; // only active
+          const tokenHex = (p.token ?? 0n).toString(16).padStart(64, '0');
+          // If filtering by token, match the hex
+          if (tokenFilter) {
+            const filterHex = tokenFilter.replace('opt1sq', ''); // rough match
+            if (!tokenHex.includes(filterHex.slice(-16))) continue;
+          }
+          const amount = Number(p.amount ?? 0n) / 1e8;
+          const filled = Number(p.filled ?? 0n) / 1e8;
+          const price = Number(p.pricePerToken ?? 0n);
+          chainOrders.push({
+            id: String(i),
+            type: orderType === 1 ? 'sell' : 'buy',
+            creator: (p.creator ?? 0n).toString(16).padStart(64, '0'),
+            tokenAddress: tokenHex,
+            tokenSymbol: '???',
+            tokenName: 'OP20 Token',
+            amount, amountFilled: filled,
+            pricePerToken: price,
+            totalPrice: (amount - filled) * price,
+            createdAt: Date.now() / 1000,
+            status: 'active',
+            fills: [],
+          });
+        } catch { /* skip unreadable orders */ }
+      }
+      return chainOrders;
+    } catch { return []; }
+  }, [provider]);
 
   // Fetch token list
   const fetchTokens = useCallback(async () => {
     try {
       const res = await fetch(`${LP_API}/market/tokens`, { signal: AbortSignal.timeout(5000) });
       if (res.ok) setTokenList((await res.json()).tokens || []);
-    } catch { /* offline */ }
+    } catch { /* offline — no token list available */ }
     setLoading(false);
   }, []);
 
-  // Fetch orders for selected token
+  // Fetch orders for selected token (server first, on-chain fallback)
   const fetchOrders = useCallback(async (tokenAddr?: string) => {
     const addr = tokenAddr || selectedToken;
     if (!addr) return;
     try {
       const url = `${LP_API}/market/orders?token=${encodeURIComponent(addr)}&status=active`;
       const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) setOrders((await res.json()).orders || []);
-    } catch { /* offline */ }
-  }, [selectedToken]);
+      if (res.ok) { setOrders((await res.json()).orders || []); return; }
+    } catch { /* server offline, try on-chain */ }
+    // On-chain fallback
+    const chainOrders = await fetchOrdersOnChain(addr);
+    if (chainOrders.length > 0) setOrders(chainOrders);
+  }, [selectedToken, fetchOrdersOnChain]);
 
   useEffect(() => { fetchTokens(); }, [fetchTokens]);
   useEffect(() => { if (selectedToken) fetchOrders(); }, [selectedToken, fetchOrders]);
@@ -379,8 +429,9 @@ const Marketplace: React.FC = () => {
         </div>
 
         {msg && (
-          <div style={{ padding: '10px 14px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', borderRadius: 10, fontSize: '.74rem', color: 'var(--g)', marginBottom: 12 }}>
+          <div style={{ padding: '10px 14px', background: msg.startsWith('Error') || msg.startsWith('Revert') ? 'rgba(239,68,68,.06)' : 'rgba(16,185,129,.06)', border: `1px solid ${msg.startsWith('Error') || msg.startsWith('Revert') ? 'rgba(239,68,68,.15)' : 'rgba(16,185,129,.15)'}`, borderRadius: 10, fontSize: '.74rem', color: msg.startsWith('Error') || msg.startsWith('Revert') ? '#ef4444' : 'var(--g)', marginBottom: 12 }}>
             {msg}
+            {lastTxId && <a href={getTxUrl(lastTxId)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, color: 'var(--ac)', textDecoration: 'underline' }}>View on OPScan</a>}
           </div>
         )}
 

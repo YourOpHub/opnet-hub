@@ -20,6 +20,7 @@ const SwapUI = lazy(() => import('./components/SwapUI'));
 const TokenGallery = lazy(() => import('./components/TokenGallery'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const Staking = lazy(() => import('./components/Staking'));
+const Marketplace = lazy(() => import('./components/Marketplace'));
 
 const LazyFallback = () => (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--t3)' }}>
@@ -35,6 +36,7 @@ const TABS = [
     { id: 'analytics', l: 'Analytics' },
     { id: 'gallery', l: 'Tokens' },
     { id: 'launch', l: 'Launch' },
+    { id: 'market', l: 'Market' },
     { id: 'bob', l: 'Bob AI' },
     { id: 'tools', l: 'Tools' },
     { id: 'game', l: 'Miner' },
@@ -116,6 +118,7 @@ const App: React.FC = () => {
             case 'staking': return <Staking />;
             case 'analytics': return <Analytics />;
             case 'launch': return <Launchpad />;
+            case 'market': return <Marketplace />;
             case 'gallery': return <TokenGallery />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;

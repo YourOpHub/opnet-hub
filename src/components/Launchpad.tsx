@@ -17,11 +17,15 @@ import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api'
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const OP20_ABI: BitcoinInterfaceAbi = [
-  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
+  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
   { name: 'totalSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'maximumSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'balanceOf', inputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'balance', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'isPublicMintEnabled', inputs: [], outputs: [{ name: 'enabled', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
+  { name: 'getMaxMintPerTx', inputs: [], outputs: [{ name: 'maxAmount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
+
+type SortMode = 'hot1h' | 'hot8h' | 'hot24h' | 'newest' | 'holders';
 
 /* ═══════════════════════════════════════════════════════════════
    SIDEBAR TOKEN LIST ITEM
@@ -33,7 +37,7 @@ const TokenListItem: React.FC<{
   const grad = isGraduated(token);
   const [c1] = hashColor(token.symbol);
   const imgSrc = token.image || genLogo(token.symbol);
-  const isReal = token.address.startsWith('opt1sq') && !token.address.includes('_demo');
+  const isReal = token.address.startsWith('opt1sq');
 
   return (
     <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
@@ -267,6 +271,7 @@ const Launchpad: React.FC = () => {
   const [userBal, setUserBal] = useState(0);
   const [addAddr, setAddAddr] = useState('');
   const [adding, setAdding] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('hot24h');
 
   // Load from server on mount (social/registry layer)
   useEffect(() => {
@@ -291,7 +296,7 @@ const Launchpad: React.FC = () => {
 
   // On-chain sync for selected token
   const syncToken = useCallback(async (addr: string) => {
-    if (!addr.startsWith('opt1sq') || addr.includes('_demo')) return;
+    if (!addr.startsWith('opt1sq')) return;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const c = getContract<any>(addr, OP20_ABI, provider, NETWORK);
@@ -317,7 +322,7 @@ const Launchpad: React.FC = () => {
 
   // On-chain balance for selected token
   const syncBalance = useCallback(async (addr: string) => {
-    if (!senderAddr || !addr.startsWith('opt1sq') || addr.includes('_demo')) { setUserBal(0); return; }
+    if (!senderAddr || !addr.startsWith('opt1sq')) { setUserBal(0); return; }
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const c = getContract<any>(addr, OP20_ABI, provider, NETWORK, senderAddr as any);
@@ -342,12 +347,39 @@ const Launchpad: React.FC = () => {
     if (!selected && tokens.length > 0) setSelected(tokens[0]);
   }, [tokens, selected]);
 
-  // Filter tokens
+  // Filter + sort tokens
   const filtered = useMemo(() => {
-    if (!search) return tokens;
-    const q = search.toLowerCase();
-    return tokens.filter(t => t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q) || t.address.toLowerCase().includes(q));
-  }, [tokens, search]);
+    let list = tokens;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(t => t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q) || t.address.toLowerCase().includes(q));
+    }
+    const now = Date.now();
+    const sortFns: Record<SortMode, (a: LaunchToken, b: LaunchToken) => number> = {
+      hot1h: (a, b) => {
+        const aM = a.trades.filter(t => now - t.timestamp < 3600_000).reduce((s, t) => s + t.amount, 0);
+        const bM = b.trades.filter(t => now - t.timestamp < 3600_000).reduce((s, t) => s + t.amount, 0);
+        return bM - aM;
+      },
+      hot8h: (a, b) => {
+        const aM = a.trades.filter(t => now - t.timestamp < 28800_000).reduce((s, t) => s + t.amount, 0);
+        const bM = b.trades.filter(t => now - t.timestamp < 28800_000).reduce((s, t) => s + t.amount, 0);
+        return bM - aM;
+      },
+      hot24h: (a, b) => {
+        const aM = a.trades.filter(t => now - t.timestamp < 86400_000).reduce((s, t) => s + t.amount, 0);
+        const bM = b.trades.filter(t => now - t.timestamp < 86400_000).reduce((s, t) => s + t.amount, 0);
+        return bM - aM;
+      },
+      newest: (a, b) => b.createdAt - a.createdAt,
+      holders: (a, b) => {
+        const aH = new Set(a.trades.map(t => t.wallet)).size;
+        const bH = new Set(b.trades.map(t => t.wallet)).size;
+        return bH - aH;
+      },
+    };
+    return [...list].sort(sortFns[sortMode]);
+  }, [tokens, search, sortMode]);
 
   // ON-CHAIN MINT
   const handleMint = useCallback(async () => {
@@ -356,8 +388,8 @@ const Launchpad: React.FC = () => {
     const amount = parseFloat(mintAmt);
     if (!amount || amount <= 0) return;
 
-    if (!selected.address.startsWith('opt1sq') || selected.address.includes('_demo')) {
-      setMintStep('Demo token. Deploy a real contract first.');
+    if (!selected.address.startsWith('opt1sq')) {
+      setMintStep('Invalid contract address');
       setTimeout(() => setMintStep(''), 3000);
       return;
     }
@@ -370,11 +402,13 @@ const Launchpad: React.FC = () => {
 
       setMintStep('Simulating publicMint...');
       const sim = await withRetry(() => contract.publicMint(rawAmount));
-      if ((sim as CallResult).revert) throw new Error(`Reverted: ${(sim as CallResult).revert}`);
+      const callRes = sim as CallResult;
+      if (callRes.revert) throw new Error(`Reverted: ${callRes.revert}`);
+      if (!callRes.sendTransaction) throw new Error('Simulation failed — contract may not support publicMint');
 
       setMintStep('Sign in your wallet...');
       const txParams = await buildTxParams(provider, walletAddress);
-      const receipt = await (sim as CallResult).sendTransaction(txParams);
+      const receipt = await callRes.sendTransaction(txParams);
       const txHash = receipt?.transactionId || '';
 
       setMintStep(`TX: ${txHash ? txHash.slice(0, 20) + '...' : 'broadcast'}`);
@@ -457,7 +491,8 @@ const Launchpad: React.FC = () => {
     if (useServer) registerToken(token).catch(() => {});
   }, [useServer]);
 
-  const isReal = selected && selected.address.startsWith('opt1sq') && !selected.address.includes('_demo');
+  const isReal = selected && selected.address.startsWith('opt1sq');
+  const holderCount = selected ? new Set(selected.trades.map(t => t.wallet)).size : 0;
   const progress = selected ? getProgress(selected) : 0;
   const grad = selected ? isGraduated(selected) : false;
   const [selColor] = selected ? hashColor(selected.symbol) : ['#F7931A'];
@@ -473,7 +508,15 @@ const Launchpad: React.FC = () => {
             <span style={{ fontSize: '.54rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{tokens.length}</span>
           </div>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
-            style={{ width: '100%', padding: '7px 10px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.7rem', fontFamily: 'var(--ff)', outline: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', padding: '7px 10px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.7rem', fontFamily: 'var(--ff)', outline: 'none', boxSizing: 'border-box', marginBottom: 6 }} />
+          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {([['hot1h', '1H'], ['hot8h', '8H'], ['hot24h', '24H'], ['newest', 'New'], ['holders', 'Holders']] as [SortMode, string][]).map(([m, label]) => (
+              <button key={m} onClick={() => setSortMode(m)}
+                style={{ flex: 1, padding: '3px 0', borderRadius: 6, border: '1px solid ' + (sortMode === m ? 'rgba(247,147,26,.4)' : 'var(--bd)'), background: sortMode === m ? 'rgba(247,147,26,.1)' : 'transparent', color: sortMode === m ? 'var(--o)' : 'var(--t4)', fontSize: '.52rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Token list */}
@@ -561,6 +604,7 @@ const Launchpad: React.FC = () => {
                   ['Public Mint', fmtNum(selected.publicMintSupply)],
                   ['Max / TX', fmtNum(selected.maxMintPerTx)],
                   ['Decimals', String(selected.decimals)],
+                  ['Holders', String(holderCount)],
                   ['Creator', selected.creator.slice(0, 16) + '...'],
                   ['Created', timeAgo(selected.createdAt)],
                 ].map(([k, v]) => (
@@ -604,7 +648,7 @@ const Launchpad: React.FC = () => {
                   </div>
                 )}
                 <div style={{ marginTop: 8, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
-                  {isReal ? 'Real on-chain publicMint \u00b7 Costs ~1K sats BTC gas' : 'Demo token \u2014 deploy a real contract to mint on-chain'}
+                  On-chain publicMint &middot; Costs ~1K sats BTC gas
                 </div>
               </div>
             ) : (

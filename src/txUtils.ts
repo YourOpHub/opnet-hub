@@ -111,6 +111,35 @@ export async function ensureAllowance(
 }
 
 /**
+ * Estimate minimum BTC (in sats) required for an operation.
+ * Uses live gas parameters from the network.
+ */
+export async function getMinBtcRequired(
+  provider: JSONRpcProvider,
+  opType: 'interaction' | 'deploy' = 'interaction',
+): Promise<{ minSats: bigint; feeRate: number; label: string }> {
+  try {
+    const gas = await provider.gasParameters();
+    const feeRate = gas.bitcoin.recommended.low || gas.bitcoin.recommended.medium || 2;
+    const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1_000_000n;
+    const priorityFee = gas.baseGas / gasPerSat;
+    // Typical tx size: ~250 vB for interaction, ~1000 vB for deploy
+    const txSize = opType === 'deploy' ? 1000 : 250;
+    const btcFee = BigInt(Math.ceil(txSize * feeRate));
+    const gasFee = opType === 'deploy' ? 100_000n : priorityFee < 500n ? 500n : priorityFee;
+    const minSats = btcFee + gasFee + 546n; // 546 = dust limit
+    const label = opType === 'deploy'
+      ? `~${(Number(minSats) / 100_000).toFixed(1)}K sats (~${(Number(minSats) / 100_000_000).toFixed(5)} BTC)`
+      : `~${Number(minSats).toLocaleString()} sats (~${(Number(minSats) / 100_000_000).toFixed(6)} BTC)`;
+    return { minSats, feeRate, label };
+  } catch {
+    // Fallback estimates
+    const minSats = opType === 'deploy' ? 110_000n : 5_000n;
+    return { minSats, feeRate: 2, label: opType === 'deploy' ? '~110K sats' : '~5K sats' };
+  }
+}
+
+/**
  * Format user-friendly error messages for common OPNet issues.
  */
 export function formatTxError(e: unknown): string {

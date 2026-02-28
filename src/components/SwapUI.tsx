@@ -548,6 +548,17 @@ const SwapUI: React.FC = () => {
             </div>
           )}
 
+          {/* BTC Balance indicator */}
+          {connected && balances.BTC != null && (
+            <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(255,255,255,.03)', borderRadius: 10, fontSize: '.6rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--t4)' }}>BTC Balance</span>
+              <span style={{ fontFamily: 'var(--fm)', color: Number(balances.BTC) < 5000 ? 'var(--r)' : 'var(--t2)' }}>
+                {(Number(balances.BTC) / 1e8).toFixed(6)} BTC ({Number(balances.BTC).toLocaleString()} sats)
+                {Number(balances.BTC) < 5000 && <span style={{ color: 'var(--r)', marginLeft: 4 }}>· Need ~5K sats min</span>}
+              </span>
+            </div>
+          )}
+
           {/* Swap / Connect button */}
           {connected ? (
             <button onClick={doSwap}

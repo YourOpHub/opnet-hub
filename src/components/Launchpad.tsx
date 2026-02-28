@@ -9,141 +9,60 @@ import {
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
 import {
-  getPrice, getMarketCap, getProgress, isGraduated, getPriceAtPct,
-  fmtMcap, fmtNum, hashColor, genLogo, timeAgo, GRADUATION_PCT,
+  getProgress, isGraduated, fmtNum, hashColor, genLogo, timeAgo, GRADUATION_PCT,
 } from '../launchpad/types';
-import { loadTokens, saveTokens, addToken, addTrade, addReply, toggleLike } from '../launchpad/store';
-import { isServerAvailable, fetchTokens, serverReply, serverLike, registerToken } from '../launchpad/api';
+import { loadTokens, saveTokens, addToken, addTrade } from '../launchpad/store';
+import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api';
 
 const NETWORK = networks.testnet;
 const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
-const MINTABLE_ABI: BitcoinInterfaceAbi = [
+const OP20_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
   { name: 'totalSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'maximumSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'balanceOf', inputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'balance', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
-type View = 'grid' | 'detail' | 'create';
-type Filter = 'all' | 'bonding' | 'graduated' | 'new';
-type Sort = 'mcap' | 'new' | 'progress' | 'replies';
-
 /* ═══════════════════════════════════════════════════════════════
-   BONDING CURVE CHART (SVG)
+   SIDEBAR TOKEN LIST ITEM
    ═══════════════════════════════════════════════════════════════ */
-const BondingChart: React.FC<{ token: LaunchToken; width?: number; height?: number }> = ({ token, width = 400, height = 180 }) => {
-  const pts: string[] = [];
-  const steps = 60;
-  const pub = token.publicMintSupply;
-  const curPct = getProgress(token);
-  const gradPct = GRADUATION_PCT;
-
-  // Find max price for scaling
-  let maxP = 0;
-  for (let i = 0; i <= steps; i++) {
-    const p = getPriceAtPct(i / steps, pub);
-    if (p > maxP) maxP = p;
-  }
-  const pad = { t: 12, b: 24, l: 8, r: 8 };
-  const cw = width - pad.l - pad.r;
-  const ch = height - pad.t - pad.b;
-
-  for (let i = 0; i <= steps; i++) {
-    const pct = i / steps;
-    const price = getPriceAtPct(pct, pub);
-    const x = pad.l + (pct * cw);
-    const y = pad.t + ch - (price / maxP) * ch;
-    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-  }
-
-  const curX = pad.l + curPct * cw;
-  const curPrice = getPrice(token.mintedSupply, pub);
-  const curY = pad.t + ch - (curPrice / maxP) * ch;
-  const gradX = pad.l + gradPct * cw;
-
-  const areaPath = `M${pts[0]} ${pts.map(p => `L${p}`).join(' ')} L${pad.l + cw},${pad.t + ch} L${pad.l},${pad.t + ch} Z`;
-  const linePath = `M${pts[0]} ${pts.map(p => `L${p}`).join(' ')}`;
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto' }}>
-      <defs>
-        <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F7931A" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#F7931A" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      {/* Grid lines */}
-      {[0.25, 0.5, 0.75].map(p => (
-        <line key={p} x1={pad.l} x2={pad.l + cw} y1={pad.t + ch * (1 - p)} y2={pad.t + ch * (1 - p)} stroke="rgba(255,255,255,.04)" strokeWidth="0.5" />
-      ))}
-      {/* Graduation line */}
-      <line x1={gradX} x2={gradX} y1={pad.t} y2={pad.t + ch} stroke="rgba(16,185,129,.3)" strokeWidth="1" strokeDasharray="4,3" />
-      <text x={gradX + 3} y={pad.t + 10} fill="rgba(16,185,129,.5)" fontSize="7" fontFamily="var(--fm)">GRAD</text>
-      {/* Area fill */}
-      <path d={areaPath} fill="url(#curveGrad)" />
-      {/* Curve line */}
-      <path d={linePath} fill="none" stroke="#F7931A" strokeWidth="1.5" />
-      {/* Current position dot */}
-      <circle cx={curX} cy={curY} r="4" fill="#F7931A" stroke="#fff" strokeWidth="1.5" />
-      <line x1={curX} x2={curX} y1={curY} y2={pad.t + ch} stroke="#F7931A" strokeWidth="0.5" strokeDasharray="3,2" />
-      {/* Labels */}
-      <text x={pad.l + 2} y={height - 4} fill="rgba(255,255,255,.25)" fontSize="7" fontFamily="var(--fm)">0%</text>
-      <text x={pad.l + cw - 20} y={height - 4} fill="rgba(255,255,255,.25)" fontSize="7" fontFamily="var(--fm)">100%</text>
-      <text x={curX - 15} y={height - 4} fill="#F7931A" fontSize="7" fontWeight="700" fontFamily="var(--fm)">{(curPct * 100).toFixed(1)}%</text>
-    </svg>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   TOKEN CARD
-   ═══════════════════════════════════════════════════════════════ */
-const TokenCard: React.FC<{ token: LaunchToken; onClick: () => void }> = ({ token, onClick }) => {
+const TokenListItem: React.FC<{
+  token: LaunchToken; active: boolean; onClick: () => void;
+}> = ({ token, active, onClick }) => {
   const progress = getProgress(token);
-  const mcap = getMarketCap(token);
-  const price = getPrice(token.mintedSupply, token.publicMintSupply);
   const grad = isGraduated(token);
   const [c1] = hashColor(token.symbol);
   const imgSrc = token.image || genLogo(token.symbol);
+  const isReal = token.address.startsWith('opt1sq') && !token.address.includes('_demo');
 
   return (
-    <div className="lp-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
-        <img src={imgSrc} alt={token.symbol} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${c1}33` }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--w)' }}>{token.name}</span>
-            {grad && <span className="lp-badge grad">GRADUATED</span>}
-          </div>
-          <div style={{ fontFamily: 'var(--fm)', color: c1, fontWeight: 600, fontSize: '.72rem' }}>${token.symbol}</div>
-        </div>
-      </div>
-      <div style={{ fontSize: '.66rem', color: 'var(--t3)', marginBottom: 8, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {token.description}
-      </div>
-      {/* Stats row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem', marginBottom: 8 }}>
-        <div><span style={{ color: 'var(--t4)' }}>MCap</span> <span style={{ color: 'var(--w)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{fmtMcap(mcap)} VIBE</span></div>
-        <div><span style={{ color: 'var(--t4)' }}>Price</span> <span style={{ color: 'var(--o)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{price < 0.001 ? price.toExponential(1) : price.toFixed(4)}</span></div>
-      </div>
-      {/* Progress bar */}
-      {!grad && (
-        <div style={{ marginBottom: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.56rem', color: 'var(--t4)', marginBottom: 3 }}>
-            <span>Bonding Progress</span>
-            <span>{(progress * 100).toFixed(1)}%</span>
-          </div>
-          <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,.06)' }}>
-            <div style={{ height: '100%', borderRadius: 2, background: `linear-gradient(90deg, ${c1}, var(--o))`, width: `${progress * 100}%`, transition: 'width .3s' }} />
+    <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
+      style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}` }}>
+      <img src={imgSrc} alt="" style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: '.74rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {token.symbol}
+          </span>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {isReal && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', flexShrink: 0 }} />}
+            {grad && <span style={{ fontSize: '.5rem', color: 'var(--g)', fontWeight: 700 }}>GRAD</span>}
           </div>
         </div>
-      )}
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '.56rem', color: 'var(--t4)' }}>
-        <span>{token.creator.slice(0, 10)}...</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <span>💬 {token.replies.length}</span>
-          <span>❤️ {token.likes}</span>
-          <span>{timeAgo(token.createdAt)}</span>
+        <div style={{ fontSize: '.58rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {token.name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+          <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 2,
+              background: grad ? 'var(--g)' : `linear-gradient(90deg, ${c1}, ${c1}88)`,
+              width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .3s',
+            }} />
+          </div>
+          <span style={{ fontSize: '.48rem', fontFamily: 'var(--fm)', color: 'var(--t4)', minWidth: 24, textAlign: 'right' }}>
+            {(progress * 100).toFixed(0)}%
+          </span>
         </div>
       </div>
     </div>
@@ -151,233 +70,9 @@ const TokenCard: React.FC<{ token: LaunchToken; onClick: () => void }> = ({ toke
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   DETAIL VIEW
+   DEPLOY MODAL
    ═══════════════════════════════════════════════════════════════ */
-const DetailView: React.FC<{
-  token: LaunchToken;
-  onBack: () => void;
-  onBuy: (amount: number) => Promise<void>;
-  onReply: (text: string) => void;
-  onLike: () => void;
-  buying: boolean;
-  buyStep: string;
-  userBalance: number;
-  walletConnected: boolean;
-}> = ({ token, onBack, onBuy, onReply, onLike, buying, buyStep, userBalance, walletConnected }) => {
-  const [buyAmt, setBuyAmt] = useState('');
-  const [replyText, setReplyText] = useState('');
-  const progress = getProgress(token);
-  const mcap = getMarketCap(token);
-  const price = getPrice(token.mintedSupply, token.publicMintSupply);
-  const grad = isGraduated(token);
-  const [c1] = hashColor(token.symbol);
-  const imgSrc = token.image || genLogo(token.symbol);
-
-  const handleTrade = async () => {
-    const amt = parseFloat(buyAmt);
-    if (!amt || amt <= 0) return;
-    await onBuy(amt);
-    setBuyAmt('');
-  };
-
-  const handleReply = () => {
-    if (!replyText.trim()) return;
-    onReply(replyText.trim());
-    setReplyText('');
-  };
-
-  return (
-    <div>
-      <button onClick={onBack} className="lp-back">← Back to tokens</button>
-
-      <div className="lp-detail-grid">
-        {/* Left: Chart + Trades + Replies */}
-        <div>
-          {/* Token header */}
-          <div className="P" style={{ padding: 16, marginBottom: 10 }}>
-            <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
-              <img src={imgSrc} alt={token.symbol} style={{ width: 56, height: 56, borderRadius: '50%', border: `2px solid ${c1}44` }} />
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--w)' }}>{token.name}</span>
-                  <span style={{ fontFamily: 'var(--fm)', color: c1, fontWeight: 600, fontSize: '.85rem' }}>${token.symbol}</span>
-                  {grad && <span className="lp-badge grad">GRADUATED</span>}
-                </div>
-                <div style={{ color: 'var(--t3)', fontSize: '.72rem', marginTop: 2 }}>{token.description}</div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: '.62rem' }}>
-                  {token.website && <a href={`https://${token.website}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>🌐 Website</a>}
-                  {token.twitter && <a href={`https://x.com/${token.twitter}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>𝕏 Twitter</a>}
-                  {token.telegram && <a href={`https://t.me/${token.telegram}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>✈ Telegram</a>}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chart */}
-          <div className="P" style={{ padding: 14, marginBottom: 10 }}>
-            <div className="Lb">Bonding Curve</div>
-            <BondingChart token={token} />
-            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 8, fontSize: '.65rem' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--t4)' }}>Price</div>
-                <div style={{ color: 'var(--o)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{price < 0.001 ? price.toExponential(2) : price.toFixed(4)} VIBE</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--t4)' }}>Market Cap</div>
-                <div style={{ color: 'var(--w)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{fmtMcap(mcap)} VIBE</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--t4)' }}>Progress</div>
-                <div style={{ color: grad ? 'var(--g)' : c1, fontWeight: 700, fontFamily: 'var(--fm)' }}>{(progress * 100).toFixed(1)}%</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ color: 'var(--t4)' }}>Trades</div>
-                <div style={{ color: 'var(--w)', fontWeight: 700, fontFamily: 'var(--fm)' }}>{token.trades.length}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Trade history */}
-          <div className="P" style={{ padding: 14, marginBottom: 10 }}>
-            <div className="Lb">Recent Trades</div>
-            <div style={{ maxHeight: 200, overflow: 'auto' }}>
-              {token.trades.slice().reverse().slice(0, 20).map(tr => (
-                <div key={tr.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.64rem' }}>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <span style={{ color: tr.type === 'buy' ? 'var(--g)' : '#ef4444', fontWeight: 700 }}>{tr.type === 'buy' ? 'BUY' : 'SELL'}</span>
-                    <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{fmtNum(tr.amount)} {token.symbol}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, color: 'var(--t4)' }}>
-                    <span>{tr.wallet.slice(0, 8)}...</span>
-                    <span>{timeAgo(tr.timestamp)}</span>
-                  </div>
-                </div>
-              ))}
-              {token.trades.length === 0 && <div style={{ color: 'var(--t4)', fontSize: '.7rem', textAlign: 'center', padding: 16 }}>No trades yet. Be the first!</div>}
-            </div>
-          </div>
-
-          {/* Thread / Replies */}
-          <div className="P" style={{ padding: 14 }}>
-            <div className="Lb" style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Thread ({token.replies.length})</span>
-              <button onClick={onLike} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '.7rem', color: 'var(--t3)' }}>❤️ {token.likes}</button>
-            </div>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-              <input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Post a reply..." onKeyDown={e => e.key === 'Enter' && handleReply()}
-                style={{ flex: 1, padding: '8px 10px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.72rem', fontFamily: 'var(--ff)', outline: 'none' }} />
-              <button onClick={handleReply} className="btn-s" style={{ padding: '8px 14px' }}>Post</button>
-            </div>
-            {token.replies.slice().reverse().map(r => (
-              <div key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.58rem', color: 'var(--t4)', marginBottom: 3 }}>
-                  <span style={{ fontFamily: 'var(--fm)' }}>{r.wallet}</span>
-                  <span>{timeAgo(r.timestamp)}</span>
-                </div>
-                <div style={{ fontSize: '.72rem', color: 'var(--t2)' }}>{r.text}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right sidebar: Buy + Token Info */}
-        <div>
-          {/* Trade Panel */}
-          <div className="P" style={{ padding: 16, marginBottom: 10 }}>
-            {grad ? (
-              <div style={{ padding: 16, textAlign: 'center', fontSize: '.76rem', color: 'var(--t3)' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🎓</div>
-                <div style={{ fontWeight: 700, color: 'var(--g)', marginBottom: 4 }}>Token Graduated!</div>
-                <div>Trade on the <strong>Swap</strong> page via SimplePool AMM.</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--g)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.5px' }}>Mint {token.symbol}</div>
-                {/* User balance */}
-                {walletConnected && userBalance > 0 && (
-                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '5px 8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
-                    Your balance: <strong style={{ color: 'var(--w)', fontFamily: 'var(--fm)' }}>{fmtNum(userBalance)} {token.symbol}</strong>
-                  </div>
-                )}
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 4 }}>
-                    Amount to mint (max {fmtNum(token.maxMintPerTx)}/tx)
-                  </div>
-                  <input type="text" inputMode="numeric" value={buyAmt} onChange={e => setBuyAmt(e.target.value.replace(/[^0-9.]/g, ''))}
-                    placeholder={`Max ${fmtNum(token.maxMintPerTx)}`}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 14, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.82rem', fontFamily: 'var(--fm)', outline: 'none' }} />
-                </div>
-                <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-                  {[1000, 10000, 100000, token.maxMintPerTx].filter(v => v > 0).map((v, i) => (
-                    <button key={i} onClick={() => setBuyAmt(String(v))}
-                      style={{ flex: 1, padding: '5px 2px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
-                      {fmtNum(v)}
-                    </button>
-                  ))}
-                </div>
-                {buyAmt && parseFloat(buyAmt) > 0 && (
-                  <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginBottom: 8, padding: '6px 8px', background: 'rgba(16,185,129,.06)', borderRadius: 8, border: '1px solid rgba(16,185,129,.1)' }}>
-                    Cost: <strong style={{ color: 'var(--o)' }}>BTC gas only (~1K sats)</strong> · Tokens minted to your wallet on-chain
-                  </div>
-                )}
-                <button onClick={handleTrade} disabled={buying || !buyAmt}
-                  className="lbtn" style={{ width: '100%', opacity: buying ? 0.6 : 1 }}>
-                  {buying ? buyStep || 'Minting...' : walletConnected ? `Mint ${token.symbol} (on-chain)` : 'Connect Wallet'}
-                </button>
-                <div style={{ marginTop: 8, fontSize: '.56rem', color: 'var(--t4)', textAlign: 'center' }}>
-                  Real on-chain publicMint · Costs BTC gas · Tokens go directly to your wallet
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Token Info */}
-          <div className="P" style={{ padding: 16, marginBottom: 10 }}>
-            <div className="Lb">Token Info</div>
-            <div style={{ fontSize: '.68rem' }}>
-              {[
-                ['Contract', token.address],
-                ['Creator', token.creator],
-                ['Total Supply', fmtNum(token.totalSupply)],
-                ['Public Mint', fmtNum(token.publicMintSupply)],
-                ['Minted', `${fmtNum(token.mintedSupply)} (${(progress * 100).toFixed(1)}%)`],
-                ['Max/TX', fmtNum(token.maxMintPerTx)],
-                ['Decimals', String(token.decimals)],
-                ['Created', new Date(token.createdAt).toLocaleDateString()],
-              ].map(([label, val]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
-                  <span style={{ color: 'var(--t4)' }}>{label}</span>
-                  <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)', maxWidth: '60%', textAlign: 'right', wordBreak: 'break-all', fontSize: '.62rem' }}>{val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bonding progress */}
-          {!grad && (
-            <div className="P" style={{ padding: 16 }}>
-              <div className="Lb">Graduation Progress</div>
-              <div style={{ position: 'relative', height: 12, borderRadius: 6, background: 'rgba(255,255,255,.06)', marginBottom: 8, overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 6, background: `linear-gradient(90deg, ${c1}, var(--g))`, width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .3s' }} />
-              </div>
-              <div style={{ textAlign: 'center', fontSize: '.65rem', color: 'var(--t3)' }}>
-                {(Math.min(progress / GRADUATION_PCT, 1) * 100).toFixed(1)}% to graduation
-              </div>
-              <div style={{ marginTop: 8, fontSize: '.6rem', color: 'var(--t4)', lineHeight: 1.5, textAlign: 'center' }}>
-                When {(GRADUATION_PCT * 100).toFixed(0)}% of supply is minted, this token graduates to the SimplePool AMM for real trading.
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════════════
-   CREATE MODAL
-   ═══════════════════════════════════════════════════════════════ */
-const CreateModal: React.FC<{
+const DeployModal: React.FC<{
   open: boolean;
   onClose: () => void;
   onCreated: (token: LaunchToken) => void;
@@ -489,8 +184,8 @@ const CreateModal: React.FC<{
     <div className="lp-modal-overlay" onClick={onClose}>
       <div className="lp-modal" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Launch Token</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Deploy Contract</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: '1.2rem', cursor: 'pointer' }}>&#x2715;</button>
         </div>
 
         {/* Image upload */}
@@ -522,7 +217,7 @@ const CreateModal: React.FC<{
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Total Supply</label>
           <input style={iStyle} type="text" inputMode="numeric" value={supply} onChange={e => setSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000000" />
-          <div style={{ fontSize: '.56rem', color: 'var(--t4)', marginTop: 2 }}>50% to you · 50% for public mint · 1% max per TX</div>
+          <div style={{ fontSize: '.56rem', color: 'var(--t4)', marginTop: 2 }}>50% to you &middot; 50% for public mint &middot; 1% max per TX</div>
         </div>
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
@@ -541,13 +236,13 @@ const CreateModal: React.FC<{
         </div>
 
         <div style={{ padding: '8px 10px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 10, fontSize: '.65rem', color: 'var(--t3)', marginBottom: 12 }}>
-          Deploy cost: <strong style={{ color: 'var(--o)' }}>~50K sats (~0.0005 BTC)</strong> · Token goes live on Bitcoin L1
+          Deploy cost: <strong style={{ color: 'var(--o)' }}>~50K sats (~0.0005 BTC)</strong> &middot; Contract goes live on Bitcoin L1
         </div>
 
         {error && <div style={{ padding: '8px 10px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8, color: '#ef4444', fontSize: '.72rem', marginBottom: 10 }}>{error}</div>}
 
         <button onClick={deploy} disabled={deploying} className="lbtn" style={{ width: '100%', opacity: deploying ? 0.6 : 1 }}>
-          {deploying ? step || 'Deploying...' : walletAddress ? `Launch $${symbol || 'TOKEN'}` : 'Connect Wallet'}
+          {deploying ? step || 'Deploying...' : walletAddress ? `Deploy $${symbol || 'TOKEN'}` : 'Connect Wallet'}
         </button>
       </div>
     </div>
@@ -555,25 +250,25 @@ const CreateModal: React.FC<{
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN LAUNCHPAD PAGE
+   MAIN LAUNCHPAD — UniSat-style Two-Panel Layout
    ═══════════════════════════════════════════════════════════════ */
 const Launchpad: React.FC = () => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
 
-  const [view, setView] = useState<View>('grid');
   const [tokens, setTokens] = useState<LaunchToken[]>(() => loadTokens());
   const [selected, setSelected] = useState<LaunchToken | null>(null);
-  const [filter, setFilter] = useState<Filter>('all');
-  const [sort, setSort] = useState<Sort>('mcap');
   const [search, setSearch] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
-  const [buying, setBuying] = useState(false);
-  const [buyStep, setBuyStep] = useState('');
+  const [deployOpen, setDeployOpen] = useState(false);
+  const [mintAmt, setMintAmt] = useState('');
+  const [minting, setMinting] = useState(false);
+  const [mintStep, setMintStep] = useState('');
   const [useServer, setUseServer] = useState(false);
-  const [userBalances, setUserBalances] = useState<Record<string, number>>({});
+  const [userBal, setUserBal] = useState(0);
+  const [addAddr, setAddAddr] = useState('');
+  const [adding, setAdding] = useState(false);
 
-  // Check server availability on mount + merge server tokens (social/registry)
+  // Load from server on mount (social/registry layer)
   useEffect(() => {
     (async () => {
       const available = await isServerAvailable();
@@ -581,13 +276,11 @@ const Launchpad: React.FC = () => {
       if (available) {
         const serverTokens = await fetchTokens();
         if (serverTokens && serverTokens.length > 0) {
-          // Merge server tokens with local (server has social data)
           const local = loadTokens();
           const merged = serverTokens.map(st => {
             const lt = local.find(l => l.address === st.address);
             return lt ? { ...lt, replies: st.replies || lt.replies, likes: st.likes || lt.likes } : st;
           });
-          // Add any local-only tokens
           local.forEach(lt => { if (!merged.find(m => m.address === lt.address)) merged.push(lt); });
           setTokens(merged);
           saveTokens(merged);
@@ -596,131 +289,100 @@ const Launchpad: React.FC = () => {
     })();
   }, []);
 
-  // Sync on-chain state for real tokens (totalSupply → mintedSupply)
-  const syncTokenState = useCallback(async (tokenAddress: string) => {
-    if (!tokenAddress.startsWith('opt1sq') || tokenAddress.includes('_demo')) return;
+  // On-chain sync for selected token
+  const syncToken = useCallback(async (addr: string) => {
+    if (!addr.startsWith('opt1sq') || addr.includes('_demo')) return;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(tokenAddress, MINTABLE_ABI, provider, NETWORK);
-      const [tsRes, msRes] = await Promise.all([
-        withRetry(() => contract.totalSupply()),
-        withRetry(() => contract.maximumSupply()),
+      const c = getContract<any>(addr, OP20_ABI, provider, NETWORK);
+      const [tsR, msR] = await Promise.all([
+        withRetry(() => c.totalSupply()),
+        withRetry(() => c.maximumSupply()),
       ]);
-      if ((tsRes as CallResult).revert || (msRes as CallResult).revert) return;
-      const tsProp = (tsRes as CallResult).properties as Record<string, unknown>;
-      const msProp = (msRes as CallResult).properties as Record<string, unknown>;
-      const totalSupplyRaw = BigInt(String(tsProp?.supply || 0));
-      const maxSupplyRaw = BigInt(String(msProp?.supply || 0));
-      const halfMax = maxSupplyRaw / 2n;
-      const publicMinted = totalSupplyRaw > halfMax ? totalSupplyRaw - halfMax : 0n;
-      const mintedSupply = Number(publicMinted) / 1e8;
-      console.log(`[Launchpad] On-chain sync ${tokenAddress.slice(0, 15)}...: minted=${mintedSupply}`);
+      if ((tsR as CallResult).revert || (msR as CallResult).revert) return;
+      const tsP = (tsR as CallResult).properties as Record<string, unknown>;
+      const msP = (msR as CallResult).properties as Record<string, unknown>;
+      const total = BigInt(String(tsP?.supply || 0));
+      const max = BigInt(String(msP?.supply || 0));
+      const half = max / 2n;
+      const minted = total > half ? Number(total - half) / 1e8 : 0;
       setTokens(prev => {
-        const copy = prev.map(t => t.address === tokenAddress ? { ...t, mintedSupply } : t);
+        const copy = prev.map(t => t.address === addr ? { ...t, mintedSupply: minted } : t);
         saveTokens(copy);
         return copy;
       });
-      setSelected(prev => prev && prev.address === tokenAddress ? { ...prev, mintedSupply } : prev);
-    } catch (e) { console.warn('[Launchpad] On-chain sync failed:', e); }
+      setSelected(prev => prev && prev.address === addr ? { ...prev, mintedSupply: minted } : prev);
+    } catch (e) { console.warn('[LP] sync failed:', e); }
   }, [provider]);
 
-  // Sync user's on-chain balance for a token
-  const syncUserBalance = useCallback(async (tokenAddress: string) => {
-    if (!senderAddr || !tokenAddress.startsWith('opt1sq') || tokenAddress.includes('_demo')) return;
+  // On-chain balance for selected token
+  const syncBalance = useCallback(async (addr: string) => {
+    if (!senderAddr || !addr.startsWith('opt1sq') || addr.includes('_demo')) { setUserBal(0); return; }
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(tokenAddress, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      const c = getContract<any>(addr, OP20_ABI, provider, NETWORK, senderAddr as any);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await contract.balanceOf(senderAddr as any);
+      const res = await c.balanceOf(senderAddr as any);
       if (!(res as CallResult).revert) {
-        const prop = (res as CallResult).properties as Record<string, unknown>;
-        const bal = BigInt(String(prop?.balance || 0));
-        const balNum = Number(bal) / 1e8;
-        setUserBalances(prev => ({ ...prev, [tokenAddress]: balNum }));
+        const p = (res as CallResult).properties as Record<string, unknown>;
+        setUserBal(Number(BigInt(String(p?.balance || 0))) / 1e8);
       }
-    } catch { /* ignore */ }
+    } catch { setUserBal(0); }
   }, [senderAddr, provider]);
 
-  // On-chain sync for selected token + user balance
+  // Sync when selected changes
   useEffect(() => {
     if (!selected) return;
-    syncTokenState(selected.address);
-    if (walletAddress) syncUserBalance(selected.address);
-  }, [selected?.address, walletAddress, syncTokenState, syncUserBalance]);
+    syncToken(selected.address);
+    syncBalance(selected.address);
+  }, [selected?.address, walletAddress, syncToken, syncBalance]);
 
-  // Refresh token list
-  const refresh = useCallback(async () => {
-    if (useServer) {
-      const serverTokens = await fetchTokens();
-      if (serverTokens) { setTokens(serverTokens); saveTokens(serverTokens); return; }
-    }
-    setTokens(loadTokens());
-  }, [useServer]);
+  // Auto-select first token
+  useEffect(() => {
+    if (!selected && tokens.length > 0) setSelected(tokens[0]);
+  }, [tokens, selected]);
 
-  // Filter & sort
+  // Filter tokens
   const filtered = useMemo(() => {
-    let list = [...tokens];
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(t => t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q));
-    }
-    if (filter === 'bonding') list = list.filter(t => !isGraduated(t));
-    else if (filter === 'graduated') list = list.filter(t => isGraduated(t));
-    else if (filter === 'new') list = list.filter(t => Date.now() - t.createdAt < 86400_000);
+    if (!search) return tokens;
+    const q = search.toLowerCase();
+    return tokens.filter(t => t.name.toLowerCase().includes(q) || t.symbol.toLowerCase().includes(q) || t.address.toLowerCase().includes(q));
+  }, [tokens, search]);
 
-    if (sort === 'mcap') list.sort((a, b) => getMarketCap(b) - getMarketCap(a));
-    else if (sort === 'new') list.sort((a, b) => b.createdAt - a.createdAt);
-    else if (sort === 'progress') list.sort((a, b) => getProgress(b) - getProgress(a));
-    else if (sort === 'replies') list.sort((a, b) => b.replies.length - a.replies.length);
-    return list;
-  }, [tokens, filter, sort, search]);
-
-  // Stats
-  const totalLaunches = tokens.length;
-  const graduated = tokens.filter(t => isGraduated(t)).length;
-  const totalMcap = tokens.reduce((s, t) => s + getMarketCap(t), 0);
-
-  // Open detail
-  const openDetail = useCallback((t: LaunchToken) => {
-    setSelected(t);
-    setView('detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
-  // ON-CHAIN BUY — real publicMint via wallet
-  const handleBuy = useCallback(async (amount: number) => {
+  // ON-CHAIN MINT
+  const handleMint = useCallback(async () => {
     if (!walletAddress || !senderAddr) { openConnectModal(); return; }
     if (!selected) return;
+    const amount = parseFloat(mintAmt);
+    if (!amount || amount <= 0) return;
 
-    // Demo tokens can't be minted on-chain
     if (!selected.address.startsWith('opt1sq') || selected.address.includes('_demo')) {
-      setBuyStep('Demo token — deploy a real token to mint on-chain');
-      setTimeout(() => setBuyStep(''), 3000);
+      setMintStep('Demo token. Deploy a real contract first.');
+      setTimeout(() => setMintStep(''), 3000);
       return;
     }
 
-    setBuying(true); setBuyStep('Preparing transaction...');
+    setMinting(true); setMintStep('Preparing...');
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(selected.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      const contract = getContract<any>(selected.address, OP20_ABI, provider, NETWORK, senderAddr as any);
 
-      setBuyStep('Simulating publicMint...');
+      setMintStep('Simulating publicMint...');
       const sim = await withRetry(() => contract.publicMint(rawAmount));
-      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
+      if ((sim as CallResult).revert) throw new Error(`Reverted: ${(sim as CallResult).revert}`);
 
-      setBuyStep('Sign transaction in your wallet...');
+      setMintStep('Sign in your wallet...');
       const txParams = await buildTxParams(provider, walletAddress);
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt?.transactionId || '';
 
-      setBuyStep(`Broadcasting... TX: ${txHash ? txHash.slice(0, 16) + '...' : 'pending'}`);
+      setMintStep(`TX: ${txHash ? txHash.slice(0, 20) + '...' : 'broadcast'}`);
 
-      // Record trade locally
+      // Record trade
       const trade: TradeRecord = {
         id: `t_${Date.now()}`, type: 'buy', amount,
-        price: getPrice(selected.mintedSupply, selected.publicMintSupply),
-        wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
+        price: 0, wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`,
         txHash, timestamp: Date.now(),
       };
       const updated = addTrade(selected.address, trade);
@@ -728,142 +390,279 @@ const Launchpad: React.FC = () => {
       const refreshed = updated.find(t => t.address === selected.address);
       if (refreshed) setSelected(refreshed);
 
-      setBuyStep('\u2713 Minted on-chain! Syncing state...');
-
-      // Sync on-chain state after confirmation
-      setTimeout(() => {
-        syncTokenState(selected.address);
-        syncUserBalance(selected.address);
-      }, 8000);
-      setTimeout(() => setBuyStep(''), 6000);
+      setMintStep('Minted! Syncing...');
+      setTimeout(() => { syncToken(selected.address); syncBalance(selected.address); }, 8000);
+      setTimeout(() => setMintStep(''), 6000);
+      setMintAmt('');
     } catch (e) {
-      console.error('[Launchpad Buy]', e);
-      setBuyStep(formatTxError(e));
-      setTimeout(() => setBuyStep(''), 6000);
+      console.error('[LP Mint]', e);
+      setMintStep(formatTxError(e));
+      setTimeout(() => setMintStep(''), 6000);
     } finally {
-      setBuying(false);
+      setMinting(false);
     }
-  }, [walletAddress, senderAddr, selected, provider, openConnectModal, syncTokenState, syncUserBalance]);
+  }, [walletAddress, senderAddr, selected, mintAmt, provider, openConnectModal, syncToken, syncBalance]);
 
-  // Reply — server + localStorage
-  const handleReply = useCallback((text: string) => {
-    if (!walletAddress || !selected) return;
-    const walletShort = `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`;
-    // Optimistic local update
-    const updated = addReply(selected.address, walletShort, text);
-    setTokens(updated);
-    const refreshed = updated.find(t => t.address === selected.address);
-    if (refreshed) setSelected(refreshed);
-    // Server sync
-    if (useServer) serverReply(selected.address, walletAddress, text).catch(() => {});
-  }, [walletAddress, selected, useServer]);
+  // Add contract by address
+  const handleAddContract = useCallback(async () => {
+    if (!addAddr.trim()) return;
+    const addr = addAddr.trim();
+    if (tokens.find(t => t.address === addr)) {
+      setSelected(tokens.find(t => t.address === addr) || null);
+      setAddAddr('');
+      return;
+    }
+    setAdding(true);
+    try {
+      // Try to read on-chain state
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const c = getContract<any>(addr, OP20_ABI, provider, NETWORK);
+      const [tsR, msR] = await Promise.all([c.totalSupply(), c.maximumSupply()]);
+      if ((tsR as CallResult).revert || (msR as CallResult).revert) throw new Error('Not a valid OP20 token');
+      const tsP = (tsR as CallResult).properties as Record<string, unknown>;
+      const msP = (msR as CallResult).properties as Record<string, unknown>;
+      const total = Number(BigInt(String(tsP?.supply || 0))) / 1e8;
+      const max = Number(BigInt(String(msP?.supply || 0))) / 1e8;
+      const half = max / 2;
+      const minted = total > half ? total - half : 0;
 
-  // Like — server + localStorage
-  const handleLike = useCallback(() => {
-    if (!selected) return;
-    const updated = toggleLike(selected.address);
-    setTokens(updated);
-    const refreshed = updated.find(t => t.address === selected.address);
-    if (refreshed) setSelected(refreshed);
-    if (useServer) serverLike(selected.address).catch(() => {});
-  }, [selected, useServer]);
+      const token: LaunchToken = {
+        address: addr, name: `Token ${addr.slice(-6)}`, symbol: addr.slice(-4).toUpperCase(),
+        decimals: 8, totalSupply: max, publicMintSupply: half,
+        maxMintPerTx: Math.floor(max * 0.01), mintedSupply: minted,
+        creator: 'unknown', createdAt: Date.now(),
+        description: 'Added by contract address', image: null,
+        website: '', twitter: '', telegram: '',
+        status: minted >= half * GRADUATION_PCT ? 'graduated' : 'bonding',
+        txHash: '', trades: [], replies: [], likes: 0,
+      };
+      const updated = addToken(token);
+      setTokens(updated);
+      setSelected(token);
+      setAddAddr('');
+      if (useServer) registerToken(token).catch(() => {});
+    } catch (e) {
+      setMintStep(e instanceof Error ? e.message : 'Invalid contract');
+      setTimeout(() => setMintStep(''), 3000);
+    } finally {
+      setAdding(false);
+    }
+  }, [addAddr, tokens, provider, useServer]);
 
   // Token created callback
   const handleCreated = useCallback((token: LaunchToken) => {
     const updated = addToken(token);
     setTokens(updated);
     setSelected(token);
-    setView('detail');
-    // Register on server
     if (useServer) registerToken(token).catch(() => {});
   }, [useServer]);
 
-  /* ─── Render ─── */
-  if (view === 'detail' && selected) {
-    return (
-      <div>
-        <DetailView
-          token={selected} onBack={() => { setView('grid'); refresh(); }}
-          onBuy={handleBuy} onReply={handleReply} onLike={handleLike}
-          buying={buying} buyStep={buyStep}
-          userBalance={userBalances[selected.address] || 0}
-          walletConnected={!!walletAddress}
-        />
-      </div>
-    );
-  }
+  const isReal = selected && selected.address.startsWith('opt1sq') && !selected.address.includes('_demo');
+  const progress = selected ? getProgress(selected) : 0;
+  const grad = selected ? isGraduated(selected) : false;
+  const [selColor] = selected ? hashColor(selected.symbol) : ['#F7931A'];
 
+  /* ─── RENDER ─── */
   return (
-    <div>
-      {/* Header */}
-      <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '20px 18px' }}>
-        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--w)', marginBottom: 2 }}>
-          <span style={{ background: 'linear-gradient(135deg, #F7931A, #ffab40)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>OPNet Launchpad</span>
-        </div>
-        <div style={{ color: 'var(--t3)', fontSize: '.78rem', maxWidth: 500, margin: '0 auto 12px' }}>
-          Launch tokens on Bitcoin L1. Bonding curve → Graduation → AMM trading.
-        </div>
-        {/* Stats row */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, flexWrap: 'wrap' }}>
-          {[
-            ['Launches', String(totalLaunches)],
-            ['Graduated', String(graduated)],
-            ['Total MCap', `${fmtMcap(totalMcap)} VIBE`],
-          ].map(([label, val]) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{label}</div>
-              <div style={{ fontSize: '.9rem', fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>{val}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 8, fontSize: '.56rem', color: 'var(--g)' }}>
-          ● On-chain mode — real publicMint transactions on Bitcoin L1
-        </div>
-      </div>
-
-      {/* Toolbar: search + filters + create */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tokens..."
-          style={{ flex: '1 1 180px', padding: '9px 12px', borderRadius: 14, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.78rem', fontFamily: 'var(--ff)', outline: 'none' }} />
-
-        <div style={{ display: 'flex', gap: 4 }}>
-          {([['all', 'All'], ['bonding', '🔥 Bonding'], ['graduated', '🎓 Graduated'], ['new', '✨ New']] as const).map(([f, label]) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`lp-filter ${filter === f ? 'on' : ''}`}>
-              {label}
-            </button>
-          ))}
+    <div className="lp-split">
+      {/* ═══ LEFT SIDEBAR ═══ */}
+      <div className="lp-sidebar">
+        <div style={{ padding: '12px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontWeight: 800, fontSize: '.82rem', color: 'var(--w)' }}>Contracts</span>
+            <span style={{ fontSize: '.54rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{tokens.length}</span>
+          </div>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
+            style={{ width: '100%', padding: '7px 10px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.7rem', fontFamily: 'var(--ff)', outline: 'none', boxSizing: 'border-box' }} />
         </div>
 
-        <select value={sort} onChange={e => setSort(e.target.value as Sort)}
-          style={{ padding: '8px 10px', borderRadius: 10, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--t2)', fontSize: '.7rem', fontFamily: 'var(--ff)', cursor: 'pointer' }}>
-          <option value="mcap">Sort: Market Cap</option>
-          <option value="new">Sort: Newest</option>
-          <option value="progress">Sort: Progress</option>
-          <option value="replies">Sort: Most Active</option>
-        </select>
-
-        <button onClick={() => setCreateOpen(true)} className="lbtn" style={{ padding: '9px 20px', fontSize: '.78rem' }}>
-          + Launch Token
-        </button>
-      </div>
-
-      {/* Token Grid */}
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--t4)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: 8 }}>🔍</div>
-          <div style={{ fontSize: '.82rem' }}>No tokens found</div>
-        </div>
-      ) : (
-        <div className="lp-grid">
+        {/* Token list */}
+        <div className="lp-sidebar-list">
           {filtered.map(t => (
-            <TokenCard key={t.address} token={t} onClick={() => openDetail(t)} />
+            <TokenListItem key={t.address} token={t} active={selected?.address === t.address} onClick={() => setSelected(t)} />
           ))}
+          {filtered.length === 0 && (
+            <div style={{ padding: 20, textAlign: 'center', fontSize: '.7rem', color: 'var(--t4)' }}>No contracts found</div>
+          )}
         </div>
-      )}
 
-      {/* Create Modal */}
-      <CreateModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
+        {/* Add contract */}
+        <div style={{ padding: '8px 10px', borderTop: '1px solid var(--bd)' }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+            <input value={addAddr} onChange={e => setAddAddr(e.target.value)} placeholder="opt1sq... address"
+              onKeyDown={e => e.key === 'Enter' && handleAddContract()}
+              style={{ flex: 1, padding: '6px 8px', borderRadius: 8, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.6rem', fontFamily: 'var(--fm)', outline: 'none' }} />
+            <button onClick={handleAddContract} disabled={adding}
+              style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(247,147,26,.15)', border: '1px solid rgba(247,147,26,.3)', color: 'var(--o)', fontSize: '.6rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 700 }}>
+              {adding ? '...' : '+'}
+            </button>
+          </div>
+          <button onClick={() => setDeployOpen(true)} className="lbtn" style={{ width: '100%', padding: '8px', fontSize: '.7rem' }}>
+            Deploy New Contract
+          </button>
+        </div>
+      </div>
+
+      {/* ═══ RIGHT MAIN PANEL ═══ */}
+      <div className="lp-main">
+        {!selected ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--t4)', fontSize: '.82rem' }}>
+            Select a contract from the sidebar
+          </div>
+        ) : (
+          <div style={{ padding: '16px 20px', maxWidth: 720, margin: '0 auto' }}>
+            {/* ── Header ── */}
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16 }}>
+              <img src={selected.image || genLogo(selected.symbol)} alt="" style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${selColor}44` }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--w)' }}>{selected.name}</span>
+                  <span style={{ fontFamily: 'var(--fm)', color: selColor, fontWeight: 700, fontSize: '.9rem' }}>${selected.symbol}</span>
+                  {grad && <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,.12)', color: 'var(--g)', fontSize: '.6rem', fontWeight: 700 }}>GRADUATED</span>}
+                  {isReal && <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(247,147,26,.1)', color: 'var(--o)', fontSize: '.56rem', fontWeight: 600 }}>ON-CHAIN</span>}
+                </div>
+                <div style={{ fontSize: '.6rem', color: 'var(--t4)', fontFamily: 'var(--fm)', marginTop: 2, wordBreak: 'break-all' }}>
+                  {selected.address}
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  {selected.twitter && <a href={`https://x.com/${selected.twitter}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>&#x1D54F; Twitter</a>}
+                  {selected.website && <a href={`https://${selected.website}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>&#x1F310; Website</a>}
+                  {selected.telegram && <a href={`https://t.me/${selected.telegram}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>&#x2708; Telegram</a>}
+                </div>
+              </div>
+            </div>
+
+            {selected.description && (
+              <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginBottom: 14, lineHeight: 1.5 }}>
+                {selected.description}
+              </div>
+            )}
+
+            {/* ── Supply Info ── */}
+            <div className="P" style={{ padding: 14, marginBottom: 12 }}>
+              <div className="Lb" style={{ marginBottom: 8 }}>Supply</div>
+              {/* Progress bar */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.58rem', color: 'var(--t4)', marginBottom: 3 }}>
+                  <span>Minted: {fmtNum(selected.mintedSupply)} / {fmtNum(selected.publicMintSupply)}</span>
+                  <span style={{ color: grad ? 'var(--g)' : selColor, fontWeight: 700 }}>{(progress * 100).toFixed(1)}%</span>
+                </div>
+                <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 4,
+                    background: grad ? 'var(--g)' : `linear-gradient(90deg, ${selColor}, var(--o))`,
+                    width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .5s',
+                  }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '.66rem' }}>
+                {[
+                  ['Total Supply', fmtNum(selected.totalSupply)],
+                  ['Public Mint', fmtNum(selected.publicMintSupply)],
+                  ['Max / TX', fmtNum(selected.maxMintPerTx)],
+                  ['Decimals', String(selected.decimals)],
+                  ['Creator', selected.creator.slice(0, 16) + '...'],
+                  ['Created', timeAgo(selected.createdAt)],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--t4)' }}>{k}</span>
+                    <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)', fontSize: '.6rem' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              {walletAddress && userBal > 0 && (
+                <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(16,185,129,.06)', borderRadius: 8, fontSize: '.66rem' }}>
+                  Your balance: <strong style={{ color: 'var(--g)', fontFamily: 'var(--fm)' }}>{fmtNum(userBal)} {selected.symbol}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* ── Mint Panel ── */}
+            {!grad ? (
+              <div className="P" style={{ padding: 14, marginBottom: 12 }}>
+                <div className="Lb" style={{ marginBottom: 8 }}>Public Mint</div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  <input type="text" inputMode="numeric" value={mintAmt} onChange={e => setMintAmt(e.target.value.replace(/[^0-9.]/g, ''))}
+                    placeholder={`Amount (max ${fmtNum(selected.maxMintPerTx)})`}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 12, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.8rem', fontFamily: 'var(--fm)', outline: 'none' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                  {[1000, 10000, 100000, selected.maxMintPerTx].filter(v => v > 0).map((v, i) => (
+                    <button key={i} onClick={() => setMintAmt(String(v))}
+                      style={{ flex: 1, padding: '5px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.56rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
+                      {v === selected.maxMintPerTx ? 'MAX' : fmtNum(v)}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={handleMint} disabled={minting || !mintAmt}
+                  className="lbtn" style={{ width: '100%', opacity: minting ? 0.6 : 1 }}>
+                  {minting ? mintStep || 'Minting...' : walletAddress ? `Mint ${selected.symbol}` : 'Connect Wallet'}
+                </button>
+                {!minting && mintStep && (
+                  <div style={{ marginTop: 6, fontSize: '.62rem', color: mintStep.includes('Minted') ? 'var(--g)' : '#ef4444', textAlign: 'center' }}>
+                    {mintStep}
+                  </div>
+                )}
+                <div style={{ marginTop: 8, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
+                  {isReal ? 'Real on-chain publicMint \u00b7 Costs ~1K sats BTC gas' : 'Demo token \u2014 deploy a real contract to mint on-chain'}
+                </div>
+              </div>
+            ) : (
+              <div className="P" style={{ padding: 14, marginBottom: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>&#x1F393;</div>
+                <div style={{ fontWeight: 700, color: 'var(--g)', fontSize: '.82rem', marginBottom: 4 }}>Graduated!</div>
+                <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>
+                  Public mint complete. Trade on <strong>Swap</strong> page via MotoSwap AMM.
+                </div>
+              </div>
+            )}
+
+            {/* ── Trade ── */}
+            <div className="P" style={{ padding: 14, marginBottom: 12 }}>
+              <div className="Lb" style={{ marginBottom: 8 }}>Trade</div>
+              <div style={{ fontSize: '.7rem', color: 'var(--t3)', lineHeight: 1.6 }}>
+                <div style={{ marginBottom: 8 }}>
+                  Trade this token on the <strong>Swap</strong> page using MotoSwap AMM pools.
+                  After graduation, full trading is available via liquidity pools.
+                </div>
+                {isReal && selected.txHash && (
+                  <a href={`https://testnet.opnet.org/tx/${selected.txHash}`} target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'var(--c2)', textDecoration: 'none', fontSize: '.62rem' }}>
+                    View deploy TX on explorer &#x2197;
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* ── Recent Activity ── */}
+            <div className="P" style={{ padding: 14 }}>
+              <div className="Lb" style={{ marginBottom: 8 }}>Recent Activity</div>
+              <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                {selected.trades.slice().reverse().slice(0, 15).map(tr => (
+                  <div key={tr.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.62rem' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ color: 'var(--g)', fontWeight: 700 }}>MINT</span>
+                      <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{fmtNum(tr.amount)} {selected.symbol}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, color: 'var(--t4)' }}>
+                      <span>{tr.wallet.slice(0, 8)}...</span>
+                      <span>{timeAgo(tr.timestamp)}</span>
+                    </div>
+                  </div>
+                ))}
+                {selected.trades.length === 0 && (
+                  <div style={{ color: 'var(--t4)', fontSize: '.68rem', textAlign: 'center', padding: 16 }}>
+                    No mints yet. Be the first!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Deploy Modal */}
+      <DeployModal open={deployOpen} onClose={() => setDeployOpen(false)} onCreated={handleCreated} />
     </div>
   );
 };

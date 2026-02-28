@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address } from '@btc-vision/transaction';
-import { networks } from '@btc-vision/bitcoin';
+import { BinaryWriter } from '@btc-vision/transaction';
+import { networks, Transaction } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
@@ -16,6 +17,20 @@ import {
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
 import LiquidityModal from './LiquidityModal';
+
+type SwapMainTab = 'swap' | 'pools';
+
+const LP_API = import.meta.env.VITE_LP_API || 'http://188.137.250.160:3457';
+
+interface UserPool {
+  address: string;
+  tokenA: string;
+  tokenB: string;
+  symbolA: string;
+  symbolB: string;
+  deployedAt: number;
+  deployer: string;
+}
 
 /** OPNet testnet network config */
 const NETWORK = networks.testnet;
@@ -93,6 +108,11 @@ const TOKENS: Token[] = [
 
 type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 
+const POOL_CREATE_ABI: BitcoinInterfaceAbi = [
+  { name: 'getTokens', inputs: [], outputs: [{ name: 'tokenA', type: ABIDataTypes.ADDRESS }, { name: 'tokenB', type: ABIDataTypes.ADDRESS }], type: BitcoinAbiTypes.Function },
+  { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+];
+
 const SwapUI: React.FC = () => {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
 
@@ -114,6 +134,20 @@ const SwapUI: React.FC = () => {
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
   const [history, setHistory] = useState<TxRecord[]>([]);
+  const [mainTab, setMainTab] = useState<SwapMainTab>('swap');
+  const [userPools, setUserPools] = useState<UserPool[]>(() => {
+    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch { return []; }
+  });
+  const [createPoolOpen, setCreatePoolOpen] = useState(false);
+  const [poolTokenA, setPoolTokenA] = useState('');
+  const [poolTokenB, setPoolTokenB] = useState('');
+  const [poolSymA, setPoolSymA] = useState('');
+  const [poolSymB, setPoolSymB] = useState('');
+  const [poolSeedA, setPoolSeedA] = useState('');
+  const [poolSeedB, setPoolSeedB] = useState('');
+  const [deployingPool, setDeployingPool] = useState(false);
+  const [poolDeployStep, setPoolDeployStep] = useState('');
+  const [poolDeployResult, setPoolDeployResult] = useState<{ ok: boolean; msg: string; address?: string } | null>(null);
   const [showLiquidity, setShowLiquidity] = useState(false);
   const [lpMineAmt, setLpMineAmt] = useState('');
   const [lpVibeAmt, setLpVibeAmt] = useState('');
@@ -397,6 +431,74 @@ const SwapUI: React.FC = () => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
   }, [fromIdx, toIdx]);
 
+  /** Deploy a new SimplePool for any token pair */
+  const createPool = useCallback(async () => {
+    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!poolTokenA || !poolTokenB) return;
+    if (poolTokenA === poolTokenB) { setPoolDeployResult({ ok: false, msg: 'Token A and B must be different' }); return; }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const inst = walletInstance as any;
+    const web3 = inst.web3 || inst;
+    if (!web3?.deployContract) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
+
+    setDeployingPool(true); setPoolDeployResult(null);
+    try {
+      setPoolDeployStep('Loading SimplePool bytecode...');
+      const base = import.meta.env.BASE_URL || '/';
+      const resp = await fetch(`${base}wasm/SimplePool.wasm`);
+      if (!resp.ok) throw new Error('Failed to load SimplePool.wasm');
+      const bytecode = new Uint8Array(await resp.arrayBuffer());
+
+      setPoolDeployStep('Encoding token addresses...');
+      const writer = new BinaryWriter();
+      writer.writeAddress(Address.fromString(poolTokenA));
+      writer.writeAddress(Address.fromString(poolTokenB));
+
+      setPoolDeployStep('Fetching UTXOs...');
+      const provider2 = new JSONRpcProvider(RPC_URL, NETWORK);
+      const utxos = await provider2.utxoManager.getUTXOs({ address: walletAddress });
+      if (!utxos?.length) throw new Error('No UTXOs. Get testnet BTC from faucet.');
+
+      setPoolDeployStep('Sign in your wallet...');
+      const result = await web3.deployContract({
+        bytecode, calldata: writer.getBuffer(), utxos, from: walletAddress,
+        feeRate: 10, priorityFee: 10_000n, gasSatFee: 100_000n,
+        revealMLDSAPublicKey: true, linkMLDSAPublicKeyToAddress: true,
+      });
+
+      setPoolDeployStep('Broadcasting...');
+      const [fundingTx, deployTx] = result.transaction;
+      if (fundingTx) await provider2.sendRawTransaction(fundingTx, false);
+      if (deployTx) await provider2.sendRawTransaction(deployTx, false);
+
+      let txid = '';
+      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch {}
+
+      const newPool: UserPool = {
+        address: result.contractAddress || txid,
+        tokenA: poolTokenA, tokenB: poolTokenB,
+        symbolA: poolSymA || poolTokenA.slice(-6).toUpperCase(),
+        symbolB: poolSymB || poolTokenB.slice(-6).toUpperCase(),
+        deployedAt: Date.now(), deployer: walletAddress,
+      };
+
+      const updatedPools = [...userPools, newPool];
+      setUserPools(updatedPools);
+      localStorage.setItem('hub_user_pools', JSON.stringify(updatedPools));
+
+      setPoolDeployResult({ ok: true, msg: `Pool deployed at ${newPool.address}`, address: newPool.address });
+      setCreatePoolOpen(false);
+      setPoolTokenA(''); setPoolTokenB(''); setPoolSymA(''); setPoolSymB('');
+      setPoolSeedA(''); setPoolSeedB('');
+    } catch (e) {
+      setPoolDeployResult({ ok: false, msg: e instanceof Error ? e.message : 'Deployment failed' });
+    } finally {
+      setDeployingPool(false);
+      setPoolDeployStep('');
+    }
+  }, [walletAddress, walletInstance, poolTokenA, poolTokenB, poolSymA, poolSymB, userPools, openConnectModal]);
+
   const selectStyle: React.CSSProperties = {
     background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: '14px',
     color: 'var(--w)', padding: '8px 12px', fontSize: '.82rem', fontWeight: 700,
@@ -411,9 +513,172 @@ const SwapUI: React.FC = () => {
 
   const connected = !!walletAddress;
 
+  const iStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', borderRadius: 12,
+    background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
+    fontSize: '.78rem', fontFamily: 'var(--fm)', outline: 'none', boxSizing: 'border-box' as const,
+  };
+
   return (
     <div>
-      <div style={{ maxWidth: 460, margin: '0 auto' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+        {/* ── Main tabs ── */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+          {(['swap', 'pools'] as SwapMainTab[]).map(t => (
+            <button key={t} onClick={() => setMainTab(t)}
+              style={{ padding: '9px 22px', borderRadius: 12, border: '1px solid ' + (mainTab === t ? 'rgba(247,147,26,.4)' : 'var(--bd)'),
+                background: mainTab === t ? 'rgba(247,147,26,.08)' : 'var(--bg3)',
+                color: mainTab === t ? 'var(--o)' : 'var(--t3)',
+                fontSize: '.8rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 700, textTransform: 'capitalize' as const }}>
+              {t === 'swap' ? 'Swap' : 'Pools'}
+            </button>
+          ))}
+        </div>
+
+        {/* ══════════════════════════════════
+             POOLS TAB
+           ══════════════════════════════════ */}
+        {mainTab === 'pools' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Liquidity Pools</div>
+                <div style={{ fontSize: '.66rem', color: 'var(--t4)', marginTop: 2 }}>Create a pool for any OP20 token pair. Earn 0.3% fees on every swap.</div>
+              </div>
+              <button onClick={() => setCreatePoolOpen(v => !v)} className="lbtn" style={{ padding: '9px 16px', fontSize: '.74rem', flexShrink: 0 }}>
+                + Create Pool
+              </button>
+            </div>
+
+            {/* Create pool form */}
+            {createPoolOpen && (
+              <div className="P" style={{ padding: 18, marginBottom: 14 }}>
+                <div className="Lb" style={{ marginBottom: 12 }}>New Liquidity Pool</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <label style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Token A Address</label>
+                    <input style={iStyle} value={poolTokenA} onChange={e => setPoolTokenA(e.target.value)} placeholder="opt1sq..." />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Token B Address</label>
+                    <input style={iStyle} value={poolTokenB} onChange={e => setPoolTokenB(e.target.value)} placeholder="opt1sq..." />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Symbol A (optional)</label>
+                    <input style={iStyle} value={poolSymA} onChange={e => setPoolSymA(e.target.value)} placeholder="e.g. MINE" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Symbol B (optional)</label>
+                    <input style={iStyle} value={poolSymB} onChange={e => setPoolSymB(e.target.value)} placeholder="e.g. VIBE" />
+                  </div>
+                </div>
+
+                {poolDeployResult && (
+                  <div style={{ padding: '9px 12px', borderRadius: 10, fontSize: '.68rem', marginBottom: 10,
+                    background: poolDeployResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+                    color: poolDeployResult.ok ? 'var(--g)' : '#ef4444',
+                    border: '1px solid ' + (poolDeployResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)') }}>
+                    {poolDeployResult.msg}
+                    {poolDeployResult.address && (
+                      <a href={getContractOpscanUrl(poolDeployResult.address)} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'block', marginTop: 4, color: 'var(--c2)', fontSize: '.62rem' }}>View on Explorer →</a>
+                    )}
+                  </div>
+                )}
+
+                <button onClick={createPool} disabled={deployingPool || !poolTokenA || !poolTokenB}
+                  className="lbtn" style={{ width: '100%', opacity: deployingPool ? 0.6 : 1 }}>
+                  {deployingPool ? (poolDeployStep || 'Deploying...') : connected ? 'Deploy SimplePool' : 'Connect Wallet'}
+                </button>
+                <div style={{ marginTop: 8, fontSize: '.56rem', color: 'var(--t4)', textAlign: 'center' }}>
+                  Deploys SimplePool.wasm on-chain. Costs ~100K sats gas. Earn 0.3% on all swaps in your pool.
+                </div>
+              </div>
+            )}
+
+            {/* System pool — always shown */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: '.6rem', color: 'var(--t4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>System Pools</div>
+              <div style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: '.84rem' }}>⛏️ MINE / ⚡ VIBE</span>
+                    <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: '.52rem', background: 'rgba(16,185,129,.1)', color: 'var(--g)', fontWeight: 700 }}>LIVE</span>
+                  </div>
+                  <span style={{ fontSize: '.62rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>Fee: 0.3%</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: '.66rem' }}>
+                  <div style={{ textAlign: 'center', padding: '8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                    <div style={{ color: 'var(--t4)', marginBottom: 2 }}>MINE</div>
+                    <div style={{ fontFamily: 'var(--fm)', color: 'var(--t2)', fontWeight: 600 }}>{reserveA.toLocaleString()}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                    <div style={{ color: 'var(--t4)', marginBottom: 2 }}>VIBE</div>
+                    <div style={{ fontFamily: 'var(--fm)', color: 'var(--t2)', fontWeight: 600 }}>{reserveB.toLocaleString()}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                    <div style={{ color: 'var(--t4)', marginBottom: 2 }}>Rate</div>
+                    <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600 }}>{reserveA > 0 ? (reserveB / reserveA).toFixed(1) : '—'}</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+                  <button onClick={() => { setMainTab('swap'); setShowLiquidity(true); }}
+                    style={{ flex: 1, padding: '7px', borderRadius: 9, border: '1px solid rgba(14,165,233,.2)', background: 'rgba(14,165,233,.05)', color: '#0ea5e9', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>
+                    💧 Add Liquidity
+                  </button>
+                  <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
+                    style={{ flex: 1, padding: '7px', borderRadius: 9, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t4)', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    OPScan ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* User-created pools */}
+            {userPools.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: '.6rem', color: 'var(--t4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>Your Pools</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {userPools.map(pool => (
+                    <div key={pool.address} style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontWeight: 700, fontSize: '.82rem' }}>{pool.symbolA} / {pool.symbolB}</span>
+                        <span style={{ fontSize: '.56rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
+                          {new Date(pool.deployedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '.6rem', color: 'var(--t4)', wordBreak: 'break-all', marginBottom: 8, fontFamily: 'var(--fm)' }}>
+                        {pool.address}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <a href={getContractOpscanUrl(pool.address)} target="_blank" rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '6px', borderRadius: 8, border: '1px solid var(--bd)', color: 'var(--t4)', fontSize: '.64rem', textAlign: 'center', textDecoration: 'none', fontFamily: 'var(--ff)' }}>
+                          View on OPScan ↗
+                        </a>
+                        <button onClick={() => { const u = userPools.filter(p => p.address !== pool.address); setUserPools(u); localStorage.setItem('hub_user_pools', JSON.stringify(u)); }}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', color: '#ef4444', fontSize: '.64rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {userPools.length === 0 && !createPoolOpen && (
+              <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--t4)', fontSize: '.78rem' }}>
+                <div style={{ fontSize: '2rem', marginBottom: 8 }}>💧</div>
+                No user pools yet. Create the first one for your token!
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════
+             SWAP TAB
+           ══════════════════════════════════ */}
+        {mainTab === 'swap' && (<>
         <div style={{
           padding: '24px 22px', position: 'relative', borderRadius: 22,
           background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)',
@@ -670,6 +935,7 @@ const SwapUI: React.FC = () => {
             ))}
           </div>
         )}
+        </>)} {/* end mainTab === 'swap' */}
       </div>
     </div>
   );

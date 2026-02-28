@@ -5,7 +5,7 @@
 import type { LaunchToken, TradeRecord } from './types';
 
 const STORE_KEY = 'hub_launchpad_tokens';
-const STORE_VERSION = 2;
+const STORE_VERSION = 3;
 
 /* ─── Seed tokens (pre-populated) ─── */
 function seedTokens(): LaunchToken[] {

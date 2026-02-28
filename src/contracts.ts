@@ -87,18 +87,19 @@ export const STAKING_SELECTORS = {
 } as const;
 
 /** P2PMarket — on-chain P2P orderbook (Verify-Don't-Custody pattern) */
-export const MARKET_ADDRESS = 'opt1sqqzv8grwu8y7qzvn8zx5avelfvhc02996qw3s7r3';
-export const MARKET_PUBKEY = '0x9388a3ee4c4efd7e04e362ca96e666dde17e755bcffd0f108ced82d591425ecb';
-export const MARKET_HEX = '9388a3ee4c4efd7e04e362ca96e666dde17e755bcffd0f108ced82d591425ecb';
+export const MARKET_ADDRESS = 'opt1sqpggj6rdnmwuwewnhp0etmckv8rhurf7ace65dd7';
+export const MARKET_PUBKEY = '0xe3523f3c7aea4349d34e710e4650de421e7dd800435414191f34f017124a3ca1';
+export const MARKET_HEX = 'e3523f3c7aea4349d34e710e4650de421e7dd800435414191f34f017124a3ca1';
 
-/** P2PMarket selectors (from opnet-transform build output) */
+/** P2PMarket v5 selectors — trustless buy orders (accept + execute) */
 export const MARKET_SELECTORS = {
     createSellOrder: 0x35db31a0,   // createSellOrder(address,uint256,uint256) → orderId
-    fillSellOrder: 0x8d7e1c91,     // fillSellOrder(uint256,uint256) → success (buyer sends BTC output to seller)
+    fillSellOrder: 0x8d7e1c91,     // fillSellOrder(uint256,uint256) → success (buyer sends BTC to seller)
     createBuyOrder: 0x310ce017,    // createBuyOrder(address,uint256,uint256) → orderId
-    fillBuyOrder: 0x1a6a2042,      // fillBuyOrder(uint256,uint256) → success (seller sends tokens, buyer BTC verified)
+    acceptBuyOrder: 0x9736c4d9,    // acceptBuyOrder(uint256) → success (seller locks tokens)
+    executeBuyOrder: 0x1e08843b,   // executeBuyOrder(uint256) → success (buyer pays BTC, gets tokens)
     cancelOrder: 0xeb5aa830,       // cancelOrder(uint256) → success
-    getOrder: 0xe9489555,          // getOrder(uint256) → (type,status,creator,token,amount,filled,price)
+    getOrder: 0xe9489555,          // getOrder(uint256) → (type,status,creator,token,amount,filled,price,seller)
     getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
 } as const;
 

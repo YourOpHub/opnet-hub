@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { networks } from '@btc-vision/bitcoin';
 import {
@@ -6,9 +6,10 @@ import {
   TransactionOutputFlags,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
-import { MARKET_ADDRESS, MARKET_PUBKEY, MARKET_HEX, MARKET_SELECTORS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { MARKET_ADDRESS, MARKET_PUBKEY, MARKET_HEX, MARKET_SELECTORS, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 
 const NETWORK = networks.testnet;
@@ -31,9 +32,11 @@ const MARKET_ABI: BitcoinInterfaceAbi = [
     { name: 'amount', type: ABIDataTypes.UINT256 },
     { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
   ], outputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'fillBuyOrder', inputs: [
+  { name: 'acceptBuyOrder', inputs: [
     { name: 'orderId', type: ABIDataTypes.UINT256 },
-    { name: 'fillAmount', type: ABIDataTypes.UINT256 },
+  ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
+  { name: 'executeBuyOrder', inputs: [
+    { name: 'orderId', type: ABIDataTypes.UINT256 },
   ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
   { name: 'cancelOrder', inputs: [
     { name: 'orderId', type: ABIDataTypes.UINT256 },
@@ -48,6 +51,7 @@ const MARKET_ABI: BitcoinInterfaceAbi = [
     { name: 'amount', type: ABIDataTypes.UINT256 },
     { name: 'filled', type: ABIDataTypes.UINT256 },
     { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
+    { name: 'seller', type: ABIDataTypes.UINT256 },
   ], type: BitcoinAbiTypes.Function },
   { name: 'getNextOrderId', inputs: [], outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
@@ -57,6 +61,7 @@ interface Order {
   id: string;
   type: 'sell' | 'buy';
   creator: string;
+  seller: string; // for accepted buy orders — the seller who locked tokens
   tokenAddress: string;
   tokenSymbol: string;
   tokenName: string;
@@ -65,18 +70,32 @@ interface Order {
   pricePerToken: number;
   totalPrice: number;
   createdAt: number;
-  status: 'active' | 'filled' | 'cancelled';
+  status: 'active' | 'filled' | 'cancelled' | 'accepted';
   fills: { id: string; filler: string; amount: number; price: number; timestamp: number }[];
 }
 
 interface MarketToken {
   address: string;
+  pubkey: string;
   symbol: string;
   name: string;
+  decimals: number;
   sellCount: number;
   buyCount: number;
   totalVolume: number;
 }
+
+/** Hardcoded known tokens — always available even when LP_API is offline */
+const KNOWN_TOKENS: MarketToken[] = Object.values(TESTNET_CONTRACTS).map(t => ({
+  address: t.address,
+  pubkey: t.pubkey,
+  symbol: t.symbol,
+  name: t.name,
+  decimals: t.decimals,
+  sellCount: 0,
+  buyCount: 0,
+  totalVolume: 0,
+}));
 
 const iStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 12,
@@ -130,20 +149,23 @@ const Marketplace: React.FC = () => {
           const p = r.properties;
           const orderType = Number(p.orderType ?? 0n);
           const status = Number(p.status ?? 0n);
-          if (status !== 1) continue; // only active
+          // Show active (1) and accepted (4) orders
+          if (status !== 1 && status !== 4) continue;
           const tokenHex = (p.token ?? 0n).toString(16).padStart(64, '0');
-          // If filtering by token, match the hex
           if (tokenFilter) {
-            const filterHex = tokenFilter.replace('opt1sq', ''); // rough match
+            const filterHex = tokenFilter.replace('opt1sq', '');
             if (!tokenHex.includes(filterHex.slice(-16))) continue;
           }
           const amount = Number(p.amount ?? 0n) / 1e8;
           const filled = Number(p.filled ?? 0n) / 1e8;
           const price = Number(p.pricePerToken ?? 0n);
+          const statusStr = status === 1 ? 'active' : 'accepted';
+          const sellerHex = (p.seller ?? 0n).toString(16).padStart(64, '0');
           chainOrders.push({
             id: String(i),
             type: orderType === 1 ? 'sell' : 'buy',
             creator: (p.creator ?? 0n).toString(16).padStart(64, '0'),
+            seller: sellerHex,
             tokenAddress: tokenHex,
             tokenSymbol: '???',
             tokenName: 'OP20 Token',
@@ -151,7 +173,7 @@ const Marketplace: React.FC = () => {
             pricePerToken: price,
             totalPrice: (amount - filled) * price,
             createdAt: Date.now() / 1000,
-            status: 'active',
+            status: statusStr,
             fills: [],
           });
         } catch { /* skip unreadable orders */ }
@@ -160,12 +182,28 @@ const Marketplace: React.FC = () => {
     } catch { return []; }
   }, [provider]);
 
-  // Fetch token list
+  // Fetch token list (server first, hardcoded fallback)
   const fetchTokens = useCallback(async () => {
     try {
-      const res = await fetch(`${LP_API}/market/tokens`, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) setTokenList((await res.json()).tokens || []);
-    } catch { /* offline — no token list available */ }
+      const res = await fetch(`${LP_API}/market/tokens`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const serverTokens = (await res.json()).tokens || [];
+        // Merge server tokens with known tokens (ensure pubkey is present)
+        const merged = serverTokens.map((st: MarketToken) => {
+          const known = KNOWN_TOKENS.find(k => k.address === st.address);
+          return { ...st, pubkey: st.pubkey || known?.pubkey || '', decimals: st.decimals || known?.decimals || 8 };
+        });
+        // Add known tokens not in server list
+        for (const kt of KNOWN_TOKENS) {
+          if (!merged.find((m: MarketToken) => m.address === kt.address)) merged.push(kt);
+        }
+        setTokenList(merged);
+        setLoading(false);
+        return;
+      }
+    } catch { /* server offline */ }
+    // Fallback: use hardcoded known tokens
+    setTokenList(KNOWN_TOKENS);
     setLoading(false);
   }, []);
 
@@ -200,10 +238,10 @@ const Marketplace: React.FC = () => {
   // Currently selected token info
   const selInfo = tokenList.find(t => t.address === selectedToken);
 
-  // Sell orders / buy orders for current token
+  // Sell orders / buy orders for current token (include accepted buy orders too)
   const sellOrders = orders.filter(o => o.type === 'sell' && o.status === 'active').sort((a, b) => a.pricePerToken - b.pricePerToken);
-  const buyOrders = orders.filter(o => o.type === 'buy' && o.status === 'active').sort((a, b) => b.pricePerToken - a.pricePerToken);
-  const myOrders = orders.filter(o => o.creator === walletAddress);
+  const buyOrders = orders.filter(o => o.type === 'buy' && (o.status === 'active' || o.status === 'accepted')).sort((a, b) => b.pricePerToken - a.pricePerToken);
+  const myOrders = orders.filter(o => o.creator === walletAddress || o.seller === walletAddress);
 
   // Create order — ON-CHAIN via P2PMarket contract
   const handleCreate = useCallback(async () => {
@@ -217,10 +255,14 @@ const Marketplace: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
-      const amountU256 = BigInt(Math.round(amt * 1e8)); // token amount in smallest units
+      const decimals = selInfo?.decimals || 8;
+      const amountU256 = BigInt(Math.round(amt * Math.pow(10, decimals))); // token amount in smallest units
       const priceU256 = BigInt(Math.round(ppt));   // price per token in raw sats (integer)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tokenAddr = selectedToken as any;
+
+      // SDK expects Address object, not string — convert pubkey to Address
+      const pubkey = selInfo?.pubkey;
+      if (!pubkey) throw new Error('Token pubkey unknown — cannot create order. Select a known token.');
+      const tokenAddr = Address.fromString(pubkey);
 
       if (orderType === 'sell') {
         // Step 1: Ensure allowance for P2PMarket to pull tokens
@@ -318,26 +360,15 @@ const Marketplace: React.FC = () => {
         (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
         await (sim as CallResult).sendTransaction(tp);
       } else {
-        // Seller fills buy order: must approve tokens + include BTC output
-        setFillStep('Approving tokens...');
-        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, fillAmtU256, provider, senderAddr as unknown as string, walletAddress, setFillStep);
+        // Seller accepts buy order: approve tokens → contract locks them
+        // No BTC in this step — buyer will pay BTC later via executeBuyOrder
+        setFillStep('Approving tokens for marketplace...');
+        const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
+        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
 
-        const btcPaymentSats = BigInt(Math.ceil(fillAmt * order.pricePerToken)); // fillAmt * sats/token
-
-        market.setTransactionDetails({
-          inputs: [],
-          outputs: [{
-            to: senderAddr as unknown as string, // seller gets paid in this tx
-            value: btcPaymentSats,
-            index: 1,
-            flags: TransactionOutputFlags.hasTo,
-            scriptPubKey: undefined,
-          }],
-        });
-
-        setFillStep('Accepting buy order on-chain...');
+        setFillStep('Accepting buy order (locking tokens)...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sim = await withRetry(() => (market as any).fillBuyOrder(BigInt(orderId), fillAmtU256));
+        const sim = await withRetry(() => (market as any).acceptBuyOrder(BigInt(orderId)));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
@@ -365,6 +396,92 @@ const Marketplace: React.FC = () => {
       setTimeout(() => setFillStep(''), 5000);
     } finally { setFilling(false); }
   }, [walletAddress, senderAddr, orders, provider, openConnectModal, fetchOrders]);
+
+  // Execute accepted buy order — buyer pays BTC, gets tokens (TRUSTLESS)
+  const handleExecuteBuyOrder = useCallback(async (orderId: string) => {
+    if (!walletAddress || !senderAddr) { openConnectModal(); return; }
+    setFilling(true); setFillStep('Preparing BTC payment...');
+    try {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) throw new Error('Order not found');
+      if (order.status !== 'accepted') throw new Error('Order not accepted yet');
+
+      const remaining = order.amount - order.amountFilled;
+      const btcPaymentSats = BigInt(Math.ceil(remaining * order.pricePerToken));
+      const sellerAddress = order.seller; // hex address of seller who locked tokens
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
+
+      setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
+
+      // Set transaction details so contract can verify BTC output during simulation
+      market.setTransactionDetails({
+        inputs: [],
+        outputs: [{
+          to: sellerAddress,
+          value: btcPaymentSats,
+          index: 1,
+          flags: TransactionOutputFlags.hasTo,
+          scriptPubKey: undefined,
+        }],
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sim = await withRetry(() => (market as any).executeBuyOrder(BigInt(orderId)));
+      if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
+
+      const tp = await buildTxParams(provider, walletAddress);
+      (tp as Record<string, unknown>).extraOutputs = [{
+        address: sellerAddress,
+        value: Number(btcPaymentSats),
+      }];
+      (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
+      await (sim as CallResult).sendTransaction(tp);
+
+      setFillStep('Waiting for confirmation...');
+      await waitForNextBlock(provider, setFillStep);
+
+      setFillStep(''); setFillId(null);
+      setMsg('Buy order executed! Tokens received, BTC sent to seller.');
+      setTimeout(() => setMsg(''), 5000);
+      await fetchOrders();
+    } catch (e) {
+      setFillStep(formatTxError(e));
+      setTimeout(() => setFillStep(''), 5000);
+    } finally { setFilling(false); }
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, fetchOrders]);
+
+  // Auto-detect ACCEPTED buy orders and auto-execute (buyer pays BTC via wallet popup)
+  const autoExecuteRef = useRef(false);
+  useEffect(() => {
+    if (!walletAddress || !senderAddr || !selectedToken) return;
+    const interval = setInterval(async () => {
+      if (autoExecuteRef.current || filling) return;
+      const freshOrders = await fetchOrdersOnChain(selectedToken);
+      const myAccepted = freshOrders.find(
+        o => o.type === 'buy' && o.status === 'accepted' && o.creator === walletAddress
+      );
+      if (myAccepted) {
+        autoExecuteRef.current = true;
+        setOrders(freshOrders);
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Buy Order Accepted!', { body: 'A seller locked tokens. Approve BTC payment in your wallet.' });
+        }
+        setMsg('Seller accepted your buy order! Approve BTC payment...');
+        await handleExecuteBuyOrder(myAccepted.id);
+        autoExecuteRef.current = false;
+      }
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [walletAddress, senderAddr, selectedToken, filling, fetchOrdersOnChain, handleExecuteBuyOrder]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Cancel order — ON-CHAIN
   const handleCancel = useCallback(async (orderId: string) => {
@@ -395,13 +512,27 @@ const Marketplace: React.FC = () => {
     }
   }, [walletAddress, senderAddr, provider, fetchOrders, walletAddress]);
 
-  // Select token from search input (direct address entry)
+  // Select token from search input (direct address entry or symbol search)
   const handleSearchSelect = () => {
+    const q = search.trim().toLowerCase();
+    // Match by symbol first
+    const bySymbol = tokenList.find(t => t.symbol.toLowerCase() === q);
+    if (bySymbol) { setSelectedToken(bySymbol.address); return; }
+    // Match by address
     if (search.startsWith('opt1sq') && search.length > 20) {
       setSelectedToken(search);
       // Add to token list if not present
       if (!tokenList.find(t => t.address === search)) {
-        setTokenList(prev => [...prev, { address: search, symbol: search.slice(-6).toUpperCase(), name: 'OP20 Token', sellCount: 0, buyCount: 0, totalVolume: 0 }]);
+        // Try to find pubkey from known tokens
+        const known = KNOWN_TOKENS.find(k => k.address === search);
+        setTokenList(prev => [...prev, {
+          address: search,
+          pubkey: known?.pubkey || '',
+          symbol: known?.symbol || search.slice(-6).toUpperCase(),
+          name: known?.name || 'OP20 Token',
+          decimals: known?.decimals || 8,
+          sellCount: 0, buyCount: 0, totalVolume: 0,
+        }]);
       }
     }
   };
@@ -491,18 +622,25 @@ const Marketplace: React.FC = () => {
             })}
           </div>
 
-          {/* BUY ORDERS (bids) */}
+          {/* BUY ORDERS (bids) — trustless 3-step flow */}
           <div className="P" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--g)', marginBottom: 10 }}>Buy Orders (Bids)</div>
+            <div style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--g)', marginBottom: 10 }}>Buy Orders (Bids) <span style={{ fontSize: '.56rem', fontWeight: 400, color: 'var(--t4)' }}>Trustless</span></div>
             {buyOrders.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 20, color: 'var(--t4)', fontSize: '.72rem' }}>No buy orders</div>
             ) : buyOrders.map(o => {
               const remaining = o.amount - o.amountFilled;
               const pct = o.amount > 0 ? (o.amountFilled / o.amount) * 100 : 0;
+              const isMyBuyOrder = o.creator === walletAddress;
+              const isAccepted = o.status === 'accepted';
               return (
                 <div key={o.id} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.68rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ color: 'var(--t2)' }}>Wants: {fmtNum(remaining)} <span style={{ color: 'var(--t4)', fontSize: '.58rem' }}>/ {fmtNum(o.amount)}</span></span>
+                    <span style={{ color: 'var(--t2)' }}>
+                      Wants: {fmtNum(remaining)} <span style={{ color: 'var(--t4)', fontSize: '.58rem' }}>/ {fmtNum(o.amount)}</span>
+                      {isAccepted && (
+                        <span style={{ marginLeft: 6, padding: '1px 5px', borderRadius: 4, background: 'rgba(247,147,26,.12)', color: 'var(--o)', fontSize: '.5rem', fontWeight: 700 }}>ACCEPTED</span>
+                      )}
+                    </span>
                     <span style={{ color: 'var(--g)', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken.toFixed(2)} sat</span>
                   </div>
                   {pct > 0 && (
@@ -512,34 +650,34 @@ const Marketplace: React.FC = () => {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{o.creator.slice(0, 10)}... &middot; {timeAgo(o.createdAt)}</span>
-                    {o.creator === walletAddress ? (
-                      <button onClick={() => handleCancel(o.id)}
-                        style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {fillId === o.id ? (
-                          <>
-                            <input value={fillAmount} onChange={e => setFillAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                              placeholder={`Max ${fmtNum(remaining)}`}
-                              style={{ ...iStyle, width: 90, padding: '3px 6px', fontSize: '.6rem' }} />
-                            <button onClick={() => handleFill(o.id, parseFloat(fillAmount) || remaining)} disabled={filling}
-                              style={{ padding: '3px 8px', borderRadius: 6, background: 'rgba(247,147,26,.1)', border: '1px solid rgba(247,147,26,.2)', color: 'var(--o)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>
-                              {filling ? '...' : 'OK'}
-                            </button>
-                            <button onClick={() => { setFillId(null); setFillAmount(''); }}
-                              style={{ padding: '3px 6px', borderRadius: 6, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t4)', fontSize: '.58rem', cursor: 'pointer' }}>X</button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => handleFill(o.id)} disabled={filling}
-                              style={{ padding: '3px 10px', borderRadius: 6, background: 'rgba(247,147,26,.1)', border: '1px solid rgba(247,147,26,.2)', color: 'var(--o)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>Sell All</button>
-                            <button onClick={() => setFillId(o.id)}
-                              style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--bd)', background: 'rgba(255,255,255,.03)', color: 'var(--t3)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Partial</button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {isAccepted && isMyBuyOrder ? (
+                        <>
+                          <button onClick={() => handleExecuteBuyOrder(o.id)} disabled={filling}
+                            className="lbtn" style={{ padding: '3px 10px', fontSize: '.58rem' }}>
+                            {filling ? '...' : `Pay ${fmtNum(Math.ceil(remaining * o.pricePerToken))} sats`}
+                          </button>
+                          <button onClick={() => handleCancel(o.id)}
+                            style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
+                        </>
+                      ) : isMyBuyOrder || (isAccepted && o.seller === walletAddress) ? (
+                        <button onClick={() => handleCancel(o.id)}
+                          style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
+                      ) : !isAccepted ? (
+                        <button onClick={() => handleFill(o.id)} disabled={filling}
+                          style={{ padding: '3px 10px', borderRadius: 6, background: 'rgba(247,147,26,.1)', border: '1px solid rgba(247,147,26,.2)', color: 'var(--o)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>
+                          {filling ? '...' : 'Accept (Lock Tokens)'}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '.52rem', color: 'var(--t4)' }}>Awaiting buyer payment</span>
+                      )}
+                    </div>
                   </div>
+                  {isAccepted && !isMyBuyOrder && o.seller !== walletAddress && (
+                    <div style={{ marginTop: 4, fontSize: '.52rem', color: 'var(--t4)', fontStyle: 'italic' }}>
+                      Tokens locked by seller. Waiting for buyer to pay BTC.
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -598,7 +736,7 @@ const Marketplace: React.FC = () => {
           <div style={{ marginTop: 8, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
             {orderType === 'sell'
               ? 'Tokens are locked in the P2PMarket contract on-chain. Buyers pay BTC directly to you.'
-              : 'Your buy intent is stored on-chain. Sellers lock tokens and receive BTC from the buyer.'}
+              : 'Trustless 3-step: 1) You post buy intent → 2) Seller locks tokens in contract → 3) You pay BTC and receive tokens automatically.'}
           </div>
         </div>
 

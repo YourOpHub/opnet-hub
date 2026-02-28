@@ -256,7 +256,7 @@ const Marketplace: React.FC = () => {
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sim = await withRetry(() => (market as any).fillSellOrder(fillAmtU256, fillAmtU256));
+        const sim = await withRetry(() => (market as any).fillSellOrder(BigInt(orderId), fillAmtU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
@@ -287,7 +287,7 @@ const Marketplace: React.FC = () => {
 
         setFillStep('Accepting buy order on-chain...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sim = await withRetry(() => (market as any).fillBuyOrder(fillAmtU256, fillAmtU256));
+        const sim = await withRetry(() => (market as any).fillBuyOrder(BigInt(orderId), fillAmtU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
@@ -322,19 +322,28 @@ const Marketplace: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
-      // We need the on-chain orderId (u256). For now, use a simple mapping.
-      // The server order ID and on-chain ID may differ in dev. Use server for now.
-      // TODO: sync on-chain order IDs with server order IDs
+      const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
+      if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
+      const tp = await buildTxParams(provider, walletAddress);
+      await (sim as CallResult).sendTransaction(tp);
+      await waitForNextBlock(provider);
 
-      // Server cancel
-      await fetch(`${LP_API}/market/cancel`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, creator: walletAddress }),
-        signal: AbortSignal.timeout(5000),
-      });
+      // Notify server indexer
+      try {
+        await fetch(`${LP_API}/market/cancel`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, creator: walletAddress }),
+          signal: AbortSignal.timeout(5000),
+        });
+      } catch { /* indexer optional */ }
       await fetchOrders();
-    } catch { /* ignore */ }
-  }, [walletAddress, senderAddr, provider, fetchOrders]);
+      setMsg('Order cancelled on-chain!');
+      setTimeout(() => setMsg(''), 5000);
+    } catch (e) {
+      setMsg(formatTxError(e));
+      setTimeout(() => setMsg(''), 5000);
+    }
+  }, [walletAddress, senderAddr, provider, fetchOrders, walletAddress]);
 
   // Select token from search input (direct address entry)
   const handleSearchSelect = () => {

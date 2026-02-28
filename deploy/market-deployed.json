@@ -1,0 +1,16 @@
+{
+  "network": "testnet",
+  "contract": "P2PMarket",
+  "address": "opt1sqrzwmjyg7l4tdlltltv9kluf8rg2awtjry52kvjj",
+  "pubkey": "0x4f4097637660a818d052c4194f18a02618d6a055c0b49728d35feb36c137adf2",
+  "selectors": {
+    "createSellOrder": "0xd1a0e789",
+    "fillSellOrder": "0x7a3c6e1d",
+    "createBuyOrder": "0x82b4f956",
+    "acceptBuyOrder": "0xf711ee0b",
+    "cancelOrder": "0xeb5aa830",
+    "getOrder": "0xe9489555",
+    "getNextOrderId": "0xf4920cae"
+  },
+  "deployedAt": "2026-02-28T04:33:37.039Z"
+}

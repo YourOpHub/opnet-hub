@@ -86,6 +86,22 @@ export const STAKING_SELECTORS = {
     setRewardRate: 0x0888d584,
 } as const;
 
+/** P2PMarket — on-chain P2P orderbook (Verify-Don't-Custody pattern) */
+export const MARKET_ADDRESS = 'opt1sqrzwmjyg7l4tdlltltv9kluf8rg2awtjry52kvjj';
+export const MARKET_PUBKEY = '0x4f4097637660a818d052c4194f18a02618d6a055c0b49728d35feb36c137adf2';
+export const MARKET_HEX = '4f4097637660a818d052c4194f18a02618d6a055c0b49728d35feb36c137adf2';
+
+/** P2PMarket selectors (from opnet-transform build output) */
+export const MARKET_SELECTORS = {
+    createSellOrder: 0xd1a0e789,   // createSellOrder(address,uint256,uint256) → orderId
+    fillSellOrder: 0x7a3c6e1d,     // fillSellOrder(uint256,uint256) → success (buyer sends BTC output to seller)
+    createBuyOrder: 0x82b4f956,    // createBuyOrder(address,uint256,uint256) → orderId
+    fillBuyOrder: 0xf711ee0b,      // fillBuyOrder(uint256,uint256) → success (seller sends tokens, buyer BTC verified)
+    cancelOrder: 0xeb5aa830,       // cancelOrder(uint256) → success
+    getOrder: 0xe9489555,          // getOrder(uint256) → (type,status,creator,token,amount,filled,price)
+    getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
+} as const;
+
 /** OPScan explorer — works for testnet contract/tx inspection */
 const OPSCAN = 'https://opscan.org';
 

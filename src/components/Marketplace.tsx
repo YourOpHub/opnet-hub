@@ -9,7 +9,7 @@ import {
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
-import { MARKET_ADDRESS, MARKET_PUBKEY, MARKET_HEX, MARKET_SELECTORS, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { MARKET_ADDRESS, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 
 const NETWORK = networks.testnet;
@@ -97,6 +97,14 @@ const KNOWN_TOKENS: MarketToken[] = Object.values(TESTNET_CONTRACTS).map(t => ({
   totalVolume: 0,
 }));
 
+/** Resolve 64-char hex token address → { bech32, symbol, name, decimals } from KNOWN_TOKENS */
+function resolveTokenHex(hex64: string): { address: string; symbol: string; name: string; decimals: number } | null {
+  const withPrefix = '0x' + hex64;
+  const found = KNOWN_TOKENS.find(t => t.pubkey === withPrefix);
+  if (found) return { address: found.address, symbol: found.symbol, name: found.name, decimals: found.decimals };
+  return null;
+}
+
 const iStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 12,
   background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
@@ -152,12 +160,16 @@ const Marketplace: React.FC = () => {
           // Show active (1) and accepted (4) orders
           if (status !== 1 && status !== 4) continue;
           const tokenHex = (p.token ?? 0n).toString(16).padStart(64, '0');
+          // Resolve token hex to bech32 address and metadata
+          const resolved = resolveTokenHex(tokenHex);
+          const tokenBech32 = resolved?.address || tokenHex;
           if (tokenFilter) {
-            const filterHex = tokenFilter.replace('opt1sq', '');
-            if (!tokenHex.includes(filterHex.slice(-16))) continue;
+            // Match by bech32 address or hex pubkey
+            if (tokenBech32 !== tokenFilter && !tokenHex.includes(tokenFilter.replace('opt1sq', '').slice(-16))) continue;
           }
-          const amount = Number(p.amount ?? 0n) / 1e8;
-          const filled = Number(p.filled ?? 0n) / 1e8;
+          const decimals = resolved?.decimals || 8;
+          const amount = Number(p.amount ?? 0n) / Math.pow(10, decimals);
+          const filled = Number(p.filled ?? 0n) / Math.pow(10, decimals);
           const price = Number(p.pricePerToken ?? 0n);
           const statusStr = status === 1 ? 'active' : 'accepted';
           const sellerHex = (p.seller ?? 0n).toString(16).padStart(64, '0');
@@ -166,9 +178,9 @@ const Marketplace: React.FC = () => {
             type: orderType === 1 ? 'sell' : 'buy',
             creator: (p.creator ?? 0n).toString(16).padStart(64, '0'),
             seller: sellerHex,
-            tokenAddress: tokenHex,
-            tokenSymbol: '???',
-            tokenName: 'OP20 Token',
+            tokenAddress: tokenBech32,
+            tokenSymbol: resolved?.symbol || '???',
+            tokenName: resolved?.name || 'OP20 Token',
             amount, amountFilled: filled,
             pricePerToken: price,
             totalPrice: (amount - filled) * price,
@@ -185,7 +197,7 @@ const Marketplace: React.FC = () => {
   // Fetch token list (server first, hardcoded fallback)
   const fetchTokens = useCallback(async () => {
     try {
-      const res = await fetch(`${LP_API}/market/tokens`, { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(`${LP_API}/market/tokens`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const serverTokens = (await res.json()).tokens || [];
         // Merge server tokens with known tokens (ensure pubkey is present)
@@ -207,18 +219,12 @@ const Marketplace: React.FC = () => {
     setLoading(false);
   }, []);
 
-  // Fetch orders for selected token (server first, on-chain fallback)
+  // Fetch orders always from on-chain (LP_API has incompatible ord_xxx IDs)
   const fetchOrders = useCallback(async (tokenAddr?: string) => {
     const addr = tokenAddr || selectedToken;
     if (!addr) return;
-    try {
-      const url = `${LP_API}/market/orders?token=${encodeURIComponent(addr)}&status=active`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) { setOrders((await res.json()).orders || []); return; }
-    } catch { /* server offline, try on-chain */ }
-    // On-chain fallback
     const chainOrders = await fetchOrdersOnChain(addr);
-    if (chainOrders.length > 0) setOrders(chainOrders);
+    setOrders(chainOrders);
   }, [selectedToken, fetchOrdersOnChain]);
 
   useEffect(() => { fetchTokens(); }, [fetchTokens]);
@@ -267,7 +273,7 @@ const Marketplace: React.FC = () => {
       if (orderType === 'sell') {
         // Step 1: Ensure allowance for P2PMarket to pull tokens
         setCreateStep('Approving tokens for marketplace...');
-        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr as unknown as string, walletAddress, setCreateStep, selInfo?.symbol || 'token');
+        await ensureAllowance(selectedToken, MARKET_ADDRESS, amountU256, provider, senderAddr as unknown as string, walletAddress, setCreateStep, selInfo?.symbol || 'token');
 
         // Step 2: Call createSellOrder on-chain
         setCreateStep('Creating sell order on-chain...');
@@ -364,7 +370,7 @@ const Marketplace: React.FC = () => {
         // No BTC in this step — buyer will pay BTC later via executeBuyOrder
         setFillStep('Approving tokens for marketplace...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
+        await ensureAllowance(order.tokenAddress, MARKET_ADDRESS, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
 
         setFillStep('Accepting buy order (locking tokens)...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -575,12 +581,16 @@ const Marketplace: React.FC = () => {
               <div style={{ textAlign: 'center', padding: 20, color: 'var(--t4)', fontSize: '.72rem' }}>No sell orders</div>
             ) : sellOrders.map(o => {
               const remaining = o.amount - o.amountFilled;
+              const totalCostSats = Math.ceil(remaining * o.pricePerToken);
               const pct = o.amount > 0 ? (o.amountFilled / o.amount) * 100 : 0;
               return (
                 <div key={o.id} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.68rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ color: 'var(--t2)' }}>{fmtNum(remaining)} <span style={{ color: 'var(--t4)', fontSize: '.58rem' }}>/ {fmtNum(o.amount)}</span></span>
-                    <span style={{ color: '#ef4444', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken.toFixed(2)} sat</span>
+                    <span style={{ color: '#ef4444', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken} sat/tok</span>
+                  </div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--o)', marginBottom: 4 }}>
+                    Total: <strong>{fmtNum(totalCostSats)} sats</strong> ({(totalCostSats / 1e8).toFixed(6)} BTC)
                   </div>
                   {pct > 0 && (
                     <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,.06)', marginBottom: 4 }}>
@@ -629,6 +639,7 @@ const Marketplace: React.FC = () => {
               <div style={{ textAlign: 'center', padding: 20, color: 'var(--t4)', fontSize: '.72rem' }}>No buy orders</div>
             ) : buyOrders.map(o => {
               const remaining = o.amount - o.amountFilled;
+              const totalCostSats = Math.ceil(remaining * o.pricePerToken);
               const pct = o.amount > 0 ? (o.amountFilled / o.amount) * 100 : 0;
               const isMyBuyOrder = o.creator === walletAddress;
               const isAccepted = o.status === 'accepted';
@@ -641,7 +652,10 @@ const Marketplace: React.FC = () => {
                         <span style={{ marginLeft: 6, padding: '1px 5px', borderRadius: 4, background: 'rgba(247,147,26,.12)', color: 'var(--o)', fontSize: '.5rem', fontWeight: 700 }}>ACCEPTED</span>
                       )}
                     </span>
-                    <span style={{ color: 'var(--g)', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken.toFixed(2)} sat</span>
+                    <span style={{ color: 'var(--g)', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken} sat/tok</span>
+                  </div>
+                  <div style={{ fontSize: '.6rem', color: 'var(--o)', marginBottom: 4 }}>
+                    Pays: <strong>{fmtNum(totalCostSats)} sats</strong> ({(totalCostSats / 1e8).toFixed(6)} BTC)
                   </div>
                   {pct > 0 && (
                     <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,.06)', marginBottom: 4 }}>

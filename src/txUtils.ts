@@ -7,12 +7,14 @@
  * 3. Wait for next block (poll getBlockNumber) — NOT polling allowance
  * 4. Proceed with operation
  */
-import { JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils, type IOP20Contract, type CallResult } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
 import { networks } from '@btc-vision/bitcoin';
 
 const NETWORK = networks.testnet;
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+
+// Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
+const approvedThisSession = new Set<string>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<any> {
@@ -23,8 +25,9 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
+  // NOTE: Do NOT pass signer/mldsaSigner — the wallet extension handles signing internally.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
+  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -43,14 +46,14 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 
 export async function waitForNextBlock(
   provider: JSONRpcProvider,
   setStep?: (s: string) => void,
-  timeoutMs = 90_000,
+  timeoutMs = 30_000,
 ): Promise<void> {
   let startBlock: bigint;
   try { startBlock = await provider.getBlockNumber(); } catch { return; }
   
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    await new Promise(r => setTimeout(r, 8_000));
+    await new Promise(r => setTimeout(r, 5_000));
     const elapsed = Math.round((Date.now() - start) / 1000);
     setStep?.(`Waiting for block confirmation... (${elapsed}s)`);
     try {
@@ -69,7 +72,7 @@ export async function waitForNextBlock(
  */
 export async function ensureAllowance(
   tokenAddress: string,
-  spenderPubkey: string,
+  spenderAddress: string,
   amount: bigint,
   provider: JSONRpcProvider,
   senderAddr: string,
@@ -77,34 +80,49 @@ export async function ensureAllowance(
   setStep: (s: string) => void,
   tokenLabel = 'token',
 ): Promise<boolean> {
+  const cacheKey = `${tokenAddress}:${spenderAddress}`;
+
+  // Session cache: if we already approved this token for this spender, skip
+  if (approvedThisSession.has(cacheKey)) {
+    setStep('');
+    return false;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenContract = getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, NETWORK, senderAddr as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const spenderAddr = Address.fromString(spenderPubkey) as any;
 
   // Check existing allowance
   setStep(`Checking ${tokenLabel} allowance...`);
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allowanceRes = await tokenContract.allowance(senderAddr as any, spenderAddr);
+    const allowanceRes = await tokenContract.allowance(senderAddr as any, spenderAddress as any);
     if (!(allowanceRes as CallResult).revert) {
       const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
       const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
       if (cur >= amount) {
+        approvedThisSession.add(cacheKey);
         setStep('');
         return false; // Already approved
       }
+    } else {
+      console.warn('[txUtils] Allowance check reverted:', (allowanceRes as CallResult).revert);
     }
-  } catch { /* proceed with approval */ }
+  } catch (e) {
+    console.warn('[txUtils] Allowance check failed, proceeding with approval:', e);
+  }
 
   // Send increaseAllowance(max_uint256)
   setStep(`Approving ${tokenLabel}...`);
-  const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddr, MAX_UINT256));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddress as any, MAX_UINT256));
   if ((approveSim as CallResult).revert) throw new Error(`${tokenLabel} approval failed: ${(approveSim as CallResult).revert}`);
   const tp = await buildTxParams(provider, walletAddress);
   await (approveSim as CallResult).sendTransaction(tp);
 
-  // Wait for next block (Bob's recommended pattern)
+  // Mark as approved in session cache
+  approvedThisSession.add(cacheKey);
+
+  // Wait for next block
   await waitForNextBlock(provider, setStep);
 
   return true; // Approval was sent

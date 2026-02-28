@@ -1,0 +1,1371 @@
+{
+  "opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa": {
+    "address": "opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa",
+    "name": "Mine Token",
+    "symbol": "MINE",
+    "totalSupply": 21000000,
+    "publicMintSupply": 10500000,
+    "maxMintPerTx": 1000000,
+    "mintedSupply": 3900000,
+    "creator": "opt1pp76wu...svtj5my",
+    "createdAt": 1771979088200,
+    "description": "The OG mining token. Earn by playing SatoshiMiner.",
+    "status": "bonding",
+    "trades": [
+      {
+        "id": "t_seed_0_yr55",
+        "type": "sell",
+        "amount": 379327,
+        "price": 0.047619047619047616,
+        "wallet": "opt1pxeagjr...cdae",
+        "txHash": "",
+        "timestamp": 1771981032899
+      },
+      {
+        "id": "t_seed_1_ygnt",
+        "type": "buy",
+        "amount": 286825,
+        "price": 0.04971826317533974,
+        "wallet": "opt1pl58cam...2wd7",
+        "txHash": "",
+        "timestamp": 1771994155596
+      },
+      {
+        "id": "t_seed_2_3g3e",
+        "type": "buy",
+        "amount": 41811,
+        "price": 0.052011095700416086,
+        "wallet": "opt1puagmxj...iqs6",
+        "txHash": "",
+        "timestamp": 1772018519774
+      },
+      {
+        "id": "t_seed_3_wmn2",
+        "type": "buy",
+        "amount": 488590,
+        "price": 0.05452562704471101,
+        "wallet": "opt1pknt9yy...7of0",
+        "txHash": "",
+        "timestamp": 1772034474117
+      },
+      {
+        "id": "t_seed_4_ujna",
+        "type": "buy",
+        "amount": 368625,
+        "price": 0.05729564553093965,
+        "wallet": "opt1pnf10mz...87rm",
+        "txHash": "",
+        "timestamp": 1772043967813
+      },
+      {
+        "id": "t_seed_5_jtjf",
+        "type": "buy",
+        "amount": 184799,
+        "price": 0.060362173038229376,
+        "wallet": "opt1pq01vqm...8o9c",
+        "txHash": "",
+        "timestamp": 1772054706514
+      },
+      {
+        "id": "t_seed_6_wthk",
+        "type": "buy",
+        "amount": 336111,
+        "price": 0.06377551020408163,
+        "wallet": "opt1pwd4h12...sfko",
+        "txHash": "",
+        "timestamp": 1772078555471
+      },
+      {
+        "id": "t_seed_7_pu0k",
+        "type": "buy",
+        "amount": 98361,
+        "price": 0.06759801712483102,
+        "wallet": "opt1p9mkprr...mrn1",
+        "txHash": "",
+        "timestamp": 1772084530624
+      },
+      {
+        "id": "t_seed_8_qff5",
+        "type": "buy",
+        "amount": 263501,
+        "price": 0.07190795781399807,
+        "wallet": "opt1p7cqes4...5mat",
+        "txHash": "",
+        "timestamp": 1772104292606
+      },
+      {
+        "id": "t_seed_9_zwwr",
+        "type": "buy",
+        "amount": 360977,
+        "price": 0.07680491551459294,
+        "wallet": "opt1p04wbf6...c9ai",
+        "txHash": "",
+        "timestamp": 1772112207998
+      },
+      {
+        "id": "t_seed_10_59g7",
+        "type": "sell",
+        "amount": 436670,
+        "price": 0.08241758241758243,
+        "wallet": "opt1pln86yl...05x0",
+        "txHash": "",
+        "timestamp": 1772132638398
+      },
+      {
+        "id": "t_seed_11_kiva",
+        "type": "buy",
+        "amount": 179597,
+        "price": 0.08891523414344991,
+        "wallet": "opt1pb0ve84...upco",
+        "txHash": "",
+        "timestamp": 1772138015024
+      },
+      {
+        "id": "t_seed_12_wwwq",
+        "type": "buy",
+        "amount": 392485,
+        "price": 0.09652509652509651,
+        "wallet": "opt1pq95uyg...l5n5",
+        "txHash": "",
+        "timestamp": 1772153207373
+      },
+      {
+        "id": "t_seed_13_cvi3",
+        "type": "buy",
+        "amount": 512044,
+        "price": 0.1055594651653765,
+        "wallet": "opt1p8wwtep...nqm5",
+        "txHash": "",
+        "timestamp": 1772180242523
+      },
+      {
+        "id": "t_seed_14_cv47",
+        "type": "buy",
+        "amount": 418219,
+        "price": 0.11645962732919256,
+        "wallet": "opt1p7yegz1...rsvu",
+        "txHash": "",
+        "timestamp": 1772184246241
+      },
+      {
+        "id": "t_seed_15_jkv9",
+        "type": "buy",
+        "amount": 371044,
+        "price": 0.1298701298701299,
+        "wallet": "opt1p32saz0...4p5b",
+        "txHash": "",
+        "timestamp": 1772207135567
+      },
+      {
+        "id": "t_seed_16_3isg",
+        "type": "buy",
+        "amount": 160597,
+        "price": 0.1467710371819961,
+        "wallet": "opt1pwkd4th...5fcu",
+        "txHash": "",
+        "timestamp": 1772210329095
+      },
+      {
+        "id": "t_seed_17_jzwy",
+        "type": "buy",
+        "amount": 363613,
+        "price": 0.16872890888638917,
+        "wallet": "opt1pcvo4n0...fits",
+        "txHash": "",
+        "timestamp": 1772225520235
+      },
+      {
+        "id": "t_1772238342069_pumj",
+        "type": "buy",
+        "amount": 100000,
+        "price": 0.07307270734380708,
+        "wallet": "opt1pp_bro...test",
+        "txHash": "",
+        "timestamp": 1772238342069
+      },
+      {
+        "id": "t_1772238342072_6cmh",
+        "type": "sell",
+        "amount": 50000,
+        "price": 0.07410151908114117,
+        "wallet": "opt1pp_bro...test",
+        "txHash": "",
+        "timestamp": 1772238342072
+      }
+    ],
+    "replies": [
+      {
+        "id": "r1",
+        "wallet": "opt1pp76wu...svtj5my",
+        "text": "Mine your way to the top ⛏️",
+        "timestamp": 1772065488200
+      },
+      {
+        "id": "r_1772238342076",
+        "wallet": "opt1pp_bro...test",
+        "text": "Testing from browser!",
+        "timestamp": 1772238342076
+      }
+    ],
+    "likes": 43,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802": {
+    "address": "opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802",
+    "name": "Vibe Token",
+    "symbol": "VIBE",
+    "totalSupply": 100000000,
+    "publicMintSupply": 50000000,
+    "maxMintPerTx": 5000000,
+    "mintedSupply": 42500000,
+    "creator": "opt1pp76wu...svtj5my",
+    "createdAt": 1771979088200,
+    "description": "Community token for the OPNet ecosystem. Good vibes only.",
+    "status": "graduated",
+    "trades": [
+      {
+        "id": "t_seed_0_0ao3",
+        "type": "buy",
+        "amount": 1649550,
+        "price": 0.01,
+        "wallet": "opt1pg3u3bx...q727",
+        "txHash": "",
+        "timestamp": 1771986040971
+      },
+      {
+        "id": "t_seed_1_eg8e",
+        "type": "buy",
+        "amount": 1136469,
+        "price": 0.01022196261682243,
+        "wallet": "opt1pf7nr11...0c3l",
+        "txHash": "",
+        "timestamp": 1771987057269
+      },
+      {
+        "id": "t_seed_2_diia",
+        "type": "buy",
+        "amount": 1792235,
+        "price": 0.01045400238948626,
+        "wallet": "opt1p7l0a1g...ekm7",
+        "txHash": "",
+        "timestamp": 1771999648570
+      },
+      {
+        "id": "t_seed_3_ngzb",
+        "type": "buy",
+        "amount": 1305822,
+        "price": 0.010696821515892421,
+        "wallet": "opt1pzj5yyu...qvp0",
+        "txHash": "",
+        "timestamp": 1772007822194
+      },
+      {
+        "id": "t_seed_4_51z7",
+        "type": "buy",
+        "amount": 2351985,
+        "price": 0.01095118898623279,
+        "wallet": "opt1pwyv1ij...e8xn",
+        "txHash": "",
+        "timestamp": 1772012510606
+      },
+      {
+        "id": "t_seed_5_rxzh",
+        "type": "buy",
+        "amount": 39257,
+        "price": 0.011217948717948718,
+        "wallet": "opt1pjh1v0b...x3ss",
+        "txHash": "",
+        "timestamp": 1772023199233
+      },
+      {
+        "id": "t_seed_6_cz64",
+        "type": "buy",
+        "amount": 752909,
+        "price": 0.01149802890932983,
+        "wallet": "opt1phvtodt...mkf8",
+        "txHash": "",
+        "timestamp": 1772028666338
+      },
+      {
+        "id": "t_seed_7_3o2n",
+        "type": "buy",
+        "amount": 1356493,
+        "price": 0.01179245283018868,
+        "wallet": "opt1pouwgq8...zbrk",
+        "txHash": "",
+        "timestamp": 1772032668315
+      },
+      {
+        "id": "t_seed_8_vrsi",
+        "type": "sell",
+        "amount": 1949063,
+        "price": 0.01210235131396957,
+        "wallet": "opt1pacb6ax...s0u6",
+        "txHash": "",
+        "timestamp": 1772044999364
+      },
+      {
+        "id": "t_seed_9_1ykb",
+        "type": "buy",
+        "amount": 1791051,
+        "price": 0.012428977272727272,
+        "wallet": "opt1pm83mcw...hrvf",
+        "txHash": "",
+        "timestamp": 1772048254483
+      },
+      {
+        "id": "t_seed_10_74yv",
+        "type": "buy",
+        "amount": 510796,
+        "price": 0.012773722627737225,
+        "wallet": "opt1pwqj9on...xwk2",
+        "txHash": "",
+        "timestamp": 1772054704843
+      },
+      {
+        "id": "t_seed_11_oet8",
+        "type": "sell",
+        "amount": 1036065,
+        "price": 0.013138138138138137,
+        "wallet": "opt1pewxoe1...mkbt",
+        "txHash": "",
+        "timestamp": 1772065321683
+      },
+      {
+        "id": "t_seed_12_86wm",
+        "type": "sell",
+        "amount": 1905329,
+        "price": 0.013523956723338485,
+        "wallet": "opt1pl2624c...rgiz",
+        "txHash": "",
+        "timestamp": 1772068817038
+      },
+      {
+        "id": "t_seed_13_hg5t",
+        "type": "buy",
+        "amount": 762849,
+        "price": 0.013933121019108279,
+        "wallet": "opt1p7mlz7j...3r0c",
+        "txHash": "",
+        "timestamp": 1772076087598
+      },
+      {
+        "id": "t_seed_14_m01v",
+        "type": "sell",
+        "amount": 2362638,
+        "price": 0.014367816091954023,
+        "wallet": "opt1pvqlvow...y3hf",
+        "txHash": "",
+        "timestamp": 1772087564053
+      },
+      {
+        "id": "t_seed_15_zm4d",
+        "type": "buy",
+        "amount": 1214881,
+        "price": 0.01483050847457627,
+        "wallet": "opt1pc95676...wf09",
+        "txHash": "",
+        "timestamp": 1772096526500
+      },
+      {
+        "id": "t_seed_16_glvz",
+        "type": "buy",
+        "amount": 1378608,
+        "price": 0.01532399299474606,
+        "wallet": "opt1p527ppt...pd1e",
+        "txHash": "",
+        "timestamp": 1772102124044
+      },
+      {
+        "id": "t_seed_17_4a6x",
+        "type": "buy",
+        "amount": 2325522,
+        "price": 0.015851449275362316,
+        "wallet": "opt1pqmzwur...8s6d",
+        "txHash": "",
+        "timestamp": 1772107866468
+      },
+      {
+        "id": "t_seed_18_pcsk",
+        "type": "sell",
+        "amount": 2019224,
+        "price": 0.01641651031894934,
+        "wallet": "opt1p41yfff...v4hw",
+        "txHash": "",
+        "timestamp": 1772114041417
+      },
+      {
+        "id": "t_seed_19_mzvs",
+        "type": "buy",
+        "amount": 1191554,
+        "price": 0.017023346303501947,
+        "wallet": "opt1pzzpbzv...2tp8",
+        "txHash": "",
+        "timestamp": 1772122785470
+      },
+      {
+        "id": "t_seed_20_s06u",
+        "type": "buy",
+        "amount": 701739,
+        "price": 0.017676767676767676,
+        "wallet": "opt1psuzddc...7v3y",
+        "txHash": "",
+        "timestamp": 1772132380649
+      },
+      {
+        "id": "t_seed_21_pc0t",
+        "type": "buy",
+        "amount": 1824641,
+        "price": 0.018382352941176468,
+        "wallet": "opt1pcbptv3...am21",
+        "txHash": "",
+        "timestamp": 1772140372309
+      },
+      {
+        "id": "t_seed_22_5nus",
+        "type": "buy",
+        "amount": 545897,
+        "price": 0.01914660831509847,
+        "wallet": "opt1psfg3ro...4qyq",
+        "txHash": "",
+        "timestamp": 1772144328235
+      },
+      {
+        "id": "t_seed_23_9sx7",
+        "type": "buy",
+        "amount": 1064570,
+        "price": 0.019977168949771685,
+        "wallet": "opt1pvmqioi...yjut",
+        "txHash": "",
+        "timestamp": 1772153426252
+      },
+      {
+        "id": "t_seed_24_72u9",
+        "type": "buy",
+        "amount": 1526130,
+        "price": 0.020883054892601432,
+        "wallet": "opt1pz7jpl0...k2dm",
+        "txHash": "",
+        "timestamp": 1772164066819
+      },
+      {
+        "id": "t_seed_25_0p6x",
+        "type": "buy",
+        "amount": 1079811,
+        "price": 0.021875000000000002,
+        "wallet": "opt1pupgzu6...3qbs",
+        "txHash": "",
+        "timestamp": 1772170634179
+      },
+      {
+        "id": "t_seed_26_ohzs",
+        "type": "buy",
+        "amount": 711290,
+        "price": 0.022965879265091863,
+        "wallet": "opt1pe29epv...1g2i",
+        "txHash": "",
+        "timestamp": 1772177040374
+      },
+      {
+        "id": "t_seed_27_7kls",
+        "type": "buy",
+        "amount": 458133,
+        "price": 0.02417127071823205,
+        "wallet": "opt1pcl1425...7t9d",
+        "txHash": "",
+        "timestamp": 1772186409008
+      },
+      {
+        "id": "t_seed_28_515e",
+        "type": "buy",
+        "amount": 666466,
+        "price": 0.025510204081632657,
+        "wallet": "opt1pv47pe7...9ljx",
+        "txHash": "",
+        "timestamp": 1772186892117
+      },
+      {
+        "id": "t_seed_29_6r8h",
+        "type": "buy",
+        "amount": 2270729,
+        "price": 0.027006172839506175,
+        "wallet": "opt1pqe6665...f675",
+        "txHash": "",
+        "timestamp": 1772200150854
+      },
+      {
+        "id": "t_seed_30_8ws0",
+        "type": "buy",
+        "amount": 1261216,
+        "price": 0.028688524590163928,
+        "wallet": "opt1pjy38ai...tnit",
+        "txHash": "",
+        "timestamp": 1772202512169
+      },
+      {
+        "id": "t_seed_31_p8bn",
+        "type": "buy",
+        "amount": 20457,
+        "price": 0.030594405594405596,
+        "wallet": "opt1pna7ouw...29rn",
+        "txHash": "",
+        "timestamp": 1772215198707
+      },
+      {
+        "id": "t_seed_32_qr3s",
+        "type": "sell",
+        "amount": 2397014,
+        "price": 0.03277153558052434,
+        "wallet": "opt1pmfplf4...ozcr",
+        "txHash": "",
+        "timestamp": 1772223214582
+      },
+      {
+        "id": "t_seed_33_6f3x",
+        "type": "buy",
+        "amount": 518724,
+        "price": 0.03528225806451613,
+        "wallet": "opt1p6evwxn...6dpj",
+        "txHash": "",
+        "timestamp": 1772224079374
+      },
+      {
+        "id": "t_seed_34_mf41",
+        "type": "buy",
+        "amount": 1297469,
+        "price": 0.038209606986899555,
+        "wallet": "opt1p2x2bdy...67z4",
+        "txHash": "",
+        "timestamp": 1772236507799
+      }
+    ],
+    "replies": [
+      {
+        "id": "r3",
+        "wallet": "opt1pq8x3m...jk29a1",
+        "text": "VIBE graduated! Trading on AMM now 🎉",
+        "timestamp": 1772195088200
+      }
+    ],
+    "likes": 78,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sq_demo_satoshi_cat": {
+    "address": "opt1sq_demo_satoshi_cat",
+    "name": "Satoshi Cat",
+    "symbol": "SCAT",
+    "totalSupply": 1000000000,
+    "publicMintSupply": 500000000,
+    "maxMintPerTx": 10000000,
+    "mintedSupply": 125000000,
+    "creator": "opt1pz9abc...demo1",
+    "createdAt": 1772231088200,
+    "description": "The first cat on Bitcoin L1. Meow.",
+    "status": "bonding",
+    "trades": [
+      {
+        "id": "t_seed_0_91on",
+        "type": "buy",
+        "amount": 6736185,
+        "price": 0.001,
+        "wallet": "opt1pffi2h3...i6jj",
+        "txHash": "",
+        "timestamp": 1772231699258
+      },
+      {
+        "id": "t_seed_1_0ij2",
+        "type": "buy",
+        "amount": 23830397,
+        "price": 0.0011049723756906078,
+        "wallet": "opt1pdkqrxf...ozx4",
+        "txHash": "",
+        "timestamp": 1772232413195
+      },
+      {
+        "id": "t_seed_2_v57h",
+        "type": "buy",
+        "amount": 1646898,
+        "price": 0.0012345679012345679,
+        "wallet": "opt1p27wfjm...1nx7",
+        "txHash": "",
+        "timestamp": 1772233257730
+      },
+      {
+        "id": "t_seed_3_ouax",
+        "type": "buy",
+        "amount": 19726092,
+        "price": 0.0013986013986013986,
+        "wallet": "opt1pw2pm74...khoc",
+        "txHash": "",
+        "timestamp": 1772234632193
+      },
+      {
+        "id": "t_seed_4_kqbu",
+        "type": "sell",
+        "amount": 16771144,
+        "price": 0.0016129032258064516,
+        "wallet": "opt1psjngjb...9xi1",
+        "txHash": "",
+        "timestamp": 1772234819683
+      },
+      {
+        "id": "t_seed_5_n4dg",
+        "type": "sell",
+        "amount": 15660234,
+        "price": 0.0019047619047619048,
+        "wallet": "opt1pcxmyws...q1fk",
+        "txHash": "",
+        "timestamp": 1772236204066
+      },
+      {
+        "id": "t_seed_6_vnfo",
+        "type": "buy",
+        "amount": 21577383,
+        "price": 0.0023255813953488376,
+        "wallet": "opt1praxy71...bvap",
+        "txHash": "",
+        "timestamp": 1772237035573
+      },
+      {
+        "id": "t_seed_7_d7bv",
+        "type": "sell",
+        "amount": 11831749,
+        "price": 0.002985074626865672,
+        "wallet": "opt1py2ccy5...rxd0",
+        "txHash": "",
+        "timestamp": 1772238014253
+      }
+    ],
+    "replies": [
+      {
+        "id": "r4",
+        "wallet": "opt1pz9abc...demo1",
+        "text": "cats > dogs. always.",
+        "timestamp": 1772234688200
+      }
+    ],
+    "likes": 15,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sq_demo_bitcoin_pepe": {
+    "address": "opt1sq_demo_bitcoin_pepe",
+    "name": "Bitcoin Pepe",
+    "symbol": "BPEPE",
+    "totalSupply": 420690000,
+    "publicMintSupply": 210345000,
+    "maxMintPerTx": 5000000,
+    "mintedSupply": 84138000,
+    "creator": "opt1pk7def...demo2",
+    "createdAt": 1772223888200,
+    "description": "Feels good man. The rarest pepe lives on Bitcoin.",
+    "status": "bonding",
+    "trades": [
+      {
+        "id": "t_seed_0_upnr",
+        "type": "buy",
+        "amount": 8308534,
+        "price": 0.0023770472319284983,
+        "wallet": "opt1pa2vg3a...46df",
+        "txHash": "",
+        "timestamp": 1772224926000
+      },
+      {
+        "id": "t_seed_1_0kh1",
+        "type": "buy",
+        "amount": 1966768,
+        "price": 0.002537772845475265,
+        "wallet": "opt1pclpy3t...47tl",
+        "txHash": "",
+        "timestamp": 1772225949008
+      },
+      {
+        "id": "t_seed_2_m1n5",
+        "type": "buy",
+        "amount": 7263169,
+        "price": 0.0027218098075517155,
+        "wallet": "opt1patmsev...eqvo",
+        "txHash": "",
+        "timestamp": 1772226341668
+      },
+      {
+        "id": "t_seed_3_mhjq",
+        "type": "buy",
+        "amount": 6127208,
+        "price": 0.0029346262122574053,
+        "wallet": "opt1p8lxpvx...lp5u",
+        "txHash": "",
+        "timestamp": 1772228569721
+      },
+      {
+        "id": "t_seed_4_fjx6",
+        "type": "buy",
+        "amount": 2293438,
+        "price": 0.003183545399904239,
+        "wallet": "opt1pf50li7...121o",
+        "txHash": "",
+        "timestamp": 1772228952364
+      },
+      {
+        "id": "t_seed_5_4d20",
+        "type": "sell",
+        "amount": 6994936,
+        "price": 0.003478605705261217,
+        "wallet": "opt1p3r4mnp...v0fg",
+        "txHash": "",
+        "timestamp": 1772230397003
+      },
+      {
+        "id": "t_seed_6_t6g4",
+        "type": "buy",
+        "amount": 4043399,
+        "price": 0.0038339471482717715,
+        "wallet": "opt1pyqtw8t...f7hx",
+        "txHash": "",
+        "timestamp": 1772231911015
+      },
+      {
+        "id": "t_seed_7_byjg",
+        "type": "sell",
+        "amount": 8869878,
+        "price": 0.004270144728015267,
+        "wallet": "opt1ph310su...nwgu",
+        "txHash": "",
+        "timestamp": 1772233273927
+      },
+      {
+        "id": "t_seed_8_biup",
+        "type": "buy",
+        "amount": 7990646,
+        "price": 0.004818338983638848,
+        "wallet": "opt1prljvrs...6xoo",
+        "txHash": "",
+        "timestamp": 1772233666955
+      },
+      {
+        "id": "t_seed_9_82ck",
+        "type": "buy",
+        "amount": 4663604,
+        "price": 0.005528016818438369,
+        "wallet": "opt1pkg121m...x5gr",
+        "txHash": "",
+        "timestamp": 1772235169794
+      },
+      {
+        "id": "t_seed_10_mwvz",
+        "type": "buy",
+        "amount": 8035749,
+        "price": 0.006482856087077724,
+        "wallet": "opt1pv6hmbl...7muj",
+        "txHash": "",
+        "timestamp": 1772236325639
+      },
+      {
+        "id": "t_seed_11_ax1n",
+        "type": "buy",
+        "amount": 10507546,
+        "price": 0.007836419445918126,
+        "wallet": "opt1pv7prur...6pem",
+        "txHash": "",
+        "timestamp": 1772238098641
+      }
+    ],
+    "replies": [],
+    "likes": 31,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sq_demo_opnet_ai": {
+    "address": "opt1sq_demo_opnet_ai",
+    "name": "OPNet AI",
+    "symbol": "OPAI",
+    "totalSupply": 10000000,
+    "publicMintSupply": 5000000,
+    "maxMintPerTx": 100000,
+    "mintedSupply": 4250000,
+    "creator": "opt1pm3ghi...demo3",
+    "createdAt": 1772151888200,
+    "description": "AI agents on Bitcoin L1. Bob approved.",
+    "status": "graduated",
+    "trades": [
+      {
+        "id": "t_seed_0_s33k",
+        "type": "buy",
+        "amount": 89185,
+        "price": 0.1,
+        "wallet": "opt1piwdgqr...pvt0",
+        "txHash": "",
+        "timestamp": 1772154826209
+      },
+      {
+        "id": "t_seed_1_mdbz",
+        "type": "buy",
+        "amount": 141132,
+        "price": 0.10313531353135313,
+        "wallet": "opt1p408zlj...405f",
+        "txHash": "",
+        "timestamp": 1772155514196
+      },
+      {
+        "id": "t_seed_2_2vjy",
+        "type": "buy",
+        "amount": 44669,
+        "price": 0.10647359454855196,
+        "wallet": "opt1pw0thoh...3sgy",
+        "txHash": "",
+        "timestamp": 1772160985879
+      },
+      {
+        "id": "t_seed_3_6sg3",
+        "type": "buy",
+        "amount": 98119,
+        "price": 0.11003521126760564,
+        "wallet": "opt1phe941k...3p2i",
+        "txHash": "",
+        "timestamp": 1772165518728
+      },
+      {
+        "id": "t_seed_4_yhqx",
+        "type": "buy",
+        "amount": 105040,
+        "price": 0.11384335154826958,
+        "wallet": "opt1py7e7ul...272n",
+        "txHash": "",
+        "timestamp": 1772168036871
+      },
+      {
+        "id": "t_seed_5_rpyd",
+        "type": "buy",
+        "amount": 109015,
+        "price": 0.1179245283018868,
+        "wallet": "opt1pv0syra...pjru",
+        "txHash": "",
+        "timestamp": 1772169774819
+      },
+      {
+        "id": "t_seed_6_ygdm",
+        "type": "buy",
+        "amount": 198962,
+        "price": 0.1223091976516634,
+        "wallet": "opt1pf2xtp2...q90c",
+        "txHash": "",
+        "timestamp": 1772173313211
+      },
+      {
+        "id": "t_seed_7_ir2g",
+        "type": "buy",
+        "amount": 10777,
+        "price": 0.12703252032520326,
+        "wallet": "opt1prg9j8f...jnpy",
+        "txHash": "",
+        "timestamp": 1772178359194
+      },
+      {
+        "id": "t_seed_8_xoo5",
+        "type": "buy",
+        "amount": 188798,
+        "price": 0.1321353065539112,
+        "wallet": "opt1pjhfd0v...39k2",
+        "txHash": "",
+        "timestamp": 1772180298115
+      },
+      {
+        "id": "t_seed_9_pcwg",
+        "type": "buy",
+        "amount": 18748,
+        "price": 0.13766519823788545,
+        "wallet": "opt1p8uibhq...j943",
+        "txHash": "",
+        "timestamp": 1772186408239
+      },
+      {
+        "id": "t_seed_10_qhi0",
+        "type": "buy",
+        "amount": 45003,
+        "price": 0.14367816091954025,
+        "wallet": "opt1p34v2a3...ssip",
+        "txHash": "",
+        "timestamp": 1772187146042
+      },
+      {
+        "id": "t_seed_11_d4ij",
+        "type": "buy",
+        "amount": 2529,
+        "price": 0.1502403846153846,
+        "wallet": "opt1p7rtrij...zxme",
+        "txHash": "",
+        "timestamp": 1772192414296
+      },
+      {
+        "id": "t_seed_12_cp0i",
+        "type": "buy",
+        "amount": 132163,
+        "price": 0.1574307304785894,
+        "wallet": "opt1pitr55u...il4j",
+        "txHash": "",
+        "timestamp": 1772195743328
+      },
+      {
+        "id": "t_seed_13_db76",
+        "type": "buy",
+        "amount": 84971,
+        "price": 0.16534391534391535,
+        "wallet": "opt1ph5p0l9...wy15",
+        "txHash": "",
+        "timestamp": 1772199104471
+      },
+      {
+        "id": "t_seed_14_gv7s",
+        "type": "buy",
+        "amount": 28252,
+        "price": 0.17409470752089137,
+        "wallet": "opt1pw3zjug...x9l5",
+        "txHash": "",
+        "timestamp": 1772201904943
+      },
+      {
+        "id": "t_seed_15_8ph2",
+        "type": "buy",
+        "amount": 216706,
+        "price": 0.18382352941176472,
+        "wallet": "opt1pt0ztc3...5za7",
+        "txHash": "",
+        "timestamp": 1772205571629
+      },
+      {
+        "id": "t_seed_16_u6v1",
+        "type": "sell",
+        "amount": 111118,
+        "price": 0.19470404984423673,
+        "wallet": "opt1p1ggyfl...i9du",
+        "txHash": "",
+        "timestamp": 1772210070689
+      },
+      {
+        "id": "t_seed_17_e647",
+        "type": "buy",
+        "amount": 29970,
+        "price": 0.20695364238410596,
+        "wallet": "opt1pbf53lx...vw0k",
+        "txHash": "",
+        "timestamp": 1772213540671
+      },
+      {
+        "id": "t_seed_18_tnbk",
+        "type": "sell",
+        "amount": 29787,
+        "price": 0.22084805653710243,
+        "wallet": "opt1pzn2kjh...iikj",
+        "txHash": "",
+        "timestamp": 1772216402365
+      },
+      {
+        "id": "t_seed_19_ba0a",
+        "type": "buy",
+        "amount": 240086,
+        "price": 0.23674242424242428,
+        "wallet": "opt1peqmgzk...r6qh",
+        "txHash": "",
+        "timestamp": 1772219253263
+      },
+      {
+        "id": "t_seed_20_p43h",
+        "type": "buy",
+        "amount": 95996,
+        "price": 0.2551020408163266,
+        "wallet": "opt1pibiqpc...hww1",
+        "txHash": "",
+        "timestamp": 1772222344956
+      },
+      {
+        "id": "t_seed_21_wjll",
+        "type": "sell",
+        "amount": 90659,
+        "price": 0.27654867256637167,
+        "wallet": "opt1px7oi81...z0wb",
+        "txHash": "",
+        "timestamp": 1772226035886
+      },
+      {
+        "id": "t_seed_22_js64",
+        "type": "buy",
+        "amount": 64273,
+        "price": 0.3019323671497585,
+        "wallet": "opt1prvfrd0...dw3y",
+        "txHash": "",
+        "timestamp": 1772229135336
+      },
+      {
+        "id": "t_seed_23_3rji",
+        "type": "buy",
+        "amount": 34418,
+        "price": 0.33244680851063835,
+        "wallet": "opt1p1lc8nm...bqna",
+        "txHash": "",
+        "timestamp": 1772234265877
+      },
+      {
+        "id": "t_seed_24_48le",
+        "type": "buy",
+        "amount": 226165,
+        "price": 0.36982248520710065,
+        "wallet": "opt1perz2wz...oli8",
+        "txHash": "",
+        "timestamp": 1772236372376
+      }
+    ],
+    "replies": [
+      {
+        "id": "r5",
+        "wallet": "opt1pm3ghi...demo3",
+        "text": "We graduated! Next stop: AMM pool 🤖",
+        "timestamp": 1772195088200
+      }
+    ],
+    "likes": 56,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sq_demo_rune_gold": {
+    "address": "opt1sq_demo_rune_gold",
+    "name": "Rune Gold",
+    "symbol": "RGOLD",
+    "totalSupply": 21000000,
+    "publicMintSupply": 10500000,
+    "maxMintPerTx": 500000,
+    "mintedSupply": 1050000,
+    "creator": "opt1pn4jkl...demo4",
+    "createdAt": 1772236488200,
+    "description": "Digital gold on Bitcoin. Stack sats, stack RGOLD.",
+    "status": "bonding",
+    "trades": [
+      {
+        "id": "t_seed_0_4rur",
+        "type": "buy",
+        "amount": 262716,
+        "price": 0.047619047619047616,
+        "wallet": "opt1pabepx0...8w84",
+        "txHash": "",
+        "timestamp": 1772236935002
+      },
+      {
+        "id": "t_seed_1_41ot",
+        "type": "buy",
+        "amount": 500030,
+        "price": 0.058788947677836566,
+        "wallet": "opt1pbtfp0n...5c9a",
+        "txHash": "",
+        "timestamp": 1772237208917
+      },
+      {
+        "id": "t_seed_2_5051",
+        "type": "buy",
+        "amount": 212462,
+        "price": 0.07680491551459294,
+        "wallet": "opt1pplf8nr...e3kr",
+        "txHash": "",
+        "timestamp": 1772237542765
+      },
+      {
+        "id": "t_seed_3_2jfg",
+        "type": "buy",
+        "amount": 321079,
+        "price": 0.11074197120708751,
+        "wallet": "opt1pg06hma...bqyx",
+        "txHash": "",
+        "timestamp": 1772237898444
+      }
+    ],
+    "replies": [],
+    "likes": 7,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sq_demo_gm_token": {
+    "address": "opt1sq_demo_gm_token",
+    "name": "GM Token",
+    "symbol": "GM",
+    "totalSupply": 69420000,
+    "publicMintSupply": 34710000,
+    "maxMintPerTx": 1000000,
+    "mintedSupply": 22561500,
+    "creator": "opt1pp5mno...demo5",
+    "createdAt": 1772065488200,
+    "description": "gm. gn. Built different on Bitcoin L1.",
+    "status": "bonding",
+    "trades": [
+      {
+        "id": "t_seed_0_wqem",
+        "type": "sell",
+        "amount": 81773,
+        "price": 0.014405070584845865,
+        "wallet": "opt1p9uybdh...8zsl",
+        "txHash": "",
+        "timestamp": 1772068726031
+      },
+      {
+        "id": "t_seed_1_3eyy",
+        "type": "buy",
+        "amount": 215563,
+        "price": 0.014974085847033124,
+        "wallet": "opt1pc8ju11...q2gs",
+        "txHash": "",
+        "timestamp": 1772076623208
+      },
+      {
+        "id": "t_seed_2_x28t",
+        "type": "buy",
+        "amount": 1501255,
+        "price": 0.01558990323035267,
+        "wallet": "opt1pi4scc9...fkx6",
+        "txHash": "",
+        "timestamp": 1772084278004
+      },
+      {
+        "id": "t_seed_3_gi8t",
+        "type": "buy",
+        "amount": 562822,
+        "price": 0.016258544678155604,
+        "wallet": "opt1pcuif5w...mmq7",
+        "txHash": "",
+        "timestamp": 1772092626226
+      },
+      {
+        "id": "t_seed_4_hp5i",
+        "type": "buy",
+        "amount": 1572926,
+        "price": 0.01698711153873333,
+        "wallet": "opt1piqb0gc...he5u",
+        "txHash": "",
+        "timestamp": 1772105811398
+      },
+      {
+        "id": "t_seed_5_o7cb",
+        "type": "buy",
+        "amount": 870463,
+        "price": 0.01778403775906897,
+        "wallet": "opt1pwyxnj4...cqsu",
+        "txHash": "",
+        "timestamp": 1772111154787
+      },
+      {
+        "id": "t_seed_6_1rlm",
+        "type": "buy",
+        "amount": 191973,
+        "price": 0.018659417856017962,
+        "wallet": "opt1ppygdg7...arxz",
+        "txHash": "",
+        "timestamp": 1772121893541
+      },
+      {
+        "id": "t_seed_7_zpmv",
+        "type": "sell",
+        "amount": 1514424,
+        "price": 0.019625436764095186,
+        "wallet": "opt1prylj5g...l4bm",
+        "txHash": "",
+        "timestamp": 1772128707729
+      },
+      {
+        "id": "t_seed_8_fszf",
+        "type": "sell",
+        "amount": 686573,
+        "price": 0.020696940495468198,
+        "wallet": "opt1pij810l...06o6",
+        "txHash": "",
+        "timestamp": 1772142578251
+      },
+      {
+        "id": "t_seed_9_g6q3",
+        "type": "buy",
+        "amount": 754664,
+        "price": 0.021892204536239922,
+        "wallet": "opt1pnpoz7j...nhr9",
+        "txHash": "",
+        "timestamp": 1772147862925
+      },
+      {
+        "id": "t_seed_10_4u16",
+        "type": "buy",
+        "amount": 1375194,
+        "price": 0.023233984814267524,
+        "wallet": "opt1pctx5cc...d4do",
+        "txHash": "",
+        "timestamp": 1772156881659
+      },
+      {
+        "id": "t_seed_11_ewz3",
+        "type": "buy",
+        "amount": 1606396,
+        "price": 0.024750980386333103,
+        "wallet": "opt1pgpw6zr...ydje",
+        "txHash": "",
+        "timestamp": 1772166729880
+      },
+      {
+        "id": "t_seed_12_osw8",
+        "type": "buy",
+        "amount": 1480987,
+        "price": 0.026479909163319607,
+        "wallet": "opt1p1nq0dh...uy09",
+        "txHash": "",
+        "timestamp": 1772171313094
+      },
+      {
+        "id": "t_seed_13_o0yi",
+        "type": "buy",
+        "amount": 881166,
+        "price": 0.028468518942383135,
+        "wallet": "opt1p8sv2zg...wa69",
+        "txHash": "",
+        "timestamp": 1772180690140
+      },
+      {
+        "id": "t_seed_14_nknx",
+        "type": "buy",
+        "amount": 586010,
+        "price": 0.030780065352234747,
+        "wallet": "opt1pg1p1jc...ww3n",
+        "txHash": "",
+        "timestamp": 1772194044353
+      },
+      {
+        "id": "t_seed_15_aauo",
+        "type": "buy",
+        "amount": 1027813,
+        "price": 0.03350016415080434,
+        "wallet": "opt1pxmucrf...gul6",
+        "txHash": "",
+        "timestamp": 1772200639304
+      },
+      {
+        "id": "t_seed_16_z243",
+        "type": "buy",
+        "amount": 1322768,
+        "price": 0.036747629042974156,
+        "wallet": "opt1p75xruc...r41m",
+        "txHash": "",
+        "timestamp": 1772206148376
+      },
+      {
+        "id": "t_seed_17_3kmz",
+        "type": "buy",
+        "amount": 1150551,
+        "price": 0.04069228978770018,
+        "wallet": "opt1pc5id3n...o2td",
+        "txHash": "",
+        "timestamp": 1772216346953
+      },
+      {
+        "id": "t_seed_18_3la5",
+        "type": "buy",
+        "amount": 972627,
+        "price": 0.04558566640774009,
+        "wallet": "opt1p18gzxg...9bvc",
+        "txHash": "",
+        "timestamp": 1772229565154
+      },
+      {
+        "id": "t_seed_19_dri3",
+        "type": "sell",
+        "amount": 1252385,
+        "price": 0.05181680066491318,
+        "wallet": "opt1p6dssw9...yst6",
+        "txHash": "",
+        "timestamp": 1772229980905
+      }
+    ],
+    "replies": [
+      {
+        "id": "r6",
+        "wallet": "opt1pp5mno...demo5",
+        "text": "gm frens",
+        "timestamp": 1772151888200
+      },
+      {
+        "id": "r7",
+        "wallet": "opt1pz9abc...demo1",
+        "text": "gm! almost graduated 🫡",
+        "timestamp": 1772195088200
+      }
+    ],
+    "likes": 33,
+    "decimals": 8,
+    "image": null
+  },
+  "opt1sq_demo_laser_eyes": {
+    "address": "opt1sq_demo_laser_eyes",
+    "name": "Laser Eyes",
+    "symbol": "LASER",
+    "totalSupply": 100000000,
+    "publicMintSupply": 50000000,
+    "maxMintPerTx": 2000000,
+    "mintedSupply": 5000000,
+    "creator": "opt1pq6pqr...demo6",
+    "createdAt": 1772234688200,
+    "description": "🔴 Laser eyes until $100K BTC. Then laser eyes until $1M.",
+    "status": "bonding",
+    "trades": [
+      {
+        "id": "t_seed_0_x5xv",
+        "type": "buy",
+        "amount": 1884590,
+        "price": 0.01,
+        "wallet": "opt1p2ukadb...tiny",
+        "txHash": "",
+        "timestamp": 1772235139210
+      },
+      {
+        "id": "t_seed_1_oplc",
+        "type": "buy",
+        "amount": 1901042,
+        "price": 0.011450381679389313,
+        "wallet": "opt1pfutj7h...d0vq",
+        "txHash": "",
+        "timestamp": 1772235366498
+      },
+      {
+        "id": "t_seed_2_gmhx",
+        "type": "buy",
+        "amount": 835784,
+        "price": 0.013392857142857142,
+        "wallet": "opt1p0hmrsr...1lmx",
+        "txHash": "",
+        "timestamp": 1772236149343
+      },
+      {
+        "id": "t_seed_3_w8b6",
+        "type": "buy",
+        "amount": 326142,
+        "price": 0.016129032258064516,
+        "wallet": "opt1pgwg1bu...5di7",
+        "txHash": "",
+        "timestamp": 1772236812900
+      },
+      {
+        "id": "t_seed_4_lmf9",
+        "type": "sell",
+        "amount": 1941488,
+        "price": 0.020270270270270264,
+        "wallet": "opt1pv3mkox...k7zy",
+        "txHash": "",
+        "timestamp": 1772237684851
+      },
+      {
+        "id": "t_seed_5_4peh",
+        "type": "sell",
+        "amount": 1213446,
+        "price": 0.027272727272727282,
+        "wallet": "opt1p5zic3y...oe5x",
+        "txHash": "",
+        "timestamp": 1772238269973
+      }
+    ],
+    "replies": [],
+    "likes": 12,
+    "decimals": 8,
+    "image": null
+  }
+}

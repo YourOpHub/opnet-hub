@@ -1,0 +1,16 @@
+[Unit]
+Description=OPNet Launchpad Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/opnet-hub/faucet
+ExecStart=/usr/bin/node /root/opnet-hub/faucet/launchpad-server.mjs
+Restart=always
+RestartSec=5
+Environment=LP_PORT=3457
+Environment=DATA_DIR=/root/opnet-hub/faucet/data
+
+[Install]
+WantedBy=multi-user.target

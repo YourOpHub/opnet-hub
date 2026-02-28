@@ -7,7 +7,6 @@ import {
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { buildTxParams, withRetry } from '../txUtils';
-import { TESTNET_CONTRACTS } from '../contracts';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
 import {
   getPrice, getMarketCap, getProgress, isGraduated, getPriceAtPct,

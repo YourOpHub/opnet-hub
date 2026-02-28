@@ -8,9 +8,9 @@
     "start": "node server.mjs"
   },
   "dependencies": {
-    "@btc-vision/transaction": "^1.8.0-rc.8",
     "@btc-vision/bitcoin": "^6.5.6",
-    "express": "^4.21.0",
-    "cors": "^2.8.5"
+    "@btc-vision/transaction": "^1.8.0-rc.8",
+    "cors": "^2.8.6",
+    "express": "^4.22.1"
   }
 }

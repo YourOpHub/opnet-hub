@@ -9,7 +9,7 @@ import {
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
-import { MARKET_ADDRESS, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 
 const NETWORK = networks.testnet;
@@ -103,6 +103,24 @@ function resolveTokenHex(hex64: string): { address: string; symbol: string; name
   const found = KNOWN_TOKENS.find(t => t.pubkey === withPrefix);
   if (found) return { address: found.address, symbol: found.symbol, name: found.name, decimals: found.decimals };
   return null;
+}
+
+/** Build a P2OP scriptPubKey (OP_16 PUSH_32 <32-byte MLDSA hash>) from a 64-char hex string */
+function buildP2OPScript(mldsaHex: string): Buffer {
+  const bytes = new Uint8Array(34);
+  bytes[0] = 0x60; // OP_16 (witness version 16)
+  bytes[1] = 0x20; // PUSH_32
+  for (let i = 0; i < 32; i++) {
+    bytes[2 + i] = parseInt(mldsaHex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return Buffer.from(bytes);
+}
+
+/** Get P2OP bech32m address from 64-char MLDSA hash hex (opt1sq...) */
+function getP2OPAddress(mldsaHex: string): string {
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) bytes[i] = parseInt(mldsaHex.slice(i * 2, i * 2 + 2), 16);
+  return Address.wrap(bytes).p2op(NETWORK);
 }
 
 const iStyle: React.CSSProperties = {
@@ -273,7 +291,7 @@ const Marketplace: React.FC = () => {
       if (orderType === 'sell') {
         // Step 1: Ensure allowance for P2PMarket to pull tokens
         setCreateStep('Approving tokens for marketplace...');
-        await ensureAllowance(selectedToken, MARKET_ADDRESS, amountU256, provider, senderAddr as unknown as string, walletAddress, setCreateStep, selInfo?.symbol || 'token');
+        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr as unknown as string, walletAddress, setCreateStep, selInfo?.symbol || 'token');
 
         // Step 2: Call createSellOrder on-chain
         setCreateStep('Creating sell order on-chain...');
@@ -335,21 +353,23 @@ const Marketplace: React.FC = () => {
       const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
 
       if (order.type === 'sell') {
-        // Buyer fills sell order: must include BTC output to seller
+        // Buyer fills sell order: must include BTC output to seller's P2OP address
         const btcPaymentSats = BigInt(Math.ceil(fillAmt * order.pricePerToken));
-        const sellerAddress = order.creator; // bech32 address
+        // order.creator is the seller's MLDSA hash hex (from on-chain) — build P2OP
+        const sellerP2OPScript = buildP2OPScript(order.creator);
+        const sellerP2OPAddress = getP2OPAddress(order.creator);
 
         setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
 
-        // Set transaction details so contract can verify BTC output during simulation
+        // Set transaction details so contract can verify P2OP output during simulation
         market.setTransactionDetails({
           inputs: [],
           outputs: [{
-            to: sellerAddress,
             value: btcPaymentSats,
             index: 1, // index 0 is reserved
-            flags: TransactionOutputFlags.hasTo,
-            scriptPubKey: undefined,
+            flags: TransactionOutputFlags.hasScriptPubKey,
+            scriptPubKey: sellerP2OPScript,
+            to: undefined,
           }],
         });
 
@@ -358,9 +378,8 @@ const Marketplace: React.FC = () => {
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
-        // Include BTC output in the actual transaction
         (tp as Record<string, unknown>).extraOutputs = [{
-          address: sellerAddress,
+          address: sellerP2OPAddress,
           value: Number(btcPaymentSats),
         }];
         (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
@@ -370,7 +389,7 @@ const Marketplace: React.FC = () => {
         // No BTC in this step — buyer will pay BTC later via executeBuyOrder
         setFillStep('Approving tokens for marketplace...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        await ensureAllowance(order.tokenAddress, MARKET_ADDRESS, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
+        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
 
         setFillStep('Accepting buy order (locking tokens)...');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -414,22 +433,24 @@ const Marketplace: React.FC = () => {
 
       const remaining = order.amount - order.amountFilled;
       const btcPaymentSats = BigInt(Math.ceil(remaining * order.pricePerToken));
-      const sellerAddress = order.seller; // hex address of seller who locked tokens
+      // order.seller is the seller's MLDSA hash hex — build P2OP script and address
+      const sellerP2OPScript = buildP2OPScript(order.seller);
+      const sellerP2OPAddress = getP2OPAddress(order.seller);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
 
       setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
 
-      // Set transaction details so contract can verify BTC output during simulation
+      // Set transaction details so contract can verify P2OP output during simulation
       market.setTransactionDetails({
         inputs: [],
         outputs: [{
-          to: sellerAddress,
           value: btcPaymentSats,
           index: 1,
-          flags: TransactionOutputFlags.hasTo,
-          scriptPubKey: undefined,
+          flags: TransactionOutputFlags.hasScriptPubKey,
+          scriptPubKey: sellerP2OPScript,
+          to: undefined,
         }],
       });
 
@@ -439,7 +460,7 @@ const Marketplace: React.FC = () => {
 
       const tp = await buildTxParams(provider, walletAddress);
       (tp as Record<string, unknown>).extraOutputs = [{
-        address: sellerAddress,
+        address: sellerP2OPAddress,
         value: Number(btcPaymentSats),
       }];
       (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;

@@ -87,9 +87,10 @@ export const STAKING_SELECTORS = {
 } as const;
 
 /** P2PMarket — on-chain P2P orderbook (Verify-Don't-Custody pattern) */
-export const MARKET_ADDRESS = 'opt1sqpggj6rdnmwuwewnhp0etmckv8rhurf7ace65dd7';
-export const MARKET_PUBKEY = '0xe3523f3c7aea4349d34e710e4650de421e7dd800435414191f34f017124a3ca1';
-export const MARKET_HEX = 'e3523f3c7aea4349d34e710e4650de421e7dd800435414191f34f017124a3ca1';
+/** v6 — fixed price scaling (/1e8) + P2OP address verification */
+export const MARKET_ADDRESS = 'opt1sqqd334lec0t5kg8enjn5kpusgw7v9cc6qg7zqmsn';
+export const MARKET_PUBKEY = '0x63b25b3b2850afa425c8f86ae64c6c168fa36e198b1cce30338b86c7a93efbbe';
+export const MARKET_HEX = '63b25b3b2850afa425c8f86ae64c6c168fa36e198b1cce30338b86c7a93efbbe';
 
 /** P2PMarket v5 selectors — trustless buy orders (accept + execute) */
 export const MARKET_SELECTORS = {

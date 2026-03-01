@@ -8,6 +8,7 @@
  * 4. Proceed with operation
  */
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
+import { Address } from '@btc-vision/transaction';
 import { networks } from '@btc-vision/bitcoin';
 
 const NETWORK = networks.testnet;
@@ -72,7 +73,7 @@ export async function waitForNextBlock(
  */
 export async function ensureAllowance(
   tokenAddress: string,
-  spenderAddress: string,
+  spenderPubkeyHex: string,   // MUST be hex pubkey like '0xe3523...' — NOT bech32
   amount: bigint,
   provider: JSONRpcProvider,
   senderAddr: string,
@@ -80,7 +81,7 @@ export async function ensureAllowance(
   setStep: (s: string) => void,
   tokenLabel = 'token',
 ): Promise<boolean> {
-  const cacheKey = `${tokenAddress}:${spenderAddress}`;
+  const cacheKey = `${tokenAddress}:${spenderPubkeyHex}`;
 
   // Session cache: if we already approved this token for this spender, skip
   if (approvedThisSession.has(cacheKey)) {
@@ -90,12 +91,14 @@ export async function ensureAllowance(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenContract = getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, NETWORK, senderAddr as any);
+  // SDK requires Address objects for ADDRESS-type parameters — NOT bech32 strings
+  const spenderAddr = Address.fromString(spenderPubkeyHex);
 
   // Check existing allowance
   setStep(`Checking ${tokenLabel} allowance...`);
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allowanceRes = await tokenContract.allowance(senderAddr as any, spenderAddress as any);
+    const allowanceRes = await tokenContract.allowance(senderAddr as any, spenderAddr as any);
     if (!(allowanceRes as CallResult).revert) {
       const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
       const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
@@ -113,8 +116,7 @@ export async function ensureAllowance(
 
   // Send increaseAllowance(max_uint256)
   setStep(`Approving ${tokenLabel}...`);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddress as any, MAX_UINT256));
+  const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddr as any, MAX_UINT256));
   if ((approveSim as CallResult).revert) throw new Error(`${tokenLabel} approval failed: ${(approveSim as CallResult).revert}`);
   const tp = await buildTxParams(provider, walletAddress);
   await (approveSim as CallResult).sendTransaction(tp);

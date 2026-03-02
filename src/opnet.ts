@@ -159,6 +159,17 @@ function base64ToHex(b64: string): string {
   return Array.from(bin, c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
 }
 
+/** Parse btc_call result (base64 or hex) */
+function parseCallResult(r: Record<string, unknown>): string | null {
+  if (!r) return null;
+  if (r.error) return null;
+  if (typeof r.revert === 'string' && r.revert.length > 4) return null;
+  const raw = typeof r.result === 'string' ? r.result : (typeof r.returnData === 'string' ? r.returnData : null);
+  if (!raw || raw === 'AA==') return null;
+  if (raw.startsWith('0x')) return raw;
+  try { return '0x' + base64ToHex(raw); } catch { return raw; }
+}
+
 /** Simulate contract call (read-only).
  *  btc_call params: [to, calldataHex, fromMLDSAHex?, fromTweakedHex?, blockHeight?, ...] */
 export async function callContract(
@@ -169,19 +180,14 @@ export async function callContract(
   fromTweakedHex?: string,
 ): Promise<string | null> {
   const data = (selectorHex + calldataBodyHex).replace(/^0x/, '');
+  // Try with original address first (bech32 or hex)
   try {
     const params: (string | undefined)[] = [to, data, fromMLDSAHex, fromTweakedHex];
     const r = await rpc('btc_call', params) as Record<string, unknown>;
-    if (!r) return null;
-    if (r.error) return null;
-    if (typeof r.revert === 'string' && r.revert.length > 4) return null;
-    const raw = typeof r.result === 'string' ? r.result : (typeof r.returnData === 'string' ? r.returnData : null);
-    if (!raw || raw === 'AA==') return null;
-    if (raw.startsWith('0x')) return raw;
-    try { return '0x' + base64ToHex(raw); } catch { return raw; }
-  } catch {
-    return null;
-  }
+    const result = parseCallResult(r);
+    if (result) return result;
+  } catch { /* try fallback */ }
+  return null;
 }
 
 /** Get OP-20 token balance for an owner (returns 0n on any failure).

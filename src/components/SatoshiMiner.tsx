@@ -111,6 +111,12 @@ const SatoshiMiner: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const sparksRef = useRef<Spark[]>([]);
     const animRef = useRef(0);
+    // Combo system: rapid clicks build a multiplier
+    const [combo, setCombo] = useState(0);
+    const comboTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    // Prestige system: reset progress for permanent multiplier
+    const [prestige, setPrestige] = useState<number>(() => ld('sm_prestige', 0));
+    const [showPrestige, setShowPrestige] = useState(false);
 
     // Derived
     const totalUpgrades = ups.reduce((s, u) => s + u.lv, 0);
@@ -119,8 +125,11 @@ const SatoshiMiner: React.FC = () => {
     const lkLv = ups.find(u => u.id === 'luck')?.lv || 0;
     const tbLv = ups.find(u => u.id === 'turbo')?.lv || 0;
     const tm = Math.pow(2, tbLv);
-    const spc = (1 + ups.filter(u => u.cat === 'c').reduce((s, u) => s + (u.pc || 0) * u.lv, 0)) * tm;
-    const sps = ups.filter(u => u.cat === 'a').reduce((s, u) => s + (u.ps || 0) * u.lv, 0) * tm;
+    const prestigeMulti = 1 + prestige * 0.25; // +25% per prestige level
+    const spc = Math.floor((1 + ups.filter(u => u.cat === 'c').reduce((s, u) => s + (u.pc || 0) * u.lv, 0)) * tm * prestigeMulti);
+    const sps = Math.floor(ups.filter(u => u.cat === 'a').reduce((s, u) => s + (u.ps || 0) * u.lv, 0) * tm * prestigeMulti);
+    const comboMulti = combo >= 50 ? 5 : combo >= 30 ? 3 : combo >= 15 ? 2 : combo >= 5 ? 1.5 : 1;
+    const comboLabel = combo >= 50 ? 'MEGA' : combo >= 30 ? 'SUPER' : combo >= 15 ? 'GREAT' : combo >= 5 ? 'NICE' : '';
     const br = Math.max(1, Math.floor(50 / Math.pow(2, hlv)));
     const epochBlocks = blk % EP;
     const epochNum = Math.floor(blk / EP);
@@ -232,7 +241,7 @@ const SatoshiMiner: React.FC = () => {
     }, [mineBalance, tot, sps]);
 
     // Save
-    useEffect(() => { const sv = () => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)); localStorage.setItem('sm_mine', JSON.stringify(mineBalance)); localStorage.setItem('sm_mine_start', JSON.stringify(mineStartDay)); }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv, mineBalance, mineStartDay]);
+    useEffect(() => { const sv = () => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)); localStorage.setItem('sm_mine', JSON.stringify(mineBalance)); localStorage.setItem('sm_mine_start', JSON.stringify(mineStartDay)); localStorage.setItem('sm_prestige', JSON.stringify(prestige)); }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv, mineBalance, mineStartDay, prestige]);
 
     // $MINE accumulation (tied to game activity)
     useEffect(() => {
@@ -250,11 +259,16 @@ const SatoshiMiner: React.FC = () => {
     const click = useCallback((e: React.MouseEvent) => {
         const el = e.currentTarget as HTMLElement; const r = el.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
-        const g = Math.random() < gc; const v = g ? spc * 5 : spc;
+        // Combo: increment on each click, reset after 1s of inactivity
+        setCombo(c => c + 1);
+        clearTimeout(comboTimer.current);
+        comboTimer.current = setTimeout(() => setCombo(0), 1200);
+        const g = Math.random() < gc; const baseV = g ? spc * 5 : spc;
+        const v = Math.floor(baseV * comboMulti);
         setSats(p => p + v); setTot(p => p + v);
         clickCount.current++;
         // $MINE on click
-        const mineEarned = v * MINE_PER_SAT * (g ? 5 : 1);
+        const mineEarned = v * MINE_PER_SAT * (g ? 5 : 1) * prestigeMulti;
         if (minePoolRemaining > 0) setMineBalance(p => Math.min(MINE_GAME_POOL, p + mineEarned));
         const id = fidRef.current++;
         setFx(p => [...p, { id, x, y, v, gold: g }]);
@@ -275,7 +289,7 @@ const SatoshiMiner: React.FC = () => {
                 sparksRef.current.push({ id: Date.now() + i, x: sx, y: sy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.5, life: 1, color: g ? '#eab308' : stage.color });
             }
         }
-    }, [spc, gc, stage.color]);
+    }, [spc, gc, stage.color, comboMulti, prestigeMulti]);
 
     const buy = useCallback((uid: string) => {
         const u = ups.find(x => x.id === uid);
@@ -420,6 +434,21 @@ const SatoshiMiner: React.FC = () => {
                         <div className="sd-b" style={{ color: stage.color }}>{fs(sats)}</div>
                         <div className="sd-s">satoshis</div>
                         {sps > 0 && <div className="sd-r">+{fs(sps)}/sec</div>}
+                    {combo >= 5 && (
+                        <div style={{
+                            fontSize: '.72rem', fontWeight: 800, marginTop: 4,
+                            color: combo >= 50 ? '#ec4899' : combo >= 30 ? '#eab308' : combo >= 15 ? '#22c55e' : '#0ea5e9',
+                            textShadow: `0 0 12px ${combo >= 50 ? 'rgba(236,72,153,.6)' : combo >= 30 ? 'rgba(234,179,8,.6)' : 'rgba(14,165,233,.4)'}`,
+                            animation: 'blink .4s ease-in-out infinite',
+                        }}>
+                            {comboLabel} COMBO x{comboMulti} ({combo})
+                        </div>
+                    )}
+                    {prestige > 0 && (
+                        <div style={{ fontSize: '.55rem', color: 'var(--p)', marginTop: 2 }}>
+                            Prestige {prestige} · +{prestige * 25}% all production
+                        </div>
+                    )}
                     </div>
 
                     <div className="gs">
@@ -551,6 +580,48 @@ const SatoshiMiner: React.FC = () => {
                     <div style={{ marginTop: 6, fontSize: '.5rem', color: 'var(--t4)', textAlign: 'center' }}>
                         OP-20 token on Bitcoin L1 · Secured by ML-DSA · Consensus-verified
                     </div>
+                </div>
+                {/* Prestige */}
+                <div className="P" style={{ padding: 12, marginBottom: 6 }}>
+                    <div className="Lb" style={{ marginBottom: 4, color: 'var(--p)' }}>Prestige</div>
+                    <div style={{ fontSize: '.65rem', color: 'var(--t3)', lineHeight: 1.6, marginBottom: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Level</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)' }}>{prestige}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Bonus</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)' }}>+{prestige * 25}%</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Next level cost</span>
+                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: 'var(--o)' }}>{fs(Math.pow(10, 5 + prestige))} sats</span>
+                        </div>
+                    </div>
+                    <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 6, lineHeight: 1.5 }}>
+                        Reset ALL sats + upgrades for a permanent +25% production multiplier. Your $MINE and total mined are kept.
+                    </div>
+                    {showPrestige ? (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => {
+                                const cost = Math.pow(10, 5 + prestige);
+                                if (tot < cost) return;
+                                setPrestige(p => p + 1);
+                                setSats(0); setBlk(0); setHlv(0);
+                                setUps(UPS.map(u => ({ ...u, lv: 0 })));
+                                setShowPrestige(false);
+                                setFlash(true); setTimeout(() => setFlash(false), 600);
+                            }} disabled={tot < Math.pow(10, 5 + prestige)}
+                            style={{ flex: 1, padding: '7px 0', borderRadius: 10, border: 'none', cursor: tot >= Math.pow(10, 5 + prestige) ? 'pointer' : 'not-allowed', background: tot >= Math.pow(10, 5 + prestige) ? 'linear-gradient(135deg, var(--p), #ec4899)' : 'rgba(255,255,255,.05)', color: tot >= Math.pow(10, 5 + prestige) ? '#fff' : 'var(--t4)', fontWeight: 700, fontSize: '.68rem' }}>
+                                Prestige Now
+                            </button>
+                            <button onClick={() => setShowPrestige(false)} style={{ padding: '7px 12px', borderRadius: 10, border: '1px solid var(--bd)', background: 'none', color: 'var(--t3)', fontSize: '.65rem', cursor: 'pointer' }}>Cancel</button>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowPrestige(true)} style={{ width: '100%', padding: '7px 0', borderRadius: 10, border: '1px solid rgba(167,139,250,.2)', background: 'rgba(167,139,250,.06)', color: 'var(--p)', fontWeight: 600, fontSize: '.68rem', cursor: 'pointer' }}>
+                            Prestige (Reset for +25%)
+                        </button>
+                    )}
                 </div>
                 {/* Leaderboard */}
                 {leaderboard.length > 0 && (

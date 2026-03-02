@@ -26,9 +26,10 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
-  // Bob's docs: signer & mldsaSigner MUST be explicitly null on frontend — wallet handles signing
+  // InteractionParametersWithoutSigner: wallet manages signer/mldsaSigner/challenge internally.
+  // These keys must NOT be present in the params object at all — wallet rejects them.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
+  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {

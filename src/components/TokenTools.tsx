@@ -116,56 +116,105 @@ function ConverterTool() {
   );
 }
 
+/* ─── Known tokens database ─── */
+const KNOWN_TOKENS: Record<string, { name: string; symbol: string; decimals: number; type: string }> = {};
+for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
+  KNOWN_TOKENS[tok.address] = { name: `${sym} Token`, symbol: sym, decimals: tok.decimals, type: 'OP-20 (MintableToken)' };
+}
+
 /* ─── Token Explorer ─── */
 function TokenExplorer() {
   const [addr, setAddr] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [result, setResult] = useState<{ name: string; symbol: string; decimals: number; supply: string; isContract: boolean; bytecodeLen?: number } | null>(null);
+  const [result, setResult] = useState<{ name: string; symbol: string; decimals: number; supply: string; isContract: boolean; bytecodeLen?: number; type?: string } | null>(null);
 
   const lookup = useCallback(async () => {
-    if (!addr.trim()) return;
+    const a = addr.trim();
+    if (!a) return;
     setErr(''); setResult(null); setLoading(true);
     try {
-      const a = addr.trim();
-      const [code, info] = await Promise.all([opnet.getCode(a, true), opnet.getOP20Info(a)]);
+      // Check known tokens first
+      const known = KNOWN_TOKENS[a];
+
+      const [code, supply] = await Promise.all([
+        opnet.getCode(a, true),
+        opnet.getTokenTotalSupply(a).catch(() => 0n),
+      ]);
       const isContract = !!code && !!(code as { bytecode?: string }).bytecode;
       const bytecodeLen = isContract && (code as { bytecode?: string }).bytecode ? (code as { bytecode: string }).bytecode.length / 2 : 0;
-      if (info && isContract) {
-        setResult({ name: info.name, symbol: info.symbol, decimals: info.decimals, supply: info.totalSupply && info.totalSupply !== '0' ? formatBigNum(info.totalSupply) : info.totalSupply, isContract, bytecodeLen });
+
+      if (known) {
+        // Known token — use our local database + on-chain supply
+        const supplyStr = supply > 0n ? formatBigNum(String(Number(supply) / Math.pow(10, known.decimals))) : '—';
+        setResult({ name: known.name, symbol: known.symbol, decimals: known.decimals, supply: supplyStr, isContract: true, bytecodeLen, type: known.type });
       } else if (isContract) {
-        setResult({ name: 'Unknown', symbol: '—', decimals: 0, supply: '—', isContract, bytecodeLen });
-        setErr('Contract found but not OP-20 compatible.');
+        // Unknown contract — try OP-20 info from storage
+        const info = await opnet.getOP20Info(a);
+        if (info && info.name !== 'Unknown' && info.symbol !== '?') {
+          setResult({ name: info.name, symbol: info.symbol, decimals: info.decimals, supply: info.totalSupply !== '0' ? formatBigNum(info.totalSupply) : '—', isContract, bytecodeLen, type: 'OP-20' });
+        } else {
+          const supplyStr = supply > 0n ? formatBigNum(String(supply)) : '—';
+          setResult({ name: 'Unknown Contract', symbol: '—', decimals: 8, supply: supplyStr, isContract, bytecodeLen, type: 'Smart Contract' });
+          setErr('Contract found. OP-20 metadata not available (may be non-standard).');
+        }
       } else {
         setResult({ name: '—', symbol: '—', decimals: 0, supply: '—', isContract: false });
-        setErr('No contract at this address.');
+        setErr('No contract found at this address.');
       }
     } catch (e) { setErr(e instanceof Error ? e.message : 'Lookup failed'); }
     finally { setLoading(false); }
   }, [addr]);
 
+  // Auto-lookup when addr changes from button click
+  const setAndLookup = useCallback((address: string) => {
+    setAddr(address);
+    // lookup after state settles
+    setTimeout(() => {
+      setErr(''); setResult(null); setLoading(true);
+      const known = KNOWN_TOKENS[address];
+      Promise.all([
+        opnet.getCode(address, true),
+        opnet.getTokenTotalSupply(address).catch(() => 0n),
+      ]).then(([code, supply]) => {
+        const isContract = !!code && !!(code as { bytecode?: string }).bytecode;
+        const bytecodeLen = isContract && (code as { bytecode?: string }).bytecode ? (code as { bytecode: string }).bytecode.length / 2 : 0;
+        if (known) {
+          const supplyStr = supply > 0n ? formatBigNum(String(Number(supply) / Math.pow(10, known.decimals))) : '—';
+          setResult({ name: known.name, symbol: known.symbol, decimals: known.decimals, supply: supplyStr, isContract: true, bytecodeLen, type: known.type });
+        } else if (isContract) {
+          setResult({ name: 'Unknown', symbol: '—', decimals: 8, supply: supply > 0n ? formatBigNum(String(supply)) : '—', isContract, bytecodeLen, type: 'Smart Contract' });
+        } else {
+          setResult({ name: '—', symbol: '—', decimals: 0, supply: '—', isContract: false });
+          setErr('No contract at this address.');
+        }
+      }).catch(e => setErr(e instanceof Error ? e.message : 'Failed'))
+        .finally(() => setLoading(false));
+    }, 100);
+  }, []);
+
   return (
     <div style={cardS}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input style={{ ...inputS, flex: 1 }} value={addr} onChange={e => setAddr(e.target.value)} placeholder="Contract address (opt1sq... / tb1p...)" onKeyDown={e => e.key === 'Enter' && lookup()} />
-        <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '⏳' : 'Explore'}</button>
+        <input style={{ ...inputS, flex: 1 }} value={addr} onChange={e => setAddr(e.target.value)} placeholder="Contract address (opt1sq...)" onKeyDown={e => e.key === 'Enter' && lookup()} />
+        <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Explore'}</button>
       </div>
       {/* Quick links to known tokens */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
         {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => (
-          <button key={sym} onClick={() => { setAddr(tok.address); setTimeout(lookup, 50); }}
-            style={{ padding: '3px 10px', fontSize: '.58rem', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.03)', color: 'var(--t3)', cursor: 'pointer' }}>
+          <button key={sym} onClick={() => setAndLookup(tok.address)}
+            style={{ padding: '4px 12px', fontSize: '.62rem', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: addr === tok.address ? 'rgba(247,147,26,.1)' : 'rgba(255,255,255,.03)', color: addr === tok.address ? 'var(--o)' : 'var(--t3)', cursor: 'pointer', fontWeight: 600 }}>
             {tok.icon} {sym}
           </button>
         ))}
       </div>
-      {err && <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
+      {err && <div style={{ fontSize: '.72rem', color: err.includes('not available') ? 'var(--y)' : 'var(--r)', marginBottom: 8 }}>{err}</div>}
       {result && (
         <div>
           {[
             ['Name', result.name, 'var(--o)'],
             ['Symbol', result.symbol, 'var(--c)'],
-            ['Standard', result.isContract ? 'OP-20' : 'Not a contract', result.isContract ? 'var(--g)' : 'var(--r)'],
+            ['Type', result.type || (result.isContract ? 'Smart Contract' : 'Not a contract'), result.isContract ? 'var(--g)' : 'var(--r)'],
             ['Decimals', String(result.decimals), '#fff'],
             ['Total Supply', result.supply, '#fff'],
             ...(result.bytecodeLen ? [['Bytecode Size', `${result.bytecodeLen.toLocaleString()} bytes`, 'var(--t2)']] : []),
@@ -176,7 +225,7 @@ function TokenExplorer() {
             </div>
           ))}
           {result.isContract && <div style={{ marginTop: 8, textAlign: 'center' }}>
-            <a href={`https://opscan.org/contract/${addr.trim()}`} target="_blank" rel="noopener noreferrer"
+            <a href={`https://testnet.opscan.org/contract/${addr.trim()}`} target="_blank" rel="noopener noreferrer"
               style={{ fontSize: '.65rem', color: 'var(--c)', textDecoration: 'none' }}>View on OPScan →</a>
           </div>}
         </div>
@@ -259,15 +308,30 @@ function TXLookup() {
   const [tx, setTx] = useState<Record<string, unknown> | null>(null);
   const [receipt, setReceipt] = useState<Record<string, unknown> | null>(null);
   const [err, setErr] = useState('');
+  const [pending, setPending] = useState<Array<Record<string, unknown>>>([]);
+
+  // Load recent pending txs on mount
+  useEffect(() => {
+    opnet.getLatestPendingTxs(5).then(r => setPending(r)).catch(() => {});
+  }, []);
 
   const lookup = useCallback(async () => {
-    if (!txHash.trim()) return;
+    const h = txHash.trim();
+    if (!h) return;
     setErr(''); setTx(null); setReceipt(null); setLoading(true);
     try {
-      const [t, r] = await Promise.all([opnet.getTransaction(txHash.trim()), opnet.getTransactionReceipt(txHash.trim())]);
-      if (!t && !r) { setErr('Transaction not found'); return; }
-      setTx(t);
-      setReceipt(r);
+      // Try OPNet RPC first
+      const [t, r] = await Promise.all([
+        opnet.getTransaction(h),
+        opnet.getTransactionReceipt(h),
+      ]);
+      if (t || r) {
+        setTx(t);
+        setReceipt(r);
+      } else {
+        // Not found in OPNet — might be a plain Bitcoin TX
+        setErr(`Transaction not found in OPNet. This may be a regular Bitcoin TX. Check on a Bitcoin explorer.`);
+      }
     } catch (e) { setErr(e instanceof Error ? e.message : 'Lookup failed'); }
     finally { setLoading(false); }
   }, [txHash]);
@@ -283,7 +347,7 @@ function TXLookup() {
           <span style={{ ...valueS, fontSize: '.6rem' }}>[{v.length} items]</span>
         ) : (
           <span style={valueS}>
-            {String(v).length > 40 ? String(v).slice(0, 20) + '…' + String(v).slice(-16) : String(v)}
+            {String(v).length > 40 ? String(v).slice(0, 20) + '...' + String(v).slice(-16) : String(v)}
             {String(v).length > 10 && <CopyBtn text={String(v)} />}
           </span>
         )}
@@ -294,36 +358,84 @@ function TXLookup() {
   return (
     <div style={cardS}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input style={{ ...inputS, flex: 1 }} value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="Transaction hash (0x... or hex)" onKeyDown={e => e.key === 'Enter' && lookup()} />
-        <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '⏳' : 'Lookup'}</button>
+        <input style={{ ...inputS, flex: 1 }} value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="OPNet transaction hash" onKeyDown={e => e.key === 'Enter' && lookup()} />
+        <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Lookup'}</button>
       </div>
-      {err && <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
+      {err && (
+        <div style={{ fontSize: '.72rem', marginBottom: 8, padding: '8px 12px', borderRadius: 10 , background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.12)', color: 'var(--y)' }}>
+          {err}
+          {txHash.trim().length === 64 && (
+            <a href={`https://mempool.space/signet/tx/${txHash.trim()}`} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', marginTop: 4, color: 'var(--c)', fontSize: '.65rem' }}>
+              Check on Mempool.space (Signet) ↗
+            </a>
+          )}
+        </div>
+      )}
       {tx && (
         <div>
-          <div style={{ fontSize: '.68rem', color: 'var(--o)', fontWeight: 700, marginBottom: 6 }}>📜 Transaction</div>
+          <div style={{ fontSize: '.68rem', color: 'var(--o)', fontWeight: 700, marginBottom: 6 }}>Transaction</div>
           {renderObj(tx)}
         </div>
       )}
       {receipt && (
         <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: '.68rem', color: 'var(--g)', fontWeight: 700, marginBottom: 6 }}>✅ Receipt</div>
+          <div style={{ fontSize: '.68rem', color: 'var(--g)', fontWeight: 700, marginBottom: 6 }}>Receipt</div>
           {renderObj(receipt)}
+        </div>
+      )}
+      {/* Recent pending TXs from mempool */}
+      {!tx && !receipt && !err && pending.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: '.68rem', color: 'var(--c)', fontWeight: 700, marginBottom: 6 }}>Recent Pending TXs (Mempool)</div>
+          {pending.map((p, i) => {
+            const hash = String(p.hash || p.id || p.transactionId || '');
+            return (
+              <div key={i} style={{ ...rowS, cursor: 'pointer' }} onClick={() => { setTxHash(hash); }}>
+                <span style={{ ...monoSm, color: 'var(--c)', flex: 1 }}>{hash.slice(0, 20)}...{hash.slice(-8)}</span>
+                <span style={{ ...monoSm, color: 'var(--t4)', fontSize: '.55rem' }}>{p.from ? String(p.from).slice(0, 10) + '...' : ''}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
-/* ─── Block Explorer ─── */
+/* ─── Block Explorer with visual chain ─── */
 function BlockExplorer() {
   const [blockNum, setBlockNum] = useState('');
   const [loading, setLoading] = useState(false);
   const [block, setBlock] = useState<Record<string, unknown> | null>(null);
   const [latestHeight, setLatestHeight] = useState(0);
+  const [recentBlocks, setRecentBlocks] = useState<Array<{ num: number; txCount: number; hash: string }>>([]);
   const [err, setErr] = useState('');
+  const [mempool, setMempool] = useState<{ count?: number; opnetCount?: number } | null>(null);
 
   useEffect(() => {
-    opnet.getBlockHeight().then(h => { setLatestHeight(h); setBlockNum(String(h)); }).catch(() => {});
+    const load = async () => {
+      const h = await opnet.getBlockHeight().catch(() => 0);
+      if (h > 0) {
+        setLatestHeight(h);
+        setBlockNum(String(h));
+        // Load last 8 blocks for visual chain
+        const blocks: Array<{ num: number; txCount: number; hash: string }> = [];
+        for (let i = h; i > Math.max(0, h - 8); i--) {
+          const b = await opnet.getBlockByNumber(i, false).catch(() => null);
+          if (b) {
+            const txs = Array.isArray(b.transactions) ? (b.transactions as unknown[]).length : 0;
+            blocks.push({ num: i, txCount: txs, hash: String(b.hash || b.blockHash || '') });
+          }
+        }
+        setRecentBlocks(blocks);
+      }
+      const mp = await opnet.getMempoolInfo().catch(() => null);
+      if (mp) setMempool(mp);
+    };
+    load();
+    const iv = setInterval(load, 30000);
+    return () => clearInterval(iv);
   }, []);
 
   const lookup = useCallback(async () => {
@@ -346,7 +458,7 @@ function BlockExplorer() {
       <div key={k} style={rowS}>
         <span style={labelS}>{k}</span>
         <span style={valueS}>
-          {sv.length > 50 ? sv.slice(0, 20) + '…' + sv.slice(-16) : sv.startsWith('0x') && sv.length > 10 ? parseHex(sv) + ` (${sv.slice(0, 10)}…)` : sv}
+          {sv.length > 50 ? sv.slice(0, 20) + '...' + sv.slice(-16) : sv.startsWith('0x') && sv.length > 10 ? parseHex(sv) + ` (${sv.slice(0, 10)}...)` : sv}
           {sv.length > 10 && <CopyBtn text={sv} />}
         </span>
       </div>
@@ -355,17 +467,67 @@ function BlockExplorer() {
 
   return (
     <div style={cardS}>
+      {/* Visual block chain */}
+      {recentBlocks.length > 0 && (
+        <div style={{ marginBottom: 16, padding: '12px 0' }}>
+          <div style={{ fontSize: '.62rem', color: 'var(--t4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Block Chain</div>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', overflowX: 'auto', paddingBottom: 4 }}>
+            {/* Mempool (next block) */}
+            {mempool && (
+              <>
+                <div style={{
+                  minWidth: 72, padding: '8px 6px', borderRadius: 10, textAlign: 'center',
+                  background: 'rgba(245,158,11,.08)', border: '1px dashed rgba(245,158,11,.3)',
+                  cursor: 'default', transition: '.2s',
+                }}>
+                  <div style={{ fontSize: '.5rem', color: 'var(--y)', fontWeight: 600, marginBottom: 2 }}>PENDING</div>
+                  <div style={{ ...monoSm, fontWeight: 700, color: 'var(--y)', fontSize: '.7rem' }}>{mempool.opnetCount ?? mempool.count ?? '?'}</div>
+                  <div style={{ fontSize: '.45rem', color: 'var(--t4)' }}>txs</div>
+                </div>
+                <div style={{ color: 'var(--t4)', fontSize: '.8rem', padding: '0 2px' }}>...</div>
+              </>
+            )}
+            {recentBlocks.map((b, i) => {
+              const isLatest = i === 0;
+              const selected = blockNum === String(b.num);
+              const barH = Math.max(20, Math.min(60, b.txCount * 8 + 20));
+              return (
+                <div key={b.num} onClick={() => { setBlockNum(String(b.num)); setBlock(null); }}
+                  style={{
+                    minWidth: 72, padding: '8px 6px', borderRadius: 10, textAlign: 'center', cursor: 'pointer',
+                    background: selected ? 'rgba(247,147,26,.12)' : isLatest ? 'rgba(16,185,129,.06)' : 'rgba(255,255,255,.03)',
+                    border: `1px solid ${selected ? 'rgba(247,147,26,.3)' : isLatest ? 'rgba(16,185,129,.15)' : 'rgba(255,255,255,.06)'}`,
+                    transition: '.2s',
+                  }}>
+                  <div style={{ fontSize: '.5rem', color: isLatest ? 'var(--g)' : 'var(--t4)', fontWeight: 600, marginBottom: 2 }}>
+                    {isLatest ? 'LATEST' : `#${b.num.toLocaleString()}`}
+                  </div>
+                  <div style={{
+                    width: '100%', height: barH, borderRadius: 4, marginBottom: 4,
+                    background: `linear-gradient(180deg, ${isLatest ? 'rgba(16,185,129,.3)' : 'rgba(14,165,233,.2)'}, transparent)`,
+                  }} />
+                  <div style={{ ...monoSm, fontWeight: 700, color: '#fff', fontSize: '.7rem' }}>
+                    {isLatest ? `#${b.num.toLocaleString()}` : `${b.txCount}`}
+                  </div>
+                  <div style={{ fontSize: '.45rem', color: 'var(--t4)' }}>{b.txCount} txs</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <button onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>◀</button>
+        <button onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); setBlock(null); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&lt;</button>
         <input style={{ ...inputS, flex: 1, textAlign: 'center' }} type="number" value={blockNum} onChange={e => setBlockNum(e.target.value)} placeholder="Block number" onKeyDown={e => e.key === 'Enter' && lookup()} />
-        <button onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) setBlockNum(String(n)); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>▶</button>
-        <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '⏳' : 'Fetch'}</button>
+        <button onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) { setBlockNum(String(n)); setBlock(null); } }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&gt;</button>
+        <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Fetch'}</button>
       </div>
       {latestHeight > 0 && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-          <button onClick={() => setBlockNum(String(latestHeight))} style={{ ...copyBtnS, padding: '3px 10px' }}>Latest (#{latestHeight.toLocaleString()})</button>
-          <button onClick={() => setBlockNum(String(latestHeight - 10))} style={{ ...copyBtnS, padding: '3px 10px' }}>-10</button>
-          <button onClick={() => setBlockNum(String(latestHeight - 100))} style={{ ...copyBtnS, padding: '3px 10px' }}>-100</button>
+          <button onClick={() => { setBlockNum(String(latestHeight)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>Latest (#{latestHeight.toLocaleString()})</button>
+          <button onClick={() => { setBlockNum(String(latestHeight - 10)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-10</button>
+          <button onClick={() => { setBlockNum(String(latestHeight - 100)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-100</button>
         </div>
       )}
       {err && <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
@@ -382,8 +544,8 @@ function BlockExplorer() {
                 const txFrom = tx.from ? String(tx.from) : '';
                 return (
                   <div key={i} style={{ ...rowS, fontSize: '.6rem' }}>
-                    <span style={{ ...monoSm, color: 'var(--c)', fontSize: '.58rem' }}>{txHash.slice(0, 16)}…</span>
-                    {txFrom && <span style={{ ...monoSm, color: 'var(--t3)', fontSize: '.55rem' }}>from: {txFrom.slice(0, 10)}…</span>}
+                    <span style={{ ...monoSm, color: 'var(--c)', fontSize: '.58rem' }}>{txHash.slice(0, 16)}...</span>
+                    {txFrom && <span style={{ ...monoSm, color: 'var(--t3)', fontSize: '.55rem' }}>from: {txFrom.slice(0, 10)}...</span>}
                   </div>
                 );
               })}

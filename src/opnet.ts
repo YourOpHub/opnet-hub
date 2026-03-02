@@ -268,25 +268,56 @@ export async function getOP20Info(contractAddress: string): Promise<{
 /** Get UTXOs for an address */
 export async function getUTXOs(address: string): Promise<Array<{ transactionId: string; outputIndex: number; value: string | number }>> {
   try {
-    const r = await rpc('btc_getUTXOs', [{ address, optimize: false }]) as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
-    return r || [];
+    // RPC params: { address, optimize?, mergePendingUTXOs?, filterSpentUTXOs? }
+    const r = await rpc('btc_getUTXOs', [{ address, optimize: false, mergePendingUTXOs: true }], 15000) as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
+    return Array.isArray(r) ? r : [];
   } catch { return []; }
 }
 
-/** Get transaction by hash */
+/** Get transaction by hash — tries both with and without 0x prefix */
 export async function getTransaction(txHash: string): Promise<Record<string, unknown> | null> {
+  const hash = txHash.trim();
+  // Try as-is first
   try {
-    const r = await rpc('btc_getTransactionByHash', [txHash]) as Record<string, unknown>;
-    return r || null;
-  } catch { return null; }
+    const r = await rpc('btc_getTransactionByHash', [hash], 12000) as Record<string, unknown>;
+    if (r) return r;
+  } catch { /* try alternative */ }
+  // Try with 0x prefix if missing
+  if (!hash.startsWith('0x')) {
+    try {
+      const r = await rpc('btc_getTransactionByHash', ['0x' + hash], 12000) as Record<string, unknown>;
+      if (r) return r;
+    } catch { /* fall through */ }
+  }
+  // Try without 0x prefix
+  if (hash.startsWith('0x')) {
+    try {
+      const r = await rpc('btc_getTransactionByHash', [hash.slice(2)], 12000) as Record<string, unknown>;
+      if (r) return r;
+    } catch { /* fall through */ }
+  }
+  return null;
 }
 
 /** Get transaction receipt */
 export async function getTransactionReceipt(txHash: string): Promise<Record<string, unknown> | null> {
+  const hash = txHash.trim();
   try {
-    const r = await rpc('btc_getTransactionReceipt', [txHash]) as Record<string, unknown>;
-    return r || null;
-  } catch { return null; }
+    const r = await rpc('btc_getTransactionReceipt', [hash], 12000) as Record<string, unknown>;
+    if (r) return r;
+  } catch { /* try alt */ }
+  if (!hash.startsWith('0x')) {
+    try { return await rpc('btc_getTransactionReceipt', ['0x' + hash], 12000) as Record<string, unknown>; } catch { /* */ }
+  }
+  return null;
+}
+
+/** Get latest pending transactions from mempool */
+export async function getLatestPendingTxs(limit = 10): Promise<Array<Record<string, unknown>>> {
+  try {
+    const r = await rpc('btc_getLatestPendingTransactions', [undefined, undefined, limit], 10000) as Array<Record<string, unknown>>;
+    return Array.isArray(r) ? r : [];
+  } catch { return []; }
 }
 
 /** Get block by number */

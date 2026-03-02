@@ -265,6 +265,47 @@ export async function getOP20Info(contractAddress: string): Promise<{
   }
 }
 
+/** Get UTXOs for an address */
+export async function getUTXOs(address: string): Promise<Array<{ transactionId: string; outputIndex: number; value: string | number }>> {
+  try {
+    const r = await rpc('btc_getUTXOs', [{ address, optimize: false }]) as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
+    return r || [];
+  } catch { return []; }
+}
+
+/** Get transaction by hash */
+export async function getTransaction(txHash: string): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await rpc('btc_getTransactionByHash', [txHash]) as Record<string, unknown>;
+    return r || null;
+  } catch { return null; }
+}
+
+/** Get transaction receipt */
+export async function getTransactionReceipt(txHash: string): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await rpc('btc_getTransactionReceipt', [txHash]) as Record<string, unknown>;
+    return r || null;
+  } catch { return null; }
+}
+
+/** Get block by number */
+export async function getBlockByNumber(blockNumber: number | string, prefetchTxs = false): Promise<Record<string, unknown> | null> {
+  try {
+    const hex = typeof blockNumber === 'number' ? '0x' + blockNumber.toString(16) : blockNumber;
+    const r = await rpc('btc_getBlockByNumber', [hex, prefetchTxs]) as Record<string, unknown>;
+    return r || null;
+  } catch { return null; }
+}
+
+/** Get public key info for addresses */
+export async function getPublicKeyInfo(addresses: string[]): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await rpc('btc_getPublicKeyInfo', [addresses]) as Record<string, unknown>;
+    return r || null;
+  } catch { return null; }
+}
+
 /** Format satoshis to human-readable string */
 export function formatSats(sats: number | bigint): string {
   const n = typeof sats === 'bigint' ? Number(sats) : sats;

@@ -26,9 +26,9 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
-  // NOTE: Do NOT pass signer/mldsaSigner — the wallet extension handles signing internally.
+  // Bob's docs: signer & mldsaSigner MUST be explicitly null on frontend — wallet handles signing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
+  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -47,14 +47,14 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 
 export async function waitForNextBlock(
   provider: JSONRpcProvider,
   setStep?: (s: string) => void,
-  timeoutMs = 30_000,
+  timeoutMs = 60_000,
 ): Promise<void> {
   let startBlock: bigint;
   try { startBlock = await provider.getBlockNumber(); } catch { return; }
   
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    await new Promise(r => setTimeout(r, 5_000));
+    await new Promise(r => setTimeout(r, 8_000));
     const elapsed = Math.round((Date.now() - start) / 1000);
     setStep?.(`Waiting for block confirmation... (${elapsed}s)`);
     try {

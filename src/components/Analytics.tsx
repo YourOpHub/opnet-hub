@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { networks } from '@btc-vision/bitcoin';
-import { JSONRpcProvider } from 'opnet';
+// provider via contractCache
 import { getProvider } from '../contractCache';
 import * as opnetRpc from '../opnet';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl } from '../contracts';

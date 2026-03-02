@@ -6,7 +6,8 @@ import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
 import { getProvider } from './contractCache';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
-// txHistory used in Portfolio, not here
+import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/Toast';
 import { TESTNET_CONTRACTS } from './contracts';
 
 const BobChat = lazy(() => import('./components/BobChat'));
@@ -24,9 +25,14 @@ const Staking = lazy(() => import('./components/Staking'));
 const Marketplace = lazy(() => import('./components/Marketplace'));
 
 const LazyFallback = () => (
-    <div style={{ padding: 40, textAlign: 'center', color: 'var(--t3)' }}>
-        <div style={{ fontSize: '1.4rem', marginBottom: 8 }}>⚡</div>
-        <div style={{ fontSize: '.8rem' }}>Loading module…</div>
+    <div style={{ padding: '40px 0' }}>
+        <div className="skeleton-block" style={{ height: 180, borderRadius: 20, marginBottom: 16 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div className="skeleton-block" style={{ height: 80, borderRadius: 14 }} />
+            <div className="skeleton-block" style={{ height: 80, borderRadius: 14 }} />
+            <div className="skeleton-block" style={{ height: 80, borderRadius: 14 }} />
+        </div>
+        <div className="skeleton-block" style={{ height: 120, borderRadius: 16 }} />
     </div>
 );
 
@@ -129,7 +135,7 @@ const App: React.FC = () => {
     };
 
     return (
-        <>
+        <ToastProvider>
             <div className="site-bg" />
             <div className="particles"><span /><span /><span /><span /><span /><span /><span /><span /></div>
 
@@ -190,27 +196,35 @@ const App: React.FC = () => {
                 </div>
             </nav>
 
-            <main className="M" key={tab}><Suspense fallback={<LazyFallback />}>{P()}</Suspense></main>
+            <main className="M" key={tab}>
+                <ErrorBoundary onReset={() => setTab('home')}>
+                    <Suspense fallback={<LazyFallback />}>{P()}</Suspense>
+                </ErrorBoundary>
+            </main>
 
             <footer style={{
-                marginTop: 'auto', padding: '16px 16px', textAlign: 'center',
-                borderTop: '1px solid rgba(255,255,255,.03)', color: '#2d3548',
-                fontSize: '.65rem', background: 'rgba(6,6,11,.8)',
+                marginTop: 'auto', padding: '20px 24px', textAlign: 'center',
+                borderTop: '1px solid rgba(255,255,255,.04)', color: '#2d3548',
+                fontSize: '.65rem', background: 'rgba(6,6,11,.85)',
+                backdropFilter: 'blur(12px)',
             }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 10 }}>
                     {[
                         ['Docs', 'https://docs.opnet.org'],
-                        ['OPScan', 'https://opscan.org'],
+                        ['OPScan', 'https://testnet.opscan.org'],
                         ['GitHub', 'https://github.com/YourOpHub/opnet-hub'],
+                        ['Faucet', 'https://faucet.opnet.org'],
                     ].map(([l, u]) => (
                         <a key={l} href={u} target="_blank" rel="noopener noreferrer"
                             style={{ color: '#4a5568', textDecoration: 'none', fontWeight: 500, transition: 'color .2s', fontSize: '.65rem' }}
                             onMouseEnter={e => (e.currentTarget.style.color = '#F7931A')}
                             onMouseLeave={e => (e.currentTarget.style.color = '#4a5568')}
-                        >{l}</a>
+                        >{l} ↗</a>
                     ))}
                 </div>
-                <div style={{ color: '#1e2432' }}>OPNet Hub · Bitcoin L1 DeFi</div>
+                <div style={{ color: '#1a1f2e', fontSize: '.6rem', letterSpacing: '.02em' }}>
+                    OPNet Hub · Bitcoin L1 DeFi · Powered by OP_NET
+                </div>
             </footer>
 
             <button className="q-fab" onClick={() => setQOpen(!qOpen)}>
@@ -218,7 +232,7 @@ const App: React.FC = () => {
             </button>
 
             <QuestPanel open={qOpen} onClose={() => setQOpen(false)} onNav={navigate} />
-        </>
+        </ToastProvider>
     );
 };
 export default App;

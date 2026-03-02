@@ -6,6 +6,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
@@ -237,8 +238,8 @@ const SwapUI: React.FC = () => {
 
   const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
 
-  /** Create opnet provider (memoized) */
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  /** Singleton opnet provider */
+  const provider = useMemo(() => getProvider(), []);
 
   // senderAddr comes directly from useWalletConnect() as 'address'
 
@@ -453,7 +454,7 @@ const SwapUI: React.FC = () => {
       writer.writeAddress(Address.fromString(poolTokenB));
 
       setPoolDeployStep('Fetching UTXOs...');
-      const provider2 = new JSONRpcProvider(RPC_URL, NETWORK);
+      const provider2 = getProvider();
       const utxos = await provider2.utxoManager.getUTXOs({ address: walletAddress });
       if (!utxos?.length) throw new Error('No UTXOs. Get testnet BTC from faucet.');
 

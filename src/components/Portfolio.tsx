@@ -4,6 +4,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI,
   type IOP20Contract,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import * as opnet from '../opnet';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
@@ -35,7 +36,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
   const [btcChange, setBtcChange] = useState(0);
   const [priceLoading, setPriceLoading] = useState(true);
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   // LP position from localStorage
   const [lpMine, setLpMine] = useState(() => { try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch { return 0; } });

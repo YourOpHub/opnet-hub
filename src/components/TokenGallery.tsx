@@ -6,6 +6,7 @@ import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -121,7 +122,7 @@ const TokenGallery: React.FC = () => {
     maxMintPerTx: tok.maxMintPerTx,
   }));
 
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   const doFeaturedMint = useCallback(async (tok: typeof featured[0]) => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }

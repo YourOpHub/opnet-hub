@@ -5,6 +5,7 @@ import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import { buildTxParams, withRetry } from '../txUtils';
 import { TESTNET_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
@@ -82,7 +83,7 @@ const SPRITE_RIG = `${BASE}mining-rig.png`;
 
 const SatoshiMiner: React.FC = () => {
     const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
-    const gameProvider = React.useMemo(() => new JSONRpcProvider(GAME_RPC_URL, GAME_NETWORK), []);
+    const gameProvider = React.useMemo(() => getProvider(), []);
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
     const [tot, setTot] = useState<number>(() => ld('sm_t', 0));
     const [ups, setUps] = useState<Up[]>(() => ld('sm_u', UPS));

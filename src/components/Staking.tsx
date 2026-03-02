@@ -5,6 +5,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
@@ -33,7 +34,7 @@ const STAKING_TOKEN = TESTNET_CONTRACTS.MINE;
 
 const Staking: React.FC = () => {
   const { walletAddress, walletInstance, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');

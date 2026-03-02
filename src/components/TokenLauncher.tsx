@@ -2,7 +2,11 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { BinaryWriter } from '@btc-vision/transaction';
 import { networks, Transaction } from '@btc-vision/bitcoin';
-import { JSONRpcProvider } from 'opnet';
+import {
+  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
+  type BitcoinInterfaceAbi, type CallResult,
+} from 'opnet';
+import { getProvider } from '../contractCache';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
 
@@ -105,7 +109,7 @@ const TokenLauncher: React.FC = () => {
     return writer.getBuffer();
   };
 
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   /** Deploy token: fetch GenericToken.wasm + encode calldata → Web3Provider.deployContract() */
   const deployToken = async () => {

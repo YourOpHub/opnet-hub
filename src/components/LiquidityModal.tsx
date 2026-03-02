@@ -6,6 +6,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
@@ -34,7 +35,7 @@ interface Props {
 
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   const [tab, setTab] = useState<'add' | 'remove'>('add');
   const [mineAmt, setMineAmt] = useState('');

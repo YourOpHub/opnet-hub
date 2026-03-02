@@ -2,7 +2,8 @@ import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, laz
 import logoUrl from './assets/logo.png';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { networks } from '@btc-vision/bitcoin';
-import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
+import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
+import { getProvider } from './contractCache';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
 // txHistory used in Portfolio, not here
@@ -71,7 +72,7 @@ const App: React.FC = () => {
     const [balances, setBalances] = useState<Record<string, string>>({});
     const dropRef = useRef<HTMLDivElement>(null);
     const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-    const sdkProvider = useMemo(() => new JSONRpcProvider('https://testnet.opnet.org/api/v1/json-rpc', networks.testnet), []);
+    const sdkProvider = useMemo(() => getProvider(), []);
 
     const openDrop = useCallback(() => { clearTimeout(hoverTimer.current); setWDrop(true); }, []);
     const closeDrop = useCallback(() => { hoverTimer.current = setTimeout(() => setWDrop(false), 300); }, []);

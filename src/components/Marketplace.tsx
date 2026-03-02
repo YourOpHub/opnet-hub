@@ -6,6 +6,7 @@ import {
   TransactionOutputFlags,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
@@ -134,7 +135,7 @@ const iStyle: React.CSSProperties = {
    ═══════════════════════════════════════════════════════════════ */
 const Marketplace: React.FC = () => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   // View state: token list vs token detail
   const [selectedToken, setSelectedToken] = useState<string | null>(null);

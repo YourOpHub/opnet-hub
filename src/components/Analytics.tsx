@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { networks } from '@btc-vision/bitcoin';
 import { JSONRpcProvider } from 'opnet';
+import { getProvider } from '../contractCache';
 import * as opnetRpc from '../opnet';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { getTxHistory, type TxRecord } from '../txHistory';
@@ -106,7 +107,7 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
 };
 
 const Analytics: React.FC = () => {
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
   const [snapshots, setSnapshots] = useState<PoolSnapshot[]>(loadSnapshots());
   const [reserves, setReserves] = useState<{ mine: number; vibe: number } | null>(null);
   const [supplies, setSupplies] = useState<Record<string, bigint>>({});

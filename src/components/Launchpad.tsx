@@ -6,6 +6,7 @@ import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
+import { getProvider } from '../contractCache';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
 import {
@@ -82,7 +83,7 @@ const DeployModal: React.FC<{
   onCreated: (token: LaunchToken) => void;
 }> = ({ open, onClose, onCreated }) => {
   const { walletAddress, walletInstance, openConnectModal } = useWalletConnect();
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
@@ -258,7 +259,7 @@ const DeployModal: React.FC<{
    ═══════════════════════════════════════════════════════════════ */
 const Launchpad: React.FC = () => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
-  const provider = useMemo(() => new JSONRpcProvider(RPC_URL, NETWORK), []);
+  const provider = useMemo(() => getProvider(), []);
 
   const [tokens, setTokens] = useState<LaunchToken[]>(() => loadTokens());
   const [selected, setSelected] = useState<LaunchToken | null>(null);

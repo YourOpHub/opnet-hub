@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address } from '@btc-vision/transaction';
-import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl } from '../contracts';
-
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 
 const POOL_ABI: BitcoinInterfaceAbi = [
   { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },

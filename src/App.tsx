@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import logoUrl from './assets/logo.png';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { networks } from '@btc-vision/bitcoin';
 import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
+import { NETWORK } from './config';
 import { getProvider } from './contractCache';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
@@ -16,13 +16,14 @@ const TokenTools = lazy(() => import('./components/TokenTools'));
 const SatoshiMiner = lazy(() => import('./components/SatoshiMiner'));
 const EcosystemDir = lazy(() => import('./components/EcosystemDir'));
 const Portfolio = lazy(() => import('./components/Portfolio'));
-const TokenLauncher = lazy(() => import('./components/TokenLauncher'));
 const Launchpad = lazy(() => import('./components/Launchpad'));
 const SwapUI = lazy(() => import('./components/SwapUI'));
 const TokenGallery = lazy(() => import('./components/TokenGallery'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const Staking = lazy(() => import('./components/Staking'));
 const Marketplace = lazy(() => import('./components/Marketplace'));
+const MultiSender = lazy(() => import('./components/MultiSender'));
+const CrossChainMarketplace = lazy(() => import('./components/CrossChainMarketplace'));
 
 const LazyFallback = () => (
     <div style={{ padding: '40px 0' }}>
@@ -36,24 +37,63 @@ const LazyFallback = () => (
     </div>
 );
 
-const TABS = [
-    { id: 'home', l: 'Home' },
-    { id: 'swap', l: 'Swap' },
-    { id: 'staking', l: 'Stake' },
-    { id: 'analytics', l: 'Analytics' },
-    { id: 'gallery', l: 'Tokens' },
-    { id: 'launch', l: 'Launch' },
-    { id: 'market', l: 'Market' },
-    { id: 'bob', l: 'Bob AI' },
-    { id: 'tools', l: 'Tools' },
-    { id: 'game', l: 'Miner' },
-    { id: 'news', l: 'News' },
-    { id: 'eco', l: 'Ecosystem' },
+/* ── Grouped navigation ── */
+interface NavGroup {
+    id: string;
+    label: string;
+    icon: string;
+    items: { id: string; label: string }[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+    {
+        id: 'defi', label: 'DeFi', icon: '📊',
+        items: [
+            { id: 'swap', label: 'Swap' },
+            { id: 'staking', label: 'Stake' },
+            { id: 'market', label: 'Market' },
+            { id: 'xchain', label: 'Cross-Chain' },
+        ],
+    },
+    {
+        id: 'tokens', label: 'Tokens', icon: '🪙',
+        items: [
+            { id: 'gallery', label: 'Gallery' },
+            { id: 'launch', label: 'Launchpad' },
+            { id: 'tools', label: 'Tools' },
+            { id: 'multisend', label: 'MultiSend' },
+        ],
+    },
+    {
+        id: 'explore', label: 'Explore', icon: '🔍',
+        items: [
+            { id: 'analytics', label: 'Analytics' },
+            { id: 'eco', label: 'Ecosystem' },
+            { id: 'news', label: 'News' },
+        ],
+    },
+    {
+        id: 'play', label: 'Play', icon: '🎮',
+        items: [
+            { id: 'game', label: 'Miner' },
+            { id: 'bob', label: 'Bob AI' },
+        ],
+    },
 ];
+
+const ALL_TAB_IDS = new Set(NAV_GROUPS.flatMap(g => g.items.map(i => i.id)));
+
+function findGroup(tabId: string): string | null {
+    for (const g of NAV_GROUPS) {
+        if (g.items.some(i => i.id === tabId)) return g.id;
+    }
+    return null;
+}
 
 const App: React.FC = () => {
     const [tab, setTab] = useState('home');
     const [qOpen, setQOpen] = useState(false);
+    const [openGroup, setOpenGroup] = useState<string | null>(null);
 
     const {
         openConnectModal,
@@ -63,7 +103,6 @@ const App: React.FC = () => {
         address: senderAddr,
     } = useWalletConnect();
 
-    // Сохраняем адрес в localStorage для SatoshiMiner
     useEffect(() => {
         if (walletAddress) {
             localStorage.setItem('hub_wallet', walletAddress);
@@ -83,7 +122,6 @@ const App: React.FC = () => {
     const openDrop = useCallback(() => { clearTimeout(hoverTimer.current); setWDrop(true); }, []);
     const closeDrop = useCallback(() => { hoverTimer.current = setTimeout(() => setWDrop(false), 300); }, []);
 
-    // Fetch balances when dropdown opens — use opnet SDK for accurate results
     useEffect(() => {
         if (!wDrop || !wAddr || !senderAddr) return;
         let cancelled = false;
@@ -91,7 +129,7 @@ const App: React.FC = () => {
             (async () => {
                 try {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, networks.testnet, senderAddr as any);
+                    const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, NETWORK, senderAddr as any);
                     const sim = await op20.balanceOf(senderAddr as any);
                     const bal = sim?.properties?.balance ?? 0n;
                     const human = (Number(BigInt(bal.toString())) / Math.pow(10, tok.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -103,17 +141,30 @@ const App: React.FC = () => {
     }, [wDrop, wAddr, senderAddr, sdkProvider]);
 
     const handleWallet = useCallback(() => {
-        if (wOn) {
-            disconnect();
-        } else {
-            openConnectModal();
-        }
+        if (wOn) disconnect();
+        else openConnectModal();
     }, [wOn, disconnect, openConnectModal]);
 
     const navigate = useCallback((id: string) => {
         setTab(id);
+        // auto-expand group for active tab
+        const g = findGroup(id);
+        if (g) setOpenGroup(g);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
+
+    // close group dropdown on outside click
+    useEffect(() => {
+        if (!openGroup) return;
+        const h = (e: MouseEvent) => {
+            const nav = document.querySelector('.N');
+            if (nav && !nav.contains(e.target as Node)) setOpenGroup(null);
+        };
+        document.addEventListener('click', h);
+        return () => document.removeEventListener('click', h);
+    }, [openGroup]);
+
+    const activeGroup = findGroup(tab);
 
     const P = () => {
         switch (tab) {
@@ -130,6 +181,8 @@ const App: React.FC = () => {
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;
             case 'eco': return <EcosystemDir />;
+            case 'multisend': return <MultiSender />;
+            case 'xchain': return <CrossChainMarketplace />;
             default: return <Landing onNav={navigate} />;
         }
     };
@@ -141,9 +194,48 @@ const App: React.FC = () => {
 
             <header className="H">
                 <div className="Hi">
-                    <div className="Lo" onClick={() => navigate('home')}>
+                    <div className="Lo" onClick={() => { navigate('home'); setOpenGroup(null); }}>
                         <img src={logoUrl} alt="OPNet Hub" style={{ height: 32, objectFit: 'contain' }} />
                     </div>
+
+                    {/* Grouped nav — desktop */}
+                    <nav className="N nav-desktop">
+                        <div className="Ni">
+                            <button
+                                className={`Nt ${tab === 'home' ? 'on' : ''}`}
+                                onClick={() => { navigate('home'); setOpenGroup(null); }}
+                            >
+                                Home
+                            </button>
+                            {NAV_GROUPS.map(g => (
+                                <div key={g.id} className="nav-group" onMouseLeave={() => setOpenGroup(null)}>
+                                    <button
+                                        className={`Nt ${activeGroup === g.id ? 'on' : ''}`}
+                                        onClick={() => setOpenGroup(openGroup === g.id ? null : g.id)}
+                                        onMouseEnter={() => setOpenGroup(g.id)}
+                                    >
+                                        <span className="nav-group-icon">{g.icon}</span>
+                                        {g.label}
+                                        <span className={`nav-chevron ${openGroup === g.id ? 'open' : ''}`} />
+                                    </button>
+                                    {openGroup === g.id && (
+                                        <div className="nav-dropdown">
+                                            {g.items.map(item => (
+                                                <button
+                                                    key={item.id}
+                                                    className={`nav-drop-item ${tab === item.id ? 'active' : ''}`}
+                                                    onClick={() => { navigate(item.id); setOpenGroup(null); }}
+                                                >
+                                                    {item.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </nav>
+
                     <div className="Hr">
                         <div ref={dropRef} style={{ position: 'relative' }}
                             onMouseEnter={wOn ? openDrop : undefined}
@@ -153,30 +245,23 @@ const App: React.FC = () => {
                                 onClick={wOn ? () => setWDrop(v => !v) : handleWallet}
                                 disabled={connecting}
                             >
-                                {connecting ? 'Connecting…' : wOn ? `${wAddr.slice(0, 6)}…${wAddr.slice(-4)}` : 'Connect'}
+                                {connecting ? 'Connecting...' : wOn ? `${wAddr.slice(0, 6)}...${wAddr.slice(-4)}` : 'Connect Wallet'}
                             </button>
                             {wDrop && wOn && (
-                                <div style={{
-                                    position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 260, zIndex: 999,
-                                    background: 'rgba(10,10,18,.96)', border: '1px solid rgba(255,255,255,.06)',
-                                    borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,.6)',
-                                    backdropFilter: 'blur(24px)', padding: '14px 16px',
-                                }}>
-                                    <div style={{ fontSize: '.55rem', color: '#2d3548', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10, wordBreak: 'break-all' }}>{wAddr}</div>
+                                <div className="wallet-dropdown">
+                                    <div className="wd-addr">{wAddr}</div>
                                     {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => (
-                                        <div key={sym} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '.72rem', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
-                                            <span style={{ color: '#7a8494' }}>{tok.icon} {sym}</span>
-                                            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 600 }}>{balances[sym] ?? '…'}</span>
+                                        <div key={sym} className="wd-row">
+                                            <span className="wd-token">{tok.icon} {sym}</span>
+                                            <span className="wd-bal">{balances[sym] ?? '...'}</span>
                                         </div>
                                     ))}
-                                    <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-                                        <button onClick={() => { navigate('portfolio'); setWDrop(false); }}
-                                            style={{ flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #F7931A, #ffab40)', color: '#000', fontWeight: 700, fontSize: '.68rem', fontFamily: "'Inter', sans-serif" }}>
+                                    <div className="wd-actions">
+                                        <button className="wd-btn-primary" onClick={() => { navigate('portfolio'); setWDrop(false); }}>
                                             Portfolio
                                         </button>
-                                        <button onClick={() => { disconnect(); setWDrop(false); }}
-                                            style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', cursor: 'pointer', color: '#ef4444', fontSize: '.68rem', fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>
-                                            Exit
+                                        <button className="wd-btn-danger" onClick={() => { disconnect(); setWDrop(false); }}>
+                                            Disconnect
                                         </button>
                                     </div>
                                 </div>
@@ -186,15 +271,41 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            <nav className="N">
-                <div className="Ni">
-                    {TABS.map(t => (
-                        <button key={t.id} className={`Nt ${tab === t.id ? 'on' : ''}`} onClick={() => navigate(t.id)}>
-                            {t.l}
+            {/* Mobile bottom nav */}
+            <nav className="mobile-nav">
+                <button className={`mn-item ${tab === 'home' ? 'on' : ''}`} onClick={() => navigate('home')}>
+                    <span className="mn-icon">🏠</span><span className="mn-label">Home</span>
+                </button>
+                {NAV_GROUPS.map(g => (
+                    <button key={g.id} className={`mn-item ${activeGroup === g.id ? 'on' : ''}`}
+                        onClick={() => {
+                            if (activeGroup === g.id && openGroup === g.id) {
+                                setOpenGroup(null);
+                            } else {
+                                setOpenGroup(g.id);
+                                // navigate to first item if not already in group
+                                if (activeGroup !== g.id) navigate(g.items[0].id);
+                            }
+                        }}
+                    >
+                        <span className="mn-icon">{g.icon}</span><span className="mn-label">{g.label}</span>
+                    </button>
+                ))}
+            </nav>
+
+            {/* Sub-nav for active group on mobile */}
+            {activeGroup && (
+                <div className="mobile-subnav">
+                    {NAV_GROUPS.find(g => g.id === activeGroup)?.items.map(item => (
+                        <button key={item.id}
+                            className={`msn-item ${tab === item.id ? 'on' : ''}`}
+                            onClick={() => navigate(item.id)}
+                        >
+                            {item.label}
                         </button>
                     ))}
                 </div>
-            </nav>
+            )}
 
             <main className="M" key={tab}>
                 <ErrorBoundary onReset={() => setTab('home')}>
@@ -202,28 +313,21 @@ const App: React.FC = () => {
                 </ErrorBoundary>
             </main>
 
-            <footer style={{
-                marginTop: 'auto', padding: '20px 24px', textAlign: 'center',
-                borderTop: '1px solid rgba(255,255,255,.04)', color: '#2d3548',
-                fontSize: '.65rem', background: 'rgba(6,6,11,.85)',
-                backdropFilter: 'blur(12px)',
-            }}>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap', marginBottom: 10 }}>
+            <footer className="site-footer">
+                <div className="footer-links">
                     {[
                         ['Docs', 'https://docs.opnet.org'],
                         ['OPScan', 'https://testnet.opscan.org'],
-                        ['GitHub', 'https://github.com/YourOpHub/opnet-hub'],
+                        ['GitHub', 'https://github.com/btc-vision'],
                         ['Faucet', 'https://faucet.opnet.org'],
                     ].map(([l, u]) => (
-                        <a key={l} href={u} target="_blank" rel="noopener noreferrer"
-                            style={{ color: '#4a5568', textDecoration: 'none', fontWeight: 500, transition: 'color .2s', fontSize: '.65rem' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#F7931A')}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#4a5568')}
-                        >{l} ↗</a>
+                        <a key={l} href={u} target="_blank" rel="noopener noreferrer" className="footer-link">
+                            {l}
+                        </a>
                     ))}
                 </div>
-                <div style={{ color: '#1a1f2e', fontSize: '.6rem', letterSpacing: '.02em' }}>
-                    OPNet Hub · Bitcoin L1 DeFi · Powered by OP_NET
+                <div className="footer-copy">
+                    OPNet Hub &middot; Bitcoin L1 DeFi &middot; Powered by OP_NET
                 </div>
             </footer>
 

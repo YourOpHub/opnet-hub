@@ -29,14 +29,25 @@ const EcosystemDir: React.FC = () => {
     return (
         <div>
             {/* Header */}
-            <div className="Pg" style={{ marginBottom: 14, padding: '22px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div className="Pg" style={{ marginBottom: 16, padding: '24px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)' }}><span style={{ color: 'var(--o)' }}>{APPS.length}</span> Apps on Bitcoin's Consensus Layer</div>
-                    <div style={{ color: 'var(--t3)', fontSize: '.76rem', marginTop: 2 }}>Every app runs on cryptographic consensus. <a href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">vibecode.finance</a></div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--w)', letterSpacing: '-.02em' }}>
+                        <span style={{ color: 'var(--o)' }}>{APPS.length}</span> Apps on Bitcoin's Consensus Layer
+                    </div>
+                    <div style={{ color: 'var(--t3)', fontSize: '.76rem', marginTop: 4, lineHeight: 1.5 }}>
+                        Every app runs on cryptographic consensus.{' '}
+                        <a href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">vibecode.finance</a>
+                    </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <div className="P" style={{ padding: '6px 14px', textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)', fontSize: '.9rem' }}>{live}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Live</div></div>
-                    <div className="P" style={{ padding: '6px 14px', textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)', fontSize: '.9rem' }}>{filtered.length - live}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Building</div></div>
+                    <div className="stat-card" style={{ padding: '8px 16px', minWidth: 60 }}>
+                        <div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)', fontSize: '.95rem' }}>{live}</div>
+                        <div className="stat-label" style={{ marginBottom: 0 }}>Live</div>
+                    </div>
+                    <div className="stat-card" style={{ padding: '8px 16px', minWidth: 60 }}>
+                        <div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)', fontSize: '.95rem' }}>{filtered.length - live}</div>
+                        <div className="stat-label" style={{ marginBottom: 0 }}>Building</div>
+                    </div>
                 </div>
             </div>
 

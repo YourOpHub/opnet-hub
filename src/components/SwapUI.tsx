@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address, BinaryWriter } from '@btc-vision/transaction';
-import { networks, Transaction } from '@btc-vision/bitcoin';
+import { Transaction } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
@@ -29,10 +30,6 @@ interface UserPool {
   deployedAt: number;
   deployer: string;
 }
-
-/** OPNet testnet network config */
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const FAUCET_URL = 'https://188-137-250-160.sslip.io/faucet';
 
 /** Custom ABI for SimplePool contract */

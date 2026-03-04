@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import type { Address } from '@btc-vision/transaction';
-import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
-
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 
 /** ABI for MintableToken publicMint method */
 const MINTABLE_ABI: BitcoinInterfaceAbi = [

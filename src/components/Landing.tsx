@@ -48,6 +48,9 @@ const FEATURES = [
   { icon: '\u2737', title: 'Mine', desc: 'Clicker game that earns real $MINE tokens on Bitcoin L1', color: '#22c55e', tab: 'game' },
   { icon: '\u2263', title: 'Market', desc: 'P2P OTC marketplace for trustless OP-20 token trading', color: '#ec4899', tab: 'market' },
   { icon: '\u2736', title: 'Tools', desc: 'Block explorer, UTXO viewer, gas monitor and more', color: '#eab308', tab: 'tools' },
+  { icon: '\u27A0', title: 'MultiSend', desc: 'Batch transfer tokens to multiple recipients in one session', color: '#38bdf8', tab: 'multisend' },
+  { icon: '\u{1F517}', title: 'FractalSwap', desc: 'Swap BTC \u2194 Fractal BTC via trustless atomic swaps \u2014 1% fee', color: '#8b5cf6', tab: 'xchain' },
+  { icon: '\u{1F4E1}', title: 'News', desc: 'Live on-chain activity feed and ecosystem updates', color: '#34d399', tab: 'news' },
 ];
 
 const TECH = [
@@ -160,6 +163,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
       </div>
 
       {/* ═══ FEATURES ═══ */}
+      <div className="label-premium" style={{ marginBottom: 16 }}>What you can do</div>
       <div className="fgrid" ref={rev2.ref} style={rev2.style}>
         {FEATURES.map(f => (
           <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)}>
@@ -171,6 +175,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
       </div>
 
       {/* ═══ TECH ═══ */}
+      <div className="label-premium" style={{ marginTop: 16 }}>The stack</div>
       <div className="pillars" ref={rev3.ref} style={rev3.style}>
         {TECH.map(t => (
           <div key={t.label} className="pillar">
@@ -195,10 +200,11 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
       </div>
 
       {/* ═══ LINKS ═══ */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
+      <div className="divider" />
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
         {LINKS.map(l => (
           <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="btn-s"
-            style={{ fontSize: '.72rem', padding: '10px 18px', borderRadius: 12 }}
+            style={{ fontSize: '.72rem', padding: '10px 20px', borderRadius: 14 }}
           >{l.label} ↗</a>
         ))}
       </div>

@@ -102,6 +102,27 @@ export const MARKET_SELECTORS = {
     getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
 } as const;
 
+/** FractalSwap v2 — BTC ↔ Fractal BTC coordination (dual output.to + scriptPubKey check) */
+export const CROSSCHAIN_ADDRESS = 'opt1sqr5e5dzd2c7e8gvxnc6t7hevfqj8vaszsuaj8pw8';
+export const CROSSCHAIN_PUBKEY = '0x190fd63847c6b248682857f3824b1d565027b180b33365d8860325dc41f080e4';
+
+/** Fee recipient P2OP address string (for on-chain output.to matching) */
+export const FEE_RECIPIENT_ADDR = 'opt1sfjnexj8d35sut49m4nw7nljwk7ctpvhdf906s8j5t40mc764ft4qptud3g';
+
+/** FractalSwap selectors (from opnet-transform build output) */
+export const CROSSCHAIN_SELECTORS = {
+    createOrder: 0x17b631a3,
+    takeOrder: 0xfe6bb1e1,
+    confirmSwap: 0x2abfb8f9,
+    cancelOrder: 0xeb5aa830,
+    refundExpired: 0x7136e9b2,
+    getOrder: 0xe9489555,
+    getNextOrderId: 0xf4920cae,
+    setFeeRecipient: 0x5ccb9ecd,  // setFeeRecipient(uint256,string) — v2 changed
+    setFeeBps: 0xfdd3c00b,
+    getFeeInfo: 0xf22d798d,
+} as const;
+
 /** OPScan explorer — works for testnet contract/tx inspection */
 const OPSCAN = 'https://opscan.org';
 
@@ -115,4 +136,19 @@ export function getContractOpscanUrl(address: string): string {
 
 export function getAddressUrl(address: string): string {
     return `${OPSCAN}/accounts/${address}?network=op_testnet`;
+}
+
+/** Map opt1 addresses → hex pubkeys (for RPC calls that need pubkey format) */
+const PUBKEY_MAP: Record<string, string> = {
+    [TESTNET_CONTRACTS.MINE.address]: TESTNET_CONTRACTS.MINE.pubkey.replace('0x', ''),
+    [TESTNET_CONTRACTS.VIBE.address]: TESTNET_CONTRACTS.VIBE.pubkey.replace('0x', ''),
+    [POOL_ADDRESS]: POOL_HEX,
+    [STAKING_ADDRESS]: STAKING_PUBKEY.replace('0x', ''),
+    [MARKET_ADDRESS]: MARKET_HEX,
+    [CROSSCHAIN_ADDRESS]: CROSSCHAIN_PUBKEY.replace('0x', ''),
+};
+
+/** Get hex pubkey for an opt1 address, or return address as-is */
+export function addressToPubkey(address: string): string {
+    return PUBKEY_MAP[address] || address;
 }

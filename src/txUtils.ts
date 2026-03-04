@@ -9,9 +9,7 @@
  */
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
 import { Address } from '@btc-vision/transaction';
-import { networks } from '@btc-vision/bitcoin';
-
-const NETWORK = networks.testnet;
+import { NETWORK } from './config';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 
 // Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
@@ -26,10 +24,10 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
-  // InteractionParametersWithoutSigner: wallet manages signer/mldsaSigner/challenge internally.
-  // These keys must NOT be present in the params object at all — wallet rejects them.
+  // CRITICAL: signer/mldsaSigner MUST be explicitly null on frontend.
+  // SDK checks `signer !== null` (strict) — undefined would leak signer field to wallet.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
+  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee, signer: null, mldsaSigner: null } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -169,6 +167,11 @@ export function formatTxError(e: unknown): string {
   if (lower.includes('no utxo')) return 'No BTC UTXOs. Get testnet BTC first.';
   if (lower.includes('insufficient allowance') || lower.includes('allowance')) return 'Allowance not yet confirmed. Please wait ~30s and try again (approval already sent).';
   if (lower.includes('timeout') || lower.includes('fetch')) return 'Network timeout — try again in a few seconds.';
+  if (lower.includes('cannot accept own order') || lower.includes('own order')) return 'Cannot fill your own order. Use a different wallet.';
+  if (lower.includes('invalid epoch') || lower.includes('feature data length')) return 'Transaction encoding error. Try refreshing the page and attempt again.';
+  if (lower.includes('signer is not allowed')) return 'Wallet rejected signer params. Refresh and retry.';
+  if (lower.includes('502') || lower.includes('bad gateway')) return 'RPC server temporarily unavailable (502). Try again in a moment.';
+  if (lower.includes('cors')) return 'CORS error — RPC temporarily blocked. Try again.';
   if (lower.includes('revert')) msg += ' (Try again — testnet can be flaky)';
   return msg;
 }

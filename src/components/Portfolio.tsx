@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI,
   type IOP20Contract,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import * as opnet from '../opnet';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
 import { getTxHistory, formatTimeAgo, addTxRecord } from '../txHistory';
-
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 
 function detectNetwork(addr: string): opnet.Network | null {
   if (addr.startsWith('opt1')) return 'testnet';

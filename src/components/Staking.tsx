@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
@@ -14,9 +14,6 @@ import {
 } from '../contracts';
 import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
-
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 
 /** Staking ABI — matches SimpleStaking contract */
 const STAKING_ABI: BitcoinInterfaceAbi = [

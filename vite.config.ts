@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
+import type { UserConfig } from 'vitest/config';
 
 // Base path: '/' for dev/preview, '/opnet-hub/' for GitHub Pages prod
 const base = process.env.VITE_BASE || '/';
@@ -35,6 +36,11 @@ export default defineConfig({
             },
         },
     },
+    test: {
+        environment: 'jsdom',
+        globals: true,
+        setupFiles: ['./src/__tests__/setup.ts'],
+    } satisfies UserConfig['test'],
     build: {
         rollupOptions: {
             output: {

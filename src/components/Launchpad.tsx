@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { networks, Transaction } from '@btc-vision/bitcoin';
+import { Transaction } from '@btc-vision/bitcoin';
 import { BinaryWriter } from '@btc-vision/transaction';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
 import {
@@ -14,9 +15,6 @@ import {
 } from '../launchpad/types';
 import { loadTokens, saveTokens, addToken, addTrade } from '../launchpad/store';
 import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api';
-
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const OP20_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
   { name: 'totalSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },

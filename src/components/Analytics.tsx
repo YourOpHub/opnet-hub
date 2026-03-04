@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { networks } from '@btc-vision/bitcoin';
-// provider via contractCache
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import * as opnetRpc from '../opnet';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { getTxHistory, type TxRecord } from '../txHistory';
-
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
-const NETWORK = networks.testnet;
 
 interface PoolSnapshot {
   ts: number;

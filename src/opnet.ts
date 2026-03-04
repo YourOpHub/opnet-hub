@@ -109,11 +109,19 @@ function slotToPointer(slot: number): string {
   return btoa(binary);
 }
 
-/** Get storage at contract address and slot (OP-20: 0=name, 1=symbol, 2=decimals, 3=totalSupply) */
+/** Get storage at contract address and slot (OP-20: 0=name, 1=symbol, 2=decimals, 3=totalSupply).
+ *  Resolves opt1 addresses to hex pubkeys via known contract map. */
 export async function getStorageAt(address: string, slot: number, proofs = false): Promise<unknown> {
   const pointer = slotToPointer(slot);
-  const r = await rpc('btc_getStorageAt', [address, pointer, proofs]);
-  return r;
+  // RPC requires hex pubkey, not bech32 address — resolve via known map
+  const { addressToPubkey } = await import('./contracts');
+  const resolved = addressToPubkey(address);
+  try {
+    return await rpc('btc_getStorageAt', [resolved, pointer, proofs]);
+  } catch {
+    // Silently fail — callers handle null/missing gracefully
+    return null;
+  }
 }
 
 /** Gas parameters for the next block */
@@ -180,13 +188,13 @@ export async function callContract(
   fromTweakedHex?: string,
 ): Promise<string | null> {
   const data = (selectorHex + calldataBodyHex).replace(/^0x/, '');
-  // Try with original address first (bech32 or hex)
+  // btc_call accepts opt1 addresses with positional params
   try {
     const params: (string | undefined)[] = [to, data, fromMLDSAHex, fromTweakedHex];
     const r = await rpc('btc_call', params) as Record<string, unknown>;
     const result = parseCallResult(r);
     if (result) return result;
-  } catch { /* try fallback */ }
+  } catch { /* */ }
   return null;
 }
 
@@ -209,15 +217,16 @@ export async function getTokenBalance(
   }
 }
 
-/** Get OP-20 totalSupply (returns 0n on failure) */
+/** Get OP-20 totalSupply via storage slot 3 (NOT EVM selector — OPNet uses sha256 selectors) */
 export async function getTokenTotalSupply(tokenAddress: string): Promise<bigint> {
   try {
-    const TOTAL_SUPPLY_SELECTOR = '18160ddd';
-    const result = await callContract(tokenAddress, TOTAL_SUPPLY_SELECTOR);
-    if (!result) return 0n;
-    const hex = result.startsWith('0x') ? result.slice(2) : result;
-    if (!hex || hex.length < 2) return 0n;
-    return BigInt('0x' + hex);
+    const val = await getStorageAt(tokenAddress, OP20_SLOTS.TOTAL_SUPPLY, false);
+    if (val == null) return 0n;
+    const decoded = decodeStorageVal(val);
+    if (typeof decoded === 'number') return BigInt(decoded);
+    if (typeof decoded === 'string' && decoded.startsWith('0x')) return BigInt(decoded);
+    if (typeof decoded === 'string' && decoded !== '' && decoded !== '0') return BigInt(decoded);
+    return 0n;
   } catch {
     return 0n;
   }

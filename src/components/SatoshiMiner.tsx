@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK } from '../config';
 import { buildTxParams, withRetry } from '../txUtils';
 import { TESTNET_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
@@ -49,7 +49,7 @@ const MINE_DAILY_BASE = 350_000;
 const MINE_HALVING_DAYS = 7;
 const MINE_DECIMALS = 8;
 const MINE_CONTRACT = TESTNET_CONTRACTS.MINE.address;
-const GAME_NETWORK = networks.testnet;
+const GAME_NETWORK = NETWORK;
 const GAME_RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const MINTABLE_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },

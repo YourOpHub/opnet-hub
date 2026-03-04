@@ -1,20 +1,17 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { networks } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes,
   TransactionOutputFlags,
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import { NETWORK, RPC_URL } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
 import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
-
-const NETWORK = networks.testnet;
-const RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const LP_API = import.meta.env.VITE_LP_API || 'http://188.137.250.160:3457';
 
 /** P2PMarket ABI */
@@ -347,6 +344,11 @@ const Marketplace: React.FC = () => {
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('Order not found');
 
+      // Check: cannot fill your own order
+      if (order.creator === walletAddress || order.seller === walletAddress) {
+        throw new Error('Cannot fill your own order. Use a different wallet.');
+      }
+
       const fillAmt = amount || (order.amount - order.amountFilled);
       const fillAmtU256 = BigInt(Math.round(fillAmt * 1e8));
 
@@ -363,6 +365,8 @@ const Marketplace: React.FC = () => {
         setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
 
         // Set transaction details so contract can verify P2OP output during simulation
+        // KEY: hasScriptPubKey populates output.scriptPublicKey (bytes the contract checks)
+        // Must also include `to` for RPC validation
         market.setTransactionDetails({
           inputs: [],
           outputs: [{
@@ -370,7 +374,7 @@ const Marketplace: React.FC = () => {
             index: 1, // index 0 is reserved
             flags: TransactionOutputFlags.hasScriptPubKey,
             scriptPubKey: sellerP2OPScript,
-            to: undefined,
+            to: sellerP2OPAddress,
           }],
         });
 
@@ -379,9 +383,10 @@ const Marketplace: React.FC = () => {
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
+        // Use raw script for P2OP outputs — PSBT can't decode P2OP addresses
         (tp as Record<string, unknown>).extraOutputs = [{
-          address: sellerP2OPAddress,
-          value: Number(btcPaymentSats),
+          script: sellerP2OPScript,
+          value: btcPaymentSats,
         }];
         (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
         await (sim as CallResult).sendTransaction(tp);
@@ -444,6 +449,7 @@ const Marketplace: React.FC = () => {
       setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
 
       // Set transaction details so contract can verify P2OP output during simulation
+      // KEY: hasScriptPubKey populates output.scriptPublicKey (bytes the contract checks)
       market.setTransactionDetails({
         inputs: [],
         outputs: [{
@@ -451,7 +457,7 @@ const Marketplace: React.FC = () => {
           index: 1,
           flags: TransactionOutputFlags.hasScriptPubKey,
           scriptPubKey: sellerP2OPScript,
-          to: undefined,
+          to: sellerP2OPAddress,
         }],
       });
 
@@ -460,9 +466,10 @@ const Marketplace: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
+      // Use raw script for P2OP outputs — PSBT can't decode P2OP addresses
       (tp as Record<string, unknown>).extraOutputs = [{
-        address: sellerP2OPAddress,
-        value: Number(btcPaymentSats),
+        script: sellerP2OPScript,
+        value: btcPaymentSats,
       }];
       (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp);

@@ -6,13 +6,14 @@
 import type { LaunchToken } from './types';
 
 // Server URL — configurable via env or fallback to VPS
-const LP_API = import.meta.env.VITE_LP_API || 'http://188.137.250.160:3457';
+const LP_API = import.meta.env.VITE_LP_API || '';
 
 let serverAvailable: boolean | null = null;
 let lastCheck = 0;
 const CHECK_INTERVAL = 30_000;
 
 async function checkServer(): Promise<boolean> {
+  if (!LP_API) return false;
   if (serverAvailable !== null && Date.now() - lastCheck < CHECK_INTERVAL) return serverAvailable;
   try {
     const res = await fetch(`${LP_API}/lp/health`, { signal: AbortSignal.timeout(3000) });

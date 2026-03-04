@@ -58,9 +58,9 @@ async function mcpCall(method: string, params?: Record<string, unknown>, id?: nu
 
 export async function initBob(): Promise<boolean> {
   if (initialized) return true;
-  // On GitHub Pages or other static hosts, MCP is blocked by CORS — skip silently
+  // On static hosts without VPS proxy, try direct URL (may be blocked by CORS)
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !VPS_URL) {
-    return false;
+    vpsAvailable = false;
   }
   try {
     const res = await mcpCall('initialize', {

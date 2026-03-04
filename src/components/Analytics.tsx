@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import * as opnetRpc from '../opnet';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { getTxHistory, type TxRecord } from '../txHistory';

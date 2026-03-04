@@ -564,7 +564,11 @@ function GasTool() {
   const [mempool, setMempool] = useState<{ count?: number; opnetCount?: number; sizeBytes?: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { opnet.setNetwork(network); }, [network]);
+  useEffect(() => {
+    const prev = opnet.getNetwork();
+    opnet.setNetwork(network);
+    return () => { opnet.setNetwork(prev); };
+  }, [network]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -636,7 +640,7 @@ function FaucetTool() {
   const [token, setToken] = useState<'MINE' | 'VIBE'>('MINE');
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [msg, setMsg] = useState('');
-  const FAUCET_URL = 'http://188.137.250.160:3456';
+  const FAUCET_URL = import.meta.env.VITE_FAUCET_URL || 'https://faucet.opnet.org';
 
   const claim = useCallback(async () => {
     if (!addr.trim()) return;

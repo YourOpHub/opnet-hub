@@ -4,9 +4,8 @@ import {
   type IOP20Contract,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import * as opnet from '../opnet';
-import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
 import { getTxHistory, formatTimeAgo, addTxRecord } from '../txHistory';
@@ -65,7 +64,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
     let cancelled = false;
     const fetchRes = async () => {
       try {
-        const res = await opnetRpc.callContract(POOL_ADDRESS, '06374bfc');
+        const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');
         if (res && !cancelled) {
           const hex = res.startsWith('0x') ? res.slice(2) : res;
           if (hex.length >= 128) {

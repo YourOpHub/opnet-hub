@@ -5,7 +5,7 @@ import {
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {

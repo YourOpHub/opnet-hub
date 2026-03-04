@@ -81,8 +81,6 @@ const NAV_GROUPS: NavGroup[] = [
     },
 ];
 
-const ALL_TAB_IDS = new Set(NAV_GROUPS.flatMap(g => g.items.map(i => i.id)));
-
 function findGroup(tabId: string): string | null {
     for (const g of NAV_GROUPS) {
         if (g.items.some(i => i.id === tabId)) return g.id;

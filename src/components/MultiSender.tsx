@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import { TESTNET_CONTRACTS } from '../contracts';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import { getProvider } from '../contractCache';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 
@@ -102,7 +102,7 @@ function formatAmount(amount: string, decimals: number): bigint {
 /* ═══════════════════════════════════════════════════════════════ */
 
 const MultiSender: React.FC = () => {
-  const { walletAddress, openConnectModal } = useWalletConnect();
+  const { walletAddress, openConnectModal, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -199,7 +199,7 @@ const MultiSender: React.FC = () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const contract = getContract<IOP20Contract>(
-          tokenAddr, OP_20_ABI, provider, NETWORK, walletAddress as any,
+          tokenAddr, OP_20_ABI, provider, NETWORK, (senderAddr || walletAddress) as any,
         );
         const recipientAddr = Address.fromString(validRecipients[i].address);
         const amount = formatAmount(validRecipients[i].amount, tokenDecimals);

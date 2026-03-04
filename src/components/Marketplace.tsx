@@ -6,13 +6,13 @@ import {
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
 import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
-const LP_API = import.meta.env.VITE_LP_API || 'http://188.137.250.160:3457';
+const LP_API = import.meta.env.VITE_LP_API || '';
 
 /** P2PMarket ABI */
 const MARKET_ABI: BitcoinInterfaceAbi = [

@@ -7,7 +7,7 @@ import {
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
 

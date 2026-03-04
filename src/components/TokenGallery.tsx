@@ -6,7 +6,7 @@ import {
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -125,7 +125,8 @@ const TokenGallery: React.FC = () => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
     const amt = parseFloat(featMintAmt);
     if (!amt || amt <= 0) { setFeatMintResult({ ok: false, msg: 'Enter a valid amount' }); return; }
-    if (amt > 1000) { setFeatMintResult({ ok: false, msg: 'Max 1,000 per mint' }); return; }
+    const maxMint = tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1_000_000;
+    if (amt > maxMint) { setFeatMintResult({ ok: false, msg: `Max ${maxMint.toLocaleString()} per mint` }); return; }
     if (!senderAddr) { setFeatMintResult({ ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
     setFeatMinting(true); setFeatMintResult(null);
     try {

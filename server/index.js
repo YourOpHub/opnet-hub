@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const Database = require('better-sqlite3');
 const path = require('path');
 
+const { TokenIndexer } = require('./token-indexer');
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 const BOB_MCP_URL = process.env.BOB_MCP_URL || 'https://ai.opnet.org/mcp';
@@ -44,7 +46,13 @@ db.exec(`
   );
 `);
 
+// ─── Token Indexer ───
+const indexer = new TokenIndexer(db);
+indexer.init();
+indexer.start();
+
 // ─── Middleware ───
+app.set('trust proxy', 1); // Trust first proxy (nginx)
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 
@@ -101,12 +109,13 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── Bob MCP Proxy (CORS bypass) ───
-let mcpSessionId = null;
-
+// Each request creates/uses its own session via client-provided header
 app.post('/api/bob', async (req, res) => {
   try {
     const headers = { 'Content-Type': 'application/json' };
-    if (mcpSessionId) headers['Mcp-Session-Id'] = mcpSessionId;
+    // Forward client's session ID if provided (no server-side shared session)
+    const clientSid = req.headers['mcp-session-id'];
+    if (clientSid) headers['Mcp-Session-Id'] = clientSid;
 
     const upstream = await fetch(BOB_MCP_URL, {
       method: 'POST',
@@ -115,7 +124,7 @@ app.post('/api/bob', async (req, res) => {
     });
 
     const sid = upstream.headers.get('mcp-session-id');
-    if (sid) mcpSessionId = sid;
+    if (sid) res.set('Mcp-Session-Id', sid);
 
     const text = await upstream.text();
     res.set('Content-Type', 'text/plain');
@@ -126,8 +135,22 @@ app.post('/api/bob', async (req, res) => {
 });
 
 // ─── OP_NET RPC Proxy ───
+const RPC_ALLOWED_METHODS = new Set([
+  'btc_blockNumber', 'btc_chainId', 'btc_gas',
+  'btc_getBlockByNumber', 'btc_getBlockByHash',
+  'btc_getBalance', 'btc_getUTXOs', 'btc_getCode', 'btc_getStorageAt',
+  'btc_call', 'btc_getPublicKeyInfo',
+  'btc_getTransactionByHash', 'btc_getTransactionReceipt',
+  'btc_getMempoolInfo', 'btc_latestEpoch',
+  'btc_getLatestPendingTransactions',
+]);
+
 app.post('/api/rpc', async (req, res) => {
   try {
+    const { method } = req.body || {};
+    if (!method || !RPC_ALLOWED_METHODS.has(method)) {
+      return res.status(400).json({ error: 'Method not allowed', method });
+    }
     const upstream = await fetch(OPNET_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -143,8 +166,8 @@ app.post('/api/rpc', async (req, res) => {
 // ─── Player Sync (save game state to server) ───
 app.post('/api/player/sync', (req, res) => {
   const { address, mine_balance, total_sats_mined, total_clicks, hash_rate } = req.body;
-  if (!address || typeof address !== 'string' || address.length < 10) {
-    return res.status(400).json({ error: 'Invalid address' });
+  if (!address || typeof address !== 'string' || !address.startsWith('opt1') || address.length < 20) {
+    return res.status(400).json({ error: 'Invalid address — must be opt1 format' });
   }
 
   const poolRemaining = MINE_GAME_POOL - getTotalDistributed();
@@ -176,10 +199,19 @@ app.get('/api/player/:address', (req, res) => {
 });
 
 // ─── Claim $MINE tokens ───
+const claimCooldowns = new Map(); // address → timestamp
+const CLAIM_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 app.post('/api/claim', (req, res) => {
   const { address, amount } = req.body;
   if (!address || !amount || amount <= 0) {
     return res.status(400).json({ error: 'Invalid claim' });
+  }
+
+  const lastClaim = claimCooldowns.get(address);
+  if (lastClaim && Date.now() - lastClaim < CLAIM_COOLDOWN_MS) {
+    const waitSec = Math.ceil((CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000);
+    return res.status(429).json({ error: `Claim cooldown: wait ${waitSec}s` });
   }
 
   const player = db.prepare('SELECT * FROM players WHERE address = ?').get(address);
@@ -193,6 +225,7 @@ app.post('/api/claim', (req, res) => {
 
   // Deduct from player balance
   db.prepare('UPDATE players SET mine_balance = mine_balance - ? WHERE address = ?').run(amount, address);
+  claimCooldowns.set(address, Date.now());
 
   res.json({
     ok: true,
@@ -205,7 +238,7 @@ app.post('/api/claim', (req, res) => {
 
 // ─── Leaderboard ───
 app.get('/api/leaderboard', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100);
   const rows = db.prepare(`
     SELECT address, mine_balance, total_sats_mined, hash_rate,
            ROW_NUMBER() OVER (ORDER BY mine_balance DESC) as rank
@@ -243,10 +276,38 @@ app.get('/api/token', (_req, res) => {
   });
 });
 
-// ─── Pending Claims (admin) ───
-app.get('/api/claims/pending', (_req, res) => {
+// ─── Pending Claims (admin, requires API key) ───
+app.get('/api/claims/pending', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!key || key !== (process.env.ADMIN_API_KEY || 'opnet-hub-admin-2026')) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   const rows = db.prepare('SELECT * FROM claims WHERE status = ? ORDER BY created_at ASC').all('pending');
   res.json(rows);
+});
+
+// ─── Token Indexer API ───
+app.get('/api/tokens', (_req, res) => {
+  try {
+    const tokens = indexer.getAllTokens();
+    res.json(tokens);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch tokens', message: e.message });
+  }
+});
+
+app.get('/api/holder/:pubkey/tokens', async (req, res) => {
+  try {
+    const { pubkey } = req.params;
+    const tweaked = req.query.tweaked || '';
+    if (!pubkey || pubkey.length < 10) {
+      return res.status(400).json({ error: 'Invalid pubkey' });
+    }
+    const balances = await indexer.getHolderBalances(pubkey, tweaked);
+    res.json(balances);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch balances', message: e.message });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {

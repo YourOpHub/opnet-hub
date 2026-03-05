@@ -14,7 +14,7 @@ function detectNetwork(addr: string): opnet.Network | null {
   if (addr.startsWith('opt1')) return 'testnet';
   if (addr.startsWith('bcrt1')) return 'regtest';
   if (addr.startsWith('bc1')) return 'mainnet';
-  if (addr.startsWith('tb1')) return 'testnet';
+  // tb1 is Bitcoin Testnet4, NOT OPNet testnet (which uses opt1)
   return null;
 }
 
@@ -101,6 +101,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
       setTokenBalances({});
       return;
     }
+    const prevNet = opnet.getNetwork();
     opnet.setNetwork(net);
     let cancelled = false;
     setBtcLoading(true);
@@ -126,7 +127,8 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ 
       });
     }
 
-    return () => { cancelled = true; };
+    // M-02 FIX: restore previous network on unmount
+    return () => { cancelled = true; opnet.setNetwork(prevNet); };
   }, [walletAddress, senderAddress]);
 
   const history = walletAddress ? getTxHistory(walletAddress) : [];

@@ -31,9 +31,8 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const priorityFeeSats = gas.baseGas / gasPerSat;
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // C-01 FIX: signer/mldsaSigner must be ABSENT (not null) — wallet SDK handles signing
   return {
-    signer: null,
-    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 250_000n,
     network: NETWORK,

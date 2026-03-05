@@ -1,0 +1,37 @@
+# Heavy deps — never index
+node_modules/
+deploy/OP_20/node_modules/
+deploy/node_modules/
+faucet/node_modules/
+
+# Build output
+dist/
+deploy/OP_20/build/
+
+# Large binary / lock files
+package-lock.json
+deploy/OP_20/package-lock.json
+faucet/package-lock.json
+
+# Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+vps_key
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Data
+*.db
+deploy/data.db
+faucet/data/
+
+# Misc
+coverage/
+*.log
+nul

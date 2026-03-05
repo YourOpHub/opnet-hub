@@ -105,7 +105,6 @@ const DeployModal: React.FC<{
   const [initialMintPct, setInitialMintPct] = useState(50);
   const [publicMintEnabled, setPublicMintEnabled] = useState(true);
   const [maxMintPerTx, setMaxMintPerTx] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
@@ -237,58 +236,39 @@ const DeployModal: React.FC<{
           </div>
         </div>
 
-        {/* Token settings toggle */}
-        <button onClick={() => setShowAdvanced(!showAdvanced)} style={{
-          width: '100%', padding: '6px', marginBottom: showAdvanced ? 8 : 10,
-          background: 'none', border: '1px solid var(--bd)', borderRadius: 10,
-          color: 'var(--t4)', fontSize: '.62rem', cursor: 'pointer', fontFamily: 'var(--ff)',
-        }}>
-          {showAdvanced ? '▾ Hide Token Settings' : '▸ Token Settings (mint %, max per tx)'}
-        </button>
-
-        {showAdvanced && (
-          <div style={{ marginBottom: 10, padding: 10, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 10 }}>
-            {/* Initial mint % slider */}
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem', color: 'var(--t3)', marginBottom: 3 }}>
-                <span>Initial mint to you</span>
-                <span style={{ fontWeight: 700, color: 'var(--w)' }}>{initialMintPct}%</span>
-              </div>
-              <input type="range" min={0} max={100} step={5} value={initialMintPct}
-                onChange={e => setInitialMintPct(Number(e.target.value))}
-                style={{ width: '100%', accentColor: '#a855f7' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.52rem', color: 'var(--t4)' }}>
-                <span>You: {((parseFloat(supply) || 0) * initialMintPct / 100).toLocaleString()}</span>
-                <span>Public: {((parseFloat(supply) || 0) * (100 - initialMintPct) / 100).toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Public mint toggle */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
-                width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: publicMintEnabled ? '#a855f7' : 'var(--bg3)',
-                position: 'relative', transition: 'background .2s',
-              }}>
-                <div style={{
-                  width: 16, height: 16, borderRadius: '50%', background: 'white',
-                  position: 'absolute', top: 2, left: publicMintEnabled ? 18 : 2, transition: 'left .2s',
-                }} />
-              </button>
-              <span style={{ fontSize: '.62rem', color: 'var(--t2)' }}>Public mint enabled</span>
-            </div>
-
-            {/* Max mint per tx */}
+        {/* Token Settings — always visible, compact */}
+        <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.12)', borderRadius: 10 }}>
+          {/* Row 1: Initial mint slider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'nowrap', minWidth: 60 }}>Your mint</span>
+            <input type="range" min={0} max={100} step={5} value={initialMintPct}
+              onChange={e => setInitialMintPct(Number(e.target.value))}
+              style={{ flex: 1, accentColor: '#a855f7', height: 4 }} />
+            <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--w)', minWidth: 30, textAlign: 'right' }}>{initialMintPct}%</span>
+          </div>
+          {/* Row 2: Public mint toggle + Max per TX */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
+              width: 32, height: 18, borderRadius: 9, border: 'none', cursor: 'pointer', flexShrink: 0,
+              background: publicMintEnabled ? '#a855f7' : 'var(--bg3)', position: 'relative', transition: 'background .2s',
+            }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: '50%', background: 'white',
+                position: 'absolute', top: 2, left: publicMintEnabled ? 16 : 2, transition: 'left .2s',
+              }} />
+            </button>
+            <span style={{ fontSize: '.56rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Public mint</span>
             {publicMintEnabled && (
-              <div>
-                <label style={{ fontSize: '.58rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Max tokens per mint TX (0 = 1% of supply)</label>
-                <input style={{ ...iStyle, fontSize: '.72rem' }} type="text" inputMode="numeric"
+              <>
+                <span style={{ fontSize: '.56rem', color: 'var(--t4)' }}>|</span>
+                <span style={{ fontSize: '.56rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Max/tx:</span>
+                <input style={{ ...iStyle, fontSize: '.66rem', padding: '4px 7px', width: 90 }} type="text" inputMode="numeric"
                   value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder={String(Math.floor((parseFloat(supply) || 0) * 0.01))} />
-              </div>
+              </>
             )}
           </div>
-        )}
+        </div>
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
           <div style={{ flex: 1 }}>

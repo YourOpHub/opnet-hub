@@ -278,13 +278,13 @@ const TokenGallery: React.FC = () => {
               {featMintSym === tok.symbol && tok.publicMint && (
                 <div style={{ marginTop: 12, padding: 12, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: '14px' }}>
                   <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 6 }}>Public Mint — ${tok.symbol}</div>
-                  <div style={{ fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: 1,000 {tok.symbol}</div>
+                  <div style={{ fontSize: '.58rem', color: 'var(--t3)', marginBottom: 6 }}>Max per tx: {tok.maxMintPerTx ? (tok.maxMintPerTx / Math.pow(10, tok.decimals)).toLocaleString() : '1,000'} {tok.symbol}</div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                     <div style={{ flex: 1, position: 'relative' }}>
                       <input style={{ ...inputStyle, width: '100%', paddingRight: 48 }} type="text" inputMode="decimal"
-                        value={featMintAmt} onChange={e => { const v = e.target.value; if (v === '' || (Number(v) >= 0 && Number(v) <= 1000)) setFeatMintAmt(v); }}
-                        placeholder={`Amount (max 1,000)`} />
-                      <button onClick={() => setFeatMintAmt('1000')} style={{
+                        value={featMintAmt} onChange={e => { const v = e.target.value; const maxMint = tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1_000_000; if (v === '' || (Number(v) >= 0 && Number(v) <= maxMint)) setFeatMintAmt(v); }}
+                        placeholder={`Amount (max ${tok.maxMintPerTx ? (tok.maxMintPerTx / Math.pow(10, tok.decimals)).toLocaleString() : '1,000'})`} />
+                      <button onClick={() => setFeatMintAmt(String(tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1000))} style={{
                         position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
                         padding: '3px 6px', fontSize: '.52rem', fontWeight: 700, background: 'rgba(168,85,247,.15)',
                         border: 'none', borderRadius: 4, color: '#a855f7', cursor: 'pointer', fontFamily: 'var(--ff)',

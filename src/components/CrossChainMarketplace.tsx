@@ -390,14 +390,27 @@ const CrossChainMarketplace: React.FC = () => {
   const escrowReady = !!TOKEN_ESCROW_ADDRESS;
 
   // Auto-fill receive address from connected wallets
+  // Track if user manually edited the field
+  const [makerAddrManual, setMakerAddrManual] = useState(false);
   useEffect(() => {
-    if (formMakerAddr) return; // don't overwrite user input
+    if (makerAddrManual) return; // don't overwrite user input
     if (formDirection === SwapDirection.BTC_TO_FB && unisat.connected && unisat.address) {
       setFormMakerAddr(unisat.address);
     } else if (formDirection === SwapDirection.FB_TO_BTC && walletAddress) {
       setFormMakerAddr(walletAddress);
     }
-  }, [unisat.connected, unisat.address, formDirection, formMakerAddr, walletAddress]);
+  }, [unisat.connected, unisat.address, formDirection, makerAddrManual, walletAddress]);
+
+  // Reset manual flag on direction change
+  useEffect(() => { setMakerAddrManual(false); }, [formDirection]);
+
+  // Auto-fill Token Bridge address
+  useEffect(() => {
+    if (tbMakerAddr) return;
+    if (tbDirection === DIR_SELL_TOKEN && walletAddress) {
+      setTbMakerAddr(walletAddress);
+    }
+  }, [tbDirection, walletAddress, tbMakerAddr]);
 
   // Fetch current block
   useEffect(() => {
@@ -1693,8 +1706,8 @@ const CrossChainMarketplace: React.FC = () => {
 
       {/* Stats bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
-        <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
-          <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.05em' }}>Active Orders</div>
+        <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px', cursor: 'pointer' }} onClick={() => { fetchOrders(); toast('Refreshing orders...', 'info'); }}>
+          <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.05em' }}>Active Orders ↻</div>
           <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--w)' }}>{activeOrders.length}</div>
         </div>
         <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
@@ -1727,14 +1740,14 @@ const CrossChainMarketplace: React.FC = () => {
           <button
             className={formDirection === SwapDirection.BTC_TO_FB ? 'btn-p' : 'btn-s'}
             style={{ flex: 1, fontSize: '.76rem', padding: '10px 0' }}
-            onClick={() => { setFormDirection(SwapDirection.BTC_TO_FB); setFormMakerAddr(''); }}
+            onClick={() => { setFormDirection(SwapDirection.BTC_TO_FB); setFormMakerAddr(''); setMakerAddrManual(false); }}
           >
             BTC → Fractal
           </button>
           <button
             className={formDirection === SwapDirection.FB_TO_BTC ? 'btn-p' : 'btn-s'}
             style={{ flex: 1, fontSize: '.76rem', padding: '10px 0' }}
-            onClick={() => { setFormDirection(SwapDirection.FB_TO_BTC); setFormMakerAddr(''); }}
+            onClick={() => { setFormDirection(SwapDirection.FB_TO_BTC); setFormMakerAddr(''); setMakerAddrManual(false); }}
           >
             Fractal → BTC
           </button>
@@ -1784,7 +1797,7 @@ const CrossChainMarketplace: React.FC = () => {
             <input style={iStyle}
               placeholder={formDirection === SwapDirection.BTC_TO_FB ? 'bc1p... (Fractal)' : 'bc1p... (Bitcoin)'}
               value={formMakerAddr}
-              onChange={e => setFormMakerAddr(e.target.value)} />
+              onChange={e => { setFormMakerAddr(e.target.value); setMakerAddrManual(true); }} />
           </div>
         </div>
 

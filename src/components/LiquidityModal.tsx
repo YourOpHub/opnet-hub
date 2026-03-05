@@ -93,13 +93,15 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     })();
   }, [open, senderAddr, provider]);
 
-  // Auto-calculate VIBE based on pool ratio
+  // Auto-calculate VIBE based on pool ratio (add) or LP position ratio (remove)
   useEffect(() => {
     const m = parseFloat(mineAmt);
     if (tab === 'add' && m > 0 && ratio > 0) {
       setVibeAmt((m * ratio).toFixed(2));
+    } else if (tab === 'remove' && m > 0 && lpMine > 0 && lpVibe > 0) {
+      setVibeAmt(((m / lpMine) * lpVibe).toFixed(2));
     }
-  }, [mineAmt, ratio, tab]);
+  }, [mineAmt, ratio, tab, lpMine, lpVibe]);
 
   // Reset on tab change
   useEffect(() => {
@@ -257,18 +259,28 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           </div>
         </div>
 
-        {/* NativeSwap notice */}
+        {/* NativeSwap info — uses existing deployed NativeSwap contract */}
         {poolType === 'nativeswap' && (
           <div style={{
-            padding: '12px 14px', background: 'rgba(247,147,26,.04)', borderRadius: 14,
-            border: '1px solid rgba(247,147,26,.1)', marginBottom: 16, fontSize: '.65rem', color: '#f59e0b',
+            padding: '14px', background: 'rgba(247,147,26,.04)', borderRadius: 14,
+            border: '1px solid rgba(247,147,26,.1)', marginBottom: 16,
           }}>
-            {NATIVESWAP_ADDRESS
-              ? 'NativeSwap BTC/Token pool — deposit tokens + BTC to provide liquidity.'
-              : 'NativeSwap contract not yet deployed. Deploy with: node deploy/deploy-nativeswap.mjs'}
-            {allTokens.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: '.58rem', color: '#5a6578' }}>
-                Available tokens: {allTokens.map(t => t.symbol).join(', ')}
+            {NATIVESWAP_ADDRESS ? (<>
+              <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#F7931A', marginBottom: 8 }}>NativeSwap BTC/Token Pool</div>
+              <div style={{ fontSize: '.62rem', color: '#8b95a9', lineHeight: 1.6, marginBottom: 10 }}>
+                This pool uses the deployed NativeSwap v5 contract for BTC/Token swaps.
+                Use the <strong style={{ color: '#0ea5e9' }}>Swap</strong> tab to trade BTC for tokens.
+              </div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.5rem', color: '#5a6578', wordBreak: 'break-all', marginBottom: 10 }}>
+                {NATIVESWAP_ADDRESS}
+              </div>
+              <a href={getContractOpscanUrl(NATIVESWAP_ADDRESS)} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '.6rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>
+                View on OPScan ↗
+              </a>
+            </>) : (
+              <div style={{ fontSize: '.65rem', color: '#f59e0b' }}>
+                NativeSwap contract not yet deployed.
               </div>
             )}
           </div>
@@ -411,12 +423,12 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                     }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4 }}>VIBE amount</div>
-                  <input type="number" value={vibeAmt} onChange={e => setVibeAmt(e.target.value)}
+                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4 }}>VIBE (auto)</div>
+                  <input type="number" value={vibeAmt} readOnly
                     placeholder={lpVibe > 0 ? String(lpVibe) : '0'}
                     style={{
                       width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
-                      border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
+                      border: '1px solid rgba(255,255,255,.04)', background: 'rgba(255,255,255,.015)', color: '#8b95a9',
                       fontSize: '.8rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none',
                     }} />
                 </div>
@@ -440,7 +452,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
             </button>
 
             <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.04)', borderRadius: 10, border: '1px solid rgba(234,179,8,.08)', fontSize: '.58rem', color: '#f59e0b' }}>
-              LP position read from on-chain contract. Enter MINE amount to remove — VIBE is calculated proportionally.
+              Enter MINE amount — VIBE is auto-calculated from your LP position ratio.
             </div>
           </div>
         )}

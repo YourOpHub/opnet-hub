@@ -100,6 +100,7 @@ const SatoshiMiner: React.FC = () => {
     const [upgFlash, setUpgFlash] = useState('');
     const [shockwave, setShockwave] = useState(false);
     const fidRef = useRef(0);
+    const hitTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
     // Real chain sync
     const [chainBlock, setChainBlock] = useState(0);
     const [chainEpoch, setChainEpoch] = useState(0);
@@ -280,8 +281,10 @@ const SatoshiMiner: React.FC = () => {
         const id = fidRef.current++;
         setFx(p => [...p, { id, x, y, v, gold: g }]);
         setTimeout(() => setFx(p => p.filter(f => f.id !== id)), 800);
-        // Hit animation
-        setHitting(true); setTimeout(() => setHitting(false), 200);
+        // Hit animation — force re-trigger on rapid clicks
+        clearTimeout(hitTimer.current);
+        setHitting(false);
+        requestAnimationFrame(() => { setHitting(true); hitTimer.current = setTimeout(() => setHitting(false), 200); });
         // Shockwave on golden
         if (g) { setShockwave(true); setTimeout(() => setShockwave(false), 500); }
         // Canvas sparks

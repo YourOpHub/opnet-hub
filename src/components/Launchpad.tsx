@@ -101,6 +101,12 @@ const DeployModal: React.FC<{
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Token configuration
+  const [initialMintPct, setInitialMintPct] = useState(50);
+  const [publicMintEnabled, setPublicMintEnabled] = useState(true);
+  const [maxMintPerTx, setMaxMintPerTx] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
@@ -128,8 +134,9 @@ const DeployModal: React.FC<{
       const supplyNum = parseFloat(supply) || 1_000_000_000;
       const decimals = 8;
       const maxSupply = BigInt(Math.floor(supplyNum)) * (10n ** 8n);
-      const initialMintAmount = maxSupply / 2n; // 50% to deployer
-      const maxPerTx = BigInt(Math.floor(supplyNum * 0.01)) * (10n ** 8n); // 1% per TX
+      const initialMintAmount = (maxSupply * BigInt(initialMintPct)) / 100n;
+      const maxPerTxNum = maxMintPerTx ? parseFloat(maxMintPerTx) : Math.floor(supplyNum * 0.01);
+      const maxPerTx = BigInt(Math.floor(maxPerTxNum)) * (10n ** 8n);
 
       const writer = new BinaryWriter();
       writer.writeU256(maxSupply);
@@ -137,7 +144,7 @@ const DeployModal: React.FC<{
       writer.writeStringWithLength(name.trim());
       writer.writeStringWithLength(symbol.trim().toUpperCase());
       writer.writeU256(initialMintAmount);
-      writer.writeBoolean(true); // publicMint enabled
+      writer.writeBoolean(publicMintEnabled);
       writer.writeU256(maxPerTx);
 
       setStep('Fetching UTXOs...');
@@ -159,11 +166,12 @@ const DeployModal: React.FC<{
       let txid = '';
       try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch {}
 
+      const publicMintShare = supplyNum * (100 - initialMintPct) / 100;
       const token: LaunchToken = {
         address: result.contractAddress || txid || `opt1sq_${Date.now()}`,
         name: name.trim(), symbol: symbol.trim().toUpperCase(), decimals: 8,
-        totalSupply: supplyNum, publicMintSupply: supplyNum / 2,
-        maxMintPerTx: Math.floor(supplyNum * 0.01),
+        totalSupply: supplyNum, publicMintSupply: publicMintShare,
+        maxMintPerTx: maxPerTxNum,
         mintedSupply: 0, creator: walletAddress,
         createdAt: Date.now(), description: desc.trim() || `${name.trim()} on Bitcoin L1`,
         image: img, website, twitter, telegram,
@@ -222,10 +230,65 @@ const DeployModal: React.FC<{
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Total Supply</label>
+          <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Total Supply (Max Supply)</label>
           <input style={iStyle} type="text" inputMode="numeric" value={supply} onChange={e => setSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000000" />
-          <div style={{ fontSize: '.56rem', color: 'var(--t4)', marginTop: 2 }}>50% to you &middot; 50% for public mint &middot; 1% max per TX</div>
+          <div style={{ fontSize: '.56rem', color: 'var(--t4)', marginTop: 2 }}>
+            {initialMintPct}% to you ({((parseFloat(supply) || 0) * initialMintPct / 100).toLocaleString()}) &middot; {100 - initialMintPct}% public mint &middot; Max/tx: {maxMintPerTx || ((parseFloat(supply) || 0) * 0.01).toLocaleString()}
+          </div>
         </div>
+
+        {/* Token settings toggle */}
+        <button onClick={() => setShowAdvanced(!showAdvanced)} style={{
+          width: '100%', padding: '6px', marginBottom: showAdvanced ? 8 : 10,
+          background: 'none', border: '1px solid var(--bd)', borderRadius: 10,
+          color: 'var(--t4)', fontSize: '.62rem', cursor: 'pointer', fontFamily: 'var(--ff)',
+        }}>
+          {showAdvanced ? '▾ Hide Token Settings' : '▸ Token Settings (mint %, max per tx)'}
+        </button>
+
+        {showAdvanced && (
+          <div style={{ marginBottom: 10, padding: 10, background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)', borderRadius: 10 }}>
+            {/* Initial mint % slider */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem', color: 'var(--t3)', marginBottom: 3 }}>
+                <span>Initial mint to you</span>
+                <span style={{ fontWeight: 700, color: 'var(--w)' }}>{initialMintPct}%</span>
+              </div>
+              <input type="range" min={0} max={100} step={5} value={initialMintPct}
+                onChange={e => setInitialMintPct(Number(e.target.value))}
+                style={{ width: '100%', accentColor: '#a855f7' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.52rem', color: 'var(--t4)' }}>
+                <span>You: {((parseFloat(supply) || 0) * initialMintPct / 100).toLocaleString()}</span>
+                <span>Public: {((parseFloat(supply) || 0) * (100 - initialMintPct) / 100).toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Public mint toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
+                width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: publicMintEnabled ? '#a855f7' : 'var(--bg3)',
+                position: 'relative', transition: 'background .2s',
+              }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: '50%', background: 'white',
+                  position: 'absolute', top: 2, left: publicMintEnabled ? 18 : 2, transition: 'left .2s',
+                }} />
+              </button>
+              <span style={{ fontSize: '.62rem', color: 'var(--t2)' }}>Public mint enabled</span>
+            </div>
+
+            {/* Max mint per tx */}
+            {publicMintEnabled && (
+              <div>
+                <label style={{ fontSize: '.58rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Max tokens per mint TX (0 = 1% of supply)</label>
+                <input style={{ ...iStyle, fontSize: '.72rem' }} type="text" inputMode="numeric"
+                  value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder={String(Math.floor((parseFloat(supply) || 0) * 0.01))} />
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
           <div style={{ flex: 1 }}>

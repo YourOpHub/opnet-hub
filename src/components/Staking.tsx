@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
+  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -25,6 +25,17 @@ const STAKING_ABI: BitcoinInterfaceAbi = [
   { name: 'totalStaked', inputs: [], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'getRewardRate', inputs: [], outputs: [{ name: 'rate', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
+
+/** Typed interface for SimpleStaking contract methods */
+interface StakingContract extends BaseContractProperties {
+  stake(amount: bigint): Promise<CallResult>;
+  unstake(amount: bigint): Promise<CallResult>;
+  claim(): Promise<CallResult>;
+  stakedAmount(address: unknown): Promise<CallResult>;
+  stakedReward(address: unknown): Promise<CallResult>;
+  totalStaked(): Promise<CallResult>;
+  getRewardRate(): Promise<CallResult>;
+}
 
 /** The staking token is MINE — same token used in swap pool and minting */
 const STAKING_TOKEN = TESTNET_CONTRACTS.MINE;
@@ -63,6 +74,7 @@ const Staking: React.FC = () => {
   // Fetch wallet balances
   useEffect(() => {
     if (!walletAddress || !hashedMLDSAKey) { setMineBalance(0n); setVibeBalance(0n); setBtcBalance(0n); return; }
+    const prevNet = opnetRpc.getNetwork();
     opnetRpc.setNetwork('testnet');
     setBalLoading(true);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
@@ -72,6 +84,7 @@ const Staking: React.FC = () => {
       opnetRpc.getTokenBalance(TESTNET_CONTRACTS.VIBE.address, mldsa, tweaked).then(b => setVibeBalance(b)),
       opnetRpc.getBalance(walletAddress).then(b => setBtcBalance(b)),
     ]).finally(() => setBalLoading(false));
+    return () => { opnetRpc.setNetwork(prevNet); };
   }, [walletAddress, hashedMLDSAKey, publicKey, refreshKey]);
 
   // Fetch live staking stats from contract
@@ -80,8 +93,7 @@ const Staking: React.FC = () => {
     let cancelled = false;
     const fetchStats = async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
+        const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
         const [stakedRes, rewardRes, totalRes, rateRes] = await Promise.allSettled([
           stakingContract.stakedAmount(senderAddr),
           stakingContract.stakedReward(senderAddr),
@@ -131,8 +143,7 @@ const Staking: React.FC = () => {
 
       // 2. Stake
       setStep('Staking MINE tokens...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
+      const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
       const stakeSim = await withRetry(() => stakingContract.stake(rawAmount));
       if ((stakeSim as CallResult).revert) throw new Error(`Stake failed: ${(stakeSim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
@@ -161,8 +172,7 @@ const Staking: React.FC = () => {
     setResult(null);
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
+      const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
       setStep('Unstaking MINE tokens...');
       const sim = await withRetry(() => stakingContract.unstake(rawAmount));
       if ((sim as CallResult).revert) throw new Error(`Unstake failed: ${(sim as CallResult).revert}`);
@@ -188,8 +198,7 @@ const Staking: React.FC = () => {
     setClaiming(true);
     setResult(null);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const stakingContract = getContract<any>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr as any);
+      const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
       setStep('Claiming rewards...');
       const sim = await withRetry(() => stakingContract.claim());
       if ((sim as CallResult).revert) throw new Error(`Claim failed: ${(sim as CallResult).revert}`);

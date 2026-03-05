@@ -3,7 +3,8 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import type { Address } from '@btc-vision/transaction';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult,
+  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  type TransactionParameters,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -21,6 +22,11 @@ const MINTABLE_ABI: BitcoinInterfaceAbi = [
   },
 ];
 
+/** Typed interface for MintableToken publicMint */
+interface IMintableContract extends BaseContractProperties {
+  publicMint(amount: bigint): Promise<CallResult>;
+}
+
 const FAUCET = 'https://faucet.opnet.org';
 
 /** Fetch network gas parameters and build proper tx params */
@@ -30,15 +36,16 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
   const priorityFeeSats = gas.baseGas / gasPerSat;
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // C-01 FIX: signer/mldsaSigner must be ABSENT (not null) — wallet SDK handles signing
+  // C-01 FIX: signer/mldsaSigner must be null — wallet SDK handles signing
   return {
+    signer: null as TransactionParameters['signer'],
+    mldsaSigner: null as TransactionParameters['mldsaSigner'],
     refundTo,
     maximumAllowedSatToSpend: 250_000n,
     network: NETWORK,
     feeRate,
     priorityFee,
-  } as any;
+  };
 }
 
 interface DeployedToken {
@@ -95,6 +102,7 @@ const TokenGallery: React.FC = () => {
   // Check on-chain status for user tokens
   useEffect(() => {
     if (tokens.length === 0) return;
+    const prevNet = opnet.getNetwork();
     opnet.setNetwork('testnet');
     tokens.forEach(t => {
       if (!t.address) return;
@@ -102,6 +110,7 @@ const TokenGallery: React.FC = () => {
         setChainInfo(prev => ({ ...prev, [t.address]: { totalSupply: supply, confirmed: supply > 0n } }));
       }).catch(() => {});
     });
+    return () => { opnet.setNetwork(prevNet); };
   }, [tokens]);
 
   // Featured tokens (our pre-deployed MINE and VIBE)
@@ -130,8 +139,7 @@ const TokenGallery: React.FC = () => {
     setFeatMinting(true); setFeatMintResult(null);
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amt, tok.decimals);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await contract.publicMint(rawAmount);
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
@@ -176,9 +184,8 @@ const TokenGallery: React.FC = () => {
     try {
       const rawAmount = BigInt(Math.floor(amt * Math.pow(10, token.decimals)));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(
-        token.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any,
+      const contract = getContract<IMintableContract>(
+        token.address, MINTABLE_ABI, provider, NETWORK, senderAddr,
       );
       const sim = await contract.publicMint(rawAmount);
 

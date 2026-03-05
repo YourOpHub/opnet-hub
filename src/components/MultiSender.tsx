@@ -197,9 +197,12 @@ const MultiSender: React.FC = () => {
       ));
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rawSender = senderAddr || walletAddress;
+        const senderAddress = typeof rawSender === 'string'
+          ? Address.fromString(rawSender)
+          : rawSender;
         const contract = getContract<IOP20Contract>(
-          tokenAddr, OP_20_ABI, provider, NETWORK, (senderAddr || walletAddress) as any,
+          tokenAddr, OP_20_ABI, provider, NETWORK, senderAddress as Address,
         );
         const recipientAddr = Address.fromString(validRecipients[i].address);
         const amount = formatAmount(validRecipients[i].amount, tokenDecimals);

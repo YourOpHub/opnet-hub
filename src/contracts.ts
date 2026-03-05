@@ -32,18 +32,19 @@ export const TESTNET_CONTRACTS = {
     },
 } as const;
 
-export const DEPLOYER_ADDRESS = 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';
+export const DEPLOYER_ADDRESS = import.meta.env.VITE_DEPLOYER_ADDRESS || 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';
 
-export const DEPLOYER_MLDSA_HEX = '4ca79348ed8d21c5d4bbacdde9fe4eb7b0b0b2ed495fa81e545d5fbc7b554aea';
-export const DEPLOYER_TWEAKED_HEX = '0fb4ee127879ea8e617377fc250f362f8ffab44328436e07e0d03ddca91e0f7f';
+/** Deployer public key hashes (public, NOT private keys) — used for fee recipient P2OP */
+export const DEPLOYER_MLDSA_HEX = import.meta.env.VITE_DEPLOYER_MLDSA || '4ca79348ed8d21c5d4bbacdde9fe4eb7b0b0b2ed495fa81e545d5fbc7b554aea';
+export const DEPLOYER_TWEAKED_HEX = import.meta.env.VITE_DEPLOYER_TWEAKED || '0fb4ee127879ea8e617377fc250f362f8ffab44328436e07e0d03ddca91e0f7f';
 
 export const MINE_DEPLOY_TXID = '0c49c38d168dd72b3a8cf622e41af707e6a22256ae3cf2e36d33a24307948fdb';
 export const VIBE_DEPLOY_TXID = '81debce471fa810f416caaa88210a251558acc032a4ac0c0584ea1427ae60a1a';
 
 /** SimplePool v4 AMM — LP shares + events (PoolLiquidityAdded/Removed/Swap) */
-export const POOL_ADDRESS = 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
-export const POOL_PUBKEY = '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
-export const POOL_HEX = 'cc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
+export const POOL_ADDRESS = import.meta.env.VITE_POOL_ADDRESS || 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
+export const POOL_PUBKEY = import.meta.env.VITE_POOL_PUBKEY || '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
+export const POOL_HEX = POOL_PUBKEY.replace('0x', '');
 
 /** SimplePool v2 selectors (from opnet-transform build output) */
 export const POOL_SELECTORS = {
@@ -66,8 +67,8 @@ export const OP20_SELECTORS = {
 } as const;
 
 /** SimpleStaking v3 — events (Staked/Unstaked/RewardClaimed/RewardRateChanged) */
-export const STAKING_ADDRESS = 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
-export const STAKING_PUBKEY = '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
+export const STAKING_ADDRESS = import.meta.env.VITE_STAKING_ADDRESS || 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
+export const STAKING_PUBKEY = import.meta.env.VITE_STAKING_PUBKEY || '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
 /** Staking selectors (from opnet-transform build output) */
@@ -85,9 +86,9 @@ export const STAKING_SELECTORS = {
 } as const;
 
 /** P2PMarket v9 — output bitmap fix (prevents BTC double-counting in batch fills) */
-export const MARKET_ADDRESS = 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt';
-export const MARKET_PUBKEY = '0xd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
-export const MARKET_HEX = 'd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
+export const MARKET_ADDRESS = import.meta.env.VITE_MARKET_ADDRESS || 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt';
+export const MARKET_PUBKEY = import.meta.env.VITE_MARKET_PUBKEY || '0xd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
+export const MARKET_HEX = MARKET_PUBKEY.replace('0x', '');
 
 /** P2PMarket v5 selectors — trustless buy orders (accept + execute) */
 export const MARKET_SELECTORS = {
@@ -102,8 +103,8 @@ export const MARKET_SELECTORS = {
 } as const;
 
 /** FractalSwap v4 — output bitmap fix (BTC double-count prevention) */
-export const CROSSCHAIN_ADDRESS = 'opt1sqpylrj2pm7d3zld4y86a8kjtrd06q7s2gvyazw4c';
-export const CROSSCHAIN_PUBKEY = '0x1f3f8a86d1dd595d8533697c2bff18b1ee30ffb1339499c176a7e0447fd38820';
+export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqpylrj2pm7d3zld4y86a8kjtrd06q7s2gvyazw4c';
+export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0x1f3f8a86d1dd595d8533697c2bff18b1ee30ffb1339499c176a7e0447fd38820';
 
 /** TokenEscrowBridge — removed from UI (duplicates Marketplace), not redeployed */
 export const TOKEN_ESCROW_ADDRESS = '';
@@ -111,9 +112,9 @@ export const TOKEN_ESCROW_PUBKEY = '';
 export const TOKEN_ESCROW_HEX = '';
 
 /** NativeSwapPool v5 — BTC/MINE AMM (dust check, min fee, audit-fixed, deployed 2026-03-05) */
-export const NATIVESWAP_ADDRESS = 'opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj';
-export const NATIVESWAP_PUBKEY = '0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
-export const NATIVESWAP_HEX = '51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
+export const NATIVESWAP_ADDRESS = import.meta.env.VITE_NATIVESWAP_ADDRESS || 'opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj';
+export const NATIVESWAP_PUBKEY = import.meta.env.VITE_NATIVESWAP_PUBKEY || '0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
+export const NATIVESWAP_HEX = NATIVESWAP_PUBKEY.replace('0x', '');
 
 /** NativeSwap selectors (from opnet-transform build output) */
 export const NATIVESWAP_SELECTORS = {

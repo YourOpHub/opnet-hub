@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address } from '@btc-vision/transaction';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
+  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -21,6 +21,15 @@ const POOL_ABI: BitcoinInterfaceAbi = [
   { name: 'liquidityOf', constant: true, inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
+
+/** Typed interface for SimplePool contract */
+interface IPoolContract extends BaseContractProperties {
+  getReserves(): Promise<CallResult>;
+  sync(): Promise<CallResult>;
+  addLiquidity(amountA: bigint, amountB: bigint): Promise<CallResult>;
+  removeLiquidity(amountA: bigint, amountB: bigint): Promise<CallResult>;
+  liquidityOf(account: unknown): Promise<CallResult>;
+}
 
 interface Props {
   open: boolean;
@@ -71,12 +80,12 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     if (!senderAddr) return;
     (async () => {
       try {
-        const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const res = await withRetry(() => poolContract.liquidityOf(senderAddr)) as any;
+        const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
+        const res = await withRetry(() => poolContract.liquidityOf(senderAddr)) as CallResult;
         if (!res.revert && res.properties) {
-          const a = Number(res.properties.amountA ?? 0n) / 1e8;
-          const b = Number(res.properties.amountB ?? 0n) / 1e8;
+          const props = res.properties as Record<string, unknown>;
+          const a = Number(props.amountA ?? 0n) / 1e8;
+          const b = Number(props.amountB ?? 0n) / 1e8;
           setLpMine(a);
           setLpVibe(b);
         }
@@ -128,8 +137,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
       // Step 3: addLiquidity on pool
       setStep('Adding liquidity to pool...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
+      const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
       const addSim = await withRetry(() => poolContract.addLiquidity(mineRaw, vibeRaw));
       if ((addSim as CallResult).revert) throw new Error(`addLiquidity failed: ${(addSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress!);
@@ -159,7 +167,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     try {
       const mineRaw = BitcoinUtils.expandToDecimals(m, 8);
       const vibeRaw = BitcoinUtils.expandToDecimals(v, 8);
-      const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
+      const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
 
       setStep('Removing liquidity from pool...');
       const removeSim = await withRetry(() => poolContract.removeLiquidity(mineRaw, vibeRaw));

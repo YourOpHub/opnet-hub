@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract, ABIDataTypes, BitcoinAbiTypes,
   TransactionOutputFlags,
-  type BitcoinInterfaceAbi, type CallResult,
+  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
@@ -177,6 +177,30 @@ const TOKEN_ESCROW_ABI: BitcoinInterfaceAbi = [
     ],
   },
 ];
+
+/** Typed interface for FractalSwap contract */
+interface FractalSwapContract extends BaseContractProperties {
+  createOrder(direction: bigint, amount: bigint, hashlock: bigint, expiry: bigint, makerAddr: bigint): Promise<CallResult>;
+  takeOrder(orderId: bigint, takerAddr: bigint): Promise<CallResult>;
+  confirmSwap(orderId: bigint, preimage: bigint): Promise<CallResult>;
+  cancelOrder(orderId: bigint): Promise<CallResult>;
+  refundExpired(orderId: bigint): Promise<CallResult>;
+  getOrder(orderId: bigint): Promise<CallResult>;
+  getNextOrderId(): Promise<CallResult>;
+  getFeeInfo(): Promise<CallResult>;
+}
+
+/** Typed interface for TokenEscrowBridge contract */
+interface TokenEscrowContract extends BaseContractProperties {
+  createOrder(direction: bigint, token: Address, tokenAmount: bigint, btcPrice: bigint, hashlock: bigint, expiry: bigint, makerAddr: bigint): Promise<CallResult>;
+  takeOrder(orderId: bigint, takerAddr: bigint): Promise<CallResult>;
+  confirmSwap(orderId: bigint, preimage: bigint): Promise<CallResult>;
+  cancelOrder(orderId: bigint): Promise<CallResult>;
+  refundExpired(orderId: bigint): Promise<CallResult>;
+  getOrder(orderId: bigint): Promise<CallResult>;
+  getNextOrderId(): Promise<CallResult>;
+  getFeeInfo(): Promise<CallResult>;
+}
 
 /** Token options for the bridge */
 const TOKEN_OPTIONS = Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => ({
@@ -394,10 +418,10 @@ const CrossChainMarketplace: React.FC = () => {
     if (!contractReady) return;
     (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const c = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK);
+        const c = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK);
         const r = await c.getFeeInfo();
-        if (r?.properties?.feeBps) setFeeBps(Number(r.properties.feeBps));
+        const feeProps = r?.properties as Record<string, unknown> | undefined;
+        if (feeProps?.feeBps) setFeeBps(Number(feeProps.feeBps));
       } catch { /* */ }
     })();
   }, [provider, contractReady]);
@@ -406,16 +430,16 @@ const CrossChainMarketplace: React.FC = () => {
   const fetchOrders = useCallback(async () => {
     if (!contractReady) { setLoading(false); return; }
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK);
+      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK);
       const nextIdResult = await market.getNextOrderId();
-      const nextId = Number(nextIdResult?.properties?.nextOrderId ?? 1n);
+      const nextIdProps = nextIdResult?.properties as Record<string, bigint> | undefined;
+      const nextId = Number(nextIdProps?.nextOrderId ?? 1n);
       const fetched: FractalSwapOrder[] = [];
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await market.getOrder(BigInt(i));
           if (!r?.properties) continue;
-          const p = r.properties;
+          const p = r.properties as Record<string, bigint>;
           const status = Number(p.status ?? 0n);
           if (status === 0) continue;
           fetched.push({
@@ -486,8 +510,7 @@ const CrossChainMarketplace: React.FC = () => {
 
     setCreating(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
 
       // Generate HTLC pair
       setCreateStep('Generating HTLC preimage...');
@@ -552,8 +575,7 @@ const CrossChainMarketplace: React.FC = () => {
       const feeRecipientScript = buildP2OPScript(DEPLOYER_MLDSA_HEX);
       const feeRecipientAddress = getP2OPAddress(DEPLOYER_MLDSA_HEX);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
 
       // Set transaction details for fee output verification
       // Contract v2 dual-checks: output.to (string, on-chain) AND output.scriptPublicKey (bytes, simulation)
@@ -576,11 +598,11 @@ const CrossChainMarketplace: React.FC = () => {
       const tp = await buildTxParams(provider, walletAddress);
       // Use raw script (not address) for P2OP outputs — PSBT can't decode P2OP addresses
       // Value must be bigint (PSBT validates typeof === 'bigint')
-      (tp as Record<string, unknown>).extraOutputs = [{
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: feeRecipientScript,
         value: feeSats,
       }];
-      (tp as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp);
 
       setActionStep('');
@@ -612,8 +634,7 @@ const CrossChainMarketplace: React.FC = () => {
       const valid = await verifyPreimage(preimageHex, order.hashlock);
       if (!valid) throw new Error('Invalid preimage');
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
       setActionStep('Confirming swap on-chain...');
       const sim = await withRetry(() => market.confirmSwap(BigInt(orderId), hexToBigInt(preimageHex)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
@@ -642,8 +663,7 @@ const CrossChainMarketplace: React.FC = () => {
     if (!contractReady) return;
     setActioning(true); setActionStep('Cancelling order...');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
@@ -704,8 +724,7 @@ const CrossChainMarketplace: React.FC = () => {
     if (!contractReady) return;
     setActioning(true); setActionStep('Refunding expired order...');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => market.refundExpired(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
@@ -732,16 +751,16 @@ const CrossChainMarketplace: React.FC = () => {
     if (!escrowReady) return;
     setEscrowLoading(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bridge = getContract<any>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK);
+      const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK);
       const nextIdResult = await bridge.getNextOrderId();
-      const nextId = Number(nextIdResult?.properties?.nextOrderId ?? 1n);
+      const nextIdProps = nextIdResult?.properties as Record<string, bigint> | undefined;
+      const nextId = Number(nextIdProps?.nextOrderId ?? 1n);
       const fetched: TokenEscrowOrder[] = [];
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await bridge.getOrder(BigInt(i));
           if (!r?.properties) continue;
-          const p = r.properties;
+          const p = r.properties as Record<string, bigint>;
           const status = Number(p.status ?? 0n);
           if (status === 0) continue;
           fetched.push({
@@ -799,8 +818,7 @@ const CrossChainMarketplace: React.FC = () => {
         );
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bridge = getContract<any>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr as any);
+      const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr);
 
       // Generate HTLC pair
       setTbStep('Generating HTLC preimage...');
@@ -877,8 +895,7 @@ const CrossChainMarketplace: React.FC = () => {
       const feeRecipientScript = buildP2OPScript(DEPLOYER_MLDSA_HEX);
       const feeRecipientAddress = getP2OPAddress(DEPLOYER_MLDSA_HEX);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bridge = getContract<any>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr as any);
+      const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr);
 
       bridge.setTransactionDetails({
         inputs: [],
@@ -896,11 +913,11 @@ const CrossChainMarketplace: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
-      (tp as Record<string, unknown>).extraOutputs = [{
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: feeRecipientScript,
         value: feeSats,
       }];
-      (tp as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp);
 
       setActionStep('');
@@ -930,8 +947,7 @@ const CrossChainMarketplace: React.FC = () => {
       // HTLC model: preimage IS the proof of payment. No in-tx BTC output needed.
       // BTC payment happens on the counterparty chain via HTLC.
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bridge = getContract<any>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr as any);
+      const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr);
 
       setActionStep('Confirming swap on-chain...');
       const sim = await withRetry(() => bridge.confirmSwap(BigInt(orderId), hexToBigInt(preimageHex)));
@@ -958,8 +974,7 @@ const CrossChainMarketplace: React.FC = () => {
     if (!escrowReady) return;
     setActioning(true); setActionStep('Cancelling token escrow order...');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bridge = getContract<any>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr as any);
+      const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => bridge.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
@@ -983,8 +998,7 @@ const CrossChainMarketplace: React.FC = () => {
     if (!escrowReady) return;
     setActioning(true); setActionStep('Refunding expired token escrow...');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const bridge = getContract<any>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr as any);
+      const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => bridge.refundExpired(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);

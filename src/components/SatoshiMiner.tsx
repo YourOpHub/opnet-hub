@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult,
+  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -54,6 +54,11 @@ const GAME_RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
 const MINTABLE_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
 ];
+
+/** Typed interface for MintableToken contract */
+interface MintableContract extends BaseContractProperties {
+  publicMint(amount: bigint): Promise<CallResult>;
+}
 /** Calculate current daily emission with weekly halving */
 const getMineEmission = (daysSinceStart: number): number => {
     const halvings = Math.floor(daysSinceStart / MINE_HALVING_DAYS);
@@ -541,8 +546,7 @@ const SatoshiMiner: React.FC = () => {
                                 // On-chain publicMint via wallet
                                 setClaimStatus('claiming');
                                 const rawAmount = BitcoinUtils.expandToDecimals(claimAmount, MINE_DECIMALS);
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const contract = getContract<any>(MINE_CONTRACT, MINTABLE_ABI, gameProvider, GAME_NETWORK, senderAddr as any);
+                                const contract = getContract<MintableContract>(MINE_CONTRACT, MINTABLE_ABI, gameProvider, GAME_NETWORK, senderAddr);
                                 const sim = await withRetry(() => contract.publicMint(rawAmount));
                                 if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
                                 const txParams = await buildTxParams(gameProvider, walletAddress!);

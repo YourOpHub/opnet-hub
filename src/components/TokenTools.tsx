@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { getContract, ABIDataTypes, BitcoinAbiTypes, type BitcoinInterfaceAbi, type CallResult } from 'opnet';
+import { getContract, ABIDataTypes, BitcoinAbiTypes, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties, type TransactionParameters } from 'opnet';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY } from '../contracts';
@@ -625,8 +625,10 @@ function UTXOSplitter() {
 
       // Use pool contract if available, otherwise use any known contract
       const targetContract = POOL_ADDRESS || TESTNET_CONTRACTS.MINE.address;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(targetContract, dummyABI, provider, NETWORK, senderAddr as any);
+      interface IReservesContract extends BaseContractProperties {
+        getReserves(): Promise<CallResult>;
+      }
+      const contract = getContract<IReservesContract>(targetContract, dummyABI, provider, NETWORK, senderAddr);
 
       setStep(`Simulating split into ${splitCount} UTXOs...`);
       const sim = await contract.getReserves();
@@ -641,9 +643,9 @@ function UTXOSplitter() {
           value: BigInt(perSplitSats),
         });
       }
-      (tp as Record<string, unknown>).extraOutputs = extraOutputs;
+      (tp as unknown as Record<string, unknown>).extraOutputs = extraOutputs;
       // Increase max spend to cover all outputs
-      (tp as Record<string, unknown>).maximumAllowedSatToSpend = BigInt(totalSats);
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = BigInt(totalSats);
 
       setStep(`Sending split tx (${splitCount} UTXOs of ~${perSplitSats.toLocaleString()} sats)...`);
       await (sim as CallResult).sendTransaction(tp);

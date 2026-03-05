@@ -4,7 +4,7 @@ import { Address, BinaryWriter } from '@btc-vision/transaction';
 import { Transaction } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult,
+  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -74,10 +74,14 @@ const MINTABLE_ABI: BitcoinInterfaceAbi = [
 
 const MINT_AMOUNT = 1000; // Fixed 1000 tokens per mint
 
-interface IPoolContract {
+interface IPoolContract extends BaseContractProperties {
   swap(tokenIn: Address, amountIn: bigint, minAmountOut: bigint): Promise<CallResult>;
   getReserves(): Promise<CallResult>;
   sync(): Promise<CallResult>;
+}
+
+interface IMintableContract extends BaseContractProperties {
+  publicMint(amount: bigint): Promise<CallResult>;
 }
 
 /** Initial pool reserves (will be read from chain once pool is deployed) */
@@ -207,17 +211,20 @@ const SwapUI: React.FC = () => {
   useEffect(() => { fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); }); }, []);
 
   useEffect(() => {
+    const prevNet = opnetRpc.getNetwork();
     opnetRpc.setNetwork('testnet');
     Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
       opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
         if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
       }).catch(() => {});
     });
+    return () => { opnetRpc.setNetwork(prevNet); };
   }, []);
 
   // Fetch balances
   useEffect(() => {
     if (!walletAddress || !hashedMLDSAKey) { setBalances({}); return; }
+    const prevNet = opnetRpc.getNetwork();
     opnetRpc.setNetwork('testnet');
     setBalLoading(true);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
@@ -236,6 +243,7 @@ const SwapUI: React.FC = () => {
         .catch(() => {})
     );
     Promise.allSettled(jobs).finally(() => setBalLoading(false));
+    return () => { opnetRpc.setNetwork(prevNet); };
   }, [walletAddress, hashedMLDSAKey, publicKey, balRefreshKey]);
 
   const from = TOKENS[fromIdx] || TOKENS[0];
@@ -303,9 +311,8 @@ const SwapUI: React.FC = () => {
 
       // STEP 2: Call swap on pool
       setSwapStep('Executing swap on pool...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const poolContract = getContract<any>(
-        POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any,
+      const poolContract = getContract<IPoolContract>(
+        POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr,
       ) as unknown as IPoolContract;
       const tokenInAddr = Address.fromString(from.pubkey);
       const swapSim = await withRetry(() => poolContract.swap(tokenInAddr, rawAmount, minOut));
@@ -346,8 +353,7 @@ const SwapUI: React.FC = () => {
       const tok = TESTNET_CONTRACTS[sym as keyof typeof TESTNET_CONTRACTS];
       if (!tok) throw new Error('Unknown token');
       const rawAmount = BitcoinUtils.expandToDecimals(MINT_AMOUNT, tok.decimals);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr as any);
+      const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => contract.publicMint(rawAmount));
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
@@ -379,12 +385,11 @@ const SwapUI: React.FC = () => {
     setAddingLP(true);
     setLpResult(null);
     try {
-      const poolAddr = Address.fromString(POOL_ADDRESS) as any;
+      const poolAddr = Address.fromString(POOL_ADDRESS);
 
       // 1. Transfer MINE to pool
       setLpStep('Transferring MINE to pool...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mineContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
+      const mineContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr);
       const mineRaw = BitcoinUtils.expandToDecimals(mineAmt, 8);
       const mineSim = await withRetry(() => mineContract.transfer(poolAddr, mineRaw));
       if (mineSim.revert) throw new Error(`MINE transfer failed: ${mineSim.revert}`);
@@ -398,8 +403,7 @@ const SwapUI: React.FC = () => {
 
       // 2. Transfer VIBE to pool — fresh txParams (UTXOs changed)
       setLpStep('Transferring VIBE to pool...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const vibeContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr as any);
+      const vibeContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr);
       const vibeRaw = BitcoinUtils.expandToDecimals(vibeAmt, 8);
       const vibeSim = await withRetry(() => vibeContract.transfer(poolAddr, vibeRaw));
       if (vibeSim.revert) throw new Error(`VIBE transfer failed: ${vibeSim.revert}`);
@@ -413,8 +417,7 @@ const SwapUI: React.FC = () => {
 
       // 3. Call sync() on pool — fresh txParams again
       setLpStep('Syncing pool reserves...');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const poolContract = getContract<any>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr as any);
+      const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
       const syncSim = await withRetry(() => poolContract.sync());
       if ((syncSim as CallResult).revert) throw new Error(`Sync failed: ${(syncSim as CallResult).revert}`);
       const txParams3 = await buildTxParams(provider, walletAddress);
@@ -456,10 +459,9 @@ const SwapUI: React.FC = () => {
     if (!poolTokenA || !poolTokenB) return;
     if (poolTokenA === poolTokenB) { setPoolDeployResult({ ok: false, msg: 'Token A and B must be different' }); return; }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inst = walletInstance as any;
+    const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
     const web3 = inst.web3 || inst;
-    if (!web3?.deployContract) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
+    if (!(web3 as Record<string, unknown>)?.deployContract) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
 
     setDeployingPool(true); setPoolDeployResult(null);
     try {
@@ -480,7 +482,8 @@ const SwapUI: React.FC = () => {
       if (!utxos?.length) throw new Error('No UTXOs. Get testnet BTC from faucet.');
 
       setPoolDeployStep('Sign in your wallet...');
-      const result = await web3.deployContract({
+      const deployFn = (web3 as { deployContract: (...args: unknown[]) => Promise<{ transaction: string[]; contractAddress?: string }> }).deployContract;
+      const result = await deployFn({
         bytecode, calldata: writer.getBuffer(), utxos, from: walletAddress,
         feeRate: 10, priorityFee: 10_000n, gasSatFee: 100_000n,
         revealMLDSAPublicKey: true, linkMLDSAPublicKeyToAddress: true,

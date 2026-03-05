@@ -35,8 +35,7 @@ async function lpApi<T>(path: string, opts?: RequestInit): Promise<T | null> {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      throw new Error((err as any).error || `HTTP ${res.status}`);
+      throw new Error((err as {error?: string}).error || `HTTP ${res.status}`);
     }
     return await res.json() as T;
   } catch (e) {

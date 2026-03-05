@@ -245,6 +245,7 @@ const TokenLauncher: React.FC = () => {
     if (!verifyAddr.trim()) return;
     setVerifying(true);
     setVerifyResult(null);
+    const prevNet = opnet.getNetwork();
     try {
       opnet.setNetwork('testnet');
       const code = await opnet.getCode(verifyAddr.trim(), true);
@@ -259,6 +260,7 @@ const TokenLauncher: React.FC = () => {
     } catch {
       setVerifyResult({ ok: false, info: 'RPC error — try again.' });
     } finally {
+      opnet.setNetwork(prevNet);
       setVerifying(false);
     }
   };

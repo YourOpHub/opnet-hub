@@ -3,7 +3,8 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes,
   TransactionOutputFlags,
-  type BitcoinInterfaceAbi, type CallResult,
+  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  type TransactionParameters,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -15,6 +16,18 @@ import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 import { useToast } from './Toast';
 const LP_API = import.meta.env.VITE_LP_API || '';
 const MARKET_API = import.meta.env.VITE_API_URL || '';
+
+/** Typed interface for P2PMarket contract methods (generated dynamically from ABI) */
+interface MarketContract extends BaseContractProperties {
+  getNextOrderId(): Promise<CallResult>;
+  getOrder(orderId: bigint): Promise<CallResult>;
+  createSellOrder(token: Address, amount: bigint, pricePerToken: bigint): Promise<CallResult>;
+  createBuyOrder(token: Address, amount: bigint, pricePerToken: bigint): Promise<CallResult>;
+  fillSellOrder(orderId: bigint, fillAmount: bigint): Promise<CallResult>;
+  acceptBuyOrder(orderId: bigint): Promise<CallResult>;
+  executeBuyOrder(orderId: bigint): Promise<CallResult>;
+  cancelOrder(orderId: bigint): Promise<CallResult>;
+}
 
 /** P2PMarket ABI */
 const MARKET_ABI: BitcoinInterfaceAbi = [
@@ -173,21 +186,20 @@ const Marketplace: React.FC = () => {
   // Read orders directly from on-chain contract (fallback when LP_API unavailable)
   const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK);
       const nextIdResult = await market.getNextOrderId();
-      const nextId = Number(nextIdResult?.properties?.nextOrderId ?? 1n);
+      const nextId = Number((nextIdResult?.properties as Record<string, unknown>)?.nextOrderId ?? 1n);
       const chainOrders: Order[] = [];
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await market.getOrder(BigInt(i));
           if (!r?.properties) continue;
-          const p = r.properties;
+          const p = r.properties as Record<string, unknown>;
           const orderType = Number(p.orderType ?? 0n);
           const status = Number(p.status ?? 0n);
           // Show active (1) and accepted (4) orders
           if (status !== 1 && status !== 4) continue;
-          const tokenHex = (p.token ?? 0n).toString(16).padStart(64, '0');
+          const tokenHex = ((p.token ?? 0n) as bigint).toString(16).padStart(64, '0');
           // Resolve token hex to bech32 address and metadata
           const resolved = resolveTokenHex(tokenHex);
           const tokenBech32 = resolved?.address || tokenHex;
@@ -200,11 +212,11 @@ const Marketplace: React.FC = () => {
           const filled = Number(p.filled ?? 0n) / Math.pow(10, decimals);
           const price = Number(p.pricePerToken ?? 0n);
           const statusStr = status === 1 ? 'active' : 'accepted';
-          const sellerHex = (p.seller ?? 0n).toString(16).padStart(64, '0');
+          const sellerHex = ((p.seller ?? 0n) as bigint).toString(16).padStart(64, '0');
           chainOrders.push({
             id: String(i),
             type: orderType === 1 ? 'sell' : 'buy',
-            creator: (p.creator ?? 0n).toString(16).padStart(64, '0'),
+            creator: ((p.creator ?? 0n) as bigint).toString(16).padStart(64, '0'),
             seller: sellerHex,
             tokenAddress: tokenBech32,
             tokenSymbol: resolved?.symbol || '???',
@@ -287,8 +299,7 @@ const Marketplace: React.FC = () => {
 
     setCreating(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
       const decimals = selInfo?.decimals || 8;
       const amountU256 = BigInt(Math.round(amt * Math.pow(10, decimals))); // token amount in smallest units
       const priceU256 = BigInt(Math.round(ppt));   // price per token in raw sats (integer)
@@ -308,14 +319,14 @@ const Marketplace: React.FC = () => {
         const sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
         const tp = await buildTxParams(provider, walletAddress);
-        await (sim as CallResult).sendTransaction(tp);
+        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
         // Buy order: just stores intent on-chain (no tokens locked)
         setCreateStep('Creating buy order on-chain...');
         const sim = await withRetry(() => market.createBuyOrder(tokenAddr, amountU256, priceU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
         const tp = await buildTxParams(provider, walletAddress);
-        await (sim as CallResult).sendTransaction(tp);
+        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
       setCreateStep('');
@@ -366,8 +377,7 @@ const Marketplace: React.FC = () => {
       const fillAmt = amount || (order.amount - order.amountFilled);
       const fillAmtU256 = BigInt(Math.round(fillAmt * 1e8));
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
 
       if (order.type === 'sell') {
         // Buyer fills sell order: must include BTC output to seller's P2OP address
@@ -393,18 +403,17 @@ const Marketplace: React.FC = () => {
           }],
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sim = await withRetry(() => (market as any).fillSellOrder(BigInt(orderId), fillAmtU256));
+        const sim = await withRetry(() => market.fillSellOrder(BigInt(orderId), fillAmtU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
         // Use raw script for P2OP outputs — PSBT can't decode P2OP addresses
-        (tp as Record<string, unknown>).extraOutputs = [{
+        (tp as unknown as Record<string, unknown>).extraOutputs = [{
           script: sellerP2OPScript,
           value: btcPaymentSats,
         }];
-        (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
-        await (sim as CallResult).sendTransaction(tp);
+        (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
+        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
         // Seller accepts buy order: approve tokens → contract locks them
         // No BTC in this step — buyer will pay BTC later via executeBuyOrder
@@ -413,12 +422,11 @@ const Marketplace: React.FC = () => {
         await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
 
         setFillStep('Accepting buy order (locking tokens)...');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sim = await withRetry(() => (market as any).acceptBuyOrder(BigInt(orderId)));
+        const sim = await withRetry(() => market.acceptBuyOrder(BigInt(orderId)));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
-        await (sim as CallResult).sendTransaction(tp);
+        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
       setFillStep(''); setFillId(null); setFillAmount('');
@@ -459,8 +467,7 @@ const Marketplace: React.FC = () => {
       const sellerP2OPScript = buildP2OPScript(order.seller);
       const sellerP2OPAddress = getP2OPAddress(order.seller);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
 
       setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
 
@@ -477,18 +484,17 @@ const Marketplace: React.FC = () => {
         }],
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sim = await withRetry(() => (market as any).executeBuyOrder(BigInt(orderId)));
+      const sim = await withRetry(() => market.executeBuyOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
       // Use raw script for P2OP outputs — PSBT can't decode P2OP addresses
-      (tp as Record<string, unknown>).extraOutputs = [{
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: sellerP2OPScript,
         value: btcPaymentSats,
       }];
-      (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
-      await (sim as CallResult).sendTransaction(tp);
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
+      await (sim as CallResult).sendTransaction(tp as TransactionParameters);
 
       setFillStep(''); setFillId(null);
       toast('Buy order executed! Confirming...', 'success');
@@ -541,12 +547,11 @@ const Marketplace: React.FC = () => {
   const handleCancel = useCallback(async (orderId: string) => {
     if (!walletAddress || !senderAddr) return;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const market = getContract<any>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr as any);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      await (sim as CallResult).sendTransaction(tp);
+      await (sim as CallResult).sendTransaction(tp as TransactionParameters);
 
       toast('Order cancel submitted! Confirming...', 'success');
       fetch(`${MARKET_API}/market/cancel`, {

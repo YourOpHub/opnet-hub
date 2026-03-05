@@ -3,8 +3,9 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Transaction } from '@btc-vision/bitcoin';
 import { BinaryWriter } from '@btc-vision/transaction';
 import {
-  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult,
+  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
+  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties, type IOP20Contract,
+  type TransactionParameters,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -23,6 +24,10 @@ const OP20_ABI: BitcoinInterfaceAbi = [
   { name: 'isPublicMintEnabled', inputs: [], outputs: [{ name: 'enabled', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
   { name: 'getMaxMintPerTx', inputs: [], outputs: [{ name: 'maxAmount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
+
+interface MintableOP20 extends IOP20Contract {
+  publicMint(amount: bigint): Promise<CallResult>;
+}
 
 type SortMode = 'hot1h' | 'hot8h' | 'hot24h' | 'newest' | 'holders';
 
@@ -107,10 +112,9 @@ const DeployModal: React.FC<{
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
     if (!name.trim() || !symbol.trim()) { setError('Name and symbol required'); return; }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inst = walletInstance as any;
+    const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
     const web3 = inst.web3 || inst;
-    if (!web3?.deployContract) { setError('Wallet does not support deployment. Use OP_WALLET.'); return; }
+    if (!(web3 as Record<string, unknown>)?.deployContract) { setError('Wallet does not support deployment. Use OP_WALLET.'); return; }
 
     setDeploying(true); setError('');
     try {
@@ -141,7 +145,7 @@ const DeployModal: React.FC<{
       if (!utxos?.length) throw new Error('No UTXOs. Get testnet BTC from faucet.');
 
       setStep('Sign deployment in your wallet...');
-      const result = await web3.deployContract({
+      const result = await (web3 as { deployContract: (...args: unknown[]) => Promise<{ contractAddress?: string; transaction: string[] }> }).deployContract({
         bytecode, calldata: writer.getBuffer(), utxos, from: walletAddress,
         feeRate: 10, priorityFee: 10_000n, gasSatFee: 100_000n,
         revealMLDSAPublicKey: true, linkMLDSAPublicKeyToAddress: true,
@@ -297,8 +301,7 @@ const Launchpad: React.FC = () => {
   const syncToken = useCallback(async (addr: string) => {
     if (!addr.startsWith('opt1sq')) return;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const c = getContract<any>(addr, OP20_ABI, provider, NETWORK);
+      const c = getContract<IOP20Contract>(addr, OP20_ABI, provider, NETWORK);
       const [tsR, msR] = await Promise.all([
         withRetry(() => c.totalSupply()),
         withRetry(() => c.maximumSupply()),
@@ -323,10 +326,8 @@ const Launchpad: React.FC = () => {
   const syncBalance = useCallback(async (addr: string) => {
     if (!senderAddr || !addr.startsWith('opt1sq')) { setUserBal(0); return; }
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const c = getContract<any>(addr, OP20_ABI, provider, NETWORK, senderAddr as any);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await c.balanceOf(senderAddr as any);
+      const c = getContract<IOP20Contract>(addr, OP20_ABI, provider, NETWORK, senderAddr);
+      const res = await c.balanceOf(senderAddr);
       if (!(res as CallResult).revert) {
         const p = (res as CallResult).properties as Record<string, unknown>;
         setUserBal(Number(BigInt(String(p?.balance || 0))) / 1e8);
@@ -396,8 +397,7 @@ const Launchpad: React.FC = () => {
     setMinting(true); setMintStep('Preparing...');
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const contract = getContract<any>(selected.address, OP20_ABI, provider, NETWORK, senderAddr as any);
+      const contract = getContract<MintableOP20>(selected.address, OP20_ABI, provider, NETWORK, senderAddr);
 
       setMintStep('Simulating publicMint...');
       const sim = await withRetry(() => contract.publicMint(rawAmount));
@@ -407,7 +407,7 @@ const Launchpad: React.FC = () => {
 
       setMintStep('Sign in your wallet...');
       const txParams = await buildTxParams(provider, walletAddress);
-      const receipt = await callRes.sendTransaction(txParams);
+      const receipt = await callRes.sendTransaction(txParams as TransactionParameters);
       const txHash = receipt?.transactionId || '';
 
       setMintStep(`TX: ${txHash ? txHash.slice(0, 20) + '...' : 'broadcast'}`);
@@ -448,8 +448,7 @@ const Launchpad: React.FC = () => {
     setAdding(true);
     try {
       // Try to read on-chain state
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const c = getContract<any>(addr, OP20_ABI, provider, NETWORK);
+      const c = getContract<IOP20Contract>(addr, OP20_ABI, provider, NETWORK);
       const [tsR, msR] = await Promise.all([c.totalSupply(), c.maximumSupply()]);
       if ((tsR as CallResult).revert || (msR as CallResult).revert) throw new Error('Not a valid OP20 token');
       const tsP = (tsR as CallResult).properties as Record<string, unknown>;

@@ -20,6 +20,7 @@ start-game.bat
 test-wallet.js
 vps_key
 *.pem
+deploy/.env
 deploy/node_modules/
 deploy/data.db
 deploy/deployed.json
@@ -31,3 +32,6 @@ faucet/node_modules/
 faucet/package-lock.json
 .env.production
 .env.development
+.claude/
+.mcp.json
+nul

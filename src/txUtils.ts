@@ -9,14 +9,25 @@
  */
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
 import { Address } from '@btc-vision/transaction';
+import type { Network } from '@btc-vision/bitcoin';
 import { NETWORK } from './config';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+
+/** Transaction parameters for OPNet frontend (signer=null — wallet handles signing) */
+export interface TxParams {
+  refundTo: string;
+  maximumAllowedSatToSpend: bigint;
+  network: Network;
+  feeRate: number;
+  priorityFee: bigint;
+  signer: null;
+  mldsaSigner: null;
+}
 
 // Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
 const approvedThisSession = new Set<string>();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<any> {
+export async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<TxParams> {
   const gas = await provider.gasParameters();
   // Use low fee rate for testnet (cheaper, still confirms quickly)
   const feeRate = gas.bitcoin.recommended.low || gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 2;
@@ -24,11 +35,8 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
-  // CRITICAL: Do NOT include signer/mldsaSigner on frontend.
-  // Wallet SDK expects InteractionParametersWithoutSigner — these keys must be absent entirely.
-  // The wallet extension handles all signing internally.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
+  // Frontend: signer=null, mldsaSigner=null — wallet extension handles signing
+  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee, signer: null, mldsaSigner: null };
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -89,18 +97,18 @@ export async function ensureAllowance(
     return false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tokenContract = getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, NETWORK, senderAddr as any);
+  const senderAddress = Address.fromString(senderAddr);
+  const tokenContract = getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, NETWORK, senderAddress);
   // SDK requires Address objects for ADDRESS-type parameters — NOT bech32 strings
   const spenderAddr = Address.fromString(spenderPubkeyHex);
 
   // Check existing allowance
   setStep(`Checking ${tokenLabel} allowance...`);
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allowanceRes = await tokenContract.allowance(senderAddr as any, spenderAddr as any);
-    if (!(allowanceRes as CallResult).revert) {
-      const props = (allowanceRes as CallResult).properties as Record<string, unknown>;
+    const allowanceRes = await tokenContract.allowance(senderAddress, spenderAddr);
+    const callRes = allowanceRes as CallResult;
+    if (!callRes.revert) {
+      const props = callRes.properties as Record<string, unknown>;
       const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
       if (cur >= amount) {
         approvedThisSession.add(cacheKey);
@@ -108,7 +116,7 @@ export async function ensureAllowance(
         return false; // Already approved
       }
     } else {
-      console.warn('[txUtils] Allowance check reverted:', (allowanceRes as CallResult).revert);
+      console.warn('[txUtils] Allowance check reverted:', callRes.revert);
     }
   } catch (e) {
     console.warn('[txUtils] Allowance check failed, proceeding with approval:', e);
@@ -116,10 +124,11 @@ export async function ensureAllowance(
 
   // Send increaseAllowance(max_uint256)
   setStep(`Approving ${tokenLabel}...`);
-  const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddr as any, MAX_UINT256));
-  if ((approveSim as CallResult).revert) throw new Error(`${tokenLabel} approval failed: ${(approveSim as CallResult).revert}`);
+  const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddr, MAX_UINT256));
+  const approveResult = approveSim as CallResult;
+  if (approveResult.revert) throw new Error(`${tokenLabel} approval failed: ${approveResult.revert}`);
   const tp = await buildTxParams(provider, walletAddress);
-  await (approveSim as CallResult).sendTransaction(tp);
+  await approveResult.sendTransaction(tp);
 
   // Mark as approved in session cache
   approvedThisSession.add(cacheKey);

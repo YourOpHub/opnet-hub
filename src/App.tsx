@@ -146,9 +146,8 @@ const App: React.FC = () => {
         Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
             (async () => {
                 try {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, NETWORK, senderAddr as any);
-                    const sim = await op20.balanceOf(senderAddr as any);
+                    const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, NETWORK, senderAddr);
+                    const sim = await op20.balanceOf(senderAddr);
                     const bal = sim?.properties?.balance ?? 0n;
                     const human = (Number(BigInt(bal.toString())) / Math.pow(10, tok.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
                     if (!cancelled) setBalances(prev => ({ ...prev, [sym]: human }));

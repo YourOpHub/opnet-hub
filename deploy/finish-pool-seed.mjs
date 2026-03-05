@@ -7,6 +7,8 @@ import { networks } from '../node_modules/@btc-vision/bitcoin/build/index.js';
 
 const RPC_URL = 'https://testnet.opnet.org';
 
+const MINE_ADDRESS = 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa';
+const MINE_HEX = 'db2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d';
 const VIBE_ADDRESS = 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl';
 const VIBE_HEX = '1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818';
 
@@ -15,7 +17,8 @@ const POOL_ADDRESS = 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
 const POOL_PUBKEY = '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
 const POOL_HEX = 'cc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
 
-// Smaller seed: 25M VIBE to match 5M MINE (1:5 ratio)
+// Seed amounts
+const MINE_LIQUIDITY = 500_000n * 100_000_000n;  // 500K MINE (reduced, low on sats)
 const VIBE_LIQUIDITY = 25_000_000n * 100_000_000n;
 const TRANSFER_SELECTOR = 0x3b88ef57;
 const SYNC_SELECTOR = 0x4ffcd515;
@@ -62,9 +65,29 @@ async function broadcastInteraction(result, label) {
     return b2;
 }
 
-const step = process.argv[2] || 'vibe';
+const step = process.argv[2] || 'mine';
 
-if (step === 'vibe') {
+if (step === 'mine') {
+    console.log('\n=== Transfer MINE to pool ===');
+    const challenge = await getChallenge();
+    const utxos = await provider.fetchUTXO({ address: wallet.p2tr, minAmount: 5000n, requestedAmount: 200000n });
+    console.log(`UTXOs: ${utxos.length} (${utxos.reduce((a, u) => a + u.value, 0n)} sats)`);
+
+    const w = new BinaryWriter();
+    w.writeSelector(TRANSFER_SELECTOR);
+    w.writeAddress(Address.fromString(POOL_PUBKEY));
+    w.writeU256(MINE_LIQUIDITY);
+
+    const result = await factory.signInteraction({
+        signer: wallet.keypair, mldsaSigner: wallet.mldsaKeypair, network, utxos,
+        from: wallet.p2tr, to: MINE_ADDRESS, contract: MINE_HEX,
+        calldata: w.getBuffer(), feeRate: 1, priorityFee: 500n, gasSatFee: 5_000n,
+        challenge, linkMLDSAPublicKeyToAddress: true, revealMLDSAPublicKey: true,
+    });
+    await broadcastInteraction(result, 'MINE transfer');
+    console.log('MINE transferred to pool');
+
+} else if (step === 'vibe') {
     console.log('\n=== Transfer VIBE to pool ===');
     const challenge = await getChallenge();
     const utxos = await provider.fetchUTXO({ address: wallet.p2tr, minAmount: 5000n, requestedAmount: 200000n });
@@ -83,6 +106,31 @@ if (step === 'vibe') {
     });
     await broadcastInteraction(result, 'VIBE transfer');
     console.log('VIBE transferred to pool');
+
+} else if (step === 'fund-staking') {
+    const STAKING_ADDRESS = 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
+    const STAKING_PUBKEY = '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
+    const STAKING_HEX = '6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
+    const REWARD_AMOUNT = 500_000n * 100_000_000n; // 500K MINE for rewards
+
+    console.log('\n=== Fund SimpleStaking v3 with MINE rewards ===');
+    const challenge = await getChallenge();
+    const utxos = await provider.fetchUTXO({ address: wallet.p2tr, minAmount: 5000n, requestedAmount: 200000n });
+    console.log(`UTXOs: ${utxos.length} (${utxos.reduce((a, u) => a + u.value, 0n)} sats)`);
+
+    const w = new BinaryWriter();
+    w.writeSelector(TRANSFER_SELECTOR);
+    w.writeAddress(Address.fromString(STAKING_PUBKEY));
+    w.writeU256(REWARD_AMOUNT);
+
+    const result = await factory.signInteraction({
+        signer: wallet.keypair, mldsaSigner: wallet.mldsaKeypair, network, utxos,
+        from: wallet.p2tr, to: MINE_ADDRESS, contract: MINE_HEX,
+        calldata: w.getBuffer(), feeRate: 1, priorityFee: 500n, gasSatFee: 5_000n,
+        challenge, linkMLDSAPublicKeyToAddress: true, revealMLDSAPublicKey: true,
+    });
+    await broadcastInteraction(result, 'MINE → Staking rewards');
+    console.log(`${Number(REWARD_AMOUNT / 100_000_000n)}M MINE transferred to staking for rewards`);
 
 } else if (step === 'sync') {
     console.log('\n=== Call sync() on pool ===');

@@ -46,16 +46,17 @@ function useCounter(target: number, duration = 1200) {
   return val;
 }
 
+const BASE = import.meta.env.BASE_URL;
 const FEATURES = [
-  { icon: '\u21C4', title: 'Swap', desc: 'Trade OP-20 tokens on a real Bitcoin L1 AMM with 0.3% fees', color: '#F7931A', tab: 'swap' },
-  { icon: '\u25C8', title: 'Stake', desc: 'Lock MINE tokens and earn block rewards automatically', color: '#a78bfa', tab: 'staking' },
-  { icon: '\u26A1', title: 'Build', desc: 'Deploy smart contracts with WASM — AssemblyScript or Rust', color: '#0ea5e9', tab: 'launch' },
-  { icon: '\u2737', title: 'Mine', desc: 'Clicker game that earns real $MINE tokens on Bitcoin L1', color: '#22c55e', tab: 'game' },
-  { icon: '\u2263', title: 'Market', desc: 'P2P OTC marketplace for trustless OP-20 token trading', color: '#ec4899', tab: 'market' },
-  { icon: '\u2736', title: 'Tools', desc: 'Block explorer, UTXO viewer, gas monitor and more', color: '#eab308', tab: 'tools' },
-  { icon: '\u27A0', title: 'MultiSend', desc: 'Batch transfer tokens to multiple recipients in one session', color: '#38bdf8', tab: 'multisend' },
-  { icon: '\u{1F517}', title: 'FractalSwap', desc: 'Swap BTC \u2194 Fractal BTC via trustless atomic swaps \u2014 1% fee', color: '#8b5cf6', tab: 'xchain' },
-  { icon: '\u{1F4E1}', title: 'News', desc: 'Live on-chain activity feed and ecosystem updates', color: '#34d399', tab: 'news' },
+  { icon: `${BASE}icons/icon-swap.png`, title: 'Swap', desc: 'Trade OP-20 tokens on a real Bitcoin L1 AMM with 0.3% fees', color: '#F7931A', tab: 'swap' },
+  { icon: `${BASE}icons/icon-stake.png`, title: 'Stake', desc: 'Lock MINE tokens and earn block rewards automatically', color: '#a78bfa', tab: 'staking' },
+  { icon: `${BASE}icons/icon-build.png`, title: 'Build', desc: 'Deploy smart contracts with WASM — AssemblyScript or Rust', color: '#0ea5e9', tab: 'launch' },
+  { icon: `${BASE}icons/icon-mine.png`, title: 'Mine', desc: 'Clicker game that earns real $MINE tokens on Bitcoin L1', color: '#22c55e', tab: 'game' },
+  { icon: `${BASE}icons/icon-market.png`, title: 'Market', desc: 'P2P OTC marketplace for trustless OP-20 token trading', color: '#ec4899', tab: 'market' },
+  { icon: `${BASE}icons/icon-tools.png`, title: 'Tools', desc: 'Block explorer, UTXO viewer, gas monitor and more', color: '#eab308', tab: 'tools' },
+  { icon: `${BASE}icons/icon-multisend.png`, title: 'MultiSend', desc: 'Batch transfer tokens to multiple recipients in one session', color: '#38bdf8', tab: 'multisend' },
+  { icon: `${BASE}icons/icon-xchain.png`, title: 'FractalSwap', desc: 'Swap BTC \u2194 Fractal BTC via trustless atomic swaps \u2014 1% fee', color: '#8b5cf6', tab: 'xchain' },
+  { icon: `${BASE}icons/icon-news.png`, title: 'News', desc: 'Live on-chain activity feed and ecosystem updates', color: '#34d399', tab: 'news' },
 ];
 
 const TECH = [
@@ -112,28 +113,34 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   return (
     <div>
       {/* ═══ HERO ═══ */}
-      <div className="hero-l">
-        <div className="hero-badge">
-          <span className="dot" />
-          Bitcoin L1 Smart Contracts
+      <div className="hero-l" style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 340px' }}>
+          <div className="hero-badge">
+            <span className="dot" />
+            Bitcoin L1 Smart Contracts
+          </div>
+
+          <h1 className="hero-h1">
+            DeFi on<br />
+            <span className="hero-ac">Pure Bitcoin</span>
+          </h1>
+
+          <p className="hero-p">
+            Swap, stake, and earn on Bitcoin Layer 1. Powered by OP_NET
+            consensus — no bridges, no sidechains, no compromises.
+          </p>
+
+          <div className="hero-ctas">
+            <button className="btn-p" onClick={() => nav('swap')}>Start Trading</button>
+            <button className="btn-s" onClick={() => nav('game')}>Play &amp; Earn</button>
+            <a className="btn-s" href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">
+              Read Docs
+            </a>
+          </div>
         </div>
-
-        <h1 className="hero-h1">
-          DeFi on<br />
-          <span className="hero-ac">Pure Bitcoin</span>
-        </h1>
-
-        <p className="hero-p">
-          Swap, stake, and earn on Bitcoin Layer 1. Powered by OP_NET
-          consensus — no bridges, no sidechains, no compromises.
-        </p>
-
-        <div className="hero-ctas">
-          <button className="btn-p" onClick={() => nav('swap')}>Start Trading</button>
-          <button className="btn-s" onClick={() => nav('game')}>Play &amp; Earn</button>
-          <a className="btn-s" href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">
-            Read Docs
-          </a>
+        <div style={{ flex: '0 1 360px', display: 'flex', justifyContent: 'center' }}>
+          <img src={`${BASE}icons/hero-illustration.png`} alt="Bitcoin DeFi"
+            style={{ maxWidth: '100%', height: 'auto', filter: 'drop-shadow(0 0 40px rgba(247,147,26,.25))', animation: 'heroFloat 4s ease-in-out infinite' }} />
         </div>
       </div>
 
@@ -173,7 +180,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
         {FEATURES.map((f, i) => (
           <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)}
             style={{ animation: rev2.style.opacity === 1 ? `cardRevealIn .5s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` : 'none' }}>
-            <div className="fc-i" style={{ color: f.color }}>{f.icon}</div>
+            <img src={f.icon} alt={f.title} className="fc-i" style={{ width: 48, height: 48, objectFit: 'contain' }} />
             <div className="fc-t">{f.title}</div>
             <div className="fc-d">{f.desc}</div>
           </div>

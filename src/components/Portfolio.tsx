@@ -196,7 +196,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
             </tr>
-            {isTestnet && Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => {
+            {isTestnet && Object.entries(TESTNET_CONTRACTS).map(([sym, tok]: [string, any]) => {
               const tb = tokenBalances[sym];
               const rawBal = tb?.balance ?? 0n;
               const humanBal = Number(rawBal) / Math.pow(10, tok.decimals);
@@ -205,7 +205,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                 <tr key={tok.symbol}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{ fontSize: '1rem' }}>{tok.icon}</span>
+                      {tok.iconUrl ? <img src={tok.iconUrl} alt={tok.symbol} style={{ width: 28, height: 28, borderRadius: '50%' }} /> : <span style={{ fontSize: '1rem' }}>{tok.icon}</span>}
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--w)' }}>{tok.name}</div>
                         <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>

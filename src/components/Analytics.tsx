@@ -284,7 +284,7 @@ const Analytics: React.FC = () => {
       <div className="P" style={{ padding: 16, marginBottom: 16 }}>
         <div className="Lb" style={{ marginBottom: 10 }}>🪙 Token Supply</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
-          {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => {
+          {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]: [string, any]) => {
             const supply = supplies[sym];
             const totalMinted = supply ? Number(supply) / Math.pow(10, tok.decimals) : 0;
             const maxSupply = tok.supply;
@@ -292,7 +292,7 @@ const Analytics: React.FC = () => {
             return (
               <div key={sym} style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>
+                  {tok.iconUrl ? <img src={tok.iconUrl} alt={tok.symbol} style={{ width: 28, height: 28, borderRadius: '50%' }} /> : <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>}
                   <span style={{ fontWeight: 700 }}>${sym}</span>
                   {tok.publicMint && <span style={{ fontSize: '.5rem', background: 'rgba(168,85,247,.12)', color: '#a855f7', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>MINTABLE</span>}
                 </div>

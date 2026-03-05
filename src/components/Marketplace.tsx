@@ -631,7 +631,10 @@ const Marketplace: React.FC = () => {
           <div className="P" style={{ padding: 14 }}>
             <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#ef4444', marginBottom: 10 }}>Sell Orders (Asks)</div>
             {sellOrders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 20, color: 'var(--t4)', fontSize: '.72rem' }}>No sell orders</div>
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--t4)' }}>
+                <img src="/icons/empty-orders.png" alt="" style={{ width: 100, opacity: .45, marginBottom: 10, display: 'inline-block' }} />
+                <div style={{ fontSize: '.72rem' }}>No sell orders yet</div>
+              </div>
             ) : sellOrders.map(o => {
               const remaining = o.amount - o.amountFilled;
               const totalCostSats = Math.ceil(remaining * o.pricePerToken);
@@ -689,7 +692,10 @@ const Marketplace: React.FC = () => {
           <div className="P" style={{ padding: 14 }}>
             <div style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--g)', marginBottom: 10 }}>Buy Orders (Bids) <span style={{ fontSize: '.56rem', fontWeight: 400, color: 'var(--t4)' }}>Trustless</span></div>
             {buyOrders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 20, color: 'var(--t4)', fontSize: '.72rem' }}>No buy orders</div>
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--t4)' }}>
+                <img src="/icons/empty-orders.png" alt="" style={{ width: 100, opacity: .45, marginBottom: 10, display: 'inline-block' }} />
+                <div style={{ fontSize: '.72rem' }}>No buy orders yet</div>
+              </div>
             ) : buyOrders.map(o => {
               const remaining = o.amount - o.amountFilled;
               const totalCostSats = Math.ceil(remaining * o.pricePerToken);

@@ -974,8 +974,10 @@ a:hover {
 }
 
 .fc-i {
-  font-size: 2.4rem;
+  width: 48px;
+  height: 48px;
   margin-bottom: 16px;
+  border-radius: 12px;
   filter: drop-shadow(0 0 12px rgba(247, 147, 26, .2));
   transition: transform .3s var(--ease-spring)
 }
@@ -2435,7 +2437,7 @@ a:hover {
   .pillars { gap: 10px }
   .fgrid { gap: 10px }
   .fc { padding: 18px 16px }
-  .fc-i { font-size: 1.6rem }
+  .fc-i { width: 36px; height: 36px }
   .fc-t { font-size: .82rem }
   .fc-d { font-size: .72rem }
   .eco-bn { padding: 16px; border-radius: 16px }
@@ -2464,6 +2466,10 @@ a:hover {
 @keyframes cardRevealIn {
   from { opacity: 0; transform: translateY(16px) scale(.97); filter: blur(3px) }
   to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0) }
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0) }
+  50% { transform: translateY(-12px) }
 }
 
 /* ═══ SKELETON LOADING ═══ */

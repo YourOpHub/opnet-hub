@@ -40,10 +40,10 @@ export const DEPLOYER_TWEAKED_HEX = '0fb4ee127879ea8e617377fc250f362f8ffab443284
 export const MINE_DEPLOY_TXID = '0c49c38d168dd72b3a8cf622e41af707e6a22256ae3cf2e36d33a24307948fdb';
 export const VIBE_DEPLOY_TXID = '81debce471fa810f416caaa88210a251558acc032a4ac0c0584ea1427ae60a1a';
 
-/** SimplePool v3 AMM — LP share model, audit fixes (post-reset #2) */
-export const POOL_ADDRESS = 'opt1sqztrzryk063ta3nx98f4v4xfsl0l8fdjgujl9s4e';
-export const POOL_PUBKEY = '0x02adb0aca0e24c104817de39a4fd8ffeab9f3e5a424c550a2bebaa8da96f18e1';
-export const POOL_HEX = '02adb0aca0e24c104817de39a4fd8ffeab9f3e5a424c550a2bebaa8da96f18e1';
+/** SimplePool v4 AMM — LP shares + events (PoolLiquidityAdded/Removed/Swap) */
+export const POOL_ADDRESS = 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
+export const POOL_PUBKEY = '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
+export const POOL_HEX = 'cc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
 
 /** SimplePool v2 selectors (from opnet-transform build output) */
 export const POOL_SELECTORS = {
@@ -65,9 +65,9 @@ export const OP20_SELECTORS = {
     allowance: 0xd864b7ca,
 } as const;
 
-/** SimpleStaking v2 — post-reset #2, 2M MINE funded */
-export const STAKING_ADDRESS = 'opt1sqprz0p6xx593unycyd9lpr5wuu0nkgv35c59c54y';
-export const STAKING_PUBKEY = '0x4fb131c700761b9bd82c844c381fd1b5ba9fcd71d301a9e800c9ab83af91b86e';
+/** SimpleStaking v3 — events (Staked/Unstaked/RewardClaimed/RewardRateChanged) */
+export const STAKING_ADDRESS = 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
+export const STAKING_PUBKEY = '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
 /** Staking selectors (from opnet-transform build output) */
@@ -101,9 +101,9 @@ export const MARKET_SELECTORS = {
     getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
 } as const;
 
-/** FractalSwap v3 — post-reset #2 */
-export const CROSSCHAIN_ADDRESS = 'opt1sqrmhp0msf9ccajnfrrd2th0ux9tcuxlqxu2mrnpu';
-export const CROSSCHAIN_PUBKEY = '0xb209ab09e187ac6562424892212f0ff546db6c1aae36cb0d6a95bd9014a38e0c';
+/** FractalSwap v4 — output bitmap fix (BTC double-count prevention) */
+export const CROSSCHAIN_ADDRESS = 'opt1sqpylrj2pm7d3zld4y86a8kjtrd06q7s2gvyazw4c';
+export const CROSSCHAIN_PUBKEY = '0x1f3f8a86d1dd595d8533697c2bff18b1ee30ffb1339499c176a7e0447fd38820';
 
 /** TokenEscrowBridge — removed from UI (duplicates Marketplace), not redeployed */
 export const TOKEN_ESCROW_ADDRESS = '';

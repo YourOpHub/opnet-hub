@@ -4,8 +4,8 @@
   "tokenType": "MintableToken",
   "tokens": {
     "MINE": {
-      "address": "opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa",
-      "pubkey": "0x64adc4c6cb9a05553363ffa544b32d6668d8e1ce02311c72915dc18c3603f397",
+      "address": "opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa",
+      "pubkey": "0xdb2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d",
       "symbol": "MINE",
       "name": "Mine Token",
       "decimals": 8,
@@ -15,8 +15,8 @@
       "maxMintPerTx": "1000000"
     },
     "VIBE": {
-      "address": "opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802",
-      "pubkey": "0x818ecc6e52aa04e57e641a7bec673f33517a70b00ff1604c5e05296674760df1",
+      "address": "opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl",
+      "pubkey": "0x1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818",
       "symbol": "VIBE",
       "name": "Vibe Token",
       "decimals": 8,
@@ -26,5 +26,5 @@
       "maxMintPerTx": "5000000"
     }
   },
-  "deployedAt": "2026-02-27T05:03:38.006Z"
+  "deployedAt": "2026-03-04T08:10:41.256Z"
 }

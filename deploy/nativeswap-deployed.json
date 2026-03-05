@@ -1,0 +1,8 @@
+{
+  "network": "testnet",
+  "contract": "NativeSwapPool",
+  "address": "opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj",
+  "pubkey": "0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900",
+  "token": "db2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d",
+  "deployedAt": "2026-03-05T01:34:08.079Z"
+}

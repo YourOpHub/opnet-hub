@@ -3,8 +3,8 @@ import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { POOL_ADDRESS } from '../contracts';
 
-/** Scroll-triggered fade-in hook */
-function useReveal() {
+/** Scroll-triggered fade-in hook with blur */
+function useReveal(delay = 0) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -17,7 +17,12 @@ function useReveal() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
-  return { ref, style: { opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1)' } as React.CSSProperties };
+  return { ref, style: {
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(24px)',
+    filter: visible ? 'blur(0)' : 'blur(4px)',
+    transition: `opacity .6s cubic-bezier(.22,1,.36,1) ${delay}s, transform .6s cubic-bezier(.22,1,.36,1) ${delay}s, filter .6s cubic-bezier(.22,1,.36,1) ${delay}s`,
+  } as React.CSSProperties };
 }
 
 /** Animated counter */
@@ -97,10 +102,10 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   const animBtc = useCounter(btc);
   const animBlock = useCounter(block, 800);
 
-  const rev1 = useReveal();
-  const rev2 = useReveal();
-  const rev3 = useReveal();
-  const rev4 = useReveal();
+  const rev1 = useReveal(0);
+  const rev2 = useReveal(0.1);
+  const rev3 = useReveal(0);
+  const rev4 = useReveal(0.1);
 
   const nav = useCallback((t: string) => onNav(t), [onNav]);
 
@@ -165,8 +170,9 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
       {/* ═══ FEATURES ═══ */}
       <div className="label-premium" style={{ marginBottom: 16 }}>What you can do</div>
       <div className="fgrid" ref={rev2.ref} style={rev2.style}>
-        {FEATURES.map(f => (
-          <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)}>
+        {FEATURES.map((f, i) => (
+          <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)}
+            style={{ animation: rev2.style.opacity === 1 ? `cardRevealIn .5s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` : 'none' }}>
             <div className="fc-i" style={{ color: f.color }}>{f.icon}</div>
             <div className="fc-t">{f.title}</div>
             <div className="fc-d">{f.desc}</div>

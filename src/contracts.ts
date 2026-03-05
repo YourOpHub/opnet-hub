@@ -84,10 +84,10 @@ export const STAKING_SELECTORS = {
     setRewardEndBlock: 0xe97e03b2,  // v2: deployer sets end block
 } as const;
 
-/** P2PMarket v8 — fixed BTC payment verification (checks both scriptPubKey AND decoded to address) */
-export const MARKET_ADDRESS = 'opt1sqr9djv83f9yg94x5zfv7ppgd4narm3ewyvp3pnkl';
-export const MARKET_PUBKEY = '0x89c4e70cfd3e4b37e5c9fba9e2aac047fc4c6c4d6ab2d9f52f93949a3c499eaf';
-export const MARKET_HEX = '89c4e70cfd3e4b37e5c9fba9e2aac047fc4c6c4d6ab2d9f52f93949a3c499eaf';
+/** P2PMarket v9 — output bitmap fix (prevents BTC double-counting in batch fills) */
+export const MARKET_ADDRESS = 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt';
+export const MARKET_PUBKEY = '0xd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
+export const MARKET_HEX = 'd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
 
 /** P2PMarket v5 selectors — trustless buy orders (accept + execute) */
 export const MARKET_SELECTORS = {
@@ -110,10 +110,10 @@ export const TOKEN_ESCROW_ADDRESS = '';
 export const TOKEN_ESCROW_PUBKEY = '';
 export const TOKEN_ESCROW_HEX = '';
 
-/** NativeSwapPool v3 — BTC/MINE AMM (fully audit-fixed, deployed 2026-03-05) */
-export const NATIVESWAP_ADDRESS = 'opt1sqral2q69evhz02lt8yrytfqheyjqy9rk4scf86p8';
-export const NATIVESWAP_PUBKEY = '0x227a8a279f61c463d835e0635480927047be7bc948452431e95403ddf256b4c7';
-export const NATIVESWAP_HEX = '227a8a279f61c463d835e0635480927047be7bc948452431e95403ddf256b4c7';
+/** NativeSwapPool v5 — BTC/MINE AMM (dust check, min fee, audit-fixed, deployed 2026-03-05) */
+export const NATIVESWAP_ADDRESS = 'opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj';
+export const NATIVESWAP_PUBKEY = '0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
+export const NATIVESWAP_HEX = '51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
 
 /** NativeSwap selectors (from opnet-transform build output) */
 export const NATIVESWAP_SELECTORS = {

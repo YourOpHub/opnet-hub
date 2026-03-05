@@ -222,7 +222,8 @@ const SatoshiMiner: React.FC = () => {
     // Derived: current day and emission
     const daysSinceStart = Math.floor(Date.now() / 86400000) - mineStartDay;
     const dailyEmission = getMineEmission(daysSinceStart);
-    const minePoolRemaining = serverPool !== null ? serverPool : Math.max(0, MINE_GAME_POOL - mineBalance);
+    const minePoolRaw = serverPool !== null ? serverPool : Math.max(0, MINE_GAME_POOL - mineBalance);
+    const minePoolRemaining = Number.isFinite(minePoolRaw) ? minePoolRaw : MINE_GAME_POOL;
 
     // Server sync: push game state every 30s + fetch leaderboard
     useEffect(() => {

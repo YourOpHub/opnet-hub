@@ -17,6 +17,7 @@ import {
   POOL_ADDRESS, POOL_PUBKEY,
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
+import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import LiquidityModal from './LiquidityModal';
 
 type SwapMainTab = 'swap' | 'pools';
@@ -30,7 +31,6 @@ interface UserPool {
   deployedAt: number;
   deployer: string;
 }
-const FAUCET_URL = 'https://188-137-250-160.sslip.io/faucet';
 
 /** Custom ABI for SimplePool contract */
 const POOL_ABI: BitcoinInterfaceAbi = [
@@ -96,7 +96,7 @@ function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): 
 
 interface Token { symbol: string; name: string; icon: string; decimals: number; address: string; pubkey: string; }
 
-const TOKENS: Token[] = [
+const BASE_TOKENS: Token[] = [
   { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, decimals: 8, address: TESTNET_CONTRACTS.MINE.address, pubkey: TESTNET_CONTRACTS.MINE.pubkey },
   { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address, pubkey: TESTNET_CONTRACTS.VIBE.pubkey },
 ];
@@ -110,6 +110,30 @@ const POOL_CREATE_ABI: BitcoinInterfaceAbi = [
 
 const SwapUI: React.FC = () => {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
+
+  // Dynamic token list: base + indexer-discovered
+  const [extraTokens, setExtraTokens] = useState<Token[]>([]);
+  const TOKENS = useMemo(() => {
+    const known = new Set(BASE_TOKENS.map(t => t.address));
+    return [...BASE_TOKENS, ...extraTokens.filter(t => !known.has(t.address))];
+  }, [extraTokens]);
+
+  // Fetch tokens from indexer on mount
+  useEffect(() => {
+    fetchAllTokens().then(indexed => {
+      const extra: Token[] = indexed
+        .filter(t => !BASE_TOKENS.some(bt => bt.address === t.address))
+        .map(t => ({
+          symbol: t.symbol,
+          name: t.name,
+          icon: '',
+          decimals: t.decimals,
+          address: t.address,
+          pubkey: t.pubkey,
+        }));
+      if (extra.length > 0) setExtraTokens(extra);
+    }).catch(() => {});
+  }, []);
 
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(1);
@@ -355,7 +379,7 @@ const SwapUI: React.FC = () => {
     setAddingLP(true);
     setLpResult(null);
     try {
-      const poolAddr = Address.fromString(POOL_PUBKEY) as any;
+      const poolAddr = Address.fromString(POOL_ADDRESS) as any;
 
       // 1. Transfer MINE to pool
       setLpStep('Transferring MINE to pool...');
@@ -538,7 +562,7 @@ const SwapUI: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <div>
                 <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Liquidity Pools</div>
-                <div style={{ fontSize: '.66rem', color: 'var(--t4)', marginTop: 2 }}>Create a pool for any OP20 token pair. Earn 0.3% fees on every swap.</div>
+                <div style={{ fontSize: '.66rem', color: 'var(--t4)', marginTop: 2 }}>Create a pool for any OP20 token pair. Earn 0.3% fees on every swap. For BTC pools, use NativeSwap in the Liquidity modal.</div>
               </div>
               <button onClick={() => setCreatePoolOpen(v => !v)} className="lbtn" style={{ padding: '9px 16px', fontSize: '.74rem', flexShrink: 0 }}>
                 + Create Pool
@@ -549,6 +573,22 @@ const SwapUI: React.FC = () => {
             {createPoolOpen && (
               <div className="P" style={{ padding: 18, marginBottom: 14 }}>
                 <div className="Lb" style={{ marginBottom: 12 }}>New Liquidity Pool</div>
+                {/* Quick select tokens */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+                  {TOKENS.map(t => (
+                    <button key={t.symbol} onClick={() => {
+                      if (!poolTokenA) { setPoolTokenA(t.address); setPoolSymA(t.symbol); }
+                      else if (poolTokenA !== t.address && !poolTokenB) { setPoolTokenB(t.address); setPoolSymB(t.symbol); }
+                    }} style={{
+                      padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)',
+                      background: 'rgba(255,255,255,.03)', color: '#8b95a9', cursor: 'pointer',
+                      fontSize: '.6rem', fontWeight: 600, fontFamily: 'var(--ff)',
+                    }}>
+                      {t.icon} {t.symbol}
+                    </button>
+                  ))}
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                   <div>
                     <label style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Token A Address</label>

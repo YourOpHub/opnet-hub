@@ -170,8 +170,14 @@ app.post('/api/player/sync', (req, res) => {
     return res.status(400).json({ error: 'Invalid address — must be opt1 format' });
   }
 
+  // B-03 FIX: validate numeric fields
+  const numBalance = typeof mine_balance === 'number' && isFinite(mine_balance) ? Math.max(0, mine_balance) : 0;
+  const numSats = typeof total_sats_mined === 'number' && isFinite(total_sats_mined) ? Math.max(0, Math.floor(total_sats_mined)) : 0;
+  const numClicks = typeof total_clicks === 'number' && isFinite(total_clicks) ? Math.max(0, Math.floor(total_clicks)) : 0;
+  const numHash = typeof hash_rate === 'number' && isFinite(hash_rate) ? Math.max(0, hash_rate) : 0;
+
   const poolRemaining = MINE_GAME_POOL - getTotalDistributed();
-  const cappedBalance = Math.min(mine_balance || 0, poolRemaining > 0 ? mine_balance : 0);
+  const cappedBalance = Math.min(numBalance, poolRemaining > 0 ? numBalance : 0);
 
   const stmt = db.prepare(`
     INSERT INTO players (address, mine_balance, total_sats_mined, total_clicks, hash_rate, last_sync, updated_at)
@@ -185,8 +191,8 @@ app.post('/api/player/sync', (req, res) => {
       updated_at = datetime('now')
   `);
 
-  stmt.run(address, cappedBalance, total_sats_mined || 0, total_clicks || 0, hash_rate || 0,
-           cappedBalance, total_sats_mined || 0, total_clicks || 0, hash_rate || 0);
+  stmt.run(address, cappedBalance, numSats, numClicks, numHash,
+           cappedBalance, numSats, numClicks, numHash);
 
   res.json({ ok: true, mine_balance: cappedBalance, pool_remaining: poolRemaining });
 });
@@ -204,8 +210,8 @@ const CLAIM_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
 app.post('/api/claim', (req, res) => {
   const { address, amount } = req.body;
-  if (!address || !amount || amount <= 0) {
-    return res.status(400).json({ error: 'Invalid claim' });
+  if (!address || typeof amount !== 'number' || !isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Invalid claim — amount must be a positive number' });
   }
 
   const lastClaim = claimCooldowns.get(address);
@@ -278,8 +284,12 @@ app.get('/api/token', (_req, res) => {
 
 // ─── Pending Claims (admin, requires API key) ───
 app.get('/api/claims/pending', (req, res) => {
+  const adminKey = process.env.ADMIN_API_KEY;
+  if (!adminKey) {
+    return res.status(503).json({ error: 'Admin endpoint not configured' });
+  }
   const key = req.headers['x-admin-key'] || req.query.key;
-  if (!key || key !== (process.env.ADMIN_API_KEY || 'opnet-hub-admin-2026')) {
+  if (!key || key !== adminKey) {
     return res.status(403).json({ error: 'Forbidden' });
   }
   const rows = db.prepare('SELECT * FROM claims WHERE status = ? ORDER BY created_at ASC').all('pending');

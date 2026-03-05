@@ -1,8 +1,8 @@
 {
   "network": "testnet",
-  "contract": "P2PMarket",
-  "address": "opt1sqqd334lec0t5kg8enjn5kpusgw7v9cc6qg7zqmsn",
-  "pubkey": "0x63b25b3b2850afa425c8f86ae64c6c168fa36e198b1cce30338b86c7a93efbbe",
+  "contract": "P2PMarket v8",
+  "address": "opt1sqr9djv83f9yg94x5zfv7ppgd4narm3ewyvp3pnkl",
+  "pubkey": "0x89c4e70cfd3e4b37e5c9fba9e2aac047fc4c6c4d6ab2d9f52f93949a3c499eaf",
   "selectors": {
     "createSellOrder": "0x35db31a0",
     "fillSellOrder": "0x8d7e1c91",
@@ -13,5 +13,5 @@
     "getOrder": "0xe9489555",
     "getNextOrderId": "0xf4920cae"
   },
-  "deployedAt": "2026-03-01T21:07:04.068Z"
+  "deployedAt": "2026-03-04T18:16:35.305Z"
 }

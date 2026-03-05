@@ -29,3 +29,5 @@ deploy/OP_20/node_modules/
 faucet/data/
 faucet/node_modules/
 faucet/package-lock.json
+.env.production
+.env.development

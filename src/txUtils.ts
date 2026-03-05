@@ -24,10 +24,11 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
-  // CRITICAL: signer/mldsaSigner MUST be explicitly null on frontend.
-  // SDK checks `signer !== null` (strict) — undefined would leak signer field to wallet.
+  // CRITICAL: Do NOT include signer/mldsaSigner on frontend.
+  // Wallet SDK expects InteractionParametersWithoutSigner — these keys must be absent entirely.
+  // The wallet extension handles all signing internally.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee, signer: null, mldsaSigner: null } as any;
+  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {

@@ -1,15 +1,16 @@
 /**
- * OPNet Hub — Deploy P2PMarket contract
+ * OPNet Hub — Deploy P2PMarket contract (v8 — fixed BTC payment verification)
  * Usage: OPNET_MNEMONIC="12 words..." node deploy/deploy-market.mjs
  */
 import { Mnemonic, TransactionFactory, ChallengeSolution, OPNetLimitedProvider } from '../node_modules/@btc-vision/transaction/build/index.js';
-import { networks } from '../node_modules/@btc-vision/bitcoin/build/index.js';
+import { networks, fromBase64 } from '../node_modules/@btc-vision/bitcoin/build/index.js';
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RPC_URL = 'https://testnet.opnet.org';
+const RPC = `${RPC_URL}/api/v1/json-rpc`;
 
 const phrase = process.env.OPNET_MNEMONIC;
 if (!phrase) { console.error('Set OPNET_MNEMONIC env var'); process.exit(1); }
@@ -22,14 +23,20 @@ console.log('Wallet:', wallet.p2tr);
 const provider = new OPNetLimitedProvider(RPC_URL);
 const factory = new TransactionFactory();
 
-async function getChallenge() {
-    const res = await fetch(`${RPC_URL}/api/v1/json-rpc`, {
+async function rpc(method, params = []) {
+    const r = await fetch(RPC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'btc_latestEpoch', params: [], id: 1 }),
-        signal: AbortSignal.timeout(12000),
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+        signal: AbortSignal.timeout(15000),
     });
-    const { result: e } = await res.json();
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    return d.result;
+}
+
+async function getChallenge() {
+    const e = await rpc('btc_latestEpoch');
     console.log('Epoch:', e.epochNumber);
     return new ChallengeSolution({
         epochNumber: e.epochNumber,
@@ -52,12 +59,32 @@ async function getChallenge() {
 }
 
 async function getUTXOs() {
-    const utxos = await provider.fetchUTXO({
-        address: wallet.p2tr,
-        minAmount: 10000n,
-        requestedAmount: 400000n,
-    });
-    console.log(`UTXOs: ${utxos.length} (${utxos.reduce((a, u) => a + u.value, 0n)} sats)`);
+    // Use JSON-RPC to fetch UTXOs (REST API returns empty for opt1 addresses)
+    const data = await rpc('btc_getUTXOs', [wallet.p2tr, false, false, true]);
+    const allUtxos = [...(data.confirmed || []), ...(data.pending || [])];
+    const spentSet = new Set((data.spentTransactions || []).map(s => `${s.transactionId}:${s.outputIndex}`));
+    const unspent = allUtxos.filter(u => !spentSet.has(`${u.transactionId}:${u.outputIndex}`));
+
+    if (unspent.length === 0) throw new Error('No UTXOs available');
+
+    // Build UTXO objects compatible with TransactionFactory
+    const rawTxns = data.raw || [];
+    const utxos = [];
+    for (const u of unspent) {
+        const rawIdx = Number(u.raw);
+        if (rawIdx >= 0 && rawIdx < rawTxns.length) {
+            utxos.push({
+                transactionId: u.transactionId,
+                outputIndex: u.outputIndex,
+                value: BigInt(u.value),
+                scriptPubKey: u.scriptPubKey,
+                nonWitnessUtxo: fromBase64(rawTxns[rawIdx]),
+            });
+        }
+    }
+
+    const total = utxos.reduce((a, u) => a + u.value, 0n);
+    console.log(`UTXOs: ${utxos.length} (${total} sats)`);
     return utxos;
 }
 
@@ -75,7 +102,7 @@ async function broadcastPair(txs, label) {
 // ══════════════════════════════════════════════════════════════════════════════
 // Deploy P2PMarket.wasm (no constructor calldata needed — onDeployment sets nextOrderId=1)
 // ══════════════════════════════════════════════════════════════════════════════
-console.log('\n=== Deploy P2PMarket ===');
+console.log('\n=== Deploy P2PMarket v8 ===');
 const challenge = await getChallenge();
 const utxos = await getUTXOs();
 
@@ -90,7 +117,7 @@ const result = await factory.signDeployment({
     from: wallet.p2tr,
     feeRate: 2,
     priorityFee: 1000n,
-    gasSatFee: 100_000n,
+    gasSatFee: 10_000n,
     bytecode,
     calldata: new Uint8Array(0),
     challenge,
@@ -98,11 +125,11 @@ const result = await factory.signDeployment({
     revealMLDSAPublicKey: true,
 });
 
-await broadcastPair(result.transaction, 'P2PMarket deployment');
+await broadcastPair(result.transaction, 'P2PMarket v8 deployment');
 
 const info = {
     network: 'testnet',
-    contract: 'P2PMarket',
+    contract: 'P2PMarket v8',
     address: result.contractAddress,
     pubkey: result.contractPubKey,
     selectors: {
@@ -120,7 +147,7 @@ const info = {
 
 writeFileSync(join(__dirname, 'market-deployed.json'), JSON.stringify(info, null, 2));
 console.log('\n================================');
-console.log(`P2PMarket deployed at: ${result.contractAddress}`);
+console.log(`P2PMarket v8 deployed at: ${result.contractAddress}`);
 console.log(`Pubkey: ${result.contractPubKey}`);
 console.log('Saved to deploy/market-deployed.json');
 console.log('================================');

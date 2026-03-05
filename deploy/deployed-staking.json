@@ -3,9 +3,9 @@
   "deployer": "opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my",
   "contractType": "SimpleStaking",
   "stakingToken": "MINE",
-  "tokenPubkey": "0x64adc4c6cb9a05553363ffa544b32d6668d8e1ce02311c72915dc18c3603f397",
+  "tokenPubkey": "0xdb2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d",
   "rewardRate": "10000000000",
-  "address": "opt1sqpxk2hqaux0upqyz7wz3egnv8rfjrusj058388t8",
-  "pubkey": "0xb921bda1595223005ff40de0bcb50572bd9401865a5b67f5383d48f877143928",
-  "deployedAt": "2026-02-27T16:04:48.679Z"
+  "address": "opt1sqprz0p6xx593unycyd9lpr5wuu0nkgv35c59c54y",
+  "pubkey": "0x4fb131c700761b9bd82c844c381fd1b5ba9fcd71d301a9e800c9ab83af91b86e",
+  "deployedAt": "2026-03-04T08:12:49.456Z"
 }

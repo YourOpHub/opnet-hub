@@ -1,18 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useWalletConnect } from '@btc-vision/walletconnect';
+import { getContract, ABIDataTypes, BitcoinAbiTypes, type BitcoinInterfaceAbi, type CallResult } from 'opnet';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS } from '../contracts';
+import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY } from '../contracts';
+import { getProvider } from '../contractCache';
+import { NETWORK } from '../config';
+import { buildTxParams, formatTxError, waitForNextBlock } from '../txUtils';
 
 /* ═══════════════════════════════════════════════════════════════
    TOOLS — Swiss army knife for OPNet developers & users
    ═══════════════════════════════════════════════════════════════ */
 
-type ToolTab = 'converter' | 'explorer' | 'utxo' | 'tx' | 'block' | 'gas' | 'faucet';
+type ToolTab = 'converter' | 'explorer' | 'utxo' | 'splitter' | 'tx' | 'block' | 'gas' | 'faucet';
 
 const TOOL_TABS: { id: ToolTab; icon: string; label: string }[] = [
   { id: 'converter', icon: '💱', label: 'Converter' },
   { id: 'explorer', icon: '🔍', label: 'Token Explorer' },
   { id: 'utxo', icon: '📦', label: 'UTXO Viewer' },
+  { id: 'splitter', icon: '✂️', label: 'UTXO Split' },
   { id: 'tx', icon: '📜', label: 'TX Lookup' },
   { id: 'block', icon: '⛓️', label: 'Block Explorer' },
   { id: 'gas', icon: '⛽', label: 'Gas & Mempool' },
@@ -557,6 +563,220 @@ function BlockExplorer() {
   );
 }
 
+/* ─── UTXO Splitter ─── */
+function UTXOSplitter() {
+  const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
+  const provider = useMemo(() => getProvider(), []);
+
+  const [utxos, setUtxos] = useState<Array<{ transactionId: string; outputIndex: number; value: string | number }>>([]);
+  const [balance, setBalance] = useState<bigint>(0n);
+  const [loading, setLoading] = useState(false);
+  const [splitCount, setSplitCount] = useState(5);
+  const [splitting, setSplitting] = useState(false);
+  const [step, setStep] = useState('');
+  const [err, setErr] = useState('');
+
+  // Fetch UTXOs on mount when wallet connected
+  const fetchUTXOs = useCallback(async () => {
+    if (!walletAddress) return;
+    setLoading(true);
+    try {
+      const [u, b] = await Promise.all([
+        opnet.getUTXOs(walletAddress),
+        opnet.getBalance(walletAddress),
+      ]);
+      setUtxos(u);
+      setBalance(b);
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed to fetch UTXOs'); }
+    finally { setLoading(false); }
+  }, [walletAddress]);
+
+  useEffect(() => { fetchUTXOs(); }, [fetchUTXOs]);
+
+  const totalSats = utxos.reduce((s, u) => {
+    const v = typeof u.value === 'string' ? (u.value.startsWith('0x') ? Number(BigInt(u.value)) : Number(u.value)) : u.value;
+    return s + v;
+  }, 0);
+
+  // Estimate: 250 vB overhead + 43 vB per output, at 2 sat/vB
+  const estimatedFee = (250 + splitCount * 43) * 2;
+  const perSplitSats = totalSats > estimatedFee ? Math.floor((totalSats - estimatedFee) / splitCount) : 0;
+  const isDust = perSplitSats < 546;
+
+  // We use a dummy contract call with extraOutputs to create a self-transfer
+  // The simplest approach: call the pool's getReserves (a view call that won't change state)
+  // and attach extraOutputs that split BTC to self
+  const handleSplit = useCallback(async () => {
+    if (!walletAddress || !senderAddr) { openConnectModal(); return; }
+    if (isDust || perSplitSats <= 0 || splitCount < 2) return;
+
+    setSplitting(true); setErr(''); setStep('Preparing UTXO split...');
+    try {
+      // Build a dummy view call to SimplePool getReserves
+      // This is a read-only call that will succeed, we just need the tx infrastructure
+      // to attach extraOutputs for the split
+      const dummyABI: BitcoinInterfaceAbi = [{
+        name: 'getReserves', type: BitcoinAbiTypes.Function,
+        inputs: [], outputs: [
+          { name: 'reserveA', type: ABIDataTypes.UINT256 },
+          { name: 'reserveB', type: ABIDataTypes.UINT256 },
+        ],
+      }];
+
+      // Use pool contract if available, otherwise use any known contract
+      const targetContract = POOL_ADDRESS || TESTNET_CONTRACTS.MINE.address;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contract = getContract<any>(targetContract, dummyABI, provider, NETWORK, senderAddr as any);
+
+      setStep(`Simulating split into ${splitCount} UTXOs...`);
+      const sim = await contract.getReserves();
+      if ((sim as CallResult).revert) throw new Error(`Simulation failed: ${(sim as CallResult).revert}`);
+
+      // Build extraOutputs: N-1 outputs to self (the change output is the Nth)
+      const tp = await buildTxParams(provider, walletAddress);
+      const extraOutputs = [];
+      for (let i = 0; i < splitCount - 1; i++) {
+        extraOutputs.push({
+          address: walletAddress,
+          value: BigInt(perSplitSats),
+        });
+      }
+      (tp as Record<string, unknown>).extraOutputs = extraOutputs;
+      // Increase max spend to cover all outputs
+      (tp as Record<string, unknown>).maximumAllowedSatToSpend = BigInt(totalSats);
+
+      setStep(`Sending split tx (${splitCount} UTXOs of ~${perSplitSats.toLocaleString()} sats)...`);
+      await (sim as CallResult).sendTransaction(tp);
+
+      setStep('');
+      setErr('');
+
+      // Wait for confirmation then refresh
+      setStep('Waiting for block confirmation...');
+      await waitForNextBlock(provider, setStep, 90_000);
+      setStep('');
+      fetchUTXOs();
+    } catch (e) {
+      setErr(formatTxError(e));
+      setStep('');
+    } finally { setSplitting(false); }
+  }, [walletAddress, senderAddr, splitCount, perSplitSats, isDust, totalSats, provider, openConnectModal, fetchUTXOs]);
+
+  return (
+    <div style={cardS}>
+      {!walletAddress ? (
+        <div style={{ textAlign: 'center', padding: '24px 16px' }}>
+          <div style={{ fontSize: '1.4rem', marginBottom: 8 }}>✂️</div>
+          <div style={{ fontSize: '.82rem', fontWeight: 700, marginBottom: 6 }}>UTXO Splitter</div>
+          <p style={{ fontSize: '.72rem', color: 'var(--t3)', marginBottom: 12, maxWidth: 400, margin: '0 auto 12px' }}>
+            Split your BTC into multiple UTXOs for parallel transactions.
+            Useful when you need to submit multiple OPNet operations quickly.
+          </p>
+          <button style={btnS} onClick={openConnectModal}>Connect Wallet</button>
+        </div>
+      ) : (
+        <>
+          {/* Current UTXO status */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+            <div style={{ textAlign: 'center', padding: 10, background: 'rgba(247,147,26,.06)', borderRadius: 12 }}>
+              <div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{(totalSats / 1e8).toFixed(6)}</div>
+              <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>BTC Balance</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: 10, background: 'rgba(14,165,233,.06)', borderRadius: 12 }}>
+              <div style={{ ...monoSm, fontWeight: 700, color: 'var(--c)' }}>{utxos.length}</div>
+              <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Current UTXOs</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: 10, background: 'rgba(167,139,250,.06)', borderRadius: 12 }}>
+              <div style={{ ...monoSm, fontWeight: 700, color: 'var(--p)' }}>{totalSats.toLocaleString()}</div>
+              <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Total Sats</div>
+            </div>
+          </div>
+
+          {/* Split controls */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 }}>
+              Split into {splitCount} UTXOs
+            </label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="range" min="2" max="20" value={splitCount}
+                onChange={e => setSplitCount(parseInt(e.target.value))}
+                style={{ flex: 1, accentColor: '#F7931A' }} />
+              <input type="number" min="2" max="20" value={splitCount}
+                onChange={e => setSplitCount(Math.min(20, Math.max(2, parseInt(e.target.value) || 2)))}
+                style={{ ...inputS, width: 60, textAlign: 'center', padding: '6px 8px' }} />
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,.03)', borderRadius: 12, marginBottom: 12, border: '1px solid rgba(255,255,255,.06)' }}>
+            <div style={{ fontSize: '.72rem', color: 'var(--t2)', marginBottom: 6, fontWeight: 600 }}>Preview</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: '.72rem' }}>
+              <span style={{ color: 'var(--t3)' }}>Total balance:</span>
+              <span style={{ ...monoSm, fontWeight: 700, textAlign: 'right' }}>{totalSats.toLocaleString()} sats</span>
+              <span style={{ color: 'var(--t3)' }}>Est. fee:</span>
+              <span style={{ ...monoSm, fontWeight: 700, textAlign: 'right', color: 'var(--y)' }}>~{estimatedFee.toLocaleString()} sats</span>
+              <span style={{ color: 'var(--t3)' }}>Per UTXO:</span>
+              <span style={{ ...monoSm, fontWeight: 700, textAlign: 'right', color: isDust ? 'var(--r)' : 'var(--g)' }}>
+                ~{perSplitSats.toLocaleString()} sats
+              </span>
+            </div>
+            {isDust && (
+              <div style={{ marginTop: 8, fontSize: '.68rem', color: 'var(--r)', fontWeight: 600 }}>
+                Per-UTXO amount below dust limit (546 sats). Reduce split count.
+              </div>
+            )}
+          </div>
+
+          {/* Quick presets */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+            {[2, 3, 5, 8, 10, 15, 20].map(n => (
+              <button key={n} onClick={() => setSplitCount(n)}
+                style={{
+                  padding: '4px 10px', fontSize: '.62rem', borderRadius: 8, cursor: 'pointer',
+                  border: splitCount === n ? '1px solid rgba(247,147,26,.4)' : '1px solid rgba(255,255,255,.08)',
+                  background: splitCount === n ? 'rgba(247,147,26,.12)' : 'rgba(255,255,255,.03)',
+                  color: splitCount === n ? 'var(--o)' : 'var(--t3)', fontWeight: 600,
+                }}>
+                {n}x
+              </button>
+            ))}
+          </div>
+
+          {step && (
+            <div style={{ fontSize: '.72rem', color: 'var(--o)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 8 }}>
+              {step}
+            </div>
+          )}
+          {err && (
+            <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>
+              {err}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={{ ...btnS, flex: 1, opacity: splitting || isDust || perSplitSats <= 0 ? 0.5 : 1 }}
+              disabled={splitting || isDust || perSplitSats <= 0 || loading}
+              onClick={handleSplit}>
+              {splitting ? 'Splitting...' : `Split into ${splitCount} UTXOs`}
+            </button>
+            <button style={{ ...copyBtnS, padding: '8px 12px' }}
+              onClick={fetchUTXOs} disabled={loading}>
+              {loading ? '...' : 'Refresh'}
+            </button>
+          </div>
+
+          {/* Info */}
+          <div style={{ marginTop: 12, fontSize: '.6rem', color: 'var(--t4)', lineHeight: 1.5 }}>
+            Splitting UTXOs helps with parallel transactions. Each OPNet contract interaction
+            needs its own UTXO. If you only have 1 UTXO, you must wait for each tx to confirm
+            before sending the next one.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── Gas & Mempool ─── */
 function GasTool() {
   const [network, setNetwork] = useState<opnet.Network>(opnet.getNetwork());
@@ -742,6 +962,7 @@ const TokenTools: React.FC = () => {
       {activeTab === 'converter' && <ConverterTool />}
       {activeTab === 'explorer' && <TokenExplorer />}
       {activeTab === 'utxo' && <UTXOViewer />}
+      {activeTab === 'splitter' && <UTXOSplitter />}
       {activeTab === 'tx' && <TXLookup />}
       {activeTab === 'block' && <BlockExplorer />}
       {activeTab === 'gas' && <GasTool />}

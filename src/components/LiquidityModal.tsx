@@ -10,13 +10,14 @@ import { NETWORK } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
-import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl } from '../contracts';
+import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
+import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 
 const POOL_ABI: BitcoinInterfaceAbi = [
   { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'sync', inputs: [], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'addLiquidity', inputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'removeLiquidity', inputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
+  { name: 'addLiquidity', inputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'shares', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'removeLiquidity', inputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'actualA', type: ABIDataTypes.UINT256 }, { name: 'actualB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
   { name: 'liquidityOf', constant: true, inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
@@ -30,19 +31,31 @@ interface Props {
   onRefresh: () => void;
 }
 
+type PoolType = 'simplepool' | 'nativeswap' | 'custom';
+
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
 
+  const [poolType, setPoolType] = useState<PoolType>('simplepool');
   const [tab, setTab] = useState<'add' | 'remove'>('add');
   const [mineAmt, setMineAmt] = useState('');
   const [vibeAmt, setVibeAmt] = useState('');
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState('');
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
 
   const [lpMine, setLpMine] = useState(0);
   const [lpVibe, setLpVibe] = useState(0);
+
+  // Fetch token list from indexer
+  useEffect(() => {
+    if (!open) return;
+    fetchAllTokens().then(tokens => {
+      if (tokens.length > 0) setAllTokens(tokens);
+    }).catch(() => {});
+  }, [open]);
 
   const hasLP = lpMine > 0 || lpVibe > 0;
   const poolShare = reserveA > 0 ? (lpMine / reserveA) * 100 : 0;
@@ -211,8 +224,50 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           ))}
         </div>
 
-        {/* Pool Info */}
-        <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,.025)', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', marginBottom: 16, fontSize: '.68rem' }}>
+        {/* Pool Selector */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: '.52rem', color: '#5a6578', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>Pool</div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => setPoolType('simplepool')} style={{
+              flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: poolType === 'simplepool' ? 'rgba(14,165,233,.12)' : 'rgba(255,255,255,.03)',
+              color: poolType === 'simplepool' ? '#0ea5e9' : '#5a6578', fontWeight: 700, fontSize: '.65rem',
+              fontFamily: 'var(--ff)', transition: 'all .2s',
+              outline: poolType === 'simplepool' ? '1px solid rgba(14,165,233,.3)' : 'none',
+            }}>
+              MINE/VIBE
+            </button>
+            <button onClick={() => setPoolType('nativeswap')} style={{
+              flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: poolType === 'nativeswap' ? 'rgba(247,147,26,.12)' : 'rgba(255,255,255,.03)',
+              color: poolType === 'nativeswap' ? '#F7931A' : '#5a6578', fontWeight: 700, fontSize: '.65rem',
+              fontFamily: 'var(--ff)', transition: 'all .2s',
+              outline: poolType === 'nativeswap' ? '1px solid rgba(247,147,26,.3)' : 'none',
+            }}>
+              BTC/Token
+            </button>
+          </div>
+        </div>
+
+        {/* NativeSwap notice */}
+        {poolType === 'nativeswap' && (
+          <div style={{
+            padding: '12px 14px', background: 'rgba(247,147,26,.04)', borderRadius: 14,
+            border: '1px solid rgba(247,147,26,.1)', marginBottom: 16, fontSize: '.65rem', color: '#f59e0b',
+          }}>
+            {NATIVESWAP_ADDRESS
+              ? 'NativeSwap BTC/Token pool — deposit tokens + BTC to provide liquidity.'
+              : 'NativeSwap contract not yet deployed. Deploy with: node deploy/deploy-nativeswap.mjs'}
+            {allTokens.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: '.58rem', color: '#5a6578' }}>
+                Available tokens: {allTokens.map(t => t.symbol).join(', ')}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pool Info (SimplePool) */}
+        {poolType === 'simplepool' && <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,.025)', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', marginBottom: 16, fontSize: '.68rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: hasLP ? 8 : 0 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>MINE</div>
@@ -233,10 +288,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
               <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#0ea5e9', fontWeight: 700, fontSize: '.72rem' }}>{poolShare.toFixed(2)}%</span>
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* ADD TAB */}
-        {tab === 'add' && (
+        {/* ADD TAB (SimplePool only for now) */}
+        {poolType === 'simplepool' && tab === 'add' && (
           <div>
             <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -307,8 +362,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           </div>
         )}
 
-        {/* REMOVE TAB */}
-        {tab === 'remove' && (
+        {/* REMOVE TAB (SimplePool only for now) */}
+        {poolType === 'simplepool' && tab === 'remove' && (
           <div>
             {/* Position summary if tracked in localStorage */}
             {hasLP && (
@@ -377,7 +432,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
             </button>
 
             <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.04)', borderRadius: 10, border: '1px solid rgba(234,179,8,.08)', fontSize: '.58rem', color: '#f59e0b' }}>
-              SimplePool v1 — positions tracked locally. If you don't see your position, enter amounts manually.
+              LP position read from on-chain contract. Enter MINE amount to remove — VIBE is calculated proportionally.
             </div>
           </div>
         )}

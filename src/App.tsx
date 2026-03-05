@@ -9,6 +9,7 @@ import QuestPanel from './components/Quests';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { TESTNET_CONTRACTS } from './contracts';
+import { fetchHolderBalances, type HolderBalance } from './tokenApi';
 
 const BobChat = lazy(() => import('./components/BobChat'));
 const NewsFeed = lazy(() => import('./components/NewsFeed'));
@@ -18,7 +19,6 @@ const EcosystemDir = lazy(() => import('./components/EcosystemDir'));
 const Portfolio = lazy(() => import('./components/Portfolio'));
 const Launchpad = lazy(() => import('./components/Launchpad'));
 const SwapUI = lazy(() => import('./components/SwapUI'));
-const TokenGallery = lazy(() => import('./components/TokenGallery'));
 const Analytics = lazy(() => import('./components/Analytics'));
 const Staking = lazy(() => import('./components/Staking'));
 const Marketplace = lazy(() => import('./components/Marketplace'));
@@ -47,7 +47,7 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
     {
-        id: 'defi', label: 'DeFi', icon: '📊',
+        id: 'defi', label: 'DeFi', icon: '\u25C8',
         items: [
             { id: 'swap', label: 'Swap' },
             { id: 'staking', label: 'Stake' },
@@ -56,16 +56,15 @@ const NAV_GROUPS: NavGroup[] = [
         ],
     },
     {
-        id: 'tokens', label: 'Tokens', icon: '🪙',
+        id: 'tokens', label: 'Tokens', icon: '\u2B22',
         items: [
-            { id: 'gallery', label: 'Gallery' },
             { id: 'launch', label: 'Launchpad' },
             { id: 'tools', label: 'Tools' },
             { id: 'multisend', label: 'MultiSend' },
         ],
     },
     {
-        id: 'explore', label: 'Explore', icon: '🔍',
+        id: 'explore', label: 'Explore', icon: '\u2606',
         items: [
             { id: 'analytics', label: 'Analytics' },
             { id: 'eco', label: 'Ecosystem' },
@@ -73,7 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
         ],
     },
     {
-        id: 'play', label: 'Play', icon: '🎮',
+        id: 'play', label: 'Play', icon: '\u25B7',
         items: [
             { id: 'game', label: 'Miner' },
             { id: 'bob', label: 'Bob AI' },
@@ -99,6 +98,8 @@ const App: React.FC = () => {
         walletAddress,
         connecting,
         address: senderAddr,
+        publicKey,
+        hashedMLDSAKey,
     } = useWalletConnect();
 
     useEffect(() => {
@@ -115,14 +116,33 @@ const App: React.FC = () => {
     const [balances, setBalances] = useState<Record<string, string>>({});
     const dropRef = useRef<HTMLDivElement>(null);
     const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const navGroupTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
     const sdkProvider = useMemo(() => getProvider(), []);
 
     const openDrop = useCallback(() => { clearTimeout(hoverTimer.current); setWDrop(true); }, []);
     const closeDrop = useCallback(() => { hoverTimer.current = setTimeout(() => setWDrop(false), 300); }, []);
 
+    const [indexerBalances, setIndexerBalances] = useState<HolderBalance[]>([]);
+
     useEffect(() => {
         if (!wDrop || !wAddr || !senderAddr) return;
         let cancelled = false;
+
+        // Try indexer API first for ALL tokens
+        const mldsaHex = hashedMLDSAKey ? (hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey) : '';
+        const tweakedHex = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : '';
+        if (mldsaHex) {
+            fetchHolderBalances(mldsaHex, tweakedHex).then(results => {
+                if (cancelled) return;
+                setIndexerBalances(results);
+                for (const r of results) {
+                    const human = (Number(BigInt(r.balance)) / Math.pow(10, r.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
+                    setBalances(prev => ({ ...prev, [r.symbol]: human }));
+                }
+            }).catch(() => {});
+        }
+
+        // Fallback: hardcoded tokens via SDK (always runs as backup)
         Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
             (async () => {
                 try {
@@ -136,7 +156,7 @@ const App: React.FC = () => {
             })();
         });
         return () => { cancelled = true; };
-    }, [wDrop, wAddr, senderAddr, sdkProvider]);
+    }, [wDrop, wAddr, senderAddr, sdkProvider, hashedMLDSAKey, publicKey]);
 
     const handleWallet = useCallback(() => {
         if (wOn) disconnect();
@@ -175,12 +195,11 @@ const App: React.FC = () => {
             case 'analytics': return <Analytics />;
             case 'launch': return <Launchpad />;
             case 'market': return <Marketplace />;
-            case 'gallery': return <TokenGallery />;
+            case 'xchain': return <CrossChainMarketplace />;
             case 'game': return <SatoshiMiner />;
             case 'news': return <NewsFeed />;
             case 'eco': return <EcosystemDir />;
             case 'multisend': return <MultiSender />;
-            case 'xchain': return <CrossChainMarketplace />;
             default: return <Landing onNav={navigate} />;
         }
     };
@@ -206,11 +225,13 @@ const App: React.FC = () => {
                                 Home
                             </button>
                             {NAV_GROUPS.map(g => (
-                                <div key={g.id} className="nav-group" onMouseLeave={() => setOpenGroup(null)}>
+                                <div key={g.id} className="nav-group"
+                                    onMouseEnter={() => { clearTimeout(navGroupTimer.current); setOpenGroup(g.id); }}
+                                    onMouseLeave={() => { navGroupTimer.current = setTimeout(() => setOpenGroup(null), 250); }}
+                                >
                                     <button
                                         className={`Nt ${activeGroup === g.id ? 'on' : ''}`}
                                         onClick={() => setOpenGroup(openGroup === g.id ? null : g.id)}
-                                        onMouseEnter={() => setOpenGroup(g.id)}
                                     >
                                         <span className="nav-group-icon">{g.icon}</span>
                                         {g.label}
@@ -248,12 +269,23 @@ const App: React.FC = () => {
                             {wDrop && wOn && (
                                 <div className="wallet-dropdown">
                                     <div className="wd-addr">{wAddr}</div>
+                                    {/* Hardcoded tokens first */}
                                     {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => (
                                         <div key={sym} className="wd-row">
                                             <span className="wd-token">{tok.icon} {sym}</span>
                                             <span className="wd-bal">{balances[sym] ?? '...'}</span>
                                         </div>
                                     ))}
+                                    {/* Extra tokens from indexer (not in hardcoded list) */}
+                                    {indexerBalances
+                                        .filter(b => !Object.keys(TESTNET_CONTRACTS).includes(b.symbol))
+                                        .map(b => (
+                                            <div key={b.token} className="wd-row">
+                                                <span className="wd-token">{b.symbol}</span>
+                                                <span className="wd-bal">{balances[b.symbol] ?? '...'}</span>
+                                            </div>
+                                        ))
+                                    }
                                     <div className="wd-actions">
                                         <button className="wd-btn-primary" onClick={() => { navigate('portfolio'); setWDrop(false); }}>
                                             Portfolio
@@ -272,7 +304,7 @@ const App: React.FC = () => {
             {/* Mobile bottom nav */}
             <nav className="mobile-nav">
                 <button className={`mn-item ${tab === 'home' ? 'on' : ''}`} onClick={() => navigate('home')}>
-                    <span className="mn-icon">🏠</span><span className="mn-label">Home</span>
+                    <span className="mn-icon">{'\u2302'}</span><span className="mn-label">Home</span>
                 </button>
                 {NAV_GROUPS.map(g => (
                     <button key={g.id} className={`mn-item ${activeGroup === g.id ? 'on' : ''}`}
@@ -330,7 +362,7 @@ const App: React.FC = () => {
             </footer>
 
             <button className="q-fab" onClick={() => setQOpen(!qOpen)}>
-                <span>🎯</span>
+                <span>{'\u2737'}</span>
             </button>
 
             <QuestPanel open={qOpen} onClose={() => setQOpen(false)} onNav={navigate} />

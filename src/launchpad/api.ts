@@ -16,7 +16,7 @@ async function checkServer(): Promise<boolean> {
   if (!LP_API) return false;
   if (serverAvailable !== null && Date.now() - lastCheck < CHECK_INTERVAL) return serverAvailable;
   try {
-    const res = await fetch(`${LP_API}/lp/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${LP_API}/health`, { signal: AbortSignal.timeout(3000) });
     serverAvailable = res.ok;
   } catch {
     serverAvailable = false;
@@ -58,7 +58,7 @@ export interface ServerToken extends LaunchToken {
 /** Fetch all tokens from server (registry + social data) */
 export async function fetchTokens(): Promise<ServerToken[] | null> {
   if (!await checkServer()) return null;
-  const data = await lpApi<{ tokens: ServerToken[] }>('/lp/tokens');
+  const data = await lpApi<{ tokens: ServerToken[] }>('/tokens');
   return data?.tokens || null;
 }
 
@@ -66,7 +66,7 @@ export async function fetchTokens(): Promise<ServerToken[] | null> {
 export async function registerToken(token: LaunchToken): Promise<boolean> {
   if (!await checkServer()) return false;
   try {
-    await lpApi('/lp/create', { method: 'POST', body: JSON.stringify(token) });
+    await lpApi('/create', { method: 'POST', body: JSON.stringify(token) });
     return true;
   } catch { return false; }
 }
@@ -75,7 +75,7 @@ export async function registerToken(token: LaunchToken): Promise<boolean> {
 export async function serverReply(address: string, wallet: string, text: string): Promise<boolean> {
   if (!await checkServer()) return false;
   try {
-    await lpApi('/lp/reply', { method: 'POST', body: JSON.stringify({ address, wallet, text }) });
+    await lpApi('/reply', { method: 'POST', body: JSON.stringify({ address, wallet, text }) });
     return true;
   } catch { return false; }
 }
@@ -84,7 +84,7 @@ export async function serverReply(address: string, wallet: string, text: string)
 export async function serverLike(address: string): Promise<boolean> {
   if (!await checkServer()) return false;
   try {
-    await lpApi('/lp/like', { method: 'POST', body: JSON.stringify({ address }) });
+    await lpApi('/like', { method: 'POST', body: JSON.stringify({ address }) });
     return true;
   } catch { return false; }
 }

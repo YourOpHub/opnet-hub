@@ -283,9 +283,11 @@ export async function getOP20Info(contractAddress: string): Promise<{
 /** Get UTXOs for an address */
 export async function getUTXOs(address: string): Promise<Array<{ transactionId: string; outputIndex: number; value: string | number }>> {
   try {
-    // RPC params: { address, optimize?, mergePendingUTXOs?, filterSpentUTXOs? }
-    const r = await rpc('btc_getUTXOs', [{ address, optimize: false, mergePendingUTXOs: true }], 15000) as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
-    return Array.isArray(r) ? r : [];
+    // btc_getUTXOs params: [address, optimize?, mergePendingUTXOs?]
+    const r = await rpc('btc_getUTXOs', [address, false, true], 15000) as Record<string, unknown>;
+    // Result may be { confirmed: [...] } or a direct array
+    const items = Array.isArray(r) ? r : (Array.isArray((r as Record<string, unknown>)?.confirmed) ? (r as Record<string, unknown>).confirmed : []);
+    return items as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
   } catch { return []; }
 }
 

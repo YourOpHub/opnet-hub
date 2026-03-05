@@ -12,7 +12,9 @@ import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBl
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
 import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
+import { useToast } from './Toast';
 const LP_API = import.meta.env.VITE_LP_API || '';
+const MARKET_API = import.meta.env.VITE_API_URL || '';
 
 /** P2PMarket ABI */
 const MARKET_ABI: BitcoinInterfaceAbi = [
@@ -133,6 +135,16 @@ const iStyle: React.CSSProperties = {
 const Marketplace: React.FC = () => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { toast } = useToast();
+
+  // Convert senderAddr (Address/Uint8Array) to 64-char hex for own-order comparison
+  const senderHex = useMemo(() => {
+    if (!senderAddr) return '';
+    try {
+      const bytes = new Uint8Array(senderAddr as unknown as ArrayBufferLike);
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch { return ''; }
+  }, [senderAddr]);
 
   // View state: token list vs token detail
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
@@ -213,7 +225,7 @@ const Marketplace: React.FC = () => {
   // Fetch token list (server first, hardcoded fallback)
   const fetchTokens = useCallback(async () => {
     try {
-      const res = await fetch(`${LP_API}/market/tokens`, { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(`${MARKET_API}/market/tokens`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const serverTokens = (await res.json()).tokens || [];
         // Merge server tokens with known tokens (ensure pubkey is present)
@@ -263,7 +275,7 @@ const Marketplace: React.FC = () => {
   // Sell orders / buy orders for current token (include accepted buy orders too)
   const sellOrders = orders.filter(o => o.type === 'sell' && o.status === 'active').sort((a, b) => a.pricePerToken - b.pricePerToken);
   const buyOrders = orders.filter(o => o.type === 'buy' && (o.status === 'active' || o.status === 'accepted')).sort((a, b) => b.pricePerToken - a.pricePerToken);
-  const myOrders = orders.filter(o => o.creator === walletAddress || o.seller === walletAddress);
+  const myOrders = orders.filter(o => o.creator === senderHex || o.seller === senderHex);
 
   // Create order — ON-CHAIN via P2PMarket contract
   const handleCreate = useCallback(async () => {
@@ -306,12 +318,14 @@ const Marketplace: React.FC = () => {
         await (sim as CallResult).sendTransaction(tp);
       }
 
-      setCreateStep('Waiting for confirmation...');
-      await waitForNextBlock(provider, setCreateStep);
+      setCreateStep('');
+      setOrderAmount(''); setOrderPrice('');
+      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Confirming...`, 'success');
+      setCreating(false);
 
-      // Also notify server indexer
+      // Non-blocking: notify indexer + wait for block then refresh
       try {
-        await fetch(`${LP_API}/market/create`, {
+        fetch(`${MARKET_API}/market/create`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: orderType, creator: walletAddress,
@@ -320,15 +334,15 @@ const Marketplace: React.FC = () => {
             amount: amt, pricePerToken: ppt,
           }),
           signal: AbortSignal.timeout(5000),
-        });
+        }).catch(() => {});
       } catch { /* indexer optional */ }
 
-      setCreateStep('');
-      setOrderAmount(''); setOrderPrice('');
-      setMsg(`${orderType === 'sell' ? 'Sell' : 'Buy'} order created on-chain!`);
-      setTimeout(() => setMsg(''), 5000);
-      await fetchOrders();
-      await fetchTokens();
+      waitForNextBlock(provider).then(() => {
+        toast('Order confirmed on-chain!', 'success');
+        fetchOrders(); fetchTokens();
+      }).catch(() => {});
+      fetchOrders();
+      return;
     } catch (e) {
       setCreateStep(formatTxError(e));
       setTimeout(() => setCreateStep(''), 5000);
@@ -345,7 +359,7 @@ const Marketplace: React.FC = () => {
       if (!order) throw new Error('Order not found');
 
       // Check: cannot fill your own order
-      if (order.creator === walletAddress || order.seller === walletAddress) {
+      if (order.creator === senderHex || order.seller === senderHex) {
         throw new Error('Cannot fill your own order. Use a different wallet.');
       }
 
@@ -357,7 +371,8 @@ const Marketplace: React.FC = () => {
 
       if (order.type === 'sell') {
         // Buyer fills sell order: must include BTC output to seller's P2OP address
-        const btcPaymentSats = BigInt(Math.ceil(fillAmt * order.pricePerToken));
+        const rawPayment = BigInt(Math.ceil(fillAmt * order.pricePerToken));
+        const btcPaymentSats = rawPayment < 330n ? 330n : rawPayment; // enforce dust minimum
         // order.creator is the seller's MLDSA hash hex (from on-chain) — build P2OP
         const sellerP2OPScript = buildP2OPScript(order.creator);
         const sellerP2OPAddress = getP2OPAddress(order.creator);
@@ -406,27 +421,27 @@ const Marketplace: React.FC = () => {
         await (sim as CallResult).sendTransaction(tp);
       }
 
-      setFillStep('Waiting for confirmation...');
-      await waitForNextBlock(provider, setFillStep);
-
-      // Notify server indexer
-      try {
-        await fetch(`${LP_API}/market/fill`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId, filler: walletAddress, amount: fillAmt }),
-          signal: AbortSignal.timeout(5000),
-        });
-      } catch { /* indexer optional */ }
-
       setFillStep(''); setFillId(null); setFillAmount('');
-      setMsg('Order filled on-chain!');
-      setTimeout(() => setMsg(''), 5000);
-      await fetchOrders();
+      toast('Order filled! Confirming...', 'success');
+      setFilling(false);
+
+      fetch(`${MARKET_API}/market/fill`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, filler: walletAddress, amount: fillAmt }),
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => {});
+
+      waitForNextBlock(provider).then(() => {
+        toast('Fill confirmed on-chain!', 'success');
+        fetchOrders();
+      }).catch(() => {});
+      fetchOrders();
+      return;
     } catch (e) {
       setFillStep(formatTxError(e));
       setTimeout(() => setFillStep(''), 5000);
     } finally { setFilling(false); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, fetchOrders]);
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, fetchOrders, toast]);
 
   // Execute accepted buy order — buyer pays BTC, gets tokens (TRUSTLESS)
   const handleExecuteBuyOrder = useCallback(async (orderId: string) => {
@@ -438,7 +453,8 @@ const Marketplace: React.FC = () => {
       if (order.status !== 'accepted') throw new Error('Order not accepted yet');
 
       const remaining = order.amount - order.amountFilled;
-      const btcPaymentSats = BigInt(Math.ceil(remaining * order.pricePerToken));
+      const rawPayment = BigInt(Math.ceil(remaining * order.pricePerToken));
+      const btcPaymentSats = rawPayment < 330n ? 330n : rawPayment; // enforce dust minimum
       // order.seller is the seller's MLDSA hash hex — build P2OP script and address
       const sellerP2OPScript = buildP2OPScript(order.seller);
       const sellerP2OPAddress = getP2OPAddress(order.seller);
@@ -474,13 +490,16 @@ const Marketplace: React.FC = () => {
       (tp as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp);
 
-      setFillStep('Waiting for confirmation...');
-      await waitForNextBlock(provider, setFillStep);
-
       setFillStep(''); setFillId(null);
-      setMsg('Buy order executed! Tokens received, BTC sent to seller.');
-      setTimeout(() => setMsg(''), 5000);
-      await fetchOrders();
+      toast('Buy order executed! Confirming...', 'success');
+      setFilling(false);
+
+      waitForNextBlock(provider).then(() => {
+        toast('Execution confirmed on-chain!', 'success');
+        fetchOrders();
+      }).catch(() => {});
+      fetchOrders();
+      return;
     } catch (e) {
       setFillStep(formatTxError(e));
       setTimeout(() => setFillStep(''), 5000);
@@ -495,7 +514,7 @@ const Marketplace: React.FC = () => {
       if (autoExecuteRef.current || filling) return;
       const freshOrders = await fetchOrdersOnChain(selectedToken);
       const myAccepted = freshOrders.find(
-        o => o.type === 'buy' && o.status === 'accepted' && o.creator === walletAddress
+        o => o.type === 'buy' && o.status === 'accepted' && o.creator === senderHex
       );
       if (myAccepted) {
         autoExecuteRef.current = true;
@@ -528,19 +547,19 @@ const Marketplace: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       await (sim as CallResult).sendTransaction(tp);
-      await waitForNextBlock(provider);
 
-      // Notify server indexer
-      try {
-        await fetch(`${LP_API}/market/cancel`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId, creator: walletAddress }),
-          signal: AbortSignal.timeout(5000),
-        });
-      } catch { /* indexer optional */ }
-      await fetchOrders();
-      setMsg('Order cancelled on-chain!');
-      setTimeout(() => setMsg(''), 5000);
+      toast('Order cancel submitted! Confirming...', 'success');
+      fetch(`${MARKET_API}/market/cancel`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, creator: walletAddress }),
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => {});
+
+      waitForNextBlock(provider).then(() => {
+        toast('Cancel confirmed!', 'success');
+        fetchOrders();
+      }).catch(() => {});
+      fetchOrders();
     } catch (e) {
       setMsg(formatTxError(e));
       setTimeout(() => setMsg(''), 5000);
@@ -628,7 +647,7 @@ const Marketplace: React.FC = () => {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{o.creator.slice(0, 10)}... &middot; {timeAgo(o.createdAt)}</span>
-                    {o.creator === walletAddress ? (
+                    {o.creator === senderHex ? (
                       <button onClick={() => handleCancel(o.id)}
                         style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
                     ) : (
@@ -670,7 +689,7 @@ const Marketplace: React.FC = () => {
               const remaining = o.amount - o.amountFilled;
               const totalCostSats = Math.ceil(remaining * o.pricePerToken);
               const pct = o.amount > 0 ? (o.amountFilled / o.amount) * 100 : 0;
-              const isMyBuyOrder = o.creator === walletAddress;
+              const isMyBuyOrder = o.creator === senderHex;
               const isAccepted = o.status === 'accepted';
               return (
                 <div key={o.id} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.68rem' }}>
@@ -703,7 +722,7 @@ const Marketplace: React.FC = () => {
                           <button onClick={() => handleCancel(o.id)}
                             style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
                         </>
-                      ) : isMyBuyOrder || (isAccepted && o.seller === walletAddress) ? (
+                      ) : isMyBuyOrder || (isAccepted && o.seller === senderHex) ? (
                         <button onClick={() => handleCancel(o.id)}
                           style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
                       ) : !isAccepted ? (
@@ -716,7 +735,7 @@ const Marketplace: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  {isAccepted && !isMyBuyOrder && o.seller !== walletAddress && (
+                  {isAccepted && !isMyBuyOrder && o.seller !== senderHex && (
                     <div style={{ marginTop: 4, fontSize: '.52rem', color: 'var(--t4)', fontStyle: 'italic' }}>
                       Tokens locked by seller. Waiting for buyer to pay BTC.
                     </div>

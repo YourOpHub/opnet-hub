@@ -11,7 +11,7 @@ import { NETWORK } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
-import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 import { useToast } from './Toast';
 const LP_API = import.meta.env.VITE_LP_API || '';
@@ -304,9 +304,8 @@ const Marketplace: React.FC = () => {
       const amountU256 = BigInt(Math.round(amt * Math.pow(10, decimals))); // token amount in smallest units
       const priceU256 = BigInt(Math.round(ppt));   // price per token in raw sats (integer)
 
-      // SDK expects Address object, not string — convert pubkey to Address
-      const pubkey = selInfo?.pubkey;
-      if (!pubkey) throw new Error('Token pubkey unknown — cannot create order. Select a known token.');
+      // SDK expects Address object — resolve pubkey from known map or use address directly
+      const pubkey = selInfo?.pubkey || addressToPubkey(selectedToken);
       const tokenAddr = Address.fromString(pubkey);
 
       if (orderType === 'sell') {

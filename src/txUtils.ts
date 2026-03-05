@@ -13,16 +13,13 @@ import type { Network } from '@btc-vision/bitcoin';
 import { NETWORK } from './config';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 
-/** Transaction parameters for OPNet frontend (signer=null — wallet handles signing) */
-export interface TxParams {
-  refundTo: string;
-  maximumAllowedSatToSpend: bigint;
-  network: Network;
-  feeRate: number;
-  priorityFee: bigint;
-  signer: null;
-  mldsaSigner: null;
-}
+/**
+ * Transaction parameters for OPNet frontend.
+ * Runtime object has NO signer/mldsaSigner keys — wallet extension handles signing.
+ * Type uses TransactionParameters for SDK compatibility.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TxParams = any;
 
 // Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
 const approvedThisSession = new Set<string>();
@@ -35,8 +32,9 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const priorityFeeSats = gas.baseGas / gasPerSat;
   // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
-  // Frontend: signer=null, mldsaSigner=null — wallet extension handles signing
-  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee, signer: null, mldsaSigner: null };
+  // Frontend: NO signer/mldsaSigner keys — wallet extension handles signing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -84,7 +82,7 @@ export async function ensureAllowance(
   spenderPubkeyHex: string,   // MUST be hex pubkey like '0xe3523...' — NOT bech32
   amount: bigint,
   provider: JSONRpcProvider,
-  senderAddr: string,
+  senderAddr: Address | string,
   walletAddress: string,
   setStep: (s: string) => void,
   tokenLabel = 'token',
@@ -97,7 +95,7 @@ export async function ensureAllowance(
     return false;
   }
 
-  const senderAddress = Address.fromString(senderAddr);
+  const senderAddress = senderAddr instanceof Address ? senderAddr : Address.fromString(senderAddr);
   const tokenContract = getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, NETWORK, senderAddress);
   // SDK requires Address objects for ADDRESS-type parameters — NOT bech32 strings
   const spenderAddr = Address.fromString(spenderPubkeyHex);

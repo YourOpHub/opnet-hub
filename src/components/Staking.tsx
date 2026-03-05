@@ -138,7 +138,7 @@ const Staking: React.FC = () => {
       // 1. Ensure allowance (check → approve → wait for block)
       await ensureAllowance(
         STAKING_TOKEN.address, STAKING_PUBKEY, rawAmount,
-        provider, senderAddr as unknown as string, walletAddress!, setStep, 'MINE',
+        provider, senderAddr!, walletAddress!, setStep, 'MINE',
       );
 
       // 2. Stake

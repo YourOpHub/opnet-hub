@@ -36,16 +36,15 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
   const priorityFeeSats = gas.baseGas / gasPerSat;
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  // C-01 FIX: signer/mldsaSigner must be null — wallet SDK handles signing
+  // Frontend: NO signer/mldsaSigner keys — wallet extension handles signing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
-    signer: null as TransactionParameters['signer'],
-    mldsaSigner: null as TransactionParameters['mldsaSigner'],
     refundTo,
     maximumAllowedSatToSpend: 250_000n,
     network: NETWORK,
     feeRate,
     priorityFee,
-  };
+  } as any;
 }
 
 interface DeployedToken {

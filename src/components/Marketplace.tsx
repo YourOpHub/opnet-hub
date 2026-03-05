@@ -312,7 +312,7 @@ const Marketplace: React.FC = () => {
       if (orderType === 'sell') {
         // Step 1: Ensure allowance for P2PMarket to pull tokens
         setCreateStep('Approving tokens for marketplace...');
-        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr as unknown as string, walletAddress, setCreateStep, selInfo?.symbol || 'token');
+        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr!, walletAddress, setCreateStep, selInfo?.symbol || 'token');
 
         // Step 2: Call createSellOrder on-chain
         setCreateStep('Creating sell order on-chain...');
@@ -419,7 +419,7 @@ const Marketplace: React.FC = () => {
         // No BTC in this step — buyer will pay BTC later via executeBuyOrder
         setFillStep('Approving tokens for marketplace...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr as unknown as string, walletAddress, setFillStep);
+        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr!, walletAddress, setFillStep);
 
         setFillStep('Accepting buy order (locking tokens)...');
         const sim = await withRetry(() => market.acceptBuyOrder(BigInt(orderId)));

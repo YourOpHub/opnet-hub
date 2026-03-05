@@ -813,7 +813,7 @@ const CrossChainMarketplace: React.FC = () => {
         const escrowPubkey = TOKEN_ESCROW_PUBKEY.startsWith('0x') ? TOKEN_ESCROW_PUBKEY : '0x' + TOKEN_ESCROW_PUBKEY;
         await ensureAllowance(
           tbToken, escrowPubkey, tokenAmountRaw,
-          provider, senderAddr as unknown as string, walletAddress,
+          provider, senderAddr!, walletAddress,
           setTbStep, selectedToken.symbol,
         );
       }
@@ -876,7 +876,7 @@ const CrossChainMarketplace: React.FC = () => {
           const escrowPubkey = TOKEN_ESCROW_PUBKEY.startsWith('0x') ? TOKEN_ESCROW_PUBKEY : '0x' + TOKEN_ESCROW_PUBKEY;
           await ensureAllowance(
             tokenInfo.address, escrowPubkey, order.tokenAmount,
-            provider, senderAddr as unknown as string, walletAddress,
+            provider, senderAddr!, walletAddress,
             setActionStep, tokenInfo.symbol,
           );
         }

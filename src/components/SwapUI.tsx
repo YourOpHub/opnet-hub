@@ -309,7 +309,7 @@ const SwapUI: React.FC = () => {
       // STEP 1: Ensure allowance (check → approve → wait for block)
       await ensureAllowance(
         from.address, POOL_PUBKEY, rawAmount,
-        provider, senderAddr as unknown as string, walletAddress!, setSwapStep, from.symbol,
+        provider, senderAddr!, walletAddress!, setSwapStep, from.symbol,
       );
 
       // STEP 2: Call swap on pool

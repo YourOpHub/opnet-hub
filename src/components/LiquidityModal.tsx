@@ -124,14 +124,14 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       // Step 1: Ensure MINE allowance (check → approve → wait for block)
       const mineApproved = await ensureAllowance(
         TESTNET_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
-        provider, senderAddr as unknown as string, walletAddress!, setStep, 'MINE',
+        provider, senderAddr!, walletAddress!, setStep, 'MINE',
       );
 
       // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
       if (mineApproved) await waitForNextBlock(provider, setStep);
       const vibeApproved = await ensureAllowance(
         TESTNET_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
-        provider, senderAddr as unknown as string, walletAddress!, setStep, 'VIBE',
+        provider, senderAddr!, walletAddress!, setStep, 'VIBE',
       );
       if (vibeApproved) await waitForNextBlock(provider, setStep);
 

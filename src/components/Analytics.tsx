@@ -292,7 +292,7 @@ const Analytics: React.FC = () => {
             return (
               <div key={sym} style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  {tok.iconUrl ? <img src={tok.iconUrl} alt={tok.symbol} style={{ width: 28, height: 28, borderRadius: '50%' }} /> : <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>}
+                  <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>
                   <span style={{ fontWeight: 700 }}>${sym}</span>
                   {tok.publicMint && <span style={{ fontSize: '.5rem', background: 'rgba(168,85,247,.12)', color: '#a855f7', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>MINTABLE</span>}
                 </div>

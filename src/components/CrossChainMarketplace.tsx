@@ -1613,7 +1613,7 @@ const CrossChainMarketplace: React.FC = () => {
                 <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
               ) : sellTokenOrders.length === 0 ? (
                 <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-                  <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: .4, marginBottom: 8, display: 'inline-block' }} />
+                  <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
                   <div style={{ fontSize: '.72rem' }}>No sell orders yet</div>
                 </div>
               ) : (
@@ -1628,7 +1628,7 @@ const CrossChainMarketplace: React.FC = () => {
                 <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
               ) : buyTokenOrders.length === 0 ? (
                 <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-                  <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: .4, marginBottom: 8, display: 'inline-block' }} />
+                  <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
                   <div style={{ fontSize: '.72rem' }}>No buy orders yet</div>
                 </div>
               ) : (
@@ -1824,7 +1824,7 @@ const CrossChainMarketplace: React.FC = () => {
             <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
           ) : btcToFbOrders.length === 0 ? (
             <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-              <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: .4, marginBottom: 8, display: 'inline-block' }} />
+              <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
               <div style={{ fontSize: '.72rem' }}>No BTC→Fractal orders yet</div>
             </div>
           ) : (
@@ -1841,7 +1841,7 @@ const CrossChainMarketplace: React.FC = () => {
             <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
           ) : fbToBtcOrders.length === 0 ? (
             <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-              <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: .4, marginBottom: 8, display: 'inline-block' }} />
+              <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
               <div style={{ fontSize: '.72rem' }}>No Fractal→BTC orders yet</div>
             </div>
           ) : (

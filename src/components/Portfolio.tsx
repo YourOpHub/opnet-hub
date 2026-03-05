@@ -205,7 +205,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                 <tr key={tok.symbol}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      {tok.iconUrl ? <img src={tok.iconUrl} alt={tok.symbol} style={{ width: 28, height: 28, borderRadius: '50%' }} /> : <span style={{ fontSize: '1rem' }}>{tok.icon}</span>}
+                      <span style={{ fontSize: '1rem' }}>{tok.icon}</span>
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--w)' }}>{tok.name}</div>
                         <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>

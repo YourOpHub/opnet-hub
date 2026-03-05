@@ -98,16 +98,15 @@ function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): 
   return { out, impact };
 }
 
-interface Token { symbol: string; name: string; icon: string; iconUrl?: string; decimals: number; address: string; pubkey: string; }
+interface Token { symbol: string; name: string; icon: string; decimals: number; address: string; pubkey: string; }
 
 const BASE_TOKENS: Token[] = [
-  { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, iconUrl: TESTNET_CONTRACTS.MINE.iconUrl, decimals: 8, address: TESTNET_CONTRACTS.MINE.address, pubkey: TESTNET_CONTRACTS.MINE.pubkey },
-  { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, iconUrl: TESTNET_CONTRACTS.VIBE.iconUrl, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address, pubkey: TESTNET_CONTRACTS.VIBE.pubkey },
+  { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, decimals: 8, address: TESTNET_CONTRACTS.MINE.address, pubkey: TESTNET_CONTRACTS.MINE.pubkey },
+  { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address, pubkey: TESTNET_CONTRACTS.VIBE.pubkey },
 ];
 
 const TokenIcon: React.FC<{ token: Token; size?: number }> = ({ token, size = 24 }) =>
-  token.iconUrl ? <img src={token.iconUrl} alt={token.symbol} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }} />
-    : <span style={{ fontSize: size * 0.7 }}>{token.icon}</span>;
+  <span style={{ fontSize: size * 0.7 }}>{token.icon}</span>;
 
 type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 

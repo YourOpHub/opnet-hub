@@ -85,8 +85,11 @@ function parseRecipients(raw: string): Recipient[] {
       const address = parts[0] || '';
       const amount = parts[1] || '';
       const amtNum = parseFloat(amount);
-      const valid = address.length > 10 && !isNaN(amtNum) && amtNum > 0;
-      return { address, amount, valid };
+      // Validate: opt1 address (bech32m) or hex pubkey (0x...), plus valid amount
+      const validAddr = (address.startsWith('opt1') && address.length > 40) ||
+                        (address.startsWith('0x') && address.length === 66);
+      const validAmt = !isNaN(amtNum) && amtNum > 0;
+      return { address, amount, valid: validAddr && validAmt };
     });
 }
 

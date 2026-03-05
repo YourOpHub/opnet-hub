@@ -3,6 +3,7 @@ import {
   JSONRpcProvider, getContract, OP_20_ABI,
   type IOP20Contract,
 } from 'opnet';
+import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import * as opnet from '../opnet';
@@ -24,8 +25,7 @@ interface TokenBalance {
   error: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: any }> = ({ walletAddress, senderAddress }) => {
+const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | null }> = ({ walletAddress, senderAddress }) => {
   const [btcSats, setBtcSats] = useState<bigint | null>(null);
   const [btcLoading, setBtcLoading] = useState(false);
   const [btcPrice, setBtcPrice] = useState(0);

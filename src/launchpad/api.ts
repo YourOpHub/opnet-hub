@@ -25,7 +25,6 @@ async function checkServer(): Promise<boolean> {
   return serverAvailable;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function lpApi<T>(path: string, opts?: RequestInit): Promise<T | null> {
   try {
     const res = await fetch(`${LP_API}${path}`, {

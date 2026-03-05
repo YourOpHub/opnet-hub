@@ -12,7 +12,6 @@ import { NETWORK, RPC_URL } from './config';
 export { NETWORK, RPC_URL };
 
 /** Generic OPNet contract with dynamic method dispatch */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface OPNetContract extends BaseContractProperties {
   [method: string]: ((...args: unknown[]) => Promise<unknown>) | undefined | unknown;
 }

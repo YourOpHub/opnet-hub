@@ -1756,15 +1756,17 @@ const CrossChainMarketplace: React.FC = () => {
 
     const takerGetsAmount = isBtcToFb ? order.btcAmount : order.wantAmount;
     const takerSendsAmount = isBtcToFb ? order.wantAmount : order.btcAmount;
+    const takerGetsUnit = isBtcToFb ? 'BTC' : 'FB';
+    const takerSendsUnit = isBtcToFb ? 'FB' : 'BTC';
 
     return (
       <React.Fragment key={order.id}>
         <div className="ob-row" style={{ gridTemplateColumns: AV_COLS }}>
           <span className="ob-mono ob-r" style={{ color: '#22c55e', fontWeight: 700 }}>
-            {fmtBtc(takerGetsAmount)}
+            {fmtBtc(takerGetsAmount)} <span style={{ fontWeight: 500, fontSize: '.62rem', color: 'var(--t2)' }}>{takerGetsUnit}</span>
           </span>
           <span className="ob-mono ob-r" style={{ color: 'var(--t1)' }}>
-            {fmtBtc(takerSendsAmount)}
+            {fmtBtc(takerSendsAmount)} <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>{takerSendsUnit}</span>
           </span>
           <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{fmtRate(order.btcAmount, order.wantAmount)}</span>
           <div className="ob-act">

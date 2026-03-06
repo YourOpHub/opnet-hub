@@ -682,135 +682,123 @@ const Marketplace: React.FC = () => {
           </div>
         )}
 
-        {/* Two-column: Sell orders | Buy orders */}
+        {/* Two-column: Sell orders | Buy orders — exchange-style tables */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           {/* SELL ORDERS (asks) */}
-          <div className="P" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#ef4444', marginBottom: 10 }}>Sell Orders (Asks)</div>
+          <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 10px 0', fontWeight: 700, fontSize: '.82rem', color: '#ef4444' }}>Sell Orders (Asks)</div>
             {sellOrders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 32, color: 'var(--t4)' }}>
-                <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
-                <div style={{ fontSize: '.72rem' }}>No sell orders yet</div>
-              </div>
-            ) : sellOrders.map(o => {
-              const remaining = o.amount - o.amountFilled;
-              const totalCostSats = Math.ceil(remaining * o.pricePerToken);
-              const pct = o.amount > 0 ? (o.amountFilled / o.amount) * 100 : 0;
-              return (
-                <div key={o.id} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.68rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ color: 'var(--t2)' }}>{fmtNum(remaining)} <span style={{ color: 'var(--t4)', fontSize: '.58rem' }}>/ {fmtNum(o.amount)}</span></span>
-                    <span style={{ color: '#ef4444', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken} sat/tok</span>
-                  </div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--o)', marginBottom: 4 }}>
-                    Total: <strong>{fmtNum(totalCostSats)} sats</strong> ({(totalCostSats / 1e8).toFixed(6)} BTC)
-                  </div>
-                  {pct > 0 && (
-                    <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,.06)', marginBottom: 4 }}>
-                      <div style={{ height: '100%', borderRadius: 2, background: 'rgba(239,68,68,.4)', width: `${pct}%` }} />
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{o.creator.slice(0, 10)}... &middot; {timeAgo(o.createdAt)}</span>
-                    {o.creator === senderHex ? (
-                      <button onClick={() => handleCancel(o.id)}
-                        style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {fillId === o.id ? (
-                          <>
+              <div className="ob-empty">No sell orders yet</div>
+            ) : (
+              <div className="ob-scroll">
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 80px 1fr 45px auto' }}>
+                  <span>Amount</span><span className="ob-r">Price</span><span className="ob-r">Total</span>
+                  <span className="ob-r">Fill%</span><span className="ob-r">Action</span>
+                </div>
+                {sellOrders.map(o => {
+                  const remaining = o.amount - o.amountFilled;
+                  const totalCostSats = Math.ceil(remaining * o.pricePerToken);
+                  const pct = o.amount > 0 ? Math.round((o.amountFilled / o.amount) * 100) : 0;
+                  return (
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 80px 1fr 45px auto' }}>
+                      <span className="ob-mono" style={{ color: 'var(--t2)' }}>
+                        {fmtNum(remaining)} <span style={{ fontSize: '.52rem', color: 'var(--t4)' }}>/ {fmtNum(o.amount)}</span>
+                      </span>
+                      <span className="ob-mono ob-r" style={{ color: '#ef4444', fontWeight: 700 }}>{o.pricePerToken}</span>
+                      <span className="ob-mono ob-r" style={{ color: 'var(--o)', fontSize: '.62rem' }}>{fmtNum(totalCostSats)} <span style={{ fontSize: '.5rem', color: 'var(--t4)' }}>sat</span></span>
+                      <span className="ob-r" style={{ position: 'relative' }}>
+                        <span style={{ fontSize: '.56rem', color: 'var(--t3)' }}>{pct}%</span>
+                        {pct > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, borderRadius: 1, background: 'rgba(255,255,255,.06)' }}>
+                          <div style={{ height: '100%', borderRadius: 1, background: 'rgba(239,68,68,.4)', width: `${pct}%` }} />
+                        </div>}
+                      </span>
+                      <div className="ob-act">
+                        {o.creator === senderHex ? (
+                          <button onClick={() => handleCancel(o.id)}
+                            style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.54rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
+                        ) : fillId === o.id ? (
+                          <div style={{ display: 'flex', gap: 3 }}>
                             <input value={fillAmount} onChange={e => setFillAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                              placeholder={`Max ${fmtNum(remaining)}`}
-                              style={{ ...iStyle, width: 90, padding: '3px 6px', fontSize: '.6rem' }} />
+                              placeholder={`${fmtNum(remaining)}`}
+                              style={{ ...iStyle, width: 70, padding: '2px 4px', fontSize: '.56rem' }} />
                             <button onClick={() => handleFill(o.id, parseFloat(fillAmount) || remaining)} disabled={filling}
-                              style={{ padding: '3px 8px', borderRadius: 6, background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.2)', color: 'var(--g)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>
-                              {filling ? '...' : 'OK'}
+                              style={{ padding: '2px 6px', borderRadius: 5, background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.2)', color: 'var(--g)', fontSize: '.54rem', cursor: 'pointer' }}>
+                              {filling ? '..' : 'OK'}
                             </button>
                             <button onClick={() => { setFillId(null); setFillAmount(''); }}
-                              style={{ padding: '3px 6px', borderRadius: 6, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t4)', fontSize: '.58rem', cursor: 'pointer' }}>X</button>
-                          </>
+                              style={{ padding: '2px 4px', borderRadius: 5, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t4)', fontSize: '.54rem', cursor: 'pointer' }}>X</button>
+                          </div>
                         ) : (
-                          <>
+                          <div style={{ display: 'flex', gap: 3 }}>
                             <button onClick={() => handleFill(o.id)} disabled={filling}
-                              className="lbtn" style={{ padding: '3px 10px', fontSize: '.58rem' }}>Buy All</button>
+                              className="lbtn" style={{ padding: '2px 8px', fontSize: '.54rem' }}>Buy</button>
                             <button onClick={() => setFillId(o.id)}
-                              style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid var(--bd)', background: 'rgba(255,255,255,.03)', color: 'var(--t3)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Partial</button>
-                          </>
+                              style={{ padding: '2px 6px', borderRadius: 5, border: '1px solid var(--bd)', background: 'rgba(255,255,255,.03)', color: 'var(--t3)', fontSize: '.54rem', cursor: 'pointer' }}>Part</button>
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* BUY ORDERS (bids) — trustless 3-step flow */}
-          <div className="P" style={{ padding: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--g)', marginBottom: 10 }}>Buy Orders (Bids) <span style={{ fontSize: '.56rem', fontWeight: 400, color: 'var(--t4)' }}>Trustless</span></div>
+          {/* BUY ORDERS (bids) */}
+          <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 10px 0', fontWeight: 700, fontSize: '.82rem', color: 'var(--g)' }}>Buy Orders (Bids)</div>
             {buyOrders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 32, color: 'var(--t4)' }}>
-                <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
-                <div style={{ fontSize: '.72rem' }}>No buy orders yet</div>
-              </div>
-            ) : buyOrders.map(o => {
-              const remaining = o.amount - o.amountFilled;
-              const totalCostSats = Math.ceil(remaining * o.pricePerToken);
-              const pct = o.amount > 0 ? (o.amountFilled / o.amount) * 100 : 0;
-              const isMyBuyOrder = o.creator === senderHex;
-              const isAccepted = o.status === 'accepted';
-              return (
-                <div key={o.id} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.68rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ color: 'var(--t2)' }}>
-                      Wants: {fmtNum(remaining)} <span style={{ color: 'var(--t4)', fontSize: '.58rem' }}>/ {fmtNum(o.amount)}</span>
-                      {isAccepted && (
-                        <span style={{ marginLeft: 6, padding: '1px 5px', borderRadius: 4, background: 'rgba(247,147,26,.12)', color: 'var(--o)', fontSize: '.5rem', fontWeight: 700 }}>ACCEPTED</span>
-                      )}
-                    </span>
-                    <span style={{ color: 'var(--g)', fontFamily: 'var(--fm)', fontWeight: 700 }}>{o.pricePerToken} sat/tok</span>
-                  </div>
-                  <div style={{ fontSize: '.6rem', color: 'var(--o)', marginBottom: 4 }}>
-                    Pays: <strong>{fmtNum(totalCostSats)} sats</strong> ({(totalCostSats / 1e8).toFixed(6)} BTC)
-                  </div>
-                  {pct > 0 && (
-                    <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,.06)', marginBottom: 4 }}>
-                      <div style={{ height: '100%', borderRadius: 2, background: 'rgba(16,185,129,.4)', width: `${pct}%` }} />
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{o.creator.slice(0, 10)}... &middot; {timeAgo(o.createdAt)}</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {isAccepted && isMyBuyOrder ? (
-                        <>
-                          <button onClick={() => handleExecuteBuyOrder(o.id)} disabled={filling}
-                            className="lbtn" style={{ padding: '3px 10px', fontSize: '.58rem' }}>
-                            {filling ? '...' : `Pay ${fmtNum(Math.ceil(remaining * o.pricePerToken))} sats`}
-                          </button>
-                          <button onClick={() => handleCancel(o.id)}
-                            style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
-                        </>
-                      ) : isMyBuyOrder || (isAccepted && o.seller === senderHex) ? (
-                        <button onClick={() => handleCancel(o.id)}
-                          style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>Cancel</button>
-                      ) : !isAccepted ? (
-                        <button onClick={() => handleFill(o.id)} disabled={filling}
-                          style={{ padding: '3px 10px', borderRadius: 6, background: 'rgba(247,147,26,.1)', border: '1px solid rgba(247,147,26,.2)', color: 'var(--o)', fontSize: '.58rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>
-                          {filling ? '...' : 'Accept (Lock Tokens)'}
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '.52rem', color: 'var(--t4)' }}>Awaiting buyer payment</span>
-                      )}
-                    </div>
-                  </div>
-                  {isAccepted && !isMyBuyOrder && o.seller !== senderHex && (
-                    <div style={{ marginTop: 4, fontSize: '.52rem', color: 'var(--t4)', fontStyle: 'italic' }}>
-                      Tokens locked by seller. Waiting for buyer to pay BTC.
-                    </div>
-                  )}
+              <div className="ob-empty">No buy orders yet</div>
+            ) : (
+              <div className="ob-scroll">
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 80px 1fr 55px auto' }}>
+                  <span>Wants</span><span className="ob-r">Price</span><span className="ob-r">Pays</span>
+                  <span>Status</span><span className="ob-r">Action</span>
                 </div>
-              );
-            })}
+                {buyOrders.map(o => {
+                  const remaining = o.amount - o.amountFilled;
+                  const totalCostSats = Math.ceil(remaining * o.pricePerToken);
+                  const isMyBuyOrder = o.creator === senderHex;
+                  const isAccepted = o.status === 'accepted';
+                  return (
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 80px 1fr 55px auto' }}>
+                      <span className="ob-mono" style={{ color: 'var(--t2)' }}>
+                        {fmtNum(remaining)} <span style={{ fontSize: '.52rem', color: 'var(--t4)' }}>/ {fmtNum(o.amount)}</span>
+                      </span>
+                      <span className="ob-mono ob-r" style={{ color: 'var(--g)', fontWeight: 700 }}>{o.pricePerToken}</span>
+                      <span className="ob-mono ob-r" style={{ color: 'var(--o)', fontSize: '.62rem' }}>{fmtNum(totalCostSats)} <span style={{ fontSize: '.5rem', color: 'var(--t4)' }}>sat</span></span>
+                      <span>
+                        {isAccepted
+                          ? <span className="ob-badge" style={{ background: 'rgba(247,147,26,.12)', color: 'var(--o)' }}>ACCEPTED</span>
+                          : <span className="ob-badge" style={{ background: 'rgba(16,185,129,.1)', color: 'var(--g)' }}>OPEN</span>}
+                      </span>
+                      <div className="ob-act">
+                        {isAccepted && isMyBuyOrder ? (
+                          <>
+                            <button onClick={() => handleExecuteBuyOrder(o.id)} disabled={filling}
+                              className="lbtn" style={{ padding: '2px 8px', fontSize: '.54rem' }}>
+                              {filling ? '..' : `Pay ${fmtNum(totalCostSats)}`}
+                            </button>
+                            <button onClick={() => handleCancel(o.id)}
+                              style={{ padding: '2px 6px', borderRadius: 5, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.54rem', cursor: 'pointer' }}>X</button>
+                          </>
+                        ) : isMyBuyOrder || (isAccepted && o.seller === senderHex) ? (
+                          <button onClick={() => handleCancel(o.id)}
+                            style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.54rem', cursor: 'pointer' }}>Cancel</button>
+                        ) : !isAccepted ? (
+                          <button onClick={() => handleFill(o.id)} disabled={filling}
+                            style={{ padding: '2px 8px', borderRadius: 5, background: 'rgba(247,147,26,.1)', border: '1px solid rgba(247,147,26,.2)', color: 'var(--o)', fontSize: '.54rem', cursor: 'pointer', fontWeight: 600 }}>
+                            {filling ? '..' : 'Accept'}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Awaiting pay</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -870,30 +858,35 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* My orders */}
+        {/* My orders — table */}
         {myOrders.length > 0 && (
-          <div className="P" style={{ padding: 14 }}>
-            <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 8 }}>My Orders ({myOrders.length})</div>
-            {myOrders.map(o => (
-              <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.66rem' }}>
-                <div>
-                  <span style={{ color: o.type === 'sell' ? '#ef4444' : 'var(--g)', fontWeight: 700, marginRight: 6 }}>{o.type.toUpperCase()}</span>
-                  <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{fmtNum(o.amountFilled)}/{fmtNum(o.amount)}</span>
-                  <span style={{ color: 'var(--t4)', marginLeft: 6 }}>@ {o.pricePerToken} sat</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{
-                    padding: '2px 6px', borderRadius: 4, fontSize: '.52rem', fontWeight: 700,
-                    background: o.status === 'active' ? 'rgba(16,185,129,.1)' : 'rgba(255,255,255,.05)',
-                    color: o.status === 'active' ? 'var(--g)' : 'var(--t4)',
-                  }}>{o.status}</span>
-                  {o.status === 'active' && (
-                    <button onClick={() => handleCancel(o.id)}
-                      style={{ padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.52rem', cursor: 'pointer' }}>Cancel</button>
-                  )}
-                </div>
+          <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 10px 0', fontSize: '.72rem', fontWeight: 700 }}>My Orders ({myOrders.length})</div>
+            <div className="ob-scroll">
+              <div className="ob-hdr" style={{ gridTemplateColumns: '50px 1fr 80px 60px auto' }}>
+                <span>Type</span><span>Filled</span><span className="ob-r">Price</span>
+                <span>Status</span><span className="ob-r">Action</span>
               </div>
-            ))}
+              {myOrders.map(o => (
+                <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '50px 1fr 80px 60px auto' }}>
+                  <span style={{ color: o.type === 'sell' ? '#ef4444' : 'var(--g)', fontWeight: 700, fontSize: '.62rem' }}>{o.type.toUpperCase()}</span>
+                  <span className="ob-mono" style={{ color: 'var(--t2)' }}>{fmtNum(o.amountFilled)}/{fmtNum(o.amount)}</span>
+                  <span className="ob-mono ob-r" style={{ color: 'var(--t3)' }}>{o.pricePerToken} <span style={{ fontSize: '.5rem' }}>sat</span></span>
+                  <span>
+                    <span className="ob-badge" style={{
+                      background: o.status === 'active' ? 'rgba(16,185,129,.1)' : 'rgba(255,255,255,.05)',
+                      color: o.status === 'active' ? 'var(--g)' : 'var(--t4)',
+                    }}>{o.status}</span>
+                  </span>
+                  <div className="ob-act">
+                    {o.status === 'active' && (
+                      <button onClick={() => handleCancel(o.id)}
+                        style={{ padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(239,68,68,.2)', background: 'transparent', color: '#ef4444', fontSize: '.54rem', cursor: 'pointer' }}>Cancel</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

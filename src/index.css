@@ -3244,3 +3244,25 @@ input:focus-visible, textarea:focus-visible {
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 999px }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.12) }
 ::-webkit-scrollbar-track { background: transparent }
+
+/* ═══ ORDER BOOK TABLE ═══ */
+.ob-hdr { display: grid; gap: 4px; padding: 6px 10px;
+  font-size: .58rem; color: var(--t4); text-transform: uppercase;
+  letter-spacing: .06em; font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  position: sticky; top: 0; background: rgba(8,8,16,.9); z-index: 1; }
+.ob-row { display: grid; gap: 4px; padding: 7px 10px;
+  align-items: center; font-size: .68rem;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+  transition: background .15s; }
+.ob-row:hover { background: rgba(255,255,255,.03); }
+.ob-r { text-align: right; }
+.ob-mono { font-family: var(--fm); }
+.ob-scroll { max-height: 420px; overflow-y: auto; }
+.ob-empty { text-align: center; padding: 28px 10px; color: var(--t4); font-size: .72rem; }
+.ob-badge { padding: 2px 7px; border-radius: 5px; font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.ob-act { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+@media (max-width: 600px) {
+  .ob-hdr, .ob-row { font-size: .58rem; padding: 5px 6px; min-width: 520px; }
+  .ob-scroll { overflow-x: auto; }
+}

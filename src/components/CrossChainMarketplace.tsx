@@ -511,27 +511,58 @@ const CrossChainMarketplace: React.FC = () => {
   const receiveUnit = formDirection === SwapDirection.BTC_TO_FB ? 'FB' : 'BTC';
   const expiryOpts = suggestedExpiryBlocks(1);
 
-  // Persist rates in localStorage (numeric for calculations)
-  const saveRate = useCallback((orderId: string, rateNum: number, receiveSats: bigint) => {
+  // Server-synced rates (visible to all users)
+  const API_URL = import.meta.env.VITE_API_URL || '';
+  const [serverRates, setServerRates] = useState<Record<string, { send_sats: string; receive_sats: string; send_unit: string; receive_unit: string; rate: number }>>({});
+
+  // Fetch rates from server on mount
+  useEffect(() => {
+    if (!API_URL) return;
+    (async () => {
+      try {
+        const r = await fetch(`${API_URL}/api/orders/rates`, { signal: AbortSignal.timeout(5000) });
+        if (r.ok) setServerRates(await r.json());
+      } catch { /* */ }
+    })();
+  }, [API_URL]);
+
+  // Save rate to server + localStorage
+  const saveRate = useCallback((orderId: string, rateNum: number, receiveSats: bigint, sendSats: bigint, sUnit: string, rUnit: string) => {
+    // localStorage
     try {
       const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
       stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
     } catch { /* */ }
-  }, []);
+    // Server (non-blocking)
+    if (API_URL) {
+      fetch(`${API_URL}/api/orders/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, sendSats: sendSats.toString(), receiveSats: receiveSats.toString(), sendUnit: sUnit, receiveUnit: rUnit, rate: rateNum }),
+      }).then(r => {
+        if (r.ok) setServerRates(prev => ({ ...prev, [orderId]: { send_sats: sendSats.toString(), receive_sats: receiveSats.toString(), send_unit: sUnit, receive_unit: rUnit, rate: rateNum } }));
+      }).catch(() => {});
+    }
+  }, [API_URL]);
+
+  // Get rate: server first, then localStorage fallback
   const getRate = useCallback((orderId: string): { rate: number; receiveSats: bigint } | null => {
+    // Server rates (available to all users)
+    const sr = serverRates[orderId];
+    if (sr) return { rate: sr.rate, receiveSats: BigInt(sr.receive_sats || '0') };
+    // localStorage fallback (own orders)
     try {
       const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
       const v = stored[orderId];
       if (!v) return null;
-      // Backward compat with old string format "1 BTC = 0.98 FB"
       if (typeof v === 'string') {
         const m = v.match(/= ([\d.]+)/);
         return m ? { rate: parseFloat(m[1]), receiveSats: 0n } : null;
       }
       return { rate: v.r, receiveSats: BigInt(v.rx || '0') };
     } catch { return null; }
-  }, []);
+  }, [serverRates]);
 
   // ── Create Order ──
   const handleCreate = useCallback(async () => {
@@ -573,7 +604,7 @@ const CrossChainMarketplace: React.FC = () => {
 
       // Save preimage & rate with actual contract ID
       savePreimage(actualNextId, preimage);
-      if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats);
+      if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats, formAmountSats, sendUnit, receiveUnit);
 
       setCreateStep('Waiting for confirmation...');
       toast(`Order #${actualNextId} created! Waiting for block confirmation...`, 'success');
@@ -1269,31 +1300,36 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* Swap flow: Sends → Gets */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: '.72rem', color: 'var(--t2)', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Swap details: Pays → Gets */}
+        <div style={{
+          marginTop: 8, padding: '8px 12px', borderRadius: 8,
+          background: receiveAmt ? 'rgba(34,197,94,.06)' : 'rgba(255,255,255,.03)',
+          border: `1px solid ${receiveAmt ? 'rgba(34,197,94,.1)' : 'rgba(255,255,255,.06)'}`,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem', marginBottom: receiveAmt ? 4 : 0 }}>
+            <span style={{ color: 'var(--t2)' }}>Pays:</span>
+            <b>{satsToBtc(order.amountSats, oSendUnit)}</b>
+          </div>
           {receiveAmt ? (
-            <span>
-              Pays <b>{satsToBtc(order.amountSats, oSendUnit)}</b>
-              {' → '}
-              Gets <b style={{ color: 'var(--g)' }}>{satsToBtc(receiveAmt, oWantUnit)}</b>
-            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem' }}>
+              <span style={{ color: 'var(--t2)' }}>Gets:</span>
+              <b style={{ color: 'var(--g)' }}>{satsToBtc(receiveAmt, oWantUnit)}</b>
+            </div>
           ) : (
-            <span>Sends <b>{satsToBtc(order.amountSats, oSendUnit)}</b></span>
+            <div style={{ fontSize: '.66rem', color: 'var(--t4)', marginTop: 2 }}>
+              Receive amount not specified
+            </div>
           )}
-          <span style={{ color: 'var(--t3)' }}>|</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 6, fontSize: '.68rem', color: 'var(--t3)', flexWrap: 'wrap' }}>
           <span>Fee: <b style={{ color: 'var(--o)' }}>+{satsToBtc(feeSats)}</b></span>
           {rateInfo && rateInfo.rate > 0 && (
-            <span style={{ fontSize: '.66rem', color: 'var(--t3)' }}>
-              1 {oSendUnit} = {rateInfo.rate.toFixed(4)} {oWantUnit}
-            </span>
+            <span>Rate: 1 {oSendUnit} = {rateInfo.rate.toFixed(4)} {oWantUnit}</span>
           )}
           {order.expiry > 0 && (
-            <>
-              <span style={{ color: 'var(--t3)' }}>|</span>
-              <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
-                {isExpired ? 'EXPIRED' : formatBlockCountdown(blocksLeft)}
-              </span>
-            </>
+            <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
+              {isExpired ? 'EXPIRED' : formatBlockCountdown(blocksLeft)}
+            </span>
           )}
         </div>
 
@@ -1404,10 +1440,7 @@ const CrossChainMarketplace: React.FC = () => {
                 </button>
               )}
 
-              {/* Confirm with manual preimage input */}
-              {order.status === OrderStatus.Taken && !isExpired && !myPreimage && (
-                <PreimageInput orderId={order.id} onConfirm={handleConfirm} disabled={actioning} />
-              )}
+              {/* Confirm with manual preimage — only for advanced users in expanded view */}
 
               {/* Refund expired */}
               {isExpired && order.status === OrderStatus.Taken && (

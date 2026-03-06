@@ -100,7 +100,7 @@ class FractalSwapRelayer {
             this.wallet = mnemonicObj.deriveOPWallet(undefined, 0);
 
             // Provider for SDK contract calls
-            this.sdkProvider = new opnet.JSONRpcProvider(OPNET_BASE, this.network);
+            this.sdkProvider = new opnet.JSONRpcProvider({ url: OPNET_BASE, network: this.network });
             this.getContract = opnet.getContract;
             this.TransactionOutputFlags = opnet.TransactionOutputFlags;
 

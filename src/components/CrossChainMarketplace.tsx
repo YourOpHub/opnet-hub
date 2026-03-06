@@ -1190,7 +1190,7 @@ const CrossChainMarketplace: React.FC = () => {
         color: isBtcToFb ? '#f59e0b' : '#8b5cf6',
         padding: '4px 10px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
       }}>
-        {isBtcToFb ? 'BTC → FB' : 'FB → BTC'}
+        {isBtcToFb ? 'Send BTC, Get FB' : 'Send FB, Get BTC'}
       </span>
     );
   };
@@ -1202,8 +1202,8 @@ const CrossChainMarketplace: React.FC = () => {
     const myPreimage = preimageStore[order.id];
     const isMyOrder = walletAddress && order.creator.includes(walletAddress.replace('opt1', '').slice(-16));
     const feeSats = (order.amountSats * BigInt(feeBps)) / 10000n;
-    // When direction is BTC_TO_FB: maker sends BTC, wants FB. When FB_TO_BTC: maker sends FB, wants BTC.
-    const amountUnit = order.direction === SwapDirection.BTC_TO_FB ? 'BTC' : 'FB';
+    // amountSats is always BTC locked in the contract
+    const amountUnit = 'BTC' as const;
     const orderRate = getRate(order.id);
 
     return (
@@ -1313,7 +1313,8 @@ const CrossChainMarketplace: React.FC = () => {
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               {/* Take order — for open orders (not own) */}
               {order.status === OrderStatus.Open && !isExpired && !isMyOrder && (
-                <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)} onTake={handleTake} disabled={actioning} />
+                <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)} onTake={handleTake} disabled={actioning}
+                  defaultAddr={order.direction === SwapDirection.BTC_TO_FB ? (unisat.address || '') : (walletAddress || '')} />
               )}
 
               {/* Confirm swap — reveal preimage (for taken orders) */}
@@ -1904,11 +1905,16 @@ const CrossChainMarketplace: React.FC = () => {
 
 /** Inline Take Order button with taker address input */
 const TakeOrderButton: React.FC<{
-  orderId: string; feeSats: number;
+  orderId: string; feeSats: number; defaultAddr?: string;
   onTake: (id: string, takerAddr: string) => void; disabled: boolean;
-}> = ({ orderId, feeSats, onTake, disabled }) => {
+}> = ({ orderId, feeSats, onTake, disabled, defaultAddr }) => {
   const [show, setShow] = useState(false);
-  const [addr, setAddr] = useState('');
+  const [addr, setAddr] = useState(defaultAddr || '');
+
+  // Update addr when defaultAddr changes and user hasn't typed
+  React.useEffect(() => {
+    if (defaultAddr && !addr) setAddr(defaultAddr);
+  }, [defaultAddr]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!show) {
     return (

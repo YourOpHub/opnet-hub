@@ -42,10 +42,11 @@ const TokenListItem: React.FC<{
   const [c1] = hashColor(token.symbol);
   const imgSrc = token.image || genLogo(token.symbol);
   const isReal = token.address.startsWith('opt1sq');
+  const isPending = token.status === 'pending_confirm';
 
   return (
     <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
-      style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}` }}>
+      style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}`, opacity: isPending ? 0.5 : 1 }}>
       <img src={imgSrc} alt="" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -53,7 +54,8 @@ const TokenListItem: React.FC<{
             {token.symbol}
           </span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {isReal && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', flexShrink: 0 }} />}
+            {isPending && <span style={{ fontSize: '.5rem', color: 'var(--y)', fontWeight: 700 }}>PENDING</span>}
+            {!isPending && isReal && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', flexShrink: 0 }} />}
             {grad && <span style={{ fontSize: '.5rem', color: 'var(--g)', fontWeight: 700 }}>GRAD</span>}
           </div>
         </div>
@@ -177,7 +179,27 @@ const DeployModal: React.FC<{
         status: 'bonding', txHash: txid, trades: [], replies: [], likes: 0,
       };
 
+      token.status = 'pending_confirm';
       onCreated(token);
+      setStep('Waiting for on-chain confirmation (~5 min)...');
+
+      // Poll for contract to appear on-chain
+      const pollConfirm = async () => {
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 15000));
+          try {
+            const c = getContract<IOP20Contract>(token.address, OP20_ABI, provider, NETWORK);
+            const res = await c.maximumSupply();
+            if (!(res as CallResult).revert) {
+              token.status = 'bonding';
+              onCreated(token);
+              break;
+            }
+          } catch { /* not yet */ }
+        }
+      };
+      pollConfirm().catch(() => {});
+
       setStep(''); setDeploying(false);
       onClose();
     } catch (e) {
@@ -319,24 +341,67 @@ const Launchpad: React.FC = () => {
   const [adding, setAdding] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('hot24h');
 
-  // Load from server on mount (social/registry layer)
+  // Load from server + OPScan on mount
   useEffect(() => {
     (async () => {
       const available = await isServerAvailable();
       setUseServer(available);
+      let merged: LaunchToken[] = loadTokens();
+
+      // Load from our API
       if (available) {
         const serverTokens = await fetchTokens();
         if (serverTokens && serverTokens.length > 0) {
-          const local = loadTokens();
-          const merged = serverTokens.map(st => {
-            const lt = local.find(l => l.address === st.address);
+          merged = serverTokens.map(st => {
+            const lt = merged.find(l => l.address === st.address);
             return lt ? { ...lt, replies: st.replies || lt.replies, likes: st.likes || lt.likes } : st;
           });
+          const local = loadTokens();
           local.forEach(lt => { if (!merged.find(m => m.address === lt.address)) merged.push(lt); });
-          setTokens(merged);
-          saveTokens(merged);
         }
       }
+
+      // Load from OPScan API
+      try {
+        const resp = await fetch('https://api.opscan.org/v1/op_testnet/tokens');
+        if (resp.ok) {
+          const data = await resp.json();
+          const results = data?.results || data || [];
+          if (Array.isArray(results)) {
+            for (const t of results) {
+              const meta = t.op20Metadata || {};
+              if (!meta.symbol || meta.isPool) continue;
+              // Convert hex address to opt1sq format
+              const hexAddr = String(t.address || '').replace('0x', '');
+              // Skip if already in list (match by hex suffix)
+              if (merged.some(m => m.address === hexAddr || hexAddr.endsWith(m.address.replace('opt1sq', '').slice(-20)))) continue;
+              const maxSup = Number(meta.maximumSupply || 0) / Math.pow(10, meta.decimals || 8);
+              const totalSup = Number(meta.totalSupply || 0) / Math.pow(10, meta.decimals || 8);
+              const opToken: LaunchToken = {
+                address: t.address || hexAddr,
+                name: meta.name || meta.symbol || '?',
+                symbol: meta.symbol || '?',
+                decimals: meta.decimals || 8,
+                totalSupply: maxSup,
+                publicMintSupply: maxSup / 2,
+                maxMintPerTx: Math.floor(maxSup * 0.01),
+                mintedSupply: totalSup > maxSup / 2 ? totalSup - maxSup / 2 : 0,
+                creator: t.deployerAddress || 'unknown',
+                createdAt: t.deployedAt || Date.now(),
+                description: `${meta.name} — from OPScan`,
+                image: null,
+                status: 'bonding',
+                txHash: t.deployTransactionId || '',
+                trades: [], replies: [], likes: 0,
+              };
+              merged.push(opToken);
+            }
+          }
+        }
+      } catch (e) { console.warn('[LP] OPScan fetch failed:', e); }
+
+      setTokens(merged);
+      saveTokens(merged);
     })();
   }, []);
 
@@ -466,10 +531,21 @@ const Launchpad: React.FC = () => {
       const refreshed = updated.find(t => t.address === selected.address);
       if (refreshed) setSelected(refreshed);
 
-      setMintStep('Minted! Syncing...');
-      setTimeout(() => { syncToken(selected.address); syncBalance(selected.address); }, 8000);
-      setTimeout(() => setMintStep(''), 6000);
+      setMintStep('TX broadcast! Waiting for confirmation...');
       setMintAmt('');
+      // Poll for balance change to confirm
+      const startBal = userBal;
+      const pollMint = async () => {
+        for (let i = 0; i < 20; i++) {
+          await new Promise(r => setTimeout(r, 15000));
+          await syncToken(selected.address);
+          await syncBalance(selected.address);
+          if (userBal !== startBal) break;
+        }
+        setMintStep('Confirmed!');
+        setTimeout(() => setMintStep(''), 4000);
+      };
+      pollMint().catch(() => { setMintStep(''); });
     } catch (e) {
       console.error('[LP Mint]', e);
       setMintStep(formatTxError(e));
@@ -697,21 +773,36 @@ const Launchpad: React.FC = () => {
             })()}
 
             {/* ── Mint Panel ── */}
-            {!grad ? (
+            {selected.status === 'pending_confirm' ? (
+              <div className="P" style={{ padding: 14, marginBottom: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', marginBottom: 6, animation: 'spin 2s linear infinite' }}>&#x23F3;</div>
+                <div style={{ fontWeight: 700, color: 'var(--y)', fontSize: '.82rem', marginBottom: 4 }}>Awaiting Confirmation</div>
+                <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>
+                  Contract is being deployed. Wait ~5 blocks for on-chain confirmation before minting.
+                </div>
+              </div>
+            ) : !grad ? (
               <div className="P" style={{ padding: 14, marginBottom: 12 }}>
                 <div className="Lb" style={{ marginBottom: 8 }}>Public Mint</div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                  <input type="text" inputMode="numeric" value={mintAmt} onChange={e => setMintAmt(e.target.value.replace(/[^0-9.]/g, ''))}
-                    placeholder={`Amount (max ${fmtNum(selected.maxMintPerTx)})`}
-                    style={{ flex: 1, padding: '10px 12px', borderRadius: 12, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.8rem', fontFamily: 'var(--fm)', outline: 'none' }} />
-                </div>
-                <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
-                  {[1000, 10000, 100000, selected.maxMintPerTx].filter(v => v > 0).map((v, i) => (
-                    <button key={i} onClick={() => setMintAmt(String(v))}
-                      style={{ flex: 1, padding: '5px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.56rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
-                      {v === selected.maxMintPerTx ? 'MAX' : fmtNum(v)}
-                    </button>
-                  ))}
+                <div style={{ marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem', color: 'var(--t3)', marginBottom: 3 }}>
+                    <span>Amount</span>
+                    <span style={{ fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>
+                      {mintAmt ? fmtNum(Number(mintAmt)) : '0'} / {fmtNum(selected.maxMintPerTx)}
+                    </span>
+                  </div>
+                  <input type="range" min={0} max={selected.maxMintPerTx} step={Math.max(1, Math.floor(selected.maxMintPerTx / 100))}
+                    value={Number(mintAmt) || 0}
+                    onChange={e => setMintAmt(e.target.value === '0' ? '' : e.target.value)}
+                    style={{ width: '100%', accentColor: selColor, marginBottom: 4 }} />
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[25, 50, 75, 100].map(pct => (
+                      <button key={pct} onClick={() => setMintAmt(String(Math.floor(selected.maxMintPerTx * pct / 100)))}
+                        style={{ flex: 1, padding: '4px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.56rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
+                        {pct}%
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <button onClick={handleMint} disabled={minting || !mintAmt}
                   className="lbtn" style={{ width: '100%', opacity: minting ? 0.6 : 1 }}>

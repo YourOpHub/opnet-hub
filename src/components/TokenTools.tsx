@@ -152,15 +152,17 @@ function TokenExplorer() {
 
       if (known) {
         // Known token — use our local database + on-chain supply
-        const supplyStr = supply > 0n ? formatBigNum(String(Number(supply) / Math.pow(10, known.decimals))) : '—';
+        const num = Number(supply) / Math.pow(10, known.decimals);
+        const supplyStr = num > 0 ? num.toLocaleString(undefined, { maximumFractionDigits: 2 }) : (supply > 0n ? formatBigNum(String(supply)) : '0');
         setResult({ name: known.name, symbol: known.symbol, decimals: known.decimals, supply: supplyStr, isContract: true, bytecodeLen, type: known.type });
       } else if (isContract) {
         // Unknown contract — try OP-20 info from storage
         const info = await opnet.getOP20Info(a);
         if (info && info.name !== 'Unknown' && info.symbol !== '?') {
-          setResult({ name: info.name, symbol: info.symbol, decimals: info.decimals, supply: info.totalSupply !== '0' ? formatBigNum(info.totalSupply) : '—', isContract, bytecodeLen, type: 'OP-20' });
+          const supStr = info.totalSupply !== '0' ? formatBigNum(info.totalSupply) : '0';
+          setResult({ name: info.name, symbol: info.symbol, decimals: info.decimals, supply: supStr, isContract, bytecodeLen, type: 'OP-20' });
         } else {
-          const supplyStr = supply > 0n ? formatBigNum(String(supply)) : '—';
+          const supplyStr = supply > 0n ? formatBigNum(String(supply)) : '0';
           setResult({ name: 'Unknown Contract', symbol: '—', decimals: 8, supply: supplyStr, isContract, bytecodeLen, type: 'Smart Contract' });
           setErr('Contract found. OP-20 metadata not available (may be non-standard).');
         }
@@ -186,12 +188,13 @@ function TokenExplorer() {
         const isContract = !!code && !!(code as { bytecode?: string }).bytecode;
         const bytecodeLen = isContract && (code as { bytecode?: string }).bytecode ? (code as { bytecode: string }).bytecode.length / 2 : 0;
         if (known) {
-          const supplyStr = supply > 0n ? formatBigNum(String(Number(supply) / Math.pow(10, known.decimals))) : '—';
+          const num = Number(supply) / Math.pow(10, known.decimals);
+          const supplyStr = num > 0 ? num.toLocaleString(undefined, { maximumFractionDigits: 2 }) : (supply > 0n ? formatBigNum(String(supply)) : '0');
           setResult({ name: known.name, symbol: known.symbol, decimals: known.decimals, supply: supplyStr, isContract: true, bytecodeLen, type: known.type });
         } else if (isContract) {
-          setResult({ name: 'Unknown', symbol: '—', decimals: 8, supply: supply > 0n ? formatBigNum(String(supply)) : '—', isContract, bytecodeLen, type: 'Smart Contract' });
+          setResult({ name: 'Unknown', symbol: '—', decimals: 8, supply: supply > 0n ? formatBigNum(String(supply)) : '0', isContract, bytecodeLen, type: 'Smart Contract' });
         } else {
-          setResult({ name: '—', symbol: '—', decimals: 0, supply: '—', isContract: false });
+          setResult({ name: '—', symbol: '—', decimals: 0, supply: '0', isContract: false });
           setErr('No contract at this address.');
         }
       }).catch(e => setErr(e instanceof Error ? e.message : 'Failed'))
@@ -427,7 +430,7 @@ function BlockExplorer() {
         setBlockNum(String(h));
         // Load last 8 blocks for visual chain
         const blocks: Array<{ num: number; txCount: number; hash: string }> = [];
-        for (let i = h; i > Math.max(0, h - 8); i--) {
+        for (let i = h; i > Math.max(0, h - 15); i--) {
           const b = await opnet.getBlockByNumber(i, false).catch(() => null);
           if (b) {
             const txs = Array.isArray(b.transactions) ? (b.transactions as unknown[]).length : 0;
@@ -498,7 +501,7 @@ function BlockExplorer() {
               const selected = blockNum === String(b.num);
               const barH = Math.max(20, Math.min(60, b.txCount * 8 + 20));
               return (
-                <div key={b.num} onClick={() => { setBlockNum(String(b.num)); setBlock(null); }}
+                <div key={b.num} onClick={() => { setBlockNum(String(b.num)); setBlock(null); setTimeout(() => { setLoading(true); opnet.getBlockByNumber(b.num, true).then(bl => { if (bl) setBlock(bl); }).catch(() => {}).finally(() => setLoading(false)); }, 0); }}
                   style={{
                     minWidth: 72, padding: '8px 6px', borderRadius: 10, textAlign: 'center', cursor: 'pointer',
                     background: selected ? 'rgba(247,147,26,.12)' : isLatest ? 'rgba(16,185,129,.06)' : 'rgba(255,255,255,.03)',
@@ -575,6 +578,7 @@ function UTXOSplitter() {
   const [splitting, setSplitting] = useState(false);
   const [step, setStep] = useState('');
   const [err, setErr] = useState('');
+  const [selectedUtxo, setSelectedUtxo] = useState<number | null>(null); // index into utxos array
 
   // Fetch UTXOs on mount when wallet connected
   const fetchUTXOs = useCallback(async () => {
@@ -593,14 +597,19 @@ function UTXOSplitter() {
 
   useEffect(() => { fetchUTXOs(); }, [fetchUTXOs]);
 
-  const totalSats = utxos.reduce((s, u) => {
+  const getUtxoValue = (u: { value: string | number }) => {
     const v = typeof u.value === 'string' ? (u.value.startsWith('0x') ? Number(BigInt(u.value)) : Number(u.value)) : u.value;
-    return s + v;
-  }, 0);
+    return v;
+  };
+
+  const totalSats = utxos.reduce((s, u) => s + getUtxoValue(u), 0);
+
+  // If a specific UTXO is selected, split only that one
+  const splitSats = selectedUtxo !== null && utxos[selectedUtxo] ? getUtxoValue(utxos[selectedUtxo]) : totalSats;
 
   // Estimate: 250 vB overhead + 43 vB per output, at 2 sat/vB
   const estimatedFee = (250 + splitCount * 43) * 2;
-  const perSplitSats = totalSats > estimatedFee ? Math.floor((totalSats - estimatedFee) / splitCount) : 0;
+  const perSplitSats = splitSats > estimatedFee ? Math.floor((splitSats - estimatedFee) / splitCount) : 0;
   const isDust = perSplitSats < 546;
 
   // We use a dummy contract call with extraOutputs to create a self-transfer
@@ -644,8 +653,8 @@ function UTXOSplitter() {
         });
       }
       (tp as unknown as Record<string, unknown>).extraOutputs = extraOutputs;
-      // Increase max spend to cover all outputs
-      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = BigInt(totalSats);
+      // Increase max spend to cover the selected UTXO(s)
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = BigInt(splitSats);
 
       setStep(`Sending split tx (${splitCount} UTXOs of ~${perSplitSats.toLocaleString()} sats)...`);
       await (sim as CallResult).sendTransaction(tp);
@@ -693,6 +702,49 @@ function UTXOSplitter() {
               <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Total Sats</div>
             </div>
           </div>
+
+          {/* Visual UTXO grid */}
+          {utxos.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: '.68rem', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 }}>
+                Your UTXOs {selectedUtxo !== null ? `(#${selectedUtxo + 1} selected)` : '(click to select)'}
+              </label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {utxos.map((u, i) => {
+                  const v = getUtxoValue(u);
+                  const maxV = Math.max(...utxos.map(getUtxoValue));
+                  const size = Math.max(36, Math.min(80, 36 + (v / maxV) * 44));
+                  const isSelected = selectedUtxo === i;
+                  return (
+                    <div key={`${u.transactionId}:${u.outputIndex}`}
+                      onClick={() => setSelectedUtxo(isSelected ? null : i)}
+                      style={{
+                        width: size, height: size, borderRadius: 8, cursor: 'pointer',
+                        background: isSelected ? 'rgba(247,147,26,.2)' : 'rgba(255,255,255,.04)',
+                        border: `2px solid ${isSelected ? 'var(--o)' : 'rgba(255,255,255,.08)'}`,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all .15s', fontSize: '.52rem', color: isSelected ? 'var(--o)' : 'var(--t3)',
+                      }}>
+                      <div style={{ fontWeight: 700, fontSize: '.56rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v}
+                      </div>
+                      <div style={{ fontSize: '.44rem', color: 'var(--t4)' }}>sats</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedUtxo !== null && (
+                <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
+                  Splitting UTXO #{selectedUtxo + 1}: {getUtxoValue(utxos[selectedUtxo]).toLocaleString()} sats
+                </div>
+              )}
+              {selectedUtxo === null && utxos.length > 1 && (
+                <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
+                  No UTXO selected — will split all ({totalSats.toLocaleString()} sats)
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Split controls */}
           <div style={{ marginBottom: 12 }}>
@@ -784,6 +836,7 @@ function GasTool() {
   const [network, setNetwork] = useState<opnet.Network>(opnet.getNetwork());
   const [gas, setGas] = useState<opnet.GasParams | null>(null);
   const [mempool, setMempool] = useState<{ count?: number; opnetCount?: number; sizeBytes?: number } | null>(null);
+  const [pendingTxs, setPendingTxs] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -795,9 +848,14 @@ function GasTool() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [g, m] = await Promise.all([opnet.getGasParameters(), opnet.getMempoolInfo().catch(() => null)]);
+      const [g, m, pt] = await Promise.all([
+        opnet.getGasParameters(),
+        opnet.getMempoolInfo().catch(() => null),
+        opnet.getLatestPendingTxs(10).catch(() => []),
+      ]);
       setGas(g || null);
       setMempool(m || null);
+      if (Array.isArray(pt)) setPendingTxs(pt.slice(0, 10));
     } catch { setGas(null); }
     finally { setLoading(false); }
   }, []);
@@ -841,11 +899,27 @@ function GasTool() {
           {mempool && (
             <div style={{ marginTop: 10, padding: 10, background: 'rgba(14,165,233,.04)', borderRadius: 10 }}>
               <div style={{ fontSize: '.65rem', color: 'var(--c)', fontWeight: 700, marginBottom: 4 }}>Mempool</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 {mempool.count != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700 }}>{mempool.count}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Pending TXs</div></div>}
                 {mempool.opnetCount != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{mempool.opnetCount}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>OPNet TXs</div></div>}
                 {mempool.sizeBytes != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700 }}>{(mempool.sizeBytes / 1024 / 1024).toFixed(1)} MB</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Size</div></div>}
               </div>
+            </div>
+          )}
+          {pendingTxs.length > 0 && (
+            <div style={{ marginTop: 10, padding: 10, background: 'rgba(245,158,11,.04)', borderRadius: 10 }}>
+              <div style={{ fontSize: '.65rem', color: 'var(--y)', fontWeight: 700, marginBottom: 6 }}>Pending Transactions ({pendingTxs.length})</div>
+              {pendingTxs.map((tx, i) => {
+                const hash = String(tx.hash || tx.id || tx.transactionId || `tx-${i}`);
+                const from = String(tx.from || tx.sender || '').slice(0, 16);
+                const to = String(tx.to || tx.recipient || '').slice(0, 16);
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.58rem' }}>
+                    <span style={{ ...monoSm, color: 'var(--c)', fontSize: '.55rem' }}>{hash.slice(0, 14)}...</span>
+                    <span style={{ color: 'var(--t3)' }}>{from ? `${from}...` : ''} {to ? `→ ${to}...` : ''}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

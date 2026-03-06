@@ -21,7 +21,7 @@ export interface LaunchToken {
   website?: string;
   twitter?: string;
   telegram?: string;
-  status: 'bonding' | 'graduated';
+  status: 'bonding' | 'graduated' | 'pending_confirm';
   txHash?: string;
   trades: TradeRecord[];
   replies: Reply[];

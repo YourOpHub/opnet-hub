@@ -44,7 +44,7 @@ function saveSnapshot(snap: PoolSnapshot) {
 
 /** Simple SVG line chart */
 const MiniChart: React.FC<{ data: number[]; color: string; height?: number; label?: string }> = ({ data, color, height = 120, label }) => {
-  if (data.length < 2) return <div style={{ color: 'var(--t4)', fontSize: '.7rem', padding: 20, textAlign: 'center' }}>Collecting data... (refresh periodically)</div>;
+  if (data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
@@ -233,27 +233,29 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Price Chart */}
-      <div className="P" style={{ padding: 16, marginBottom: 16 }}>
-        <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
-        {snapshots.length > 0 && (
+      {/* Price Chart — only show with enough data */}
+      {rateHistory.length >= 2 && (
+        <div className="P" style={{ padding: 16, marginBottom: 16 }}>
+          <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '.55rem', color: 'var(--t4)' }}>
             <span>{new Date(snapshots[0].ts).toLocaleTimeString()}</span>
             <span>{snapshots.length} data points</span>
             <span>{new Date(snapshots[snapshots.length - 1].ts).toLocaleTimeString()}</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Reserve Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: 16 }}>
-        <div className="P" style={{ padding: 14 }}>
-          <MiniChart data={mineReserveHistory} color="#F7931A" label="MINE Reserve" height={100} />
+      {/* Reserve Charts — only show with enough data */}
+      {mineReserveHistory.length >= 2 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <div className="P" style={{ padding: 14 }}>
+            <MiniChart data={mineReserveHistory} color="#F7931A" label="MINE Reserve" height={100} />
+          </div>
+          <div className="P" style={{ padding: 14 }}>
+            <MiniChart data={vibeReserveHistory} color="#0ea5e9" label="VIBE Reserve" height={100} />
+          </div>
         </div>
-        <div className="P" style={{ padding: 14 }}>
-          <MiniChart data={vibeReserveHistory} color="#0ea5e9" label="VIBE Reserve" height={100} />
-        </div>
-      </div>
+      )}
 
       {/* Pool Details */}
       <div className="P" style={{ padding: 16, marginBottom: 16 }}>

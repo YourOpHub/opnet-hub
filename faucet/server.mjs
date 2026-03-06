@@ -20,6 +20,34 @@ import {
 } from '@btc-vision/transaction';
 import { networks } from '@btc-vision/bitcoin';
 
+/** Decode opt1 bech32m address to 32-byte witness program */
+function decodeOpt1Program(address) {
+    const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+    const sepIdx = address.lastIndexOf('1');
+    if (sepIdx < 1) throw new Error('Invalid bech32m address');
+    const data = address.slice(sepIdx + 1);
+    // Decode chars to 5-bit values (skip last 6 = checksum)
+    const values = [];
+    for (let i = 0; i < data.length - 6; i++) {
+        const v = CHARSET.indexOf(data[i]);
+        if (v === -1) throw new Error('Invalid bech32m character: ' + data[i]);
+        values.push(v);
+    }
+    // Skip first value (witness version), convert rest from 5-bit to 8-bit
+    const words = values.slice(1);
+    const bytes = [];
+    let acc = 0, bits = 0;
+    for (const w of words) {
+        acc = (acc << 5) | w;
+        bits += 5;
+        while (bits >= 8) {
+            bits -= 8;
+            bytes.push((acc >> bits) & 0xff);
+        }
+    }
+    return Buffer.from(bytes);
+}
+
 const PORT = parseInt(process.env.PORT || '3456');
 const RPC_URL = 'https://testnet.opnet.org';
 const network = { ...networks.testnet, bech32: networks.testnet.bech32Opnet };
@@ -38,13 +66,13 @@ const factory = new TransactionFactory();
 // These will be loaded from env or config file
 const TOKENS = {
     MINE: {
-        address: process.env.MINE_ADDRESS || 'opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa',
+        address: process.env.MINE_ADDRESS || 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa',
         decimals: 8,
         claimAmount: 100_000,      // 100K MINE per claim
         symbol: 'MINE',
     },
     VIBE: {
-        address: process.env.VIBE_ADDRESS || 'opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802',
+        address: process.env.VIBE_ADDRESS || 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl',
         decimals: 8,
         claimAmount: 500_000,      // 500K VIBE per claim
         symbol: 'VIBE',
@@ -110,9 +138,9 @@ async function transferTokens(tokenKey, recipientAddress) {
         const tok = TOKENS[tokenKey];
         const rawAmount = BigInt(tok.claimAmount) * (10n ** BigInt(tok.decimals));
 
-        // Resolve recipient address to get its Address object
-        // The recipient sends their opt1... address; we need to parse it for the transfer calldata
-        const recipientAddr = Address.fromString(recipientAddress);
+        // Decode opt1 bech32m address to 32-byte witness program for transfer calldata
+        const recipientBytes = decodeOpt1Program(recipientAddress);
+        const recipientAddr = new Uint8Array(recipientBytes);
 
         const challenge = await getChallenge();
         const utxos = await provider.fetchUTXO({

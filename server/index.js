@@ -54,7 +54,7 @@ indexer.start();
 
 // ─── FractalSwap Relayer ───
 const relayer = new FractalSwapRelayer();
-relayer.start();
+relayer.start().catch(e => console.error('[Relayer] Start failed:', e.message));
 
 // ─── Middleware ───
 app.set('trust proxy', 1); // Trust first proxy (nginx)

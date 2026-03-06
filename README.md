@@ -1,178 +1,168 @@
-# ⚡ OPNet Hub — Mission Control for Programmable Bitcoin
+# OPNet Hub — Mission Control for Programmable Bitcoin
 
-> The first mission control dashboard for Bitcoin's consensus layer. Built for the [OP_NET Vibecoding Challenge](https://vibecode.finance).
+The most comprehensive DeFi platform on OP_NET consensus layer — Bitcoin L1 smart contracts with real BTC escrow, AMM pools, staking, and cross-chain bridges.
 
-🌐 **Live Demo**: https://yourophub.github.io/opnet-hub/
+**Live:** [opnethub.xyz](https://opnethub.xyz) | **Network:** OPNet Testnet (Signet)
 
 ![Bitcoin L1](https://img.shields.io/badge/Bitcoin-L1-F7931A?style=flat&logo=bitcoin&logoColor=white)
 ![OP_NET](https://img.shields.io/badge/OP__NET-Consensus_Layer-0ea5e9?style=flat)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?style=flat&logo=vite&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)
+![Contracts](https://img.shields.io/badge/Contracts-7_deployed-green?style=flat)
 
-## What is this?
-
-**OPNet Hub** is a mission control dashboard for the OP_NET ecosystem — the first consensus layer on Bitcoin. Unlike metaprotocols (BRC-20, Runes) that rely on indexers, OP_NET provides cryptographic proof of correct execution directly on Bitcoin L1.
-
-This app gives users a single interface to explore, interact with, and learn about programmable Bitcoin:
-
-### Features
-
-| Feature | Description |
-|---------|-------------|
-| 🏠 **Landing** | Hero page explaining OP_NET's 3 pillars: Consensus, WASM Contracts, Post-Quantum Security |
-| 🤖 **Bob AI** | AI copilot connected to **live Bob MCP server** (ai.opnet.org) — 30+ knowledge topics, falls back to local KB |
-| 🚀 **Token Launcher** | Configure your OP-20 (name, symbol, supply), then follow real deploy steps: build from [OP_20](https://github.com/btc-vision/OP_20) template and deploy via OP_WALLET |
-| 💼 **Portfolio** | **Live BTC balance** from OP_NET RPC + OP-20 token holdings with 24h change |
-| 🛠️ **Tools** | **Live RPC**: BTC/Sats/USD converter, OP-20 token explorer (name/symbol/supply from chain), wallet inspector (balance), gas & mempool from OP_NET |
-| ⛏️ **Epoch Miner** | Idle clicker game with **$MINE token** economics — halving, pool distribution, real VPS leaderboard, claim flow |
-| 🎯 **Quests** | Tiered onboarding (Beginner → Explorer → Builder) — 8 tasks, XP, level progression, accessible via the ⚡ FAB button |
-| 🔄 **Swap** | Motoswap-style DEX — swap OP-20 tokens, **Bob MCP live contract addresses**, LP fees, slippage, price impact |
-| 📰 **News** | Curated OP_NET and Bitcoin news feed with filtering |
-| 🔗 **Ecosystem** | Directory of 26+ apps built on OP_NET's consensus layer |
-| 📊 **Dashboard** | Live BTC price, epoch progress bar, gas fee, live block feed, OPScan link, auto-refresh every 30s |
-
-## On-Chain Deployments (Testnet)
-
-| Token | Address | TX Hash | Supply |
-|-------|---------|---------|--------|
-| ⛏️ **$MINE** | `opt1sqpqqfzj0tvevwpj2fx0pwfevm7ulf7xzlcxw8nys` | `78421616ef1234...` | 21,000,000 |
-| ⚡ **$VIBE** | `opt1sqzfw0zskjdlcnsa057695af6rp5dadl2pu58dx9d` | `c1195ea7b1bdcd...` | 100,000,000 |
-
-**Deployer wallet**: `opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my`
-
-Both tokens deployed via `TransactionFactory.signDeployment()` with ML-DSA signing on OP_NET testnet.
-
-### Security & Performance
-
-- **Zero** `any` types, `@ts-ignore`, `eslint-disable` — strict TypeScript
-- **React.lazy** for 8 components — initial JS bundle: **27KB** (down from 104KB)
-- **bigint** for all satoshi/token amounts
-- **AbortSignal.timeout** on all RPC calls (8s) and MCP calls (10s)
-- **Multi-source BTC price**: CoinCap → Blockchain.info → CoinGecko with 5min cache
-- **No private keys** in frontend code
-
-### Why OP_NET?
-
-OP_NET is fundamentally different from metaprotocols:
-
-- **Cryptographic Consensus**: Given the same Bitcoin blocks, every node derives the exact same state
-- **WASM Smart Contracts**: Full Turing-complete execution via WebAssembly (AssemblyScript, Rust, C++)
-- **Post-Quantum Security**: ML-DSA (NIST-standardized) signatures for all contract interactions
-- **Zero New Trust**: Only ONE honest node needed. Inherits all of Bitcoin's security
-- **Epoch System**: 5-block checkpoints with SHA-1 proof-of-work
-
-## Tech Stack
-
-- **Frontend**: React 19 + TypeScript + Vite 5
-- **Styling**: Custom CSS with grid-line circuit aesthetic
-- **OP_NET**: Live JSON-RPC (regtest/testnet/mainnet): block height, epoch, balance, contract code & storage, gas parameters
-- **APIs**: CoinGecko (BTC price), optional Blockchain.info fallback
-- **Wallet**: OPWallet browser extension; real chain balance in Portfolio
-- **AI**: Bob MCP server ([ai.opnet.org](https://ai.opnet.org)) — **19 tools** integrated (knowledge, audit, CLI, contracts, RPC, monitor, skills)
-- **Backend**: Node.js Express API on VPS — Bob proxy (CORS bypass), player sync, leaderboard, $MINE claims
-- **Token**: $MINE (OP-20) — 21M supply, 10.5M game pool, weekly halving, consensus-verified on Bitcoin L1
-
-## Getting Started
-
-```bash
-# Clone
-git clone https://github.com/YOUR_USERNAME/opnet-hub.git
-cd opnet-hub
-
-# Install
-npm install
-
-# Run
-npm run dev
-```
-
-Open http://localhost:3000
-
-### Connect Bob (AI Dev Agent)
-
-Bob is OP_NET's MCP server. Add to `.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "opnet-bob": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://ai.opnet.org/mcp"]
-    }
-  }
-}
-```
-
-No API key needed. Restart your editor.
-
-## Backend API (VPS)
-
-The backend runs on a VPS at `188.137.250.160` and provides:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Server status + $MINE pool stats |
-| `/api/token` | GET | $MINE token info (supply, emission, pool) |
-| `/api/leaderboard` | GET | Top miners ranked by $MINE balance |
-| `/api/player/sync` | POST | Sync game state from frontend |
-| `/api/claim` | POST | Claim accumulated $MINE tokens |
-| `/api/bob` | POST | Bob MCP proxy (CORS bypass for production) |
-| `/api/rpc` | POST | OP_NET RPC proxy |
-
-### Deploy Backend
-
-```bash
-# SSH into VPS, then:
-curl -sL https://raw.githubusercontent.com/YourOpHub/opnet-hub/master/server/setup-vps.sh | bash
-```
-
-### Deploy Frontend
-
-```bash
-npm run build    # base set to /opnet-hub/ for GitHub Pages
-npx gh-pages -d dist
-```
-
-## Project Structure
-
-```
-src/
-├── App.tsx              # Main app, 9 tabs + OP_WALLET connect + Quest FAB
-├── index.css            # Premium design system (glassmorphism, animations)
-├── main.tsx             # Entry point
-├── opnet.ts             # OP_NET JSON-RPC wrapper (mainnet/testnet/regtest)
-├── bob-mcp.ts           # Bob MCP client — 19 tools, VPS proxy + direct fallback
-├── api.ts               # VPS API client (sync, leaderboard, claims)
-└── components/
-    ├── Landing.tsx       # Hero + pillars + ticker + Vibecode CTA
-    ├── Dashboard.tsx     # Live metrics: price, epoch progress, gas, OPScan
-    ├── BobChat.tsx       # AI copilot — smart routing to 10+ Bob tools
-    ├── TokenLauncher.tsx # OP-20 config + deploy steps from template
-    ├── Portfolio.tsx     # Live wallet balance + OP-20 + $MINE holdings
-    ├── TokenTools.tsx    # Converter + token explorer + gas & mempool
-    ├── SatoshiMiner.tsx  # Epoch miner + $MINE token + VPS leaderboard
-    ├── SwapUI.tsx        # Motoswap DEX + Bob contract addresses
-    ├── Quests.tsx        # Tiered onboarding via FAB button
-    ├── NewsFeed.tsx      # OP_NET/Bitcoin curated news
-    └── EcosystemDir.tsx  # 26+ dApps on OP_NET consensus layer
-server/
-├── index.js             # Express API: Bob proxy, player sync, claims, leaderboard
-├── setup-vps.sh         # One-command VPS deployment script
-├── deploy-token.js      # $MINE token deployment + chain verification
-├── nginx.conf           # Nginx reverse proxy config
-└── .env.example         # Environment variables template
-```
-
-## Built With
-
-- [OP_NET](https://docs.opnet.org) – First consensus layer on Bitcoin
-- [Bob AI](https://ai.opnet.org) – AI dev agent for OP_NET
-- [vibecode.finance](https://vibecode.finance) – OP_NET build challenge
-
-## License
-
-MIT
+> Built for [#opnetvibecode](https://vibecode.finance/challenge) Vibecoding Challenge
 
 ---
 
-⚡ Built for the [OP_NET Vibecoding Challenge](https://vibecode.finance/challenge) | #opnetvibecode
+## DeFi Suite — 5 Smart Contracts
+
+| Contract | Version | Description | Key Features |
+|----------|---------|-------------|-------------|
+| **SimplePool** | v4 | MINE/VIBE AMM | Uniswap V2 LP shares, k-invariant, 0.3% fee, MINIMUM_LIQUIDITY lock |
+| **NativeSwap** | v5 | BTC/Token AMM | 2-phase reservation model, effective reserves, dust check, slippage protection |
+| **SimpleStaking** | v3 | Stake MINE | Synthetix accumulator, reward end block, pool cap, deployer-only rate control |
+| **P2PMarket** | v9 | OTC Orderbook | Sell + buy orders, partial fills, trustless BTC verification, acceptance timeout |
+| **FractalSwap** | v7 | BTC/Fractal Bridge | Real BTC escrow both directions, relayer auto-complete, 72-block min expiry |
+
+### Token System — 2 Custom Tokens
+
+| Token | Supply | Contract | Utility |
+|-------|--------|----------|---------|
+| **MINE** | 21,000,000 | MintableToken | Game rewards, staking, DEX trading, public mint 1M/tx |
+| **VIBE** | 100,000,000 | MintableToken | Ecosystem token, LP pair, launchpad, public mint 5M/tx |
+
+---
+
+## Frontend — 14 Interactive Pages
+
+**Stack:** React 19 + TypeScript 5 + Vite 5 + WalletConnect
+
+| Group | Pages |
+|-------|-------|
+| **DeFi** | Swap (AMM), Stake (MINE rewards), Market (P2P OTC), Cross-Chain (BTC/Fractal bridge) |
+| **Tokens** | Launchpad (bonding curve), Token Tools (mint/transfer/airdrop), MultiSender (batch) |
+| **Explore** | Analytics (DEX stats), Ecosystem Directory, News Feed (on-chain activity) |
+| **Play** | Satoshi Miner (clicker game earning real MINE), Bob AI Chat (OPNet assistant) |
+
+**Key patterns:** Contract instance caching, multi-step TX state machine, localStorage persistence, BTC price feed, error boundaries, mobile responsive navigation.
+
+---
+
+## Backend — 4 Services
+
+**Stack:** Node.js + Express + SQLite (WAL mode) + systemd
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| **API Server** | 4000 | Bob MCP proxy, RPC relay, game state sync, leaderboard, MINE claims |
+| **Token Indexer** | — | Auto-discovers OP-20 tokens by scanning blocks, balance cache (60s TTL) |
+| **FractalSwap Relayer** | — | Monitors Fractal BTC payments, calls relayerComplete() on-chain |
+| **Launchpad** | 3457 | Token registry, comments, likes, marketplace orders |
+
+---
+
+## Security
+
+All 7 contracts implement:
+
+- **ReentrancyGuard** base class
+- **CEI pattern** (Checks-Effects-Interactions)
+- **SafeMath** on all u256 arithmetic
+- **Output bitmap** — prevents BTC output double-counting
+- **k-invariant verification** after every swap
+- **Dual BTC verification** — scriptPubKey + decoded address matching
+- **Owner access control** on all admin functions
+- **`Blockchain.call(token, writer, true)`** — auto-revert on cross-contract failures
+
+### 20+ Documented Audit Fixes
+
+NativeSwap: C-01 bitmap, C-02 effective reserves, C-03 reservation limits, H-03 sell verification, H-04 slippage, L-01 dust, L-02 min fee, M-05 k-invariant | P2PMarket: H-01 bitmap, M-02 acceptance timeout | Staking: M-01 reward pool cap | MintableToken: M-04 airdrop maxSupply pre-check | FractalSwap: output bitmap, expiry validation, fee cap 10%
+
+---
+
+## Testing
+
+**93 deploy/test scripts** with full E2E coverage:
+
+- **BTC_TO_FB full cycle**: create (lock BTC) -> take (pay fee) -> complete (taker claims BTC) = SUCCESS
+- **FB_TO_BTC full cycle**: create (intent) -> take (lock BTC + fee) -> complete (maker claims BTC) = SUCCESS
+- Both directions verified on-chain (testnet blocks 4093-4098)
+- Multi-wallet testing (Wallet A + B from same mnemonic)
+- Contract verification scripts for all 7 contracts
+
+---
+
+## Deployed Contracts (OPNet Testnet)
+
+| Contract | Address |
+|----------|---------|
+| MINE Token | `opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa` |
+| VIBE Token | `opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl` |
+| SimplePool v4 | `opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex` |
+| SimpleStaking v3 | `opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c` |
+| P2PMarket v9 | `opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt` |
+| NativeSwap v5 | `opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj` |
+| FractalSwap v7 | `opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu` |
+
+**Deployer:** `opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my`
+
+---
+
+## Quick Start
+
+```bash
+# Frontend
+npm install
+npm run dev              # http://localhost:3000
+
+# Backend
+cd server && npm install && npm start   # port 4000
+
+# Build & Deploy
+npm run build
+npx wrangler pages deploy dist --project-name=opnet-hub --commit-dirty=true
+```
+
+---
+
+## Project Stats
+
+- **191 commits** on dev branch
+- **56 frontend source files** (~26K LOC TypeScript/TSX)
+- **48 contract source files** (~3.5K LOC AssemblyScript)
+- **93 deployment/test scripts**
+- **7 deployed smart contracts** on testnet
+- **4 backend services** on VPS
+- **14 frontend pages** with grouped navigation
+
+---
+
+## Architecture
+
+```
+Frontend (React 19 + WalletConnect)
+    |
+    +-- Contract Cache (singleton instances)
+    +-- TX Flow State Machine (multi-step, persistent)
+    +-- Token Indexer API integration
+    |
+Backend (Express + SQLite)
+    |
+    +-- Game mechanics + leaderboard
+    +-- Token Indexer (block scanning)
+    +-- FractalSwap Relayer (auto-complete)
+    +-- Bob MCP Proxy (AI assistant)
+    |
+Smart Contracts (AssemblyScript -> WASM -> OPNet)
+    |
+    +-- OP-20 Tokens (MintableToken)
+    +-- SimplePool (Constant Product AMM)
+    +-- NativeSwapPool (BTC/Token AMM)
+    +-- SimpleStaking (Synthetix rewards)
+    +-- P2PMarket (Verify-Don't-Custody)
+    +-- CrossChainMarket (BTC escrow bridge)
+```
+
+---
+
+Built with Claude Code for the OPNet Vibecoding Challenge | [vibecode.finance](https://vibecode.finance)

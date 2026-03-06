@@ -2374,6 +2374,91 @@ a:hover {
   }
 }
 
+/* ═══ OPS PANEL ═══ */
+.ops-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 84px;
+  z-index: 150;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(59,130,246,.85);
+  border: none;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(59,130,246,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .2s
+}
+.ops-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(59,130,246,.45)
+}
+.ops-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: .6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 6px rgba(239,68,68,.4)
+}
+.ops-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  animation: fadeIn .2s ease
+}
+.ops-panel {
+  position: fixed;
+  top: 0;
+  right: -380px;
+  width: 360px;
+  height: 100vh;
+  background: rgba(8,8,14,.88);
+  backdrop-filter: blur(24px) saturate(1.8);
+  border-left: 1px solid var(--bd);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transition: right .3s cubic-bezier(.4,0,.2,1);
+  overflow: hidden
+}
+.ops-panel.ops-open {
+  right: 0
+}
+.op-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--bd);
+  background: rgba(255,255,255,.02);
+  margin-bottom: 6px;
+  transition: .15s
+}
+.op-card:hover {
+  border-color: rgba(59,130,246,.3);
+  background: rgba(59,130,246,.03)
+}
+
+@media(max-width:600px) {
+  .ops-panel { width: 100%; right: -100% }
+  .ops-fab { bottom: 16px; right: 72px; width: 40px; height: 40px; font-size: .95rem }
+}
+
 /* ═══ MINE ZONE WRAP ═══ */
 .mz-wrap {
   min-height: 440px

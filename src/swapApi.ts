@@ -82,3 +82,37 @@ export async function getRates(): Promise<Record<string, unknown>> {
     return await r.json();
   } catch { return {}; }
 }
+
+// ─── Order Locks ───
+export async function lockOrder(orderKey: string, wallet: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch(`${API}/api/swap/lock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_key: orderKey, wallet }),
+    });
+    const data = await r.json();
+    if (!r.ok) return { ok: false, error: data.error || 'Lock failed' };
+    return { ok: true };
+  } catch { return { ok: false, error: 'Network error' }; }
+}
+
+export async function unlockOrder(orderKey: string, wallet: string): Promise<void> {
+  try {
+    await fetch(`${API}/api/swap/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_key: orderKey, wallet }),
+    });
+  } catch { /* best-effort */ }
+}
+
+export interface OrderLock { order_key: string; locked_by: string; locked_at: string }
+
+export async function getActiveLocks(): Promise<Record<string, OrderLock>> {
+  try {
+    const r = await fetch(`${API}/api/swap/locks`);
+    if (!r.ok) return {};
+    return await r.json();
+  } catch { return {}; }
+}

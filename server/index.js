@@ -71,6 +71,13 @@ db.exec(`
     rate REAL,
     updated_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS order_locks (
+    order_key TEXT PRIMARY KEY,
+    locked_by TEXT NOT NULL,
+    locked_at TEXT DEFAULT (datetime('now')),
+    released INTEGER DEFAULT 0
+  );
 `);
 
 // ─── Token Indexer ───
@@ -416,6 +423,37 @@ app.get('/api/orders/rates', (_req, res) => {
   const rows = db.prepare('SELECT * FROM swap_rates ORDER BY updated_at DESC').all();
   const map = {};
   for (const r of rows) map[r.order_id] = r;
+  res.json(map);
+});
+
+// ─── Order Lock API ───
+app.post('/api/swap/lock', (req, res) => {
+  const { order_key, wallet } = req.body;
+  if (!order_key || !wallet) return res.status(400).json({ error: 'order_key, wallet required' });
+  // Clean expired locks (>10 min)
+  db.prepare("DELETE FROM order_locks WHERE released = 0 AND datetime(locked_at, '+10 minutes') < datetime('now')").run();
+  const existing = db.prepare('SELECT * FROM order_locks WHERE order_key = ? AND released = 0').get(order_key);
+  if (existing && existing.locked_by !== wallet) {
+    return res.status(409).json({ error: 'Order locked by another user', locked_by: existing.locked_by.slice(0, 10) + '...' });
+  }
+  db.prepare(`INSERT INTO order_locks (order_key, locked_by, locked_at, released) VALUES (?, ?, datetime('now'), 0)
+    ON CONFLICT(order_key) DO UPDATE SET locked_by = ?, locked_at = datetime('now'), released = 0`
+  ).run(order_key, wallet, wallet);
+  res.json({ ok: true, order_key });
+});
+
+app.post('/api/swap/unlock', (req, res) => {
+  const { order_key, wallet } = req.body;
+  if (!order_key) return res.status(400).json({ error: 'order_key required' });
+  db.prepare('UPDATE order_locks SET released = 1 WHERE order_key = ? AND (locked_by = ? OR ? IS NULL)').run(order_key, wallet || null, wallet || null);
+  res.json({ ok: true });
+});
+
+app.get('/api/swap/locks', (_req, res) => {
+  db.prepare("DELETE FROM order_locks WHERE released = 0 AND datetime(locked_at, '+10 minutes') < datetime('now')").run();
+  const rows = db.prepare('SELECT order_key, locked_by, locked_at FROM order_locks WHERE released = 0').all();
+  const map = {};
+  for (const r of rows) map[r.order_key] = r;
   res.json(map);
 });
 

@@ -6,8 +6,10 @@ import { NETWORK } from './config';
 import { getProvider } from './contractCache';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
+import OpsPanel from './components/OpsPanel';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
+import { OpsProvider } from './contexts/OpsContext';
 import { TESTNET_CONTRACTS } from './contracts';
 import { fetchHolderBalances, type HolderBalance } from './tokenApi';
 
@@ -205,6 +207,7 @@ const App: React.FC = () => {
 
     return (
         <ToastProvider>
+        <OpsProvider>
             <div className="site-bg" />
             <div className="particles"><span /><span /><span /><span /><span /><span /><span /><span /></div>
 
@@ -365,6 +368,8 @@ const App: React.FC = () => {
             </button>
 
             <QuestPanel open={qOpen} onClose={() => setQOpen(false)} onNav={navigate} />
+            <OpsPanel />
+        </OpsProvider>
         </ToastProvider>
     );
 };

@@ -8,7 +8,8 @@ import {
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
-import { updateSwapOp, getActiveOps, getHistory, type SwapOp } from '../swapApi';
+import { lockOrder, unlockOrder, getActiveLocks, type OrderLock } from '../swapApi';
+import { useOps } from '../contexts/OpsContext';
 import { buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { ensureAllowance } from '../txUtils';
 import {
@@ -360,60 +361,16 @@ const CrossChainMarketplace: React.FC = () => {
   const [actioning, setActioning] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // Per-order pending TX tracking (persisted to server)
-  const [pendingOps, setPendingOps] = useState<Record<string, { step: string; txHash?: string }>>({});
-  const setPendingOp = useCallback((orderId: string, step: string, txHash?: string) => {
-    setPendingOps(prev => ({ ...prev, [orderId]: { step, txHash } }));
-    if (walletAddress) {
-      updateSwapOp({
-        id: `fractalswap:${orderId}:${walletAddress}`,
-        market: 'fractalswap', order_id: orderId, wallet: walletAddress,
-        step, status: 'active',
-        tx_ids: txHash ? { latest: txHash } : undefined,
-      });
-    }
-  }, [walletAddress]);
-  const clearPendingOp = useCallback((orderId: string, final: 'completed' | 'failed' = 'completed', error?: string) => {
-    setPendingOps(prev => { const next = { ...prev }; delete next[orderId]; return next; });
-    if (walletAddress) {
-      updateSwapOp({
-        id: `fractalswap:${orderId}:${walletAddress}`,
-        market: 'fractalswap', order_id: orderId, wallet: walletAddress,
-        step: final === 'completed' ? 'Done' : 'Failed',
-        status: final, error: error || '',
-      });
-    }
-  }, [walletAddress]);
+  // Global ops context
+  const { trackOp, updateOpStep, completeOp, failOp } = useOps();
 
-  // History tab
-  const [showHistory, setShowHistory] = useState(false);
-  const [history, setHistory] = useState<SwapOp[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-  // Restore active ops on mount
+  // Order locks
+  const [locks, setLocks] = useState<Record<string, OrderLock>>({});
   useEffect(() => {
-    if (!walletAddress) return;
-    getActiveOps(walletAddress, 'fractalswap').then(ops => {
-      if (ops.length > 0) {
-        const restored: Record<string, { step: string; txHash?: string }> = {};
-        for (const op of ops) {
-          let txHash: string | undefined;
-          try { const t = JSON.parse(op.tx_ids); txHash = t.latest; } catch { /* */ }
-          restored[op.order_id] = { step: op.step, txHash };
-        }
-        setPendingOps(prev => ({ ...restored, ...prev }));
-      }
-    });
-  }, [walletAddress]);
-
-  // Load history
-  const loadHistory = useCallback(async () => {
-    if (!walletAddress) return;
-    setHistoryLoading(true);
-    const h = await getHistory(walletAddress, 'fractalswap');
-    setHistory(h);
-    setHistoryLoading(false);
-  }, [walletAddress]);
+    getActiveLocks().then(setLocks);
+    const iv = setInterval(() => getActiveLocks().then(setLocks), 15_000);
+    return () => clearInterval(iv);
+  }, []);
 
   // Preimage store (localStorage persistence)
   const [preimageStore, setPreimageStore] = useState<Record<string, string>>(() => {
@@ -692,15 +649,13 @@ const CrossChainMarketplace: React.FC = () => {
       if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats, formAmountSats, sendUnit, receiveUnit);
 
       // Persist create op
-      if (walletAddress) {
-        updateSwapOp({
-          id: `fractalswap:${actualNextId}:${walletAddress}`,
-          market: 'fractalswap', order_id: actualNextId, wallet: walletAddress,
-          direction: formDirection === SwapDirection.BTC_TO_FB ? 'BTC_TO_FB' : 'FB_TO_BTC',
-          role: 'maker', step: 'Created, confirming...', status: 'active',
-          amounts: { btc: Number(contractBtcAmount).toString(), want: Number(contractWantAmount).toString() },
-        });
-      }
+      const createOpId = `fractalswap:create:${actualNextId}:${walletAddress}`;
+      trackOp({
+        id: createOpId, market: 'fractalswap', orderId: actualNextId,
+        direction: formDirection === SwapDirection.BTC_TO_FB ? 'BTC_TO_FB' : 'FB_TO_BTC',
+        role: 'maker', step: 'Created, confirming...',
+        amounts: { btc: Number(contractBtcAmount).toString(), want: Number(contractWantAmount).toString() },
+      });
 
       setCreateStep('Waiting for confirmation...');
       toast(`Order #${actualNextId} created!${formDirection === SwapDirection.BTC_TO_FB ? ' BTC locked in contract.' : ''} Waiting for block...`, 'success');
@@ -712,7 +667,7 @@ const CrossChainMarketplace: React.FC = () => {
       waitForNextBlock(provider).then(() => {
         setCreateStep('');
         toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
-        if (walletAddress) updateSwapOp({ id: `fractalswap:${actualNextId}:${walletAddress}`, market: 'fractalswap', order_id: actualNextId, wallet: walletAddress, step: 'Confirmed', status: 'completed' });
+        completeOp(createOpId);
         fetchOrders();
       }).catch(() => { setCreateStep(''); });
       fetchOrders();
@@ -726,7 +681,14 @@ const CrossChainMarketplace: React.FC = () => {
   const handleTake = useCallback(async (orderId: string, takerAddrInput: string) => {
     if (!walletAddress || !senderAddr) { openConnectModal(); return; }
     if (!contractReady) return;
+
+    // Lock order
+    const lockKey = `fractalswap:${orderId}`;
+    const lockRes = await lockOrder(lockKey, walletAddress);
+    if (!lockRes.ok) { toast(lockRes.error || 'Order is locked by another user', 'error'); return; }
+
     setActioning(true); setActionStep('Taking order...');
+    const opId = `fractalswap:${orderId}:${walletAddress}`;
     try {
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('Order not found');
@@ -787,22 +749,25 @@ const CrossChainMarketplace: React.FC = () => {
       await (sim as CallResult).sendTransaction(tp);
 
       setActionStep('');
-      setPendingOp(orderId, 'TX sent, waiting for block confirmation...');
+      trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'TX sent, confirming...', amounts: { btc: Number(order.btcAmount).toString() } });
       toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Confirming...`, 'success');
       setActioning(false);
 
       waitForNextBlock(provider).then(() => {
-        clearPendingOp(orderId, 'completed');
+        completeOp(opId);
+        unlockOrder(lockKey, walletAddress);
         toast(`Order #${orderId} confirmed on-chain!`, 'success');
         fetchOrders();
-      }).catch(() => { clearPendingOp(orderId, 'completed'); });
+      }).catch(() => { completeOp(opId); unlockOrder(lockKey, walletAddress); });
       fetchOrders();
       return;
     } catch (e) {
+      failOp(opId, formatTxError(e));
+      unlockOrder(lockKey, walletAddress);
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(false); }
-  }, [walletAddress, senderAddr, orders, feeBps, provider, openConnectModal, contractReady, fetchOrders, toast, setPendingOp, clearPendingOp, contractP2OPScript]);
+  }, [walletAddress, senderAddr, orders, feeBps, provider, openConnectModal, contractReady, fetchOrders, toast, trackOp, completeOp, failOp, contractP2OPScript]);
 
   // ── Complete Order (v6 — claim locked BTC after sending FB) ──
   const handleComplete = useCallback(async (orderId: string) => {
@@ -840,22 +805,23 @@ const CrossChainMarketplace: React.FC = () => {
       await (sim as CallResult).sendTransaction(tp);
 
       setActionStep('');
-      setPendingOp(orderId, 'Order completed! BTC claimed. Waiting for settlement...');
+      const opId = `fractalswap:complete:${orderId}:${walletAddress}`;
+      trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'BTC claimed, settling...' });
       toast(`Order #${orderId} completed! BTC claimed.`, 'success');
       setActioning(false);
 
       waitForNextBlock(provider).then(() => {
-        clearPendingOp(orderId, 'completed');
+        completeOp(opId);
         toast(`Order #${orderId} settled on-chain!`, 'success');
         fetchOrders();
-      }).catch(() => { clearPendingOp(orderId, 'completed'); });
+      }).catch(() => { completeOp(opId); });
       fetchOrders();
       return;
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(false); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, setPendingOp, clearPendingOp, getMyP2OPScript]);
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, trackOp, completeOp, getMyP2OPScript]);
 
   // ── Cancel Order (v6 — refunds locked BTC for BTC_TO_FB) ──
   const handleCancel = useCallback(async (orderId: string) => {
@@ -963,17 +929,19 @@ const CrossChainMarketplace: React.FC = () => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
+    // Lock order
+    const lockKey = `fractalswap:${orderId}`;
+    const lockRes = await lockOrder(lockKey, walletAddress);
+    if (!lockRes.ok) { toast(lockRes.error || 'Order is locked by another user', 'error'); return; }
+
+    const opId = `fractalswap:${orderId}:${walletAddress}`;
     setActioning(true);
-    if (walletAddress) {
-      updateSwapOp({
-        id: `fractalswap:${orderId}:${walletAddress}`,
-        market: 'fractalswap', order_id: orderId, wallet: walletAddress,
-        direction: order.direction === SwapDirection.BTC_TO_FB ? 'BTC_TO_FB' : 'FB_TO_BTC',
-        role: 'taker', step: 'Step 1/3: Taking order on OPNet...',
-        amounts: { btc: order.btcAmount.toString(), want: order.wantAmount.toString() },
-      });
-    }
-    setPendingOp(orderId, 'Step 1/3: Taking order on OPNet...');
+    trackOp({
+      id: opId, market: 'fractalswap', orderId,
+      direction: order.direction === SwapDirection.BTC_TO_FB ? 'BTC_TO_FB' : 'FB_TO_BTC',
+      role: 'taker', step: 'Step 1/3: Taking order on OPNet...',
+      amounts: { btc: order.btcAmount.toString(), want: order.wantAmount.toString() },
+    });
 
     try {
       // ── Step 1: Take Order on OPNet ──
@@ -1010,11 +978,11 @@ const CrossChainMarketplace: React.FC = () => {
       await (sim as CallResult).sendTransaction(tp);
 
       toast(`Order #${orderId} taken! Waiting for block...`, 'success');
-      setPendingOp(orderId, 'Step 1/3: Waiting for block confirmation...');
+      updateOpStep(opId, 'Step 1/3: Waiting for block confirmation...');
 
       // ── Wait for block confirmation ──
-      await waitForNextBlock(provider, (s) => setPendingOp(orderId, `Step 1/3: ${s}`), 300_000);
-      setPendingOp(orderId, 'Step 2/3: Sending Fractal BTC via UniSat...');
+      await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 300_000);
+      updateOpStep(opId, 'Step 2/3: Sending Fractal BTC via UniSat...');
 
       // ── Step 2: Send Fractal BTC via UniSat ──
       const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
@@ -1033,7 +1001,7 @@ const CrossChainMarketplace: React.FC = () => {
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
       toast(`FB sent! TX: ${txid.slice(0, 12)}...`, 'success');
-      setPendingOp(orderId, 'Step 3/3: Claiming locked BTC...');
+      updateOpStep(opId, 'Step 3/3: Claiming locked BTC...');
 
       // ── Step 3: Complete Order (claim locked BTC) ──
       const market2 = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
@@ -1050,21 +1018,23 @@ const CrossChainMarketplace: React.FC = () => {
       (tp2 as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: order.btcAmount }];
       await (sim2 as CallResult).sendTransaction(tp2);
 
-      setPendingOp(orderId, 'Auto-swap complete! Waiting for final settlement...');
+      updateOpStep(opId, 'Auto-swap complete! Settling...');
       toast(`Order #${orderId} auto-completed! BTC claimed.`, 'success');
 
       waitForNextBlock(provider).then(() => {
-        clearPendingOp(orderId, 'completed');
+        completeOp(opId);
+        unlockOrder(lockKey, walletAddress);
         toast(`Order #${orderId} fully settled!`, 'success');
         fetchOrders();
-      }).catch(() => clearPendingOp(orderId, 'completed'));
+      }).catch(() => { completeOp(opId); unlockOrder(lockKey, walletAddress); });
       fetchOrders();
     } catch (e) {
-      clearPendingOp(orderId, 'failed', formatTxError(e));
+      failOp(opId, formatTxError(e));
+      unlockOrder(lockKey, walletAddress);
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 8000);
     } finally { setActioning(false); }
-  }, [walletAddress, senderAddr, orders, feeBps, provider, unisat.connected, openConnectModal, contractReady, fetchOrders, toast, setPendingOp, clearPendingOp, contractP2OPScript, getMyP2OPScript]);
+  }, [walletAddress, senderAddr, orders, feeBps, provider, unisat.connected, openConnectModal, contractReady, fetchOrders, toast, trackOp, updateOpStep, completeOp, failOp, contractP2OPScript, getMyP2OPScript]);
 
   // ── AUTO-CLAIM: Send FB + Complete in one flow (for Taken orders) ──
   // BTC_TO_FB: taker sends FB then claims BTC
@@ -1077,8 +1047,9 @@ const CrossChainMarketplace: React.FC = () => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
 
+    const opId = `fractalswap:claim:${orderId}:${walletAddress}`;
     setActioning(true);
-    setPendingOp(orderId, 'Step 1/2: Sending Fractal BTC via UniSat...');
+    trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: order.direction === SwapDirection.BTC_TO_FB ? 'taker' : 'maker', step: 'Step 1/2: Sending FB...' });
 
     try {
       // ── Step 1: Send FB ──
@@ -1098,7 +1069,7 @@ const CrossChainMarketplace: React.FC = () => {
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
       toast(`FB sent! TX: ${txid.slice(0, 12)}...`, 'success');
-      setPendingOp(orderId, 'Step 2/2: Claiming locked BTC...');
+      updateOpStep(opId, 'Step 2/2: Claiming locked BTC...');
 
       // ── Step 2: Complete Order ──
       const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
@@ -1115,21 +1086,21 @@ const CrossChainMarketplace: React.FC = () => {
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: order.btcAmount }];
       await (sim as CallResult).sendTransaction(tp);
 
-      setPendingOp(orderId, 'Auto-claim complete! Waiting for settlement...');
+      updateOpStep(opId, 'Auto-claim complete! Settling...');
       toast(`Order #${orderId} completed! BTC claimed.`, 'success');
 
       waitForNextBlock(provider).then(() => {
-        clearPendingOp(orderId, 'completed');
+        completeOp(opId);
         toast(`Order #${orderId} fully settled!`, 'success');
         fetchOrders();
-      }).catch(() => clearPendingOp(orderId, 'completed'));
+      }).catch(() => completeOp(opId));
       fetchOrders();
     } catch (e) {
-      clearPendingOp(orderId, 'failed', formatTxError(e));
+      failOp(opId, formatTxError(e));
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 8000);
     } finally { setActioning(false); }
-  }, [walletAddress, senderAddr, orders, provider, unisat.connected, openConnectModal, contractReady, fetchOrders, toast, setPendingOp, clearPendingOp, getMyP2OPScript]);
+  }, [walletAddress, senderAddr, orders, provider, unisat.connected, openConnectModal, contractReady, fetchOrders, toast, trackOp, updateOpStep, completeOp, failOp, getMyP2OPScript]);
 
   // ── Auto-send FB when maker's FB_TO_BTC order transitions Open → Taken ──
   const prevOrderStatusesRef = useRef<Record<string, OrderStatus>>({});
@@ -1680,248 +1651,110 @@ const CrossChainMarketplace: React.FC = () => {
   };
 
   const renderOrderCard = (order: FractalSwapOrder) => {
-    const isExpanded = expandedOrder === order.id;
     const blocksLeft = order.expiry > 0 ? order.expiry - currentBlock : 0;
     const isExpired = order.expiry > 0 && blocksLeft <= 0;
     const isMyOrder = walletAddress && order.creator.includes(walletAddress.replace('opt1', '').slice(-16));
     const feeSats = (order.btcAmount * BigInt(feeBps)) / 10000n;
     const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
-
-    // v6: btcAmount = BTC locked, wantAmount = FB exchanged
-    // Rate: BTC per FB
-    const rate = order.wantAmount > 0n
-      ? (Number(order.btcAmount) / Number(order.wantAmount)).toFixed(6)
-      : '';
+    const rate = order.wantAmount > 0n ? (Number(order.btcAmount) / Number(order.wantAmount)).toFixed(6) : '';
+    const isLocked = !!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`].locked_by !== walletAddress;
 
     return (
-      <div key={order.id} className="Pg" style={{ marginBottom: 8, cursor: 'pointer' }}
-        onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div key={order.id} className="Pg" style={{ marginBottom: 6, padding: '10px 14px' }}>
+        {/* Compact single row: [dir] [BTC <-> FB] [rate] [status] [btn] */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flex: 1 }}>
             {renderDirectionBadge(order.direction)}
-            <span style={{ fontWeight: 700, fontSize: '.85rem', color: 'var(--w)' }}>
-              {satsToBtc(order.btcAmount)} BTC
+            <span style={{ fontWeight: 700, fontSize: '.78rem', color: 'var(--w)' }}>
+              {satsToBtc(order.btcAmount)}
             </span>
+            <span style={{ fontSize: '.64rem', color: 'var(--t3)' }}>{'\u2194'}</span>
+            <span style={{ fontWeight: 600, fontSize: '.74rem', color: 'var(--g)' }}>
+              {satsToBtc(order.wantAmount, 'FB')}
+            </span>
+            {rate && <span style={{ fontSize: '.58rem', color: 'var(--t4)' }}>({rate})</span>}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             {renderStatusBadge(order.status)}
-            <span style={{ fontSize: '.72rem', color: 'var(--t3)' }}>#{order.id}</span>
+            <span style={{ fontSize: '.62rem', color: 'var(--t4)' }}>#{order.id}</span>
+            {order.expiry > 0 && (
+              <span style={{ fontSize: '.56rem', color: isExpired ? 'var(--r)' : 'var(--t4)' }}>
+                {isExpired ? 'EXP' : formatBlockCountdown(blocksLeft)}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Swap details */}
-        <div style={{
-          marginTop: 8, padding: '8px 12px', borderRadius: 8,
-          background: 'rgba(139,92,246,.06)', border: '1px solid rgba(139,92,246,.1)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem', marginBottom: 4 }}>
-            <span style={{ color: 'var(--t2)' }}>BTC (locked):</span>
-            <b>{satsToBtc(order.btcAmount)}</b>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem' }}>
-            <span style={{ color: 'var(--t2)' }}>FB (wanted):</span>
-            <b style={{ color: 'var(--g)' }}>{satsToBtc(order.wantAmount, 'FB')}</b>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 6, fontSize: '.68rem', color: 'var(--t3)', flexWrap: 'wrap' }}>
-          <span>Fee: <b style={{ color: 'var(--o)' }}>+{satsToBtc(feeSats)}</b></span>
-          {rate && <span>Rate: 1 FB = {rate} BTC</span>}
-          {order.expiry > 0 && (
-            <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
-              {isExpired ? 'EXPIRED' : formatBlockCountdown(blocksLeft)}
+        {/* Compact action row */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Take & Auto-Swap for BTC_TO_FB */}
+          {order.status === OrderStatus.Open && !isExpired && !isMyOrder && isBtcToFb && (
+            <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
+              onTake={handleTakeAndSwap} disabled={actioning || isLocked}
+              defaultAddr={unisat.address || ''}
+              label={isLocked ? 'Locked' : 'Take & Swap'} />
+          )}
+          {/* Take for FB_TO_BTC */}
+          {order.status === OrderStatus.Open && !isExpired && !isMyOrder && !isBtcToFb && (
+            <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
+              onTake={handleTake} disabled={actioning || isLocked}
+              defaultAddr={walletAddress || ''}
+              label={isLocked ? 'Locked' : undefined} />
+          )}
+          {/* Send FB & Claim BTC */}
+          {order.status === OrderStatus.Taken && !isExpired && (
+            (isBtcToFb ? !isMyOrder : !!isMyOrder) && (
+              <button className="btn-p" style={{ fontSize: '.66rem', padding: '5px 10px' }}
+                disabled={actioning}
+                onClick={() => handleSendAndClaim(order.id)}>
+                {unisat.connected ? `Send FB & Claim` : 'Connect UniSat'}
+              </button>
+            )
+          )}
+          {/* Claim BTC (FB sent) */}
+          {order.status === OrderStatus.Taken && !isExpired && (
+            (isBtcToFb ? !isMyOrder : !!isMyOrder) && (
+              <button style={{ ...btnSmall, background: 'rgba(59,130,246,.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,.2)' }}
+                disabled={actioning}
+                onClick={() => handleComplete(order.id)}>
+                Claim BTC
+              </button>
+            )
+          )}
+          {/* Refund */}
+          {isExpired && order.status === OrderStatus.Taken && (
+            <button style={{ ...btnSmall, background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }}
+              disabled={actioning}
+              onClick={() => handleRefund(order.id)}>
+              Refund
+            </button>
+          )}
+          {/* Cancel */}
+          {order.status === OrderStatus.Open && isMyOrder && (
+            <button style={{ ...btnSmall, background: 'rgba(107,114,128,.1)', color: '#6b7280', border: '1px solid rgba(107,114,128,.2)' }}
+              disabled={actioning}
+              onClick={() => handleCancel(order.id)}>
+              Cancel
+            </button>
+          )}
+          {/* Waiting indicator for maker FB_TO_BTC */}
+          {order.status === OrderStatus.Open && !isBtcToFb && isMyOrder && (
+            <span style={{ fontSize: '.58rem', color: '#8b5cf6', fontWeight: 600 }}>
+              {'\u231B'} Waiting for taker
             </span>
           )}
+          {/* UniSat needed for Taken FB_TO_BTC maker */}
+          {order.status === OrderStatus.Taken && !isBtcToFb && isMyOrder && !unisat.connected && (
+            <button className="btn-p" style={{ fontSize: '.6rem', padding: '3px 8px' }}
+              disabled={unisatConnecting}
+              onClick={() => handleConnectUnisat()}>
+              Connect UniSat
+            </button>
+          )}
+          {actionStep && (
+            <span style={{ fontSize: '.62rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>{actionStep}</span>
+          )}
         </div>
-
-        {/* Pending operation banner */}
-        {pendingOps[order.id] && (
-          <div style={{
-            marginTop: 8, padding: '8px 12px', borderRadius: 8,
-            background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.2)',
-            display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem',
-          }}>
-            <span style={{ animation: 'spin 2s linear infinite', fontSize: '.9rem' }}>{'\u23F3'}</span>
-            <span style={{ color: '#f59e0b', fontWeight: 600 }}>{pendingOps[order.id].step}</span>
-          </div>
-        )}
-
-        {/* Waiting for taker banner — Open FB_TO_BTC maker orders */}
-        {order.status === OrderStatus.Open && !isBtcToFb && isMyOrder && !pendingOps[order.id] && (
-          <div style={{
-            marginTop: 8, padding: '8px 12px', borderRadius: 8,
-            background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.25)',
-            display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem',
-          }}>
-            <span style={{ animation: 'spin 3s linear infinite', fontSize: '.9rem' }}>{'\u231B'}</span>
-            <span style={{ color: '#8b5cf6', fontWeight: 600 }}>Waiting for taker... Stay on page for auto-swap</span>
-          </div>
-        )}
-
-        {/* Expanded details */}
-        {isExpanded && (
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--bd)' }}>
-            <div style={{ fontSize: '.7rem', color: 'var(--t2)', marginBottom: 8 }}>
-              <div><b>Direction:</b> {isBtcToFb ? 'Maker locks BTC, wants FB' : 'Taker locks BTC, maker sends FB'}</div>
-              <div style={{ marginTop: 4 }}>
-                <b>BTC Locked:</b> {satsToBtc(order.btcAmount)} ({Number(order.btcAmount).toLocaleString()} sats)
-              </div>
-              <div style={{ marginTop: 4 }}>
-                <b>FB Wanted:</b> {satsToBtc(order.wantAmount, 'FB')} ({Number(order.wantAmount).toLocaleString()} sats)
-              </div>
-              <div style={{ marginTop: 4 }}>
-                <b>Maker Address:</b>{' '}
-                {order.makerAddr === ZERO_HEX ? <code style={{ fontSize: '.65rem' }}>(none)</code> : (() => {
-                  const bytes = new Uint8Array(32);
-                  for (let i = 0; i < 32; i++) bytes[i] = parseInt(order.makerAddr.slice(i * 2, i * 2 + 2), 16);
-                  let end = bytes.indexOf(0); if (end === -1) end = 32;
-                  const addr = new TextDecoder().decode(bytes.slice(0, end));
-                  const isFractal = addr.startsWith('bc1') || addr.startsWith('tb1');
-                  return (
-                    <code style={{ fontSize: '.65rem' }}>
-                      {isFractal ? (
-                        <a href={getFractalAddressUrl(addr)} target="_blank" rel="noopener noreferrer"
-                          style={{ color: '#8b5cf6', textDecoration: 'none' }}>
-                          {addr.slice(0, 16)}...{addr.slice(-6)}
-                        </a>
-                      ) : truncateHex(order.makerAddr, 12)}
-                    </code>
-                  );
-                })()}
-              </div>
-              {order.taker !== ZERO_HEX && (
-                <div style={{ marginTop: 4 }}>
-                  <b>Taker:</b> <code style={{ fontSize: '.65rem' }}>{truncateHex(order.taker, 12)}</code>
-                </div>
-              )}
-              {order.takerAddr !== ZERO_HEX && (() => {
-                const bytes = new Uint8Array(32);
-                for (let i = 0; i < 32; i++) bytes[i] = parseInt(order.takerAddr.slice(i * 2, i * 2 + 2), 16);
-                let end = bytes.indexOf(0); if (end === -1) end = 32;
-                const addr = new TextDecoder().decode(bytes.slice(0, end));
-                return (
-                  <div style={{ marginTop: 4 }}>
-                    <b>Taker Address:</b>{' '}
-                    <code style={{ fontSize: '.65rem' }}>
-                      {addr.startsWith('bc1') || addr.startsWith('tb1') ? (
-                        <a href={getFractalAddressUrl(addr)} target="_blank" rel="noopener noreferrer"
-                          style={{ color: '#8b5cf6', textDecoration: 'none' }}>
-                          {addr.slice(0, 16)}...{addr.slice(-6)}
-                        </a>
-                      ) : truncateHex(order.takerAddr, 12)}
-                    </code>
-                  </div>
-                );
-              })()}
-              {order.feePaid > 0n && (
-                <div style={{ marginTop: 4 }}>
-                  <b>Fee Paid:</b> {Number(order.feePaid).toLocaleString()} sats
-                </div>
-              )}
-              {order.expiry > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  <b>Expiry Block:</b> {order.expiry.toLocaleString()} ({formatBlockCountdown(blocksLeft)})
-                </div>
-              )}
-            </div>
-
-            {/* Step indicator */}
-            {order.status === OrderStatus.Open && isMyOrder && (
-              <TxStepIndicator step="waiting" steps={isBtcToFb ? MAKER_STEPS_BTC_TO_FB : MAKER_STEPS_FB_TO_BTC} />
-            )}
-            {order.status === OrderStatus.Taken && (
-              <TxStepIndicator step="executing" steps={isMyOrder
-                ? (isBtcToFb ? MAKER_STEPS_BTC_TO_FB : MAKER_STEPS_FB_TO_BTC)
-                : (isBtcToFb ? TAKER_STEPS_BTC_TO_FB : TAKER_STEPS_FB_TO_BTC)} />
-            )}
-
-            {/* Connect UniSat banner — Taken FB_TO_BTC maker without UniSat */}
-            {order.status === OrderStatus.Taken && !isBtcToFb && isMyOrder && !unisat.connected && (
-              <div style={{
-                marginTop: 8, padding: '8px 12px', borderRadius: 8,
-                background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.25)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: '.72rem',
-              }}>
-                <span style={{ color: '#f59e0b', fontWeight: 600 }}>Your order was taken — connect UniSat to send FB & claim BTC</span>
-                <button className="btn-p" style={{ fontSize: '.68rem', padding: '4px 12px', flexShrink: 0 }}
-                  disabled={unisatConnecting}
-                  onClick={(e) => { e.stopPropagation(); handleConnectUnisat(); }}>
-                  {unisatConnecting ? 'Connecting...' : 'Connect UniSat'}
-                </button>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              {/* Take & Auto-Swap — one-click for BTC_TO_FB takers */}
-              {order.status === OrderStatus.Open && !isExpired && !isMyOrder && isBtcToFb && (
-                <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
-                  onTake={handleTakeAndSwap} disabled={actioning}
-                  defaultAddr={unisat.address || ''}
-                  label="Take & Auto-Swap" />
-              )}
-
-              {/* Take order — for FB_TO_BTC orders (taker locks BTC, waits for maker to send FB) */}
-              {order.status === OrderStatus.Open && !isExpired && !isMyOrder && !isBtcToFb && (
-                <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
-                  onTake={handleTake} disabled={actioning}
-                  defaultAddr={walletAddress || ''} />
-              )}
-
-              {/* Send FB & Claim BTC — one-click for Taken orders */}
-              {order.status === OrderStatus.Taken && !isExpired && (
-                (isBtcToFb ? !isMyOrder : !!isMyOrder) && (
-                  <button className="btn-p" style={{ fontSize: '.72rem', padding: '6px 14px' }}
-                    disabled={actioning}
-                    onClick={(e) => { e.stopPropagation(); handleSendAndClaim(order.id); }}>
-                    {unisat.connected
-                      ? `Send ${satsToBtc(order.wantAmount, 'FB')} & Claim BTC`
-                      : 'Connect UniSat to Swap'}
-                  </button>
-                )
-              )}
-
-              {/* Fallback: manual complete (if FB already sent) */}
-              {order.status === OrderStatus.Taken && !isExpired && (
-                (isBtcToFb ? !isMyOrder : !!isMyOrder) && (
-                  <button style={{
-                    ...btnSmall, background: 'rgba(59,130,246,.12)', color: '#3b82f6',
-                    border: '1px solid rgba(59,130,246,.25)',
-                  }}
-                    disabled={actioning}
-                    onClick={(e) => { e.stopPropagation(); handleComplete(order.id); }}>
-                    Claim BTC (FB already sent)
-                  </button>
-                )
-              )}
-
-              {/* Refund expired */}
-              {isExpired && order.status === OrderStatus.Taken && (
-                <button style={{ ...btnSmall, background: 'rgba(239,68,68,.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,.3)' }}
-                  disabled={actioning}
-                  onClick={(e) => { e.stopPropagation(); handleRefund(order.id); }}>
-                  Refund (Return BTC)
-                </button>
-              )}
-
-              {/* Cancel — only for open orders by creator */}
-              {order.status === OrderStatus.Open && isMyOrder && (
-                <button style={{ ...btnSmall, background: 'rgba(107,114,128,.15)', color: '#6b7280', border: '1px solid rgba(107,114,128,.3)' }}
-                  disabled={actioning}
-                  onClick={(e) => { e.stopPropagation(); handleCancel(order.id); }}>
-                  Cancel{isBtcToFb ? ' (Refund BTC)' : ''}
-                </button>
-              )}
-            </div>
-
-            {actionStep && (
-              <div style={{ marginTop: 8, fontSize: '.72rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>
-                {actionStep}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     );
   };
@@ -2398,119 +2231,8 @@ const CrossChainMarketplace: React.FC = () => {
         </button>
       </div>
 
-      {/* Tabs: Orders / History */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <button className={!showHistory ? 'btn-p' : 'btn-s'} style={{ fontSize: '.76rem', padding: '8px 16px' }}
-          onClick={() => setShowHistory(false)}>
-          Orders
-        </button>
-        <button className={showHistory ? 'btn-p' : 'btn-s'} style={{ fontSize: '.76rem', padding: '8px 16px' }}
-          onClick={() => { setShowHistory(true); loadHistory(); }}>
-          History
-        </button>
-      </div>
-
-      {/* Restored pending operations banner */}
-      {Object.keys(pendingOps).length > 0 && !showHistory && (
-        <div style={{
-          background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.3)',
-          borderRadius: 12, padding: '10px 16px', marginBottom: 12,
-        }}>
-          <div style={{ fontSize: '.76rem', fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>
-            Unfinished Operations
-          </div>
-          {Object.entries(pendingOps).map(([oid, op]) => (
-            <div key={oid} style={{ fontSize: '.72rem', color: 'var(--t2)', marginBottom: 4 }}>
-              Order #{oid}: {op.step}
-              {op.step.includes('Step 2') && (
-                <button className="btn-p" style={{ fontSize: '.66rem', padding: '3px 8px', marginLeft: 8 }}
-                  disabled={actioning}
-                  onClick={() => handleComplete(oid)}>
-                  Resume (Claim BTC)
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* History view */}
-      {showHistory && (
-        <div className="Pg" style={{ padding: '16px 20px' }}>
-          <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: 12 }}>Swap History</div>
-          {historyLoading ? (
-            <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)' }}>Loading...</div>
-          ) : history.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 28, color: 'var(--t3)' }}>
-              <div style={{ fontSize: '.78rem' }}>No past swaps yet</div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {history.map(op => {
-                let amounts: Record<string, string> = {};
-                let txIds: Record<string, string> = {};
-                try { amounts = JSON.parse(op.amounts); } catch { /* */ }
-                try { txIds = JSON.parse(op.tx_ids); } catch { /* */ }
-                const isCompleted = op.status === 'completed';
-                return (
-                  <div key={op.id} style={{
-                    padding: '10px 14px', borderRadius: 10,
-                    background: isCompleted ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)',
-                    border: `1px solid ${isCompleted ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)'}`,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <span style={{
-                          background: op.direction === 'BTC_TO_FB' ? 'rgba(139,92,246,.12)' : 'rgba(245,158,11,.12)',
-                          color: op.direction === 'BTC_TO_FB' ? '#8b5cf6' : '#f59e0b',
-                          padding: '3px 8px', borderRadius: 6, fontSize: '.66rem', fontWeight: 700,
-                        }}>
-                          {op.direction === 'BTC_TO_FB' ? 'Buy FB' : 'Buy BTC'}
-                        </span>
-                        <span style={{ fontSize: '.72rem', color: 'var(--t3)' }}>#{op.order_id}</span>
-                        <span style={{
-                          padding: '2px 6px', borderRadius: 4, fontSize: '.62rem', fontWeight: 700,
-                          background: op.role === 'maker' ? 'rgba(59,130,246,.12)' : 'rgba(168,85,247,.12)',
-                          color: op.role === 'maker' ? '#3b82f6' : '#a855f7',
-                        }}>
-                          {op.role}
-                        </span>
-                      </div>
-                      <span style={{
-                        padding: '3px 8px', borderRadius: 6, fontSize: '.64rem', fontWeight: 700,
-                        background: isCompleted ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)',
-                        color: isCompleted ? '#22c55e' : '#ef4444',
-                      }}>
-                        {op.status}
-                      </span>
-                    </div>
-                    {(amounts.btc || amounts.want) && (
-                      <div style={{ marginTop: 6, fontSize: '.7rem', color: 'var(--t2)' }}>
-                        {amounts.btc && <span>BTC: {amounts.btc} </span>}
-                        {amounts.want && <span>Want: {amounts.want}</span>}
-                      </div>
-                    )}
-                    {op.error && (
-                      <div style={{ marginTop: 4, fontSize: '.66rem', color: '#ef4444' }}>{op.error}</div>
-                    )}
-                    <div style={{ marginTop: 4, fontSize: '.64rem', color: 'var(--t3)' }}>
-                      {new Date(op.updated_at + 'Z').toLocaleString()}
-                      {txIds.latest && (
-                        <span style={{ marginLeft: 8 }}>
-                          TX: {txIds.latest.slice(0, 12)}...
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Order Book */}
-      {!showHistory && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {/* Buy FB (send BTC) */}
         <div>
           <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 8, color: '#8b5cf6' }}>
@@ -2544,7 +2266,7 @@ const CrossChainMarketplace: React.FC = () => {
             fbToBtcOrders.map(renderOrderCard)
           )}
         </div>
-      </div>}
+      </div>
 
       {/* How it works */}
       <div className="Pg" style={{ marginTop: 20, padding: '16px 20px' }}>

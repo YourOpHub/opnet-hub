@@ -695,7 +695,7 @@ const Marketplace: React.FC = () => {
               <div className="ob-empty">No sell orders yet</div>
             ) : (
               <div className="ob-scroll">
-                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 80px 1fr 45px auto' }}>
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
                   <span>Amount</span><span className="ob-r">Price</span><span className="ob-r">Total</span>
                   <span className="ob-r">Fill</span><span className="ob-r">Action</span>
                 </div>
@@ -704,12 +704,12 @@ const Marketplace: React.FC = () => {
                   const totalCostSats = Math.ceil(remaining * o.pricePerToken);
                   const pct = o.amount > 0 ? Math.round((o.amountFilled / o.amount) * 100) : 0;
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 80px 1fr 45px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
                       <span className="ob-mono" style={{ color: 'var(--t1)' }}>
                         {fmtNum(remaining)} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>/ {fmtNum(o.amount)}</span>
                       </span>
                       <span className="ob-mono ob-r" style={{ color: '#ef4444', fontWeight: 700 }}>{o.pricePerToken}</span>
-                      <span className="ob-mono ob-r" style={{ color: 'var(--o)' }}>{fmtNum(totalCostSats)} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>sat</span></span>
+                      <span className="ob-mono ob-r" style={{ color: 'var(--o)' }}>{fmtNum(totalCostSats)}</span>
                       <span className="ob-r" style={{ position: 'relative' }}>
                         <span style={{ color: 'var(--t2)' }}>{pct}%</span>
                         {pct > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, borderRadius: 1, background: 'rgba(255,255,255,.08)' }}>
@@ -754,7 +754,7 @@ const Marketplace: React.FC = () => {
               <div className="ob-empty">No buy orders yet</div>
             ) : (
               <div className="ob-scroll">
-                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 80px 1fr 60px auto' }}>
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 60px auto' }}>
                   <span>Wants</span><span className="ob-r">Price</span><span className="ob-r">Pays</span>
                   <span>Status</span><span className="ob-r">Action</span>
                 </div>
@@ -764,12 +764,12 @@ const Marketplace: React.FC = () => {
                   const isMyBuyOrder = o.creator === senderHex;
                   const isAccepted = o.status === 'accepted';
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 80px 1fr 60px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 60px auto' }}>
                       <span className="ob-mono" style={{ color: 'var(--t1)' }}>
                         {fmtNum(remaining)} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>/ {fmtNum(o.amount)}</span>
                       </span>
                       <span className="ob-mono ob-r" style={{ color: 'var(--g)', fontWeight: 700 }}>{o.pricePerToken}</span>
-                      <span className="ob-mono ob-r" style={{ color: 'var(--o)' }}>{fmtNum(totalCostSats)} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>sat</span></span>
+                      <span className="ob-mono ob-r" style={{ color: 'var(--o)' }}>{fmtNum(totalCostSats)}</span>
                       <span>
                         {isAccepted
                           ? <span className="ob-badge" style={{ background: 'rgba(247,147,26,.15)', color: 'var(--o)' }}>ACCEPTED</span>

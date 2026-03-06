@@ -303,14 +303,17 @@ function getP2OPAddress(mldsaHex: string): string {
 
 /** Format sats as BTC/FB string — trim trailing zeros */
 function satsToBtc(sats: bigint, unit: 'BTC' | 'FB' = 'BTC'): string {
+  return fmtBtc(sats) + ' ' + unit;
+}
+
+/** Format sats as clean number (no unit) — for table cells */
+function fmtBtc(sats: bigint): string {
   const btc = Number(sats) / 1e8;
   let s: string;
   if (btc >= 1) s = btc.toFixed(4);
   else if (btc >= 0.01) s = btc.toFixed(6);
   else s = btc.toFixed(8);
-  // strip trailing zeros but keep at least one decimal
-  s = s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-  return s + ' ' + unit;
+  return s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1650,14 +1653,13 @@ const CrossChainMarketplace: React.FC = () => {
     );
   };
 
-  /** Grid columns for "Your Orders" table */
-  const MY_COLS = '36px 72px 1fr 1fr 72px 68px auto';
-  /** Grid columns for available swap tables */
-  const AV_COLS = '1fr 1fr 72px 60px auto';
+  /** Grid columns */
+  const MY_COLS = '30px 64px 90px 90px 68px 60px auto';
+  const AV_COLS = '90px 90px 68px auto';
 
   // Split available orders into two groups for taker perspective
-  const availBuyFb = otherOpenOrders.filter(o => o.direction === SwapDirection.FB_TO_BTC); // taker pays BTC → gets FB
-  const availGetBtc = otherOpenOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB); // taker pays FB → gets BTC
+  const availBuyFb = otherOpenOrders.filter(o => o.direction === SwapDirection.FB_TO_BTC);
+  const availGetBtc = otherOpenOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB);
 
   /** Format rate — trim trailing zeros */
   const fmtRate = (btc: bigint, fb: bigint) => {
@@ -1693,28 +1695,26 @@ const CrossChainMarketplace: React.FC = () => {
               {isBtcToFb ? 'BTC\u2192FB' : 'FB\u2192BTC'}
             </span>
           </span>
-          <span className="ob-mono" style={{ color: 'var(--w)' }}>{satsToBtc(order.btcAmount)}</span>
-          <span className="ob-mono" style={{ color: 'var(--w)' }}>{satsToBtc(order.wantAmount, 'FB')}</span>
+          <span className="ob-mono ob-r">{fmtBtc(order.btcAmount)}</span>
+          <span className="ob-mono ob-r">{fmtBtc(order.wantAmount)}</span>
           <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{fmtRate(order.btcAmount, order.wantAmount)}</span>
           <span><span className="ob-badge" style={{ background: statusInfo.bg, color: statusInfo.text }}>{statusInfo.label}</span></span>
           <div className="ob-act">
             {order.status === OrderStatus.Open && isMyOrder && (
               <>
-                <span style={{ fontSize: '.64rem', color: '#8b5cf6' }}>{'\u231B'}</span>
+                <span style={{ color: '#8b5cf6' }}>{'\u231B'}</span>
                 <button className="ob-btn danger" disabled={isThisActioning}
                   onClick={() => handleCancel(order.id)}>Cancel</button>
               </>
             )}
             {iNeedToAct && !isExpired && (
               unisat.connected ? (
-                <button className="btn-p" style={{ fontSize: '.64rem', padding: '5px 12px' }}
-                  disabled={isThisActioning}
+                <button className="ob-btn green" disabled={isThisActioning}
                   onClick={() => handleSendAndClaim(order.id)}>
-                  Send FB & Claim
+                  Send & Claim
                 </button>
               ) : (
-                <button className="btn-p" style={{ fontSize: '.64rem', padding: '5px 12px' }}
-                  disabled={unisatConnecting}
+                <button className="ob-btn accent" disabled={unisatConnecting}
                   onClick={() => handleConnectUnisat()}>
                   Connect UniSat
                 </button>
@@ -1723,7 +1723,7 @@ const CrossChainMarketplace: React.FC = () => {
             {iNeedToAct && !isExpired && unisat.connected && (
               <button className="ob-btn" style={{ color: '#3b82f6', borderColor: 'rgba(59,130,246,.2)' }}
                 disabled={isThisActioning}
-                onClick={() => handleComplete(order.id)}>Claim only</button>
+                onClick={() => handleComplete(order.id)}>Claim</button>
             )}
             {isExpired && order.status === OrderStatus.Taken && (isMyOrder || isTaker) && (
               <button className="ob-btn danger" disabled={isThisActioning}
@@ -1760,28 +1760,27 @@ const CrossChainMarketplace: React.FC = () => {
     return (
       <React.Fragment key={order.id}>
         <div className="ob-row" style={{ gridTemplateColumns: AV_COLS }}>
-          <span className="ob-mono" style={{ color: '#22c55e', fontWeight: 700 }}>
-            {satsToBtc(takerGetsAmount)}
+          <span className="ob-mono ob-r" style={{ color: '#22c55e', fontWeight: 700 }}>
+            {fmtBtc(takerGetsAmount)}
           </span>
-          <span className="ob-mono" style={{ color: 'var(--t1)' }}>
-            {satsToBtc(takerSendsAmount)}
+          <span className="ob-mono ob-r" style={{ color: 'var(--t1)' }}>
+            {fmtBtc(takerSendsAmount)}
           </span>
           <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{fmtRate(order.btcAmount, order.wantAmount)}</span>
-          <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{Number(feeSats).toLocaleString()}</span>
           <div className="ob-act">
             {!isExpired && isBtcToFb && (
               <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
                 onTake={handleTakeAndSwap} disabled={isThisActioning || isLocked}
                 defaultAddr={unisat.address || ''}
-                label={isLocked ? '\u{1F512} Locked' : '\u26A1 Take & Swap'} />
+                label={isLocked ? '\u{1F512}' : 'Take'} />
             )}
             {!isExpired && !isBtcToFb && (
               <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
                 onTake={handleTake} disabled={isThisActioning || isLocked}
                 defaultAddr={walletAddress || ''}
-                label={isLocked ? '\u{1F512} Locked' : '\u{1F91D} Take'} />
+                label={isLocked ? '\u{1F512}' : 'Take'} />
             )}
-            {isExpired && <span style={{ color: '#ef4444' }}>Expired</span>}
+            {isExpired && <span style={{ color: '#ef4444', fontSize: '.64rem' }}>Expired</span>}
           </div>
         </div>
         {isThisActioning && actionStep && (
@@ -2280,7 +2279,7 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
           <div className="ob-scroll">
             <div className="ob-hdr" style={{ gridTemplateColumns: MY_COLS }}>
-              <span>#</span><span>Dir</span><span>BTC</span><span>FB</span>
+              <span>#</span><span>Dir</span><span className="ob-r">BTC</span><span className="ob-r">FB</span>
               <span className="ob-r">Rate</span><span>Status</span><span className="ob-r">Action</span>
             </div>
             {myOrders.map(renderMyOrderRow)}
@@ -2304,8 +2303,8 @@ const CrossChainMarketplace: React.FC = () => {
           ) : (
             <div className="ob-scroll">
               <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
-                <span style={{ color: '#22c55e' }}>You Get</span><span>You Pay</span>
-                <span className="ob-r">Rate</span><span className="ob-r">Fee</span>
+                <span className="ob-r" style={{ color: '#22c55e' }}>You Get</span><span className="ob-r">You Pay</span>
+                <span className="ob-r">Rate</span>
                 <span className="ob-r">Action</span>
               </div>
               {availBuyFb.map(renderAvailableRow)}
@@ -2327,8 +2326,8 @@ const CrossChainMarketplace: React.FC = () => {
           ) : (
             <div className="ob-scroll">
               <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
-                <span style={{ color: '#22c55e' }}>You Get</span><span>You Pay</span>
-                <span className="ob-r">Rate</span><span className="ob-r">Fee</span>
+                <span className="ob-r" style={{ color: '#22c55e' }}>You Get</span><span className="ob-r">You Pay</span>
+                <span className="ob-r">Rate</span>
                 <span className="ob-r">Action</span>
               </div>
               {availGetBtc.map(renderAvailableRow)}
@@ -2390,24 +2389,27 @@ const TakeOrderButton: React.FC<{
 
   if (!show) {
     return (
-      <button className="btn-p" style={{ fontSize: '.72rem', padding: '6px 14px' }}
-        disabled={disabled}
-        onClick={(e) => { e.stopPropagation(); setShow(true); }}>
-        {label || 'Take Order'} (+{feeSats.toLocaleString()} sats fee)
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+        <button className="ob-btn green"
+          disabled={disabled}
+          onClick={(e) => { e.stopPropagation(); setShow(true); }}>
+          {label || 'Take'}
+        </button>
+        <span style={{ fontSize: '.54rem', color: 'var(--t3)' }}>+{feeSats.toLocaleString()} sat fee</span>
+      </div>
     );
   }
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
-      <input style={{ ...iStyle, width: 240, fontSize: '.68rem' }}
-        placeholder="Your receiving address (bc1p... or bc1q...)"
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+      <input style={{ ...iStyle, width: 200, fontSize: '.66rem', padding: '4px 8px' }}
+        placeholder="Receiving address (bc1p...)"
         value={addr} onChange={e => setAddr(e.target.value)} />
-      <button className="btn-p" style={{ fontSize: '.68rem', padding: '6px 10px' }}
+      <button className="ob-btn green"
         disabled={disabled || addr.length < 10}
         onClick={() => onTake(orderId, addr)}>
-        Confirm
+        OK
       </button>
-      <button style={btnSmall} onClick={() => setShow(false)}>X</button>
+      <button className="ob-btn" onClick={() => setShow(false)}>X</button>
     </div>
   );
 };

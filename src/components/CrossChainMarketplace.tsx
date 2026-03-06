@@ -1647,9 +1647,13 @@ const CrossChainMarketplace: React.FC = () => {
   };
 
   /** Grid columns for "Your Orders" table */
-  const MY_COLS = '40px 55px 1fr 1fr 70px 70px auto';
-  /** Grid columns for "Available Swaps" table */
-  const AV_COLS = '1fr 1fr 70px 70px 50px auto';
+  const MY_COLS = '36px 70px 1fr 1fr 65px 65px auto';
+  /** Grid columns for available swap tables */
+  const AV_COLS = '1fr 1fr 65px 65px 46px auto';
+
+  // Split available orders into two groups for taker perspective
+  const availBuyFb = otherOpenOrders.filter(o => o.direction === SwapDirection.FB_TO_BTC); // taker pays BTC → gets FB
+  const availGetBtc = otherOpenOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB); // taker pays FB → gets BTC
 
   /** Render a single row in the "Your Orders" table */
   const renderMyOrderRow = (order: FractalSwapOrder) => {
@@ -1657,7 +1661,6 @@ const CrossChainMarketplace: React.FC = () => {
     const isExpired = order.expiry > 0 && blocksLeft <= 0;
     const isMyOrder = isMyOrderFn(order);
     const isTaker = isTakerFn(order);
-    const feeSats = (order.btcAmount * BigInt(feeBps)) / 10000n;
     const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
     const rate = order.wantAmount > 0n ? (Number(order.btcAmount) / Number(order.wantAmount)).toFixed(4) : '';
     const isThisActioning = actioning === order.id;
@@ -1669,34 +1672,37 @@ const CrossChainMarketplace: React.FC = () => {
     return (
       <React.Fragment key={order.id}>
         <div className="ob-row" style={{ gridTemplateColumns: MY_COLS }}>
-          <span className="ob-mono" style={{ color: 'var(--t4)' }}>#{order.id}</span>
+          <span className="ob-mono" style={{ color: 'var(--t4)', fontSize: '.6rem' }}>#{order.id}</span>
           <span>
-            {isMyOrder
-              ? <span className="ob-badge" style={{ background: 'rgba(245,158,11,.1)', color: '#f59e0b' }}>YOUR</span>
-              : <span className="ob-badge" style={{ background: 'rgba(59,130,246,.1)', color: '#3b82f6' }}>TOOK</span>}
+            <span className="ob-badge" style={{
+              background: isBtcToFb ? 'rgba(139,92,246,.12)' : 'rgba(245,158,11,.12)',
+              color: isBtcToFb ? '#a78bfa' : '#f59e0b',
+            }}>
+              {isBtcToFb ? 'BTC\u2192FB' : 'FB\u2192BTC'}
+            </span>
           </span>
-          <span className="ob-mono" style={{ color: 'var(--w)' }}>{satsToBtc(order.btcAmount)} <span style={{ fontSize: '.56rem', color: 'var(--t3)' }}>BTC</span></span>
-          <span className="ob-mono" style={{ color: 'var(--w)' }}>{satsToBtc(order.wantAmount)} <span style={{ fontSize: '.56rem', color: 'var(--t3)' }}>FB</span></span>
-          <span className="ob-mono ob-r" style={{ fontSize: '.6rem', color: 'var(--t2)' }}>1:{rate}</span>
+          <span className="ob-mono" style={{ color: 'var(--w)' }}>{satsToBtc(order.btcAmount)} <span style={{ fontSize: '.52rem', color: 'var(--t3)' }}>BTC</span></span>
+          <span className="ob-mono" style={{ color: 'var(--w)' }}>{satsToBtc(order.wantAmount)} <span style={{ fontSize: '.52rem', color: 'var(--t3)' }}>FB</span></span>
+          <span className="ob-mono ob-r" style={{ fontSize: '.58rem', color: 'var(--t2)' }}>1:{rate}</span>
           <span><span className="ob-badge" style={{ background: statusInfo.bg, color: statusInfo.text }}>{statusInfo.label}</span></span>
           <div className="ob-act">
             {order.status === OrderStatus.Open && isMyOrder && (
               <>
-                <span style={{ fontSize: '.56rem', color: '#8b5cf6', fontWeight: 600 }}>{'\u231B'} Waiting...</span>
-                <button style={{ ...btnSmall, fontSize: '.58rem', padding: '2px 8px' }}
+                <span style={{ fontSize: '.54rem', color: '#8b5cf6', fontWeight: 600 }}>{'\u231B'}</span>
+                <button style={{ ...btnSmall, fontSize: '.56rem', padding: '2px 8px' }}
                   disabled={isThisActioning}
                   onClick={() => handleCancel(order.id)}>Cancel</button>
               </>
             )}
             {iNeedToAct && !isExpired && (
               unisat.connected ? (
-                <button className="btn-p" style={{ fontSize: '.6rem', padding: '4px 10px' }}
+                <button className="btn-p" style={{ fontSize: '.58rem', padding: '3px 10px' }}
                   disabled={isThisActioning}
                   onClick={() => handleSendAndClaim(order.id)}>
-                  {'\u26A1'} Send FB & Claim
+                  Send FB & Claim
                 </button>
               ) : (
-                <button className="btn-p" style={{ fontSize: '.6rem', padding: '4px 10px' }}
+                <button className="btn-p" style={{ fontSize: '.58rem', padding: '3px 10px' }}
                   disabled={unisatConnecting}
                   onClick={() => handleConnectUnisat()}>
                   Connect UniSat
@@ -1704,24 +1710,24 @@ const CrossChainMarketplace: React.FC = () => {
               )
             )}
             {iNeedToAct && !isExpired && unisat.connected && (
-              <button style={{ ...btnSmall, fontSize: '.56rem', padding: '2px 6px', background: 'rgba(59,130,246,.08)', color: '#3b82f6', border: '1px solid rgba(59,130,246,.15)' }}
+              <button style={{ ...btnSmall, fontSize: '.54rem', padding: '2px 6px', background: 'rgba(59,130,246,.08)', color: '#3b82f6', border: '1px solid rgba(59,130,246,.15)' }}
                 disabled={isThisActioning}
                 onClick={() => handleComplete(order.id)}>Claim only</button>
             )}
             {isExpired && order.status === OrderStatus.Taken && (isMyOrder || isTaker) && (
-              <button style={{ ...btnSmall, fontSize: '.58rem', padding: '2px 8px', background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }}
+              <button style={{ ...btnSmall, fontSize: '.56rem', padding: '2px 8px', background: 'rgba(239,68,68,.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,.2)' }}
                 disabled={isThisActioning}
                 onClick={() => handleRefund(order.id)}>Refund</button>
             )}
             {order.expiry > 0 && (
-              <span style={{ fontSize: '.56rem', color: isExpired ? '#ef4444' : 'var(--t4)' }}>
+              <span style={{ fontSize: '.54rem', color: isExpired ? '#ef4444' : 'var(--t4)' }}>
                 {isExpired ? 'EXP' : formatBlockCountdown(blocksLeft)}
               </span>
             )}
           </div>
         </div>
         {isThisActioning && actionStep && (
-          <div style={{ padding: '4px 10px', background: 'rgba(245,158,11,.06)', fontSize: '.6rem', color: '#f59e0b', fontFamily: 'var(--fm)', gridColumn: '1 / -1' }}>
+          <div style={{ padding: '4px 10px', background: 'rgba(245,158,11,.06)', fontSize: '.58rem', color: '#f59e0b', fontFamily: 'var(--fm)' }}>
             {actionStep}
           </div>
         )}
@@ -1729,7 +1735,7 @@ const CrossChainMarketplace: React.FC = () => {
     );
   };
 
-  /** Render a single row in the "Available Swaps" table */
+  /** Render a row in an available swap table */
   const renderAvailableRow = (order: FractalSwapOrder) => {
     const blocksLeft = order.expiry > 0 ? order.expiry - currentBlock : 0;
     const isExpired = order.expiry > 0 && blocksLeft <= 0;
@@ -1739,23 +1745,23 @@ const CrossChainMarketplace: React.FC = () => {
     const isLocked = !!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`].locked_by !== walletAddress;
     const isThisActioning = actioning === order.id;
 
-    const takerGetsLabel = isBtcToFb ? 'BTC' : 'FB';
-    const takerSendsLabel = isBtcToFb ? 'FB' : 'BTC';
     const takerGetsAmount = isBtcToFb ? order.btcAmount : order.wantAmount;
     const takerSendsAmount = isBtcToFb ? order.wantAmount : order.btcAmount;
+    const takerGetsLabel = isBtcToFb ? 'BTC' : 'FB';
+    const takerSendsLabel = isBtcToFb ? 'FB' : 'BTC';
 
     return (
       <React.Fragment key={order.id}>
         <div className="ob-row" style={{ gridTemplateColumns: AV_COLS }}>
           <span className="ob-mono" style={{ color: '#22c55e', fontWeight: 700 }}>
-            {satsToBtc(takerGetsAmount)} <span style={{ fontSize: '.56rem', fontWeight: 500 }}>{takerGetsLabel}</span>
+            {satsToBtc(takerGetsAmount)} <span style={{ fontSize: '.52rem', fontWeight: 500, color: 'var(--t3)' }}>{takerGetsLabel}</span>
           </span>
           <span className="ob-mono" style={{ color: 'var(--w)' }}>
-            {satsToBtc(takerSendsAmount)} <span style={{ fontSize: '.56rem', color: 'var(--t3)' }}>{takerSendsLabel}</span>
+            {satsToBtc(takerSendsAmount)} <span style={{ fontSize: '.52rem', color: 'var(--t4)' }}>{takerSendsLabel}</span>
           </span>
-          <span className="ob-mono ob-r" style={{ fontSize: '.6rem', color: 'var(--t2)' }}>1:{rate}</span>
-          <span className="ob-mono ob-r" style={{ fontSize: '.6rem', color: 'var(--t3)' }}>{Number(feeSats).toLocaleString()}</span>
-          <span className="ob-r" style={{ fontSize: '.56rem', color: isExpired ? '#ef4444' : 'var(--t4)' }}>
+          <span className="ob-mono ob-r" style={{ fontSize: '.58rem', color: 'var(--t2)' }}>1:{rate}</span>
+          <span className="ob-mono ob-r" style={{ fontSize: '.58rem', color: 'var(--t3)' }}>{Number(feeSats).toLocaleString()}</span>
+          <span className="ob-r" style={{ fontSize: '.54rem', color: isExpired ? '#ef4444' : 'var(--t4)' }}>
             {isExpired ? 'EXP' : order.expiry > 0 ? formatBlockCountdown(blocksLeft) : '-'}
           </span>
           <div className="ob-act">
@@ -1771,11 +1777,11 @@ const CrossChainMarketplace: React.FC = () => {
                 defaultAddr={walletAddress || ''}
                 label={isLocked ? '\u{1F512} Locked' : '\u{1F91D} Take'} />
             )}
-            {isExpired && <span style={{ fontSize: '.56rem', color: '#ef4444' }}>Expired</span>}
+            {isExpired && <span style={{ fontSize: '.54rem', color: '#ef4444' }}>Expired</span>}
           </div>
         </div>
         {isThisActioning && actionStep && (
-          <div style={{ padding: '4px 10px', background: 'rgba(245,158,11,.06)', fontSize: '.6rem', color: '#f59e0b', fontFamily: 'var(--fm)' }}>
+          <div style={{ padding: '4px 10px', background: 'rgba(245,158,11,.06)', fontSize: '.58rem', color: '#f59e0b', fontFamily: 'var(--fm)' }}>
             {actionStep}
           </div>
         )}
@@ -2270,7 +2276,7 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
           <div className="ob-scroll">
             <div className="ob-hdr" style={{ gridTemplateColumns: MY_COLS }}>
-              <span>#ID</span><span>Role</span><span>BTC</span><span>FB</span>
+              <span>#</span><span>Dir</span><span>BTC</span><span>FB</span>
               <span className="ob-r">Rate</span><span>Status</span><span className="ob-r">Action</span>
             </div>
             {myOrders.map(renderMyOrderRow)}
@@ -2278,36 +2284,51 @@ const CrossChainMarketplace: React.FC = () => {
         </div>
       )}
 
-      {/* ── Available Swaps (table) ── */}
-      <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{
-          padding: '10px 10px 0', fontWeight: 700, fontSize: '.78rem', color: 'var(--w)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
-          <span>Available Swaps ({otherOpenOrders.length})</span>
-          <span style={{ fontSize: '.64rem', color: 'var(--t4)', fontWeight: 400 }}>
-            {btcToFbOrders.filter(o => o.status === OrderStatus.Open && !isMyOrderFn(o)).length} BTC{'\u2192'}FB
-            {' \u00B7 '}
-            {fbToBtcOrders.filter(o => o.status === OrderStatus.Open && !isMyOrderFn(o)).length} FB{'\u2192'}BTC
-          </span>
-        </div>
-        {loading ? (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)' }}>Loading orders...</div>
-        ) : otherOpenOrders.length === 0 ? (
-          <div className="ob-empty">
-            <div style={{ fontSize: '.82rem', fontWeight: 600, marginBottom: 4 }}>No swaps available</div>
-            <div style={{ fontSize: '.7rem' }}>Create an order above to start trading</div>
+      {/* ── Available Swaps — split by direction ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        {/* Buy FB — taker pays BTC, gets FB (maker direction: FB_TO_BTC) */}
+        <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '10px 10px 0', fontWeight: 700, fontSize: '.82rem', color: '#22c55e' }}>
+            Buy FB ({availBuyFb.length})
+            <span style={{ fontSize: '.56rem', fontWeight: 400, color: 'var(--t4)', marginLeft: 6 }}>pay BTC {'\u2192'} get FB</span>
           </div>
-        ) : (
-          <div className="ob-scroll">
-            <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
-              <span>You Get</span><span>You Send</span>
-              <span className="ob-r">Rate</span><span className="ob-r">Fee</span>
-              <span className="ob-r">{'\u23F1'}</span><span className="ob-r">Action</span>
+          {loading ? (
+            <div style={{ padding: 28, textAlign: 'center', color: 'var(--t3)', fontSize: '.72rem' }}>Loading...</div>
+          ) : availBuyFb.length === 0 ? (
+            <div className="ob-empty">No FB for sale</div>
+          ) : (
+            <div className="ob-scroll">
+              <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
+                <span style={{ color: '#22c55e' }}>You Get (FB)</span><span>You Pay (BTC)</span>
+                <span className="ob-r">Rate</span><span className="ob-r">Fee</span>
+                <span className="ob-r">{'\u23F1'}</span><span className="ob-r">Action</span>
+              </div>
+              {availBuyFb.map(renderAvailableRow)}
             </div>
-            {otherOpenOrders.map(renderAvailableRow)}
+          )}
+        </div>
+
+        {/* Get BTC — taker pays FB, gets BTC (maker direction: BTC_TO_FB) */}
+        <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '10px 10px 0', fontWeight: 700, fontSize: '.82rem', color: '#f59e0b' }}>
+            Get BTC ({availGetBtc.length})
+            <span style={{ fontSize: '.56rem', fontWeight: 400, color: 'var(--t4)', marginLeft: 6 }}>pay FB {'\u2192'} get BTC</span>
           </div>
-        )}
+          {loading ? (
+            <div style={{ padding: 28, textAlign: 'center', color: 'var(--t3)', fontSize: '.72rem' }}>Loading...</div>
+          ) : availGetBtc.length === 0 ? (
+            <div className="ob-empty">No BTC for sale</div>
+          ) : (
+            <div className="ob-scroll">
+              <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
+                <span style={{ color: '#22c55e' }}>You Get (BTC)</span><span>You Pay (FB)</span>
+                <span className="ob-r">Rate</span><span className="ob-r">Fee</span>
+                <span className="ob-r">{'\u23F1'}</span><span className="ob-r">Action</span>
+              </div>
+              {availGetBtc.map(renderAvailableRow)}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* How it works */}

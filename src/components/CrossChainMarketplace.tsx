@@ -499,19 +499,26 @@ const CrossChainMarketplace: React.FC = () => {
   const receiveUnit = formDirection === SwapDirection.BTC_TO_FB ? 'FB' : 'BTC';
   const expiryOpts = suggestedExpiryBlocks(1);
 
-  // Persist rates in localStorage
-  const saveRate = useCallback((orderId: string, rate: string) => {
+  // Persist rates in localStorage (numeric for calculations)
+  const saveRate = useCallback((orderId: string, rateNum: number, receiveSats: bigint) => {
     try {
       const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
-      stored[orderId] = rate;
+      stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
     } catch { /* */ }
   }, []);
-  const getRate = useCallback((orderId: string): string => {
+  const getRate = useCallback((orderId: string): { rate: number; receiveSats: bigint } | null => {
     try {
       const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
-      return stored[orderId] || '';
-    } catch { return ''; }
+      const v = stored[orderId];
+      if (!v) return null;
+      // Backward compat with old string format "1 BTC = 0.98 FB"
+      if (typeof v === 'string') {
+        const m = v.match(/= ([\d.]+)/);
+        return m ? { rate: parseFloat(m[1]), receiveSats: 0n } : null;
+      }
+      return { rate: v.r, receiveSats: BigInt(v.rx || '0') };
+    } catch { return null; }
   }, []);
 
   // ── Create Order ──
@@ -549,7 +556,7 @@ const CrossChainMarketplace: React.FC = () => {
       // Save preimage
       const nextId = orders.length > 0 ? Math.max(...orders.map(o => parseInt(o.id))) + 1 : 1;
       savePreimage(String(nextId), preimage);
-      if (formRate) saveRate(String(nextId), `1 ${sendUnit} = ${formRate} ${receiveUnit}`);
+      if (formRate) saveRate(String(nextId), parseFloat(formRate), formReceiveSats);
 
       toast(`Order created! Preimage saved.`, 'success');
       setCreateStep('');
@@ -1186,11 +1193,11 @@ const CrossChainMarketplace: React.FC = () => {
     return (
       <span style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
-        background: isBtcToFb ? 'rgba(245,158,11,.12)' : 'rgba(139,92,246,.12)',
-        color: isBtcToFb ? '#f59e0b' : '#8b5cf6',
+        background: isBtcToFb ? 'rgba(139,92,246,.12)' : 'rgba(245,158,11,.12)',
+        color: isBtcToFb ? '#8b5cf6' : '#f59e0b',
         padding: '4px 10px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
       }}>
-        {isBtcToFb ? 'Send BTC, Get FB' : 'Send FB, Get BTC'}
+        {isBtcToFb ? 'Buy FB' : 'Buy BTC'}
       </span>
     );
   };
@@ -1202,20 +1209,33 @@ const CrossChainMarketplace: React.FC = () => {
     const myPreimage = preimageStore[order.id];
     const isMyOrder = walletAddress && order.creator.includes(walletAddress.replace('opt1', '').slice(-16));
     const feeSats = (order.amountSats * BigInt(feeBps)) / 10000n;
-    // BTC_TO_FB: amount is in BTC. FB_TO_BTC: amount is in FB.
-    const amountUnit = order.direction === SwapDirection.BTC_TO_FB ? 'BTC' : 'FB';
-    const orderRate = getRate(order.id);
+    const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
+    const oSendUnit: 'BTC' | 'FB' = isBtcToFb ? 'BTC' : 'FB';
+    const oWantUnit: 'BTC' | 'FB' = isBtcToFb ? 'FB' : 'BTC';
+    const rateInfo = getRate(order.id);
+
+    // Calculate receive amount from rate
+    let receiveAmt: bigint | null = null;
+    if (rateInfo) {
+      if (rateInfo.receiveSats > 0n) {
+        receiveAmt = rateInfo.receiveSats;
+      } else if (rateInfo.rate > 0) {
+        receiveAmt = BigInt(Math.round(Number(order.amountSats) * rateInfo.rate));
+      }
+    }
 
     return (
       <div key={order.id} className="Pg" style={{ marginBottom: 8, cursor: 'pointer' }}
         onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
       >
-        {/* Header row */}
+        {/* Header — prominent receive amount */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {renderDirectionBadge(order.direction)}
-            <span style={{ fontWeight: 700, fontSize: '.82rem' }}>
-              {satsToBtc(order.amountSats, amountUnit)}
+            <span style={{ fontWeight: 700, fontSize: '.85rem', color: 'var(--w)' }}>
+              {receiveAmt
+                ? satsToBtc(receiveAmt, oWantUnit)
+                : satsToBtc(order.amountSats, oSendUnit)}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1224,23 +1244,32 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* Info row */}
-        <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '.72rem', color: 'var(--t2)', flexWrap: 'wrap' }}>
-          {orderRate && <span style={{ color: 'var(--g)', fontWeight: 600 }}>{orderRate}</span>}
-          <span>Fee: <b style={{ color: 'var(--o)' }}>+{Number(feeSats).toLocaleString()} sats</b></span>
-          {order.feePaid > 0n && (
-            <span>Paid: <b>{Number(order.feePaid).toLocaleString()} sats</b></span>
+        {/* Swap flow: Sends → Gets */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: '.72rem', color: 'var(--t2)', flexWrap: 'wrap', alignItems: 'center' }}>
+          {receiveAmt ? (
+            <span>
+              Pays <b>{satsToBtc(order.amountSats, oSendUnit)}</b>
+              {' → '}
+              Gets <b style={{ color: 'var(--g)' }}>{satsToBtc(receiveAmt, oWantUnit)}</b>
+            </span>
+          ) : (
+            <span>Sends <b>{satsToBtc(order.amountSats, oSendUnit)}</b></span>
           )}
-          {order.expiry > 0 && (
-            <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
-              {isExpired ? 'EXPIRED' : `Expires: ${formatBlockCountdown(blocksLeft)}`}
+          <span style={{ color: 'var(--t3)' }}>|</span>
+          <span>Fee: <b style={{ color: 'var(--o)' }}>+{Number(feeSats).toLocaleString()} sats</b></span>
+          {rateInfo && rateInfo.rate > 0 && (
+            <span style={{ fontSize: '.66rem', color: 'var(--t3)' }}>
+              1 {oSendUnit} = {rateInfo.rate.toFixed(4)} {oWantUnit}
             </span>
           )}
-        </div>
-
-        {/* Hashlock preview */}
-        <div style={{ marginTop: 6, fontSize: '.68rem', color: 'var(--t3)', fontFamily: 'var(--fm)' }}>
-          Hashlock: {order.hashlock === ZERO_HEX ? '(pending)' : truncateHex(order.hashlock, 8)}
+          {order.expiry > 0 && (
+            <>
+              <span style={{ color: 'var(--t3)' }}>|</span>
+              <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
+                {isExpired ? 'EXPIRED' : formatBlockCountdown(blocksLeft)}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Expanded details */}
@@ -1743,21 +1772,21 @@ const CrossChainMarketplace: React.FC = () => {
             style={{ flex: 1, fontSize: '.76rem', padding: '10px 0' }}
             onClick={() => { setFormDirection(SwapDirection.BTC_TO_FB); setFormMakerAddr(''); setMakerAddrManual(false); }}
           >
-            BTC → Fractal
+            Buy FB (send BTC)
           </button>
           <button
             className={formDirection === SwapDirection.FB_TO_BTC ? 'btn-p' : 'btn-s'}
             style={{ flex: 1, fontSize: '.76rem', padding: '10px 0' }}
             onClick={() => { setFormDirection(SwapDirection.FB_TO_BTC); setFormMakerAddr(''); setMakerAddrManual(false); }}
           >
-            Fractal → BTC
+            Buy BTC (send FB)
           </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {/* You Send */}
+          {/* You Pay */}
           <div>
-            <label style={labelStyle}>You Send ({sendUnit})</label>
+            <label style={labelStyle}>You Pay ({sendUnit})</label>
             <input style={iStyle} type="number" placeholder="0.001" value={formAmount}
               onChange={e => setFormAmount(e.target.value)} min="0" step="any" />
             {formAmountSats > 0n && (
@@ -1767,21 +1796,32 @@ const CrossChainMarketplace: React.FC = () => {
             )}
           </div>
 
-          {/* You Receive */}
+          {/* You Get */}
           <div>
-            <label style={labelStyle}>You Receive ({receiveUnit})</label>
+            <label style={labelStyle}>You Get ({receiveUnit})</label>
             <input style={iStyle} type="number" placeholder="0.001" value={formReceive}
               onChange={e => setFormReceive(e.target.value)} min="0" step="any" />
             {formRate && (
-              <div style={{ fontSize: '.66rem', color: 'var(--o)', marginTop: 2, fontWeight: 600 }}>
+              <div style={{ fontSize: '.66rem', color: 'var(--g)', marginTop: 2, fontWeight: 600 }}>
                 Rate: 1 {sendUnit} = {formRate} {receiveUnit}
               </div>
             )}
           </div>
 
+          {/* Receiving address on other chain */}
+          <div>
+            <label style={labelStyle}>
+              Your {formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} Receiving Address
+            </label>
+            <input style={iStyle}
+              placeholder={formDirection === SwapDirection.BTC_TO_FB ? 'bc1p... (Fractal address)' : 'bc1p... (Bitcoin address)'}
+              value={formMakerAddr}
+              onChange={e => { setFormMakerAddr(e.target.value); setMakerAddrManual(true); }} />
+          </div>
+
           {/* Expiry */}
           <div>
-            <label style={labelStyle}>Expiry</label>
+            <label style={labelStyle}>Order Expiry</label>
             <select style={iStyle as React.CSSProperties} value={formExpiry} onChange={e => setFormExpiry(e.target.value)}>
               <option value={String(expiryOpts.min)}>~12h ({expiryOpts.min} blocks)</option>
               <option value={String(expiryOpts.default)}>~24h ({expiryOpts.default} blocks) - Recommended</option>
@@ -1789,26 +1829,33 @@ const CrossChainMarketplace: React.FC = () => {
               <option value={String(expiryOpts.max)}>~4 days ({expiryOpts.max} blocks)</option>
             </select>
           </div>
-
-          {/* Receiving address on other chain */}
-          <div>
-            <label style={labelStyle}>
-              Your {formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} Address
-            </label>
-            <input style={iStyle}
-              placeholder={formDirection === SwapDirection.BTC_TO_FB ? 'bc1p... (Fractal)' : 'bc1p... (Bitcoin)'}
-              value={formMakerAddr}
-              onChange={e => { setFormMakerAddr(e.target.value); setMakerAddrManual(true); }} />
-          </div>
         </div>
 
-        {/* Fee + rate display */}
+        {/* Summary box */}
         {formAmountSats > 0n && (
-          <div style={{ marginTop: 10, fontSize: '.76rem', color: 'var(--t2)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <span>Taker fee: <b style={{ color: 'var(--o)' }}>{Number(formFeeSats).toLocaleString()} sats ({feeBps / 100}%)</b></span>
-            <span>You send: <b>{satsToBtc(formAmountSats, sendUnit as 'BTC' | 'FB')}</b></span>
+          <div style={{
+            marginTop: 12, padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(139,92,246,.06)', border: '1px solid rgba(139,92,246,.15)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.76rem', marginBottom: 4 }}>
+              <span style={{ color: 'var(--t2)' }}>You pay:</span>
+              <b>{satsToBtc(formAmountSats, sendUnit as 'BTC' | 'FB')}</b>
+            </div>
             {formReceiveSats > 0n && (
-              <span>You receive: <b style={{ color: 'var(--g)' }}>{satsToBtc(formReceiveSats, receiveUnit as 'BTC' | 'FB')}</b></span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.76rem', marginBottom: 4 }}>
+                <span style={{ color: 'var(--t2)' }}>You get:</span>
+                <b style={{ color: 'var(--g)' }}>{satsToBtc(formReceiveSats, receiveUnit as 'BTC' | 'FB')}</b>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem' }}>
+              <span style={{ color: 'var(--t3)' }}>Taker fee ({feeBps / 100}%):</span>
+              <span style={{ color: 'var(--o)' }}>+{Number(formFeeSats).toLocaleString()} sats</span>
+            </div>
+            {formRate && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--bd)' }}>
+                <span style={{ color: 'var(--t3)' }}>Exchange rate:</span>
+                <span style={{ color: 'var(--t2)' }}>1 {sendUnit} = {formRate} {receiveUnit}</span>
+              </div>
             )}
           </div>
         )}
@@ -1829,34 +1876,34 @@ const CrossChainMarketplace: React.FC = () => {
 
       {/* Order Book */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {/* BTC → Fractal */}
+        {/* Buy FB (send BTC) */}
         <div>
-          <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 8, color: '#f59e0b' }}>
-            BTC → Fractal ({btcToFbOrders.length})
+          <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 8, color: '#8b5cf6' }}>
+            Buy FB ({btcToFbOrders.length})
           </div>
           {loading ? (
             <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
           ) : btcToFbOrders.length === 0 ? (
             <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-              <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
-              <div style={{ fontSize: '.72rem' }}>No BTC→Fractal orders yet</div>
+              <div style={{ fontSize: '1.5rem', opacity: .3, marginBottom: 8 }}>No orders</div>
+              <div style={{ fontSize: '.72rem' }}>Create an order to buy Fractal BTC</div>
             </div>
           ) : (
             btcToFbOrders.map(renderOrderCard)
           )}
         </div>
 
-        {/* Fractal → BTC */}
+        {/* Buy BTC (send FB) */}
         <div>
-          <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 8, color: '#8b5cf6' }}>
-            Fractal → BTC ({fbToBtcOrders.length})
+          <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 8, color: '#f59e0b' }}>
+            Buy BTC ({fbToBtcOrders.length})
           </div>
           {loading ? (
             <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
           ) : fbToBtcOrders.length === 0 ? (
             <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-              <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
-              <div style={{ fontSize: '.72rem' }}>No Fractal→BTC orders yet</div>
+              <div style={{ fontSize: '1.5rem', opacity: .3, marginBottom: 8 }}>No orders</div>
+              <div style={{ fontSize: '.72rem' }}>Create an order to buy Bitcoin</div>
             </div>
           ) : (
             fbToBtcOrders.map(renderOrderCard)

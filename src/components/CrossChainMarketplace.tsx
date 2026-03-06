@@ -1202,8 +1202,8 @@ const CrossChainMarketplace: React.FC = () => {
     const myPreimage = preimageStore[order.id];
     const isMyOrder = walletAddress && order.creator.includes(walletAddress.replace('opt1', '').slice(-16));
     const feeSats = (order.amountSats * BigInt(feeBps)) / 10000n;
-    // amountSats is always BTC locked in the contract
-    const amountUnit = 'BTC' as const;
+    // BTC_TO_FB: amount is in BTC. FB_TO_BTC: amount is in FB.
+    const amountUnit = order.direction === SwapDirection.BTC_TO_FB ? 'BTC' : 'FB';
     const orderRate = getRate(order.id);
 
     return (

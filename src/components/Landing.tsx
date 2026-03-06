@@ -137,9 +137,6 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
             </a>
           </div>
         </div>
-        <div style={{ flex: '0 1 360px', display: 'flex', justifyContent: 'center', fontSize: '6rem' }}>
-          ₿
-        </div>
       </div>
 
       {/* ═══ LIVE TICKER ═══ */}

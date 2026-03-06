@@ -361,45 +361,6 @@ const Launchpad: React.FC = () => {
         }
       }
 
-      // Load from OPScan API
-      try {
-        const resp = await fetch('https://api.opscan.org/v1/op_testnet/tokens');
-        if (resp.ok) {
-          const data = await resp.json();
-          const results = data?.results || data || [];
-          if (Array.isArray(results)) {
-            for (const t of results) {
-              const meta = t.op20Metadata || {};
-              if (!meta.symbol || meta.isPool) continue;
-              // Convert hex address to opt1sq format
-              const hexAddr = String(t.address || '').replace('0x', '');
-              // Skip if already in list (match by hex suffix)
-              if (merged.some(m => m.address === hexAddr || hexAddr.endsWith(m.address.replace('opt1sq', '').slice(-20)))) continue;
-              const maxSup = Number(meta.maximumSupply || 0) / Math.pow(10, meta.decimals || 8);
-              const totalSup = Number(meta.totalSupply || 0) / Math.pow(10, meta.decimals || 8);
-              const opToken: LaunchToken = {
-                address: t.address || hexAddr,
-                name: meta.name || meta.symbol || '?',
-                symbol: meta.symbol || '?',
-                decimals: meta.decimals || 8,
-                totalSupply: maxSup,
-                publicMintSupply: maxSup / 2,
-                maxMintPerTx: Math.floor(maxSup * 0.01),
-                mintedSupply: totalSup > maxSup / 2 ? totalSup - maxSup / 2 : 0,
-                creator: t.deployerAddress || 'unknown',
-                createdAt: t.deployedAt || Date.now(),
-                description: `${meta.name} — from OPScan`,
-                image: null,
-                status: 'bonding',
-                txHash: t.deployTransactionId || '',
-                trades: [], replies: [], likes: 0,
-              };
-              merged.push(opToken);
-            }
-          }
-        }
-      } catch (e) { console.warn('[LP] OPScan fetch failed:', e); }
-
       setTokens(merged);
       saveTokens(merged);
     })();

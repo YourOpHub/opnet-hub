@@ -35,7 +35,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [dismiss]);
 
   const icons: Record<ToastType, string> = {
-    success: '\u2713', error: '\u2717', warning: '!', info: 'i',
+    success: '\u2705', error: '\u274C', warning: '\u26A0\uFE0F', info: '\u2139\uFE0F',
   };
 
   return (
@@ -50,11 +50,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               style={{ cursor: 'pointer' }}
             >
               <span style={{
-                width: 22, height: 22, borderRadius: '50%',
-                background: 'currentColor', color: 'var(--bg)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '.65rem', fontWeight: 800, flexShrink: 0,
-                opacity: .9,
+                fontSize: '1rem', lineHeight: 1, flexShrink: 0,
               }}>{icons[t.type]}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ color: 'var(--w)', lineHeight: 1.4 }}>{t.message}</div>

@@ -299,12 +299,12 @@ function getP2OPAddress(mldsaHex: string): string {
   return Address.wrap(bytes).p2op(NETWORK);
 }
 
-/** Format sats as BTC/FB string */
+/** Format sats as BTC/FB string — always in BTC format, never sats */
 function satsToBtc(sats: bigint, unit: 'BTC' | 'FB' = 'BTC'): string {
   const btc = Number(sats) / 1e8;
   if (btc >= 1) return btc.toFixed(4) + ' ' + unit;
-  if (btc >= 0.001) return btc.toFixed(6) + ' ' + unit;
-  return Number(sats).toLocaleString() + ' sats';
+  if (btc >= 0.01) return btc.toFixed(6) + ' ' + unit;
+  return btc.toFixed(8) + ' ' + unit;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -358,6 +358,15 @@ const CrossChainMarketplace: React.FC = () => {
   const [actionStep, setActionStep] = useState('');
   const [actioning, setActioning] = useState(false);
   const [msg, setMsg] = useState('');
+
+  // Per-order pending TX tracking
+  const [pendingOps, setPendingOps] = useState<Record<string, { step: string; txHash?: string }>>({});
+  const setPendingOp = useCallback((orderId: string, step: string, txHash?: string) => {
+    setPendingOps(prev => ({ ...prev, [orderId]: { step, txHash } }));
+  }, []);
+  const clearPendingOp = useCallback((orderId: string) => {
+    setPendingOps(prev => { const next = { ...prev }; delete next[orderId]; return next; });
+  }, []);
 
   // Preimage store (localStorage persistence)
   const [preimageStore, setPreimageStore] = useState<Record<string, string>>(() => {
@@ -525,12 +534,18 @@ const CrossChainMarketplace: React.FC = () => {
   const handleCreate = useCallback(async () => {
     if (!walletAddress || !senderAddr) { openConnectModal(); return; }
     if (!contractReady) { setMsg('Contract not deployed yet'); return; }
-    if (!formAmount || !formMakerAddr) return;
-    if (formAmountSats <= 0n) return;
+    if (!formAmount || !formMakerAddr || !formReceive) return;
+    if (formAmountSats <= 0n || formReceiveSats <= 0n) return;
 
     setCreating(true);
     try {
       const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr);
+
+      // Get actual next order ID from contract
+      setCreateStep('Checking order ID...');
+      const nextIdResult = await market.getNextOrderId();
+      const nextIdProps = nextIdResult?.properties as Record<string, bigint> | undefined;
+      const actualNextId = String(Number(nextIdProps?.nextOrderId ?? 1n));
 
       // Generate HTLC pair
       setCreateStep('Generating HTLC preimage...');
@@ -553,25 +568,28 @@ const CrossChainMarketplace: React.FC = () => {
       const tp = await buildTxParams(provider, walletAddress);
       await (sim as CallResult).sendTransaction(tp);
 
-      // Save preimage
-      const nextId = orders.length > 0 ? Math.max(...orders.map(o => parseInt(o.id))) + 1 : 1;
-      savePreimage(String(nextId), preimage);
-      if (formRate) saveRate(String(nextId), parseFloat(formRate), formReceiveSats);
+      // Save preimage & rate with actual contract ID
+      savePreimage(actualNextId, preimage);
+      if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats);
 
-      toast(`Order created! Preimage saved.`, 'success');
-      setCreateStep('');
+      setCreateStep('Waiting for confirmation...');
+      toast(`Order #${actualNextId} created! Waiting for block confirmation...`, 'success');
       setFormAmount('');
       setFormReceive('');
       setFormMakerAddr('');
 
-      // Non-blocking: wait for block then refresh
-      waitForNextBlock(provider).then(() => fetchOrders()).catch(() => {});
+      // Wait for block then refresh
+      waitForNextBlock(provider).then(() => {
+        setCreateStep('');
+        toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
+        fetchOrders();
+      }).catch(() => { setCreateStep(''); });
       fetchOrders();
     } catch (e) {
       setCreateStep(formatTxError(e));
       setTimeout(() => setCreateStep(''), 5000);
     } finally { setCreating(false); }
-  }, [walletAddress, senderAddr, formAmount, formMakerAddr, formDirection, formExpiry, formAmountSats, currentBlock, provider, openConnectModal, contractReady, orders, fetchOrders, savePreimage, toast, formRate, saveRate, sendUnit, receiveUnit]);
+  }, [walletAddress, senderAddr, formAmount, formMakerAddr, formReceive, formDirection, formExpiry, formAmountSats, formReceiveSats, currentBlock, provider, openConnectModal, contractReady, fetchOrders, savePreimage, toast, formRate, saveRate]);
 
   // ── Take Order (pays 1% BTC fee) ──
   const handleTake = useCallback(async (orderId: string, takerAddrInput: string) => {
@@ -626,21 +644,23 @@ const CrossChainMarketplace: React.FC = () => {
       await (sim as CallResult).sendTransaction(tp);
 
       setActionStep('');
-      toast(`Order taken! Fee: ${Number(feeSats)} sats. Confirming...`, 'success');
+      setPendingOp(orderId, 'TX sent, waiting for block confirmation...');
+      toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}. Confirming...`, 'success');
       setActioning(false);
 
       // Non-blocking confirmation
       waitForNextBlock(provider).then(() => {
-        toast('Order confirmed on-chain!', 'success');
+        clearPendingOp(orderId);
+        toast(`Order #${orderId} confirmed on-chain!`, 'success');
         fetchOrders();
-      }).catch(() => {});
+      }).catch(() => { clearPendingOp(orderId); });
       fetchOrders();
       return;
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(false); }
-  }, [walletAddress, senderAddr, orders, feeBps, provider, openConnectModal, contractReady, fetchOrders, toast]);
+  }, [walletAddress, senderAddr, orders, feeBps, provider, openConnectModal, contractReady, fetchOrders, toast, setPendingOp, clearPendingOp]);
 
   // ── Confirm Swap (reveal preimage) ──
   const handleConfirm = useCallback(async (orderId: string, preimageHex: string) => {
@@ -662,20 +682,22 @@ const CrossChainMarketplace: React.FC = () => {
       await (sim as CallResult).sendTransaction(tp);
 
       setActionStep('');
-      toast('Swap confirmed! Waiting for block...', 'success');
+      setPendingOp(orderId, 'Swap confirmed! Waiting for block settlement...');
+      toast(`Order #${orderId} confirmed! Waiting for settlement...`, 'success');
       setActioning(false);
 
       waitForNextBlock(provider).then(() => {
-        toast('Swap settled on-chain!', 'success');
+        clearPendingOp(orderId);
+        toast(`Order #${orderId} settled on-chain!`, 'success');
         fetchOrders();
-      }).catch(() => {});
+      }).catch(() => { clearPendingOp(orderId); });
       fetchOrders();
       return;
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(false); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders]);
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, setPendingOp, clearPendingOp]);
 
   // ── Cancel Order ──
   const handleCancel = useCallback(async (orderId: string) => {
@@ -1256,7 +1278,7 @@ const CrossChainMarketplace: React.FC = () => {
             <span>Sends <b>{satsToBtc(order.amountSats, oSendUnit)}</b></span>
           )}
           <span style={{ color: 'var(--t3)' }}>|</span>
-          <span>Fee: <b style={{ color: 'var(--o)' }}>+{Number(feeSats).toLocaleString()} sats</b></span>
+          <span>Fee: <b style={{ color: 'var(--o)' }}>+{satsToBtc(feeSats)}</b></span>
           {rateInfo && rateInfo.rate > 0 && (
             <span style={{ fontSize: '.66rem', color: 'var(--t3)' }}>
               1 {oSendUnit} = {rateInfo.rate.toFixed(4)} {oWantUnit}
@@ -1271,6 +1293,18 @@ const CrossChainMarketplace: React.FC = () => {
             </>
           )}
         </div>
+
+        {/* Pending operation banner */}
+        {pendingOps[order.id] && (
+          <div style={{
+            marginTop: 8, padding: '8px 12px', borderRadius: 8,
+            background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.2)',
+            display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem',
+          }}>
+            <span style={{ animation: 'spin 2s linear infinite', fontSize: '.9rem' }}>{'\u23F3'}</span>
+            <span style={{ color: '#f59e0b', fontWeight: 600 }}>{pendingOps[order.id].step}</span>
+          </div>
+        )}
 
         {/* Expanded details */}
         {isExpanded && (

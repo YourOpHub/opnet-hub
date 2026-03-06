@@ -102,9 +102,9 @@ export const MARKET_SELECTORS = {
     getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
 } as const;
 
-/** FractalSwap v6 — real BTC escrow, both directions */
-export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqqhqt6cuwyp7yven0e8xfc56e0t3lwdy6uqt5k36';
-export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0xebaae58f031bec0c941e565af9d254ff2ef8238a3148e3adf3720e42784d2ed1';
+/** FractalSwap v7 — real BTC escrow + relayer auto-complete */
+export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
+export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
 
 /** TokenEscrowBridge — removed from UI (duplicates Marketplace), not redeployed */
 export const TOKEN_ESCROW_ADDRESS = '';
@@ -137,17 +137,19 @@ export const NATIVESWAP_SELECTORS = {
 /** Fee recipient P2OP address string (for on-chain output.to matching) */
 export const FEE_RECIPIENT_ADDR = 'opt1sfjnexj8d35sut49m4nw7nljwk7ctpvhdf906s8j5t40mc764ft4qptud3g';
 
-/** FractalSwap v6 selectors (from opnet-transform build output) */
+/** FractalSwap v7 selectors (from opnet-transform build output) */
 export const CROSSCHAIN_SELECTORS = {
     createOrder: 0x17b631a3,     // createOrder(uint256,uint256,uint256,uint256,uint256)
     takeOrder: 0xfe6bb1e1,       // takeOrder(uint256,uint256)
-    completeOrder: 0x39585799,   // completeOrder(uint256) — v6: replaces confirmSwap
+    completeOrder: 0x39585799,   // completeOrder(uint256) — manual completion by taker/maker
+    relayerComplete: 0x4e402884, // relayerComplete(uint256) — v7: auto-complete by trusted relayer
     cancelOrder: 0xeb5aa830,     // cancelOrder(uint256)
     refundExpired: 0x7136e9b2,   // refundExpired(uint256)
-    getOrder: 0xe9489555,        // getOrder(uint256) → 10 fields (v6: removed hashlock/preimage, added wantAmount)
+    getOrder: 0xe9489555,        // getOrder(uint256) → 10 fields
     getNextOrderId: 0xf4920cae,  // getNextOrderId()
     setFeeRecipient: 0x5ccb9ecd, // setFeeRecipient(uint256,string)
     setFeeBps: 0xfdd3c00b,       // setFeeBps(uint256)
+    setRelayer: 0x2b07d4c5,     // setRelayer(uint256) — v7: set trusted relayer
     getFeeInfo: 0xf22d798d,      // getFeeInfo()
 } as const;
 

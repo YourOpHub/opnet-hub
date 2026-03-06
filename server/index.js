@@ -7,6 +7,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 
 const { TokenIndexer } = require('./token-indexer');
+const { FractalSwapRelayer } = require('./fractalswap-relayer');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -50,6 +51,10 @@ db.exec(`
 const indexer = new TokenIndexer(db);
 indexer.init();
 indexer.start();
+
+// ─── FractalSwap Relayer ───
+const relayer = new FractalSwapRelayer();
+relayer.start();
 
 // ─── Middleware ───
 app.set('trust proxy', 1); // Trust first proxy (nginx)

@@ -570,7 +570,38 @@ const Launchpad: React.FC = () => {
   }, [useServer]);
 
   const isReal = selected && selected.address.startsWith('opt1sq');
-  const holderCount = selected ? new Set(selected.trades.map(t => t.wallet)).size : 0;
+  const localHolderCount = selected ? new Set(selected.trades.map(t => t.wallet)).size : 0;
+  const [opscanHolders, setOpscanHolders] = useState<number | null>(null);
+  const [opscanHolderList, setOpscanHolderList] = useState<Array<{ address: string; balance: string }>>([]);
+  // Fetch holder count from OPScan when selected token changes
+  useEffect(() => {
+    setOpscanHolders(null);
+    setOpscanHolderList([]);
+    if (!selected) return;
+    // Try to find the hex address — our tokens use opt1sq which contains hex pubkey
+    // For OPScan we need the hex contract address
+    const addr = selected.address;
+    if (!addr) return;
+    // If address is hex or starts with 0x, use directly; otherwise try txHash-based lookup
+    const hexAddr = addr.startsWith('0x') ? addr : (addr.length === 64 ? '0x' + addr : null);
+    if (!hexAddr) return;
+    (async () => {
+      try {
+        const r = await fetch(`https://api.opscan.org/v1/op_testnet/tokens/${hexAddr}/holders`);
+        if (!r.ok) return;
+        const data = await r.json();
+        const arr = data?.results || data || [];
+        if (Array.isArray(arr)) {
+          setOpscanHolders(arr.length);
+          setOpscanHolderList(arr.slice(0, 20).map((h: Record<string, unknown>) => ({
+            address: String(h.address || h.holderAddress || '').slice(0, 20) + '...',
+            balance: String(h.balance || h.amount || '0'),
+          })));
+        }
+      } catch { /* */ }
+    })();
+  }, [selected?.address]);
+  const holderCount = opscanHolders !== null ? opscanHolders : localHolderCount;
   const progress = selected ? getProgress(selected) : 0;
   const grad = selected ? isGraduated(selected) : false;
   const [selColor] = selected ? hashColor(selected.symbol) : ['#F7931A'];
@@ -699,8 +730,28 @@ const Launchpad: React.FC = () => {
               )}
             </div>
 
-            {/* ── Top Holders ── */}
-            {selected.trades.length > 0 && (() => {
+            {/* ── Holders (OPScan or local) ── */}
+            {opscanHolderList.length > 0 ? (
+              <div className="P" style={{ padding: 14, marginBottom: 12 }}>
+                <div className="Lb" style={{ marginBottom: 8 }}>
+                  Top Holders ({opscanHolders ?? opscanHolderList.length})
+                  <span style={{ fontSize: '.5rem', color: 'var(--t4)', marginLeft: 6, fontWeight: 400 }}>via OPScan</span>
+                </div>
+                <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                  {opscanHolderList.map((h, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.66rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ color: 'var(--t4)', fontFamily: 'var(--fm)', minWidth: 20 }}>#{i + 1}</span>
+                        <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{h.address}</span>
+                      </div>
+                      <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600, fontSize: '.6rem' }}>
+                        {(() => { try { const n = Number(BigInt(h.balance)) / Math.pow(10, selected.decimals); return fmtNum(n); } catch { return h.balance; } })()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : selected.trades.length > 0 && (() => {
               const bals: Record<string, number> = {};
               for (const tr of selected.trades) {
                 bals[tr.wallet] = (bals[tr.wallet] || 0) + tr.amount;
@@ -720,11 +771,6 @@ const Launchpad: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600 }}>{fmtNum(amount)}</span>
                           <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{selected.symbol}</span>
-                          {selected.publicMintSupply > 0 && (
-                            <span style={{ color: 'var(--t4)', fontSize: '.52rem', fontFamily: 'var(--fm)', minWidth: 40, textAlign: 'right' }}>
-                              {((amount / selected.publicMintSupply) * 100).toFixed(1)}%
-                            </span>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -788,20 +834,25 @@ const Launchpad: React.FC = () => {
               </div>
             )}
 
-            {/* ── Trade ── */}
+            {/* ── Links & Trade ── */}
             <div className="P" style={{ padding: 14, marginBottom: 12 }}>
-              <div className="Lb" style={{ marginBottom: 8 }}>Trade</div>
-              <div style={{ fontSize: '.7rem', color: 'var(--t3)', lineHeight: 1.6 }}>
-                <div style={{ marginBottom: 8 }}>
-                  Trade this token on the <strong>Swap</strong> page using MotoSwap AMM pools.
-                  After graduation, full trading is available via liquidity pools.
-                </div>
-                {isReal && selected.txHash && (
-                  <a href={`https://testnet.opnet.org/tx/${selected.txHash}`} target="_blank" rel="noopener noreferrer"
-                    style={{ color: 'var(--c2)', textDecoration: 'none', fontSize: '.62rem' }}>
-                    View deploy TX on explorer &#x2197;
+              <div className="Lb" style={{ marginBottom: 8 }}>Links & Trade</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                {isReal && (
+                  <a href={`https://testnet.opscan.org/contract/${selected.address}`} target="_blank" rel="noopener noreferrer"
+                    style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.15)', color: 'var(--c)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
+                    OPScan
                   </a>
                 )}
+                {isReal && selected.txHash && (
+                  <a href={`https://testnet.opnet.org/tx/${selected.txHash}`} target="_blank" rel="noopener noreferrer"
+                    style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)', color: 'var(--o)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
+                    Deploy TX
+                  </a>
+                )}
+              </div>
+              <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.5 }}>
+                Trade on <strong>Swap</strong> page via MotoSwap AMM pools.
               </div>
             </div>
 

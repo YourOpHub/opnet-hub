@@ -14,6 +14,7 @@ import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
 import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 import { useToast } from './Toast';
+import { updateSwapOp, getActiveOps, getHistory, type SwapOp } from '../swapApi';
 const LP_API = import.meta.env.VITE_LP_API || '';
 const MARKET_API = import.meta.env.VITE_API_URL || '';
 
@@ -183,6 +184,28 @@ const Marketplace: React.FC = () => {
   const [msg, setMsg] = useState('');
   const [lastTxId, setLastTxId] = useState<string | null>(null);
 
+  // History
+  const [showHistory, setShowHistory] = useState(false);
+  const [p2pHistory, setP2pHistory] = useState<SwapOp[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [restoredOps, setRestoredOps] = useState<SwapOp[]>([]);
+
+  const loadP2pHistory = useCallback(async () => {
+    if (!walletAddress) return;
+    setHistoryLoading(true);
+    const h = await getHistory(walletAddress, 'p2p');
+    setP2pHistory(h);
+    setHistoryLoading(false);
+  }, [walletAddress]);
+
+  // Restore active ops on mount
+  useEffect(() => {
+    if (!walletAddress) return;
+    getActiveOps(walletAddress, 'p2p').then(ops => {
+      if (ops.length > 0) setRestoredOps(ops);
+    });
+  }, [walletAddress]);
+
   // Read orders directly from on-chain contract (fallback when LP_API unavailable)
   const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
     try {
@@ -333,6 +356,17 @@ const Marketplace: React.FC = () => {
       toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Confirming...`, 'success');
       setCreating(false);
 
+      // Persist op
+      if (walletAddress) {
+        updateSwapOp({
+          id: `p2p:create:${Date.now()}:${walletAddress}`,
+          market: 'p2p', order_id: 'pending', wallet: walletAddress,
+          direction: orderType, role: 'maker', step: 'Confirming...',
+          status: 'active',
+          amounts: { amount: orderAmount, price: orderPrice, token: selInfo?.symbol || '' },
+        });
+      }
+
       // Non-blocking: notify indexer + wait for block then refresh
       try {
         fetch(`${MARKET_API}/market/create`, {
@@ -347,8 +381,10 @@ const Marketplace: React.FC = () => {
         }).catch(() => {});
       } catch { /* indexer optional */ }
 
+      const opId = `p2p:create:${Date.now()}:${walletAddress}`;
       waitForNextBlock(provider).then(() => {
         toast('Order confirmed on-chain!', 'success');
+        if (walletAddress) updateSwapOp({ id: opId, market: 'p2p', order_id: 'confirmed', wallet: walletAddress, step: 'Done', status: 'completed' });
         fetchOrders(); fetchTokens();
       }).catch(() => {});
       fetchOrders();
@@ -432,6 +468,17 @@ const Marketplace: React.FC = () => {
       toast('Order filled! Confirming...', 'success');
       setFilling(false);
 
+      // Persist op
+      if (walletAddress) {
+        updateSwapOp({
+          id: `p2p:fill:${orderId}:${walletAddress}`,
+          market: 'p2p', order_id: orderId, wallet: walletAddress,
+          direction: order.type, role: 'taker', step: 'Confirming...',
+          status: 'active',
+          amounts: { amount: String(fillAmt), price: String(order.pricePerToken), token: order.tokenSymbol },
+        });
+      }
+
       fetch(`${MARKET_API}/market/fill`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, filler: walletAddress, amount: fillAmt }),
@@ -440,6 +487,7 @@ const Marketplace: React.FC = () => {
 
       waitForNextBlock(provider).then(() => {
         toast('Fill confirmed on-chain!', 'success');
+        if (walletAddress) updateSwapOp({ id: `p2p:fill:${orderId}:${walletAddress}`, market: 'p2p', order_id: orderId, wallet: walletAddress, step: 'Done', status: 'completed' });
         fetchOrders();
       }).catch(() => {});
       fetchOrders();
@@ -499,8 +547,20 @@ const Marketplace: React.FC = () => {
       toast('Buy order executed! Confirming...', 'success');
       setFilling(false);
 
+      // Persist op
+      if (walletAddress) {
+        updateSwapOp({
+          id: `p2p:exec:${orderId}:${walletAddress}`,
+          market: 'p2p', order_id: orderId, wallet: walletAddress,
+          direction: 'buy', role: 'maker', step: 'Confirming...',
+          status: 'active',
+          amounts: { amount: String(remaining), price: String(order.pricePerToken), token: order.tokenSymbol },
+        });
+      }
+
       waitForNextBlock(provider).then(() => {
         toast('Execution confirmed on-chain!', 'success');
+        if (walletAddress) updateSwapOp({ id: `p2p:exec:${orderId}:${walletAddress}`, market: 'p2p', order_id: orderId, wallet: walletAddress, step: 'Done', status: 'completed' });
         fetchOrders();
       }).catch(() => {});
       fetchOrders();
@@ -812,11 +872,36 @@ const Marketplace: React.FC = () => {
           </div>
         </div>
 
-        {/* My orders for this token */}
-        {myOrders.length > 0 && (
+        {/* My orders + History tabs */}
+        {(myOrders.length > 0 || walletAddress) && (
           <div className="P" style={{ padding: 14 }}>
-            <div className="Lb" style={{ marginBottom: 8 }}>My Orders ({myOrders.length})</div>
-            {myOrders.map(o => (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button className={!showHistory ? 'btn-p' : 'btn-s'} style={{ fontSize: '.68rem', padding: '5px 12px' }}
+                onClick={() => setShowHistory(false)}>
+                My Orders ({myOrders.length})
+              </button>
+              <button className={showHistory ? 'btn-p' : 'btn-s'} style={{ fontSize: '.68rem', padding: '5px 12px' }}
+                onClick={() => { setShowHistory(true); loadP2pHistory(); }}>
+                History
+              </button>
+            </div>
+
+            {/* Restored ops banner */}
+            {!showHistory && restoredOps.length > 0 && (
+              <div style={{
+                background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)',
+                borderRadius: 8, padding: '8px 12px', marginBottom: 8,
+              }}>
+                <div style={{ fontSize: '.68rem', fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>Unfinished Operations</div>
+                {restoredOps.map(op => (
+                  <div key={op.id} style={{ fontSize: '.64rem', color: 'var(--t2)', marginBottom: 2 }}>
+                    Order #{op.order_id}: {op.step} ({op.direction} / {op.role})
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!showHistory && myOrders.map(o => (
               <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.66rem' }}>
                 <div>
                   <span style={{ color: o.type === 'sell' ? '#ef4444' : 'var(--g)', fontWeight: 700, marginRight: 6 }}>{o.type.toUpperCase()}</span>
@@ -836,6 +921,49 @@ const Marketplace: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {showHistory && (
+              historyLoading ? (
+                <div style={{ textAlign: 'center', padding: 16, color: 'var(--t3)', fontSize: '.72rem' }}>Loading...</div>
+              ) : p2pHistory.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 16, color: 'var(--t3)', fontSize: '.72rem' }}>No history yet</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {p2pHistory.map(op => {
+                    let amounts: Record<string, string> = {};
+                    try { amounts = JSON.parse(op.amounts); } catch { /* */ }
+                    const isOk = op.status === 'completed';
+                    return (
+                      <div key={op.id} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '6px 10px', borderRadius: 8,
+                        background: isOk ? 'rgba(34,197,94,.04)' : 'rgba(239,68,68,.04)',
+                        border: `1px solid ${isOk ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.1)'}`,
+                      }}>
+                        <div style={{ fontSize: '.64rem' }}>
+                          <span style={{ color: op.direction === 'sell' ? '#ef4444' : 'var(--g)', fontWeight: 700, marginRight: 4 }}>
+                            {(op.direction || '').toUpperCase()}
+                          </span>
+                          <span style={{ color: 'var(--t3)', marginRight: 4 }}>#{op.order_id}</span>
+                          {amounts.token && <span style={{ color: 'var(--t2)' }}>{amounts.amount} {amounts.token}</span>}
+                          {amounts.price && <span style={{ color: 'var(--t4)', marginLeft: 4 }}>@ {amounts.price} sat</span>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{
+                            padding: '2px 6px', borderRadius: 4, fontSize: '.5rem', fontWeight: 700,
+                            background: isOk ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)',
+                            color: isOk ? '#22c55e' : '#ef4444',
+                          }}>{op.status}</span>
+                          <span style={{ fontSize: '.52rem', color: 'var(--t4)' }}>
+                            {new Date(op.updated_at + 'Z').toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
           </div>
         )}
       </div>

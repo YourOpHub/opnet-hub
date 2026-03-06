@@ -45,6 +45,32 @@ db.exec(`
     total_sats_mined INTEGER DEFAULT 0,
     rank INTEGER DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS swap_operations (
+    id TEXT PRIMARY KEY,
+    market TEXT NOT NULL,
+    order_id TEXT NOT NULL,
+    wallet TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    role TEXT NOT NULL,
+    step TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    amounts TEXT DEFAULT '{}',
+    tx_ids TEXT DEFAULT '{}',
+    error TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS swap_rates (
+    order_id TEXT PRIMARY KEY,
+    send_sats TEXT,
+    receive_sats TEXT,
+    send_unit TEXT,
+    receive_unit TEXT,
+    rate REAL,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // ─── Token Indexer ───
@@ -323,6 +349,74 @@ app.get('/api/holder/:pubkey/tokens', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch balances', message: e.message });
   }
+});
+
+// ─── Swap Persistence API ───
+app.post('/api/swap/update', (req, res) => {
+  const { id, market, order_id, wallet, direction, role, step, status, amounts, tx_ids, error } = req.body;
+  if (!id || !market || !wallet) return res.status(400).json({ error: 'id, market, wallet required' });
+  const stmt = db.prepare(`
+    INSERT INTO swap_operations (id, market, order_id, wallet, direction, role, step, status, amounts, tx_ids, error, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      step = COALESCE(?, step),
+      status = COALESCE(?, status),
+      amounts = COALESCE(?, amounts),
+      tx_ids = COALESCE(?, tx_ids),
+      error = COALESCE(?, error),
+      updated_at = datetime('now')
+  `);
+  stmt.run(
+    id, market, order_id || '', wallet, direction || '', role || '', step || '', status || 'active',
+    JSON.stringify(amounts || {}), JSON.stringify(tx_ids || {}), error || '',
+    step || null, status || null, amounts ? JSON.stringify(amounts) : null, tx_ids ? JSON.stringify(tx_ids) : null, error ?? null
+  );
+  res.json({ ok: true });
+});
+
+app.get('/api/swap/active/:wallet', (req, res) => {
+  const { wallet } = req.params;
+  const market = req.query.market || null;
+  let rows;
+  if (market) {
+    rows = db.prepare('SELECT * FROM swap_operations WHERE wallet = ? AND status = ? AND market = ? ORDER BY updated_at DESC').all(wallet, 'active', market);
+  } else {
+    rows = db.prepare('SELECT * FROM swap_operations WHERE wallet = ? AND status = ? ORDER BY updated_at DESC').all(wallet, 'active');
+  }
+  res.json(rows);
+});
+
+app.get('/api/swap/history/:wallet', (req, res) => {
+  const { wallet } = req.params;
+  const market = req.query.market || null;
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 200);
+  let rows;
+  if (market) {
+    rows = db.prepare('SELECT * FROM swap_operations WHERE wallet = ? AND status != ? AND market = ? ORDER BY updated_at DESC LIMIT ?').all(wallet, 'active', market, limit);
+  } else {
+    rows = db.prepare('SELECT * FROM swap_operations WHERE wallet = ? AND status != ? ORDER BY updated_at DESC LIMIT ?').all(wallet, 'active', limit);
+  }
+  res.json(rows);
+});
+
+app.post('/api/orders/rate', (req, res) => {
+  const { order_id, send_sats, receive_sats, send_unit, receive_unit, rate } = req.body;
+  if (!order_id) return res.status(400).json({ error: 'order_id required' });
+  db.prepare(`
+    INSERT INTO swap_rates (order_id, send_sats, receive_sats, send_unit, receive_unit, rate, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(order_id) DO UPDATE SET
+      send_sats = ?, receive_sats = ?, send_unit = ?, receive_unit = ?, rate = ?, updated_at = datetime('now')
+  `).run(order_id, send_sats || '', receive_sats || '', send_unit || '', receive_unit || '', rate || 0,
+         send_sats || '', receive_sats || '', send_unit || '', receive_unit || '', rate || 0);
+  res.json({ ok: true });
+});
+
+app.get('/api/orders/rates', (_req, res) => {
+  const rows = db.prepare('SELECT * FROM swap_rates ORDER BY updated_at DESC').all();
+  const map = {};
+  for (const r of rows) map[r.order_id] = r;
+  res.json(map);
 });
 
 app.listen(PORT, '0.0.0.0', () => {

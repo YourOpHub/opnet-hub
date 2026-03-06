@@ -492,7 +492,10 @@ const CrossChainMarketplace: React.FC = () => {
   }, [fetchOrders]);
 
   // Derived
-  const activeOrders = orders.filter(o => o.status === OrderStatus.Open || o.status === OrderStatus.Taken);
+  const activeOrders = orders.filter(o =>
+    (o.status === OrderStatus.Open || o.status === OrderStatus.Taken) &&
+    (o.expiry <= 0 || o.expiry > currentBlock),
+  );
   const btcToFbOrders = activeOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB);
   const fbToBtcOrders = activeOrders.filter(o => o.direction === SwapDirection.FB_TO_BTC);
   const totalVolumeSats = orders

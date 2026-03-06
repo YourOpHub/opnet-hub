@@ -3246,23 +3246,34 @@ input:focus-visible, textarea:focus-visible {
 ::-webkit-scrollbar-track { background: transparent }
 
 /* ═══ ORDER BOOK TABLE ═══ */
-.ob-hdr { display: grid; gap: 4px; padding: 6px 10px;
-  font-size: .58rem; color: var(--t4); text-transform: uppercase;
-  letter-spacing: .06em; font-weight: 700;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  position: sticky; top: 0; background: rgba(8,8,16,.9); z-index: 1; }
-.ob-row { display: grid; gap: 4px; padding: 7px 10px;
-  align-items: center; font-size: .68rem;
-  border-bottom: 1px solid rgba(255,255,255,.03);
+.ob-hdr { display: grid; gap: 6px; padding: 8px 12px;
+  font-size: .64rem; color: var(--t3); text-transform: uppercase;
+  letter-spacing: .05em; font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  position: sticky; top: 0; background: rgba(8,8,16,.92); z-index: 1; }
+.ob-row { display: grid; gap: 6px; padding: 9px 12px;
+  align-items: center; font-size: .74rem;
+  border-bottom: 1px solid rgba(255,255,255,.04);
   transition: background .15s; }
-.ob-row:hover { background: rgba(255,255,255,.03); }
+.ob-row:hover { background: rgba(255,255,255,.04); }
 .ob-r { text-align: right; }
 .ob-mono { font-family: var(--fm); }
-.ob-scroll { max-height: 420px; overflow-y: auto; }
-.ob-empty { text-align: center; padding: 28px 10px; color: var(--t4); font-size: .72rem; }
-.ob-badge { padding: 2px 7px; border-radius: 5px; font-size: .56rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
-.ob-act { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+.ob-scroll { max-height: 440px; overflow-y: auto; }
+.ob-empty { text-align: center; padding: 32px 10px; color: var(--t3); font-size: .76rem; }
+.ob-badge { padding: 3px 8px; border-radius: 5px; font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.ob-act { display: flex; gap: 5px; justify-content: flex-end; align-items: center; }
+.ob-act button { font-family: var(--ff); }
+.ob-btn { padding: 4px 10px; border-radius: 6px; font-size: .64rem; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--bd); background: rgba(255,255,255,.05); color: var(--t2);
+  transition: all .15s; }
+.ob-btn:hover { background: rgba(255,255,255,.08); color: var(--w); }
+.ob-btn.danger { border-color: rgba(239,68,68,.25); color: #ef4444; background: rgba(239,68,68,.06); }
+.ob-btn.danger:hover { background: rgba(239,68,68,.12); }
+.ob-btn.accent { border-color: rgba(247,147,26,.25); color: var(--o); background: rgba(247,147,26,.06); }
+.ob-btn.accent:hover { background: rgba(247,147,26,.12); }
+.ob-btn.green { border-color: rgba(16,185,129,.25); color: var(--g); background: rgba(16,185,129,.06); }
+.ob-btn.green:hover { background: rgba(16,185,129,.12); }
 @media (max-width: 600px) {
-  .ob-hdr, .ob-row { font-size: .58rem; padding: 5px 6px; min-width: 520px; }
+  .ob-hdr, .ob-row { font-size: .64rem; padding: 6px 8px; min-width: 520px; }
   .ob-scroll { overflow-x: auto; }
 }

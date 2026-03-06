@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract, ABIDataTypes, BitcoinAbiTypes,
@@ -1063,6 +1063,67 @@ const CrossChainMarketplace: React.FC = () => {
     } finally { setActioning(false); }
   }, [walletAddress, senderAddr, orders, provider, unisat.connected, openConnectModal, contractReady, fetchOrders, toast, setPendingOp, clearPendingOp, getMyP2OPScript]);
 
+  // ── Auto-send FB when maker's FB_TO_BTC order transitions Open → Taken ──
+  const prevOrderStatusesRef = useRef<Record<string, OrderStatus>>({});
+  const walletAddressRef = useRef(walletAddress);
+  walletAddressRef.current = walletAddress;
+  const unisatRef = useRef(unisat);
+  unisatRef.current = unisat;
+  const handleSendAndClaimRef = useRef(handleSendAndClaim);
+  handleSendAndClaimRef.current = handleSendAndClaim;
+  const actioningRef = useRef(actioning);
+  actioningRef.current = actioning;
+
+  useEffect(() => {
+    const prev = prevOrderStatusesRef.current;
+    const next: Record<string, OrderStatus> = {};
+    for (const o of orders) next[o.id] = o.status;
+
+    // Check for Open → Taken transitions on my FB_TO_BTC orders
+    for (const order of orders) {
+      if (order.direction !== SwapDirection.FB_TO_BTC) continue;
+      if (order.status !== OrderStatus.Taken) continue;
+      if (prev[order.id] !== OrderStatus.Open) continue;
+
+      // Is this my order?
+      const wa = walletAddressRef.current;
+      if (!wa || !order.creator.includes(wa.replace('opt1', '').slice(-16))) continue;
+
+      if (actioningRef.current) continue;
+
+      if (unisatRef.current.connected) {
+        toast(`Auto-sending FB for order #${order.id}...`, 'info');
+        setTimeout(() => handleSendAndClaimRef.current(order.id), 500);
+      } else {
+        toast('Your order was taken! Connect UniSat to send FB & claim BTC', 'warning');
+      }
+    }
+
+    prevOrderStatusesRef.current = next;
+  }, [orders, toast]);
+
+  // Auto-trigger when UniSat connects: check for pending Taken FB_TO_BTC orders
+  const prevUnisatConnected = useRef(unisat.connected);
+  useEffect(() => {
+    const wasConnected = prevUnisatConnected.current;
+    prevUnisatConnected.current = unisat.connected;
+    if (wasConnected || !unisat.connected) return; // only on false → true
+
+    const wa = walletAddressRef.current;
+    if (!wa) return;
+    if (actioningRef.current) return;
+
+    const myTakenFbToBtc = orders.find(o =>
+      o.direction === SwapDirection.FB_TO_BTC &&
+      o.status === OrderStatus.Taken &&
+      o.creator.includes(wa.replace('opt1', '').slice(-16)),
+    );
+    if (myTakenFbToBtc) {
+      toast(`Auto-sending FB for order #${myTakenFbToBtc.id}...`, 'info');
+      setTimeout(() => handleSendAndClaimRef.current(myTakenFbToBtc.id), 500);
+    }
+  }, [unisat.connected, orders, toast]);
+
   // ── Refund Expired (v6 — returns locked BTC to original locker) ──
   const handleRefund = useCallback(async (orderId: string) => {
     if (!walletAddress || !senderAddr) { openConnectModal(); return; }
@@ -1618,6 +1679,18 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
         )}
 
+        {/* Waiting for taker banner — Open FB_TO_BTC maker orders */}
+        {order.status === OrderStatus.Open && !isBtcToFb && isMyOrder && !pendingOps[order.id] && (
+          <div style={{
+            marginTop: 8, padding: '8px 12px', borderRadius: 8,
+            background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.25)',
+            display: 'flex', alignItems: 'center', gap: 8, fontSize: '.72rem',
+          }}>
+            <span style={{ animation: 'spin 3s linear infinite', fontSize: '.9rem' }}>{'\u231B'}</span>
+            <span style={{ color: '#8b5cf6', fontWeight: 600 }}>Waiting for taker... Stay on page for auto-swap</span>
+          </div>
+        )}
+
         {/* Expanded details */}
         {isExpanded && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--bd)' }}>
@@ -1693,6 +1766,22 @@ const CrossChainMarketplace: React.FC = () => {
               <TxStepIndicator step="executing" steps={isMyOrder
                 ? (isBtcToFb ? MAKER_STEPS_BTC_TO_FB : MAKER_STEPS_FB_TO_BTC)
                 : (isBtcToFb ? TAKER_STEPS_BTC_TO_FB : TAKER_STEPS_FB_TO_BTC)} />
+            )}
+
+            {/* Connect UniSat banner — Taken FB_TO_BTC maker without UniSat */}
+            {order.status === OrderStatus.Taken && !isBtcToFb && isMyOrder && !unisat.connected && (
+              <div style={{
+                marginTop: 8, padding: '8px 12px', borderRadius: 8,
+                background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.25)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: '.72rem',
+              }}>
+                <span style={{ color: '#f59e0b', fontWeight: 600 }}>Your order was taken — connect UniSat to send FB & claim BTC</span>
+                <button className="btn-p" style={{ fontSize: '.68rem', padding: '4px 12px', flexShrink: 0 }}
+                  disabled={unisatConnecting}
+                  onClick={(e) => { e.stopPropagation(); handleConnectUnisat(); }}>
+                  {unisatConnecting ? 'Connecting...' : 'Connect UniSat'}
+                </button>
+              </div>
             )}
 
             {/* Action buttons */}

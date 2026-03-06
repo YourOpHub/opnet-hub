@@ -1,11 +1,11 @@
 {
   "network": "testnet",
   "contract": "FractalSwap",
-  "address": "opt1sqpylrj2pm7d3zld4y86a8kjtrd06q7s2gvyazw4c",
-  "pubkey": "0x1f3f8a86d1dd595d8533697c2bff18b1ee30ffb1339499c176a7e0447fd38820",
+  "address": "opt1sqqhqt6cuwyp7yven0e8xfc56e0t3lwdy6uqt5k36",
+  "pubkey": "0xebaae58f031bec0c941e565af9d254ff2ef8238a3148e3adf3720e42784d2ed1",
   "feeRecipient": "4ca79348ed8d21c5d4bbacdde9fe4eb7b0b0b2ed495fa81e545d5fbc7b554aea",
   "feeRecipientAddr": "opt1sfjnexj8d35sut49m4nw7nljwk7ctpvhdf906s8j5t40mc764ft4qptud3g",
   "feeBps": 100,
   "selectors": "Run build and check opnet-transform output for selectors",
-  "deployedAt": "2026-03-05T02:10:49.415Z"
+  "deployedAt": "2026-03-06T02:52:32.709Z"
 }

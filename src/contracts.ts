@@ -102,9 +102,9 @@ export const MARKET_SELECTORS = {
     getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
 } as const;
 
-/** FractalSwap v4 — output bitmap fix (BTC double-count prevention) */
-export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqpylrj2pm7d3zld4y86a8kjtrd06q7s2gvyazw4c';
-export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0x1f3f8a86d1dd595d8533697c2bff18b1ee30ffb1339499c176a7e0447fd38820';
+/** FractalSwap v6 — real BTC escrow, both directions */
+export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqqhqt6cuwyp7yven0e8xfc56e0t3lwdy6uqt5k36';
+export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0xebaae58f031bec0c941e565af9d254ff2ef8238a3148e3adf3720e42784d2ed1';
 
 /** TokenEscrowBridge — removed from UI (duplicates Marketplace), not redeployed */
 export const TOKEN_ESCROW_ADDRESS = '';
@@ -137,18 +137,18 @@ export const NATIVESWAP_SELECTORS = {
 /** Fee recipient P2OP address string (for on-chain output.to matching) */
 export const FEE_RECIPIENT_ADDR = 'opt1sfjnexj8d35sut49m4nw7nljwk7ctpvhdf906s8j5t40mc764ft4qptud3g';
 
-/** FractalSwap selectors (from opnet-transform build output) */
+/** FractalSwap v6 selectors (from opnet-transform build output) */
 export const CROSSCHAIN_SELECTORS = {
-    createOrder: 0x17b631a3,
-    takeOrder: 0xfe6bb1e1,
-    confirmSwap: 0x2abfb8f9,
-    cancelOrder: 0xeb5aa830,
-    refundExpired: 0x7136e9b2,
-    getOrder: 0xe9489555,
-    getNextOrderId: 0xf4920cae,
-    setFeeRecipient: 0x5ccb9ecd,  // setFeeRecipient(uint256,string) — v2 changed
-    setFeeBps: 0xfdd3c00b,
-    getFeeInfo: 0xf22d798d,
+    createOrder: 0x17b631a3,     // createOrder(uint256,uint256,uint256,uint256,uint256)
+    takeOrder: 0xfe6bb1e1,       // takeOrder(uint256,uint256)
+    completeOrder: 0x39585799,   // completeOrder(uint256) — v6: replaces confirmSwap
+    cancelOrder: 0xeb5aa830,     // cancelOrder(uint256)
+    refundExpired: 0x7136e9b2,   // refundExpired(uint256)
+    getOrder: 0xe9489555,        // getOrder(uint256) → 10 fields (v6: removed hashlock/preimage, added wantAmount)
+    getNextOrderId: 0xf4920cae,  // getNextOrderId()
+    setFeeRecipient: 0x5ccb9ecd, // setFeeRecipient(uint256,string)
+    setFeeBps: 0xfdd3c00b,       // setFeeBps(uint256)
+    getFeeInfo: 0xf22d798d,      // getFeeInfo()
 } as const;
 
 /** TokenEscrowBridge selectors (from opnet-transform build output) */

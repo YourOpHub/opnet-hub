@@ -344,6 +344,28 @@ app.get('/api/tokens', (_req, res) => {
   }
 });
 
+app.get('/api/tokens/status', (_req, res) => {
+  try {
+    res.json(indexer.getScanStatus());
+  } catch (e) {
+    res.status(500).json({ error: 'Failed', message: e.message });
+  }
+});
+
+app.post('/api/tokens/add', async (req, res) => {
+  try {
+    const { address } = req.body;
+    if (!address || typeof address !== 'string' || !address.startsWith('opt1')) {
+      return res.status(400).json({ error: 'Invalid address — must be opt1 format' });
+    }
+    const result = await indexer.addTokenByAddress(address);
+    if (!result.ok) return res.status(400).json(result);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add token', message: e.message });
+  }
+});
+
 app.get('/api/holder/:pubkey/tokens', async (req, res) => {
   try {
     const { pubkey } = req.params;

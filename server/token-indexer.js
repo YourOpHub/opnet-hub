@@ -6,7 +6,7 @@
  */
 
 const OPNET_RPC = process.env.OPNET_RPC_URL || 'https://testnet.opnet.org/api/v1/json-rpc';
-const SCAN_INTERVAL_MS = 30_000; // 30 seconds
+const SCAN_INTERVAL_MS = 10_000; // 10 seconds
 const BALANCE_CACHE_TTL_MS = 60_000; // 60 seconds
 
 // ── RPC helper ──
@@ -210,15 +210,15 @@ class TokenIndexer {
             const currentHeight = await this._getCurrentHeight();
             if (!currentHeight) return;
 
-            let lastScanned = this._getLastBlock();
-            if (lastScanned === 0) {
-                // Start from a reasonable point (don't scan from genesis)
-                lastScanned = Math.max(0, currentHeight - 100);
-            }
-
-            // Scan up to 10 blocks per cycle (avoid overload)
-            const maxBlocks = 10;
+            const lastScanned = this._getLastBlock();
+            // Backfill: if far behind (>200 blocks), scan aggressively (100/cycle), otherwise 50/cycle
+            const behind = currentHeight - lastScanned;
+            const maxBlocks = behind > 200 ? 100 : 50;
             const endBlock = Math.min(lastScanned + maxBlocks, currentHeight);
+
+            if (behind > 100 && behind % 500 < maxBlocks) {
+                console.log(`[TokenIndexer] Backfill: ${lastScanned}→${currentHeight} (${behind} blocks behind)`);
+            }
 
             for (let blockNum = lastScanned + 1; blockNum <= endBlock; blockNum++) {
                 await this._scanBlock(blockNum);
@@ -250,17 +250,17 @@ class TokenIndexer {
             if (!block || !block.transactions) return;
 
             for (const tx of block.transactions) {
-                // Look for deployment transactions
-                if (tx.OPNetType === 'Deployment' || tx.opnetType === 'Deployment' ||
-                    tx.type === 'Deployment' || tx.contractAddress) {
-                    const addr = tx.contractAddress || tx.deployedContract;
-                    const pubkey = tx.contractPubKey || tx.deployedPubKey || '';
-                    if (addr) {
-                        await this._tryIndexToken(addr, pubkey.replace('0x', ''), blockNum);
-                    }
+                // Look for deployment transactions (various field naming conventions)
+                const isDeploy = tx.OPNetType === 'Deployment' || tx.opnetType === 'Deployment' ||
+                    tx.type === 'Deployment' || tx.type === 'deployment';
+                const addr = tx.contractAddress || tx.deployedContract || tx.deployedAddress || '';
+                const pubkey = tx.contractPubKey || tx.deployedPubKey || tx.contractPubkey || '';
+
+                if ((isDeploy || addr) && addr) {
+                    await this._tryIndexToken(addr, pubkey.replace('0x', ''), blockNum);
                 }
             }
-        } catch (e) {
+        } catch {
             // Some blocks may not be fetched with txs — that's fine
         }
     }
@@ -288,6 +288,37 @@ class TokenIndexer {
     /** GET /api/tokens — all known OP-20 tokens */
     getAllTokens() {
         return this.db.prepare('SELECT * FROM indexed_tokens ORDER BY deploy_block ASC').all();
+    }
+
+    /** Token count */
+    getTokenCount() {
+        const row = this.db.prepare('SELECT COUNT(*) as cnt FROM indexed_tokens').get();
+        return row?.cnt || 0;
+    }
+
+    /** GET /api/tokens/status — scan progress */
+    getScanStatus() {
+        const lastScanned = this._getLastBlock();
+        const count = this.getTokenCount();
+        return { lastScannedBlock: lastScanned, tokenCount: count };
+    }
+
+    /** POST /api/tokens/add — manually add a token by address */
+    async addTokenByAddress(address) {
+        const existing = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ?').get(address);
+        if (existing) return { ok: true, token: existing, existed: true };
+
+        const info = await probeOP20(address);
+        if (!info) return { ok: false, error: 'Not a valid OP-20 token or cannot read storage' };
+
+        this.db.prepare(`
+            INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(address, '', info.symbol, info.name, info.decimals, info.totalSupply, 0);
+
+        console.log(`[TokenIndexer] Manually added: ${info.symbol} (${info.name}) at ${address}`);
+        const token = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ?').get(address);
+        return { ok: true, token, existed: false };
     }
 
     /** GET /api/holder/:pubkey/tokens — all balances for a holder

@@ -12,6 +12,7 @@ import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import { useOps } from '../contexts/OpsContext';
+import { fetchAllTokens, type IndexedToken, formatTokenBalance } from '../tokenApi';
 
 /** ABI for MintableToken publicMint method */
 const MINTABLE_ABI: BitcoinInterfaceAbi = [
@@ -80,17 +81,71 @@ const TokenGallery: React.FC = () => {
   const [mintAmount, setMintAmount] = useState('');
   const [minting, setMinting] = useState(false);
   const [mintResult, setMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [tab, setTab] = useState<'user' | 'featured'>('featured');
+  const [tab, setTab] = useState<'user' | 'featured' | 'all'>('all');
   const [featMintSym, setFeatMintSym] = useState<string | null>(null);
   const [featMintAmt, setFeatMintAmt] = useState('');
   const [featMinting, setFeatMinting] = useState(false);
   const [featMintResult, setFeatMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [mintHistory, setMintHistory] = useState<TxRecord[]>([]);
   const [histRefresh, setHistRefresh] = useState(0);
+  // All tokens from indexer
+  const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+  const [allSearch, setAllSearch] = useState('');
+  // Manual import
+  const [importAddr, setImportAddr] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     if (walletAddress) setMintHistory(getTxHistory(walletAddress).filter(r => r.type === 'mint'));
   }, [walletAddress, histRefresh]);
+
+  // Load all tokens from indexer when tab=all
+  const loadAllTokens = useCallback(async () => {
+    setAllLoading(true);
+    try {
+      const list = await fetchAllTokens();
+      setAllTokens(list);
+    } catch { /* ignore */ }
+    setAllLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'all') loadAllTokens();
+  }, [tab, loadAllTokens]);
+
+  const API_BASE = import.meta.env.VITE_API_URL || '';
+  const doImportToken = useCallback(async () => {
+    if (!importAddr || !importAddr.startsWith('opt1')) {
+      setImportResult({ ok: false, msg: 'Enter a valid opt1... address' });
+      return;
+    }
+    setImporting(true); setImportResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/tokens/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: importAddr.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setImportResult({ ok: false, msg: data.error || 'Token not found or not OP-20' });
+      } else {
+        setImportResult({ ok: true, msg: `${data.existed ? 'Already indexed' : 'Added'}: ${data.token.symbol} (${data.token.name})` });
+        setImportAddr('');
+        loadAllTokens();
+      }
+    } catch (e) {
+      setImportResult({ ok: false, msg: e instanceof Error ? e.message : 'Import failed' });
+    } finally { setImporting(false); }
+  }, [importAddr, API_BASE, loadAllTokens]);
+
+  const filteredAll = useMemo(() => {
+    if (!allSearch.trim()) return allTokens;
+    const q = allSearch.toLowerCase();
+    return allTokens.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.includes(q));
+  }, [allTokens, allSearch]);
 
   // Load user-deployed tokens from localStorage
   useEffect(() => {
@@ -236,7 +291,7 @@ const TokenGallery: React.FC = () => {
 
       {/* Tab switcher */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {([['featured', 'Featured Tokens'], ['user', `My Tokens (${tokens.length})`]] as const).map(([id, label]) => (
+        {([['all', `All Tokens (${allTokens.length})`], ['featured', 'Featured'], ['user', `My (${tokens.length})`]] as const).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             flex: 1, padding: '10px', borderRadius: '14px',
             background: tab === id ? 'rgba(247,147,26,.08)' : 'var(--bg3)',
@@ -246,6 +301,94 @@ const TokenGallery: React.FC = () => {
           }}>{label}</button>
         ))}
       </div>
+
+      {/* All Tokens from Indexer */}
+      {tab === 'all' && (
+        <div>
+          {/* Search + Import */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            <input style={{ ...inputStyle, flex: 1 }} type="text" value={allSearch}
+              onChange={e => setAllSearch(e.target.value)} placeholder="Search by name, symbol, or address..." />
+            <button onClick={loadAllTokens} disabled={allLoading} style={{
+              padding: '8px 14px', borderRadius: '14px', fontSize: '.7rem', fontWeight: 700,
+              background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--t2)',
+              cursor: allLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
+            }}>{allLoading ? '...' : '↻'}</button>
+          </div>
+
+          {/* Manual import */}
+          <div className="P" style={{ padding: 12, marginBottom: 10 }}>
+            <div style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--t2)', marginBottom: 6 }}>Import Token by Address</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input style={{ ...inputStyle, flex: 1, fontSize: '.72rem' }} type="text" value={importAddr}
+                onChange={e => setImportAddr(e.target.value)} placeholder="opt1sq..." />
+              <button onClick={doImportToken} disabled={importing} style={{
+                padding: '8px 14px', borderRadius: '14px', fontSize: '.68rem', fontWeight: 700,
+                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none',
+                color: 'white', cursor: importing ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
+                opacity: importing ? 0.6 : 1, whiteSpace: 'nowrap',
+              }}>{importing ? '...' : 'Import'}</button>
+            </div>
+            {importResult && (
+              <div style={{ marginTop: 6, padding: '6px 8px', borderRadius: 6, fontSize: '.62rem',
+                background: importResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+                border: `1px solid ${importResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`,
+                color: importResult.ok ? 'var(--g)' : '#ef4444',
+              }}>{importResult.msg}</div>
+            )}
+          </div>
+
+          {/* Token table */}
+          {allLoading && allTokens.length === 0 ? (
+            <div className="P" style={{ padding: 30, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>Loading tokens...</div>
+          ) : filteredAll.length === 0 ? (
+            <div className="P" style={{ padding: 30, textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🔍</div>
+              <div style={{ color: 'var(--t3)', fontSize: '.78rem' }}>
+                {allSearch ? 'No tokens match your search' : 'No tokens indexed yet. The indexer is scanning blocks...'}
+              </div>
+            </div>
+          ) : (
+            <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid var(--bd)', background: 'var(--bg2)' }}>
+              {/* Table header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 80px 100px 60px', gap: 4, padding: '8px 12px',
+                fontSize: '.58rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700,
+                borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
+                <span></span>
+                <span>Token</span>
+                <span style={{ textAlign: 'right' }}>Symbol</span>
+                <span style={{ textAlign: 'right' }}>Supply</span>
+                <span style={{ textAlign: 'right' }}>Block</span>
+              </div>
+              {/* Rows */}
+              <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+                {filteredAll.map(tok => (
+                  <a key={tok.address} href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'grid', gridTemplateColumns: '48px 1fr 80px 100px 60px', gap: 4, padding: '8px 12px',
+                      alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,.03)',
+                      textDecoration: 'none', color: 'inherit', transition: 'background .15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,.06)' }}
+                      dangerouslySetInnerHTML={{ __html: genLogo(tok.symbol) }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '.75rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.name}</div>
+                      <div style={{ fontFamily: 'var(--fm)', fontSize: '.5rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontWeight: 700, fontSize: '.72rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>{tok.symbol}</div>
+                    <div style={{ textAlign: 'right', fontSize: '.65rem', color: 'var(--t2)', fontFamily: 'var(--fm)' }}>
+                      {tok.total_supply && tok.total_supply !== '0' ? formatTokenBalance(tok.total_supply, tok.decimals) : '—'}
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: '.6rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
+                      {tok.deploy_block > 0 ? `#${tok.deploy_block}` : '—'}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Featured tokens */}
       {tab === 'featured' && (

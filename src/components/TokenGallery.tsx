@@ -92,7 +92,7 @@ const TokenGallery: React.FC = () => {
   const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'symbol' | 'supply'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'symbol' | 'supply' | 'holders' | 'mintable'>('newest');
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
   // Manual import
@@ -159,6 +159,8 @@ const TokenGallery: React.FC = () => {
         const sa = BigInt(a.total_supply || '0'); const sb = BigInt(b.total_supply || '0');
         return sa > sb ? -1 : sa < sb ? 1 : 0;
       }); break;
+      case 'holders': sorted.sort((a, b) => (b.holder_count || 0) - (a.holder_count || 0)); break;
+      case 'mintable': sorted.sort((a, b) => (b.mintable ?? -1) - (a.mintable ?? -1)); break;
     }
     return sorted;
   }, [allTokens, allSearch, sortBy]);
@@ -341,7 +343,7 @@ const TokenGallery: React.FC = () => {
           {/* Sort chips */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '.58rem', color: 'var(--t4)', fontWeight: 600, marginRight: 2 }}>Sort:</span>
-            {([['newest', 'Newest'], ['oldest', 'Oldest'], ['symbol', 'A → Z'], ['supply', 'Supply']] as const).map(([id, label]) => (
+            {([['newest', 'Newest'], ['oldest', 'Oldest'], ['symbol', 'A → Z'], ['supply', 'Supply'], ['holders', 'Holders'], ['mintable', 'Mintable']] as const).map(([id, label]) => (
               <button key={id} onClick={() => setSortBy(id)} style={{
                 padding: '4px 10px', borderRadius: 20, fontSize: '.6rem', fontWeight: 700,
                 background: sortBy === id ? 'rgba(247,147,26,.12)' : 'transparent',
@@ -394,16 +396,21 @@ const TokenGallery: React.FC = () => {
           ) : (
             <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid var(--bd)', background: 'var(--bg2)' }}>
               {/* Table header — clickable for sorting */}
-              <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 90px 55px', gap: 4, padding: '7px 10px',
+              <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', gap: 4, padding: '7px 10px',
                 fontSize: '.56rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700,
                 borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
                 <span style={{ textAlign: 'center', color: 'var(--t4)' }}>#</span>
                 <span onClick={() => setSortBy('symbol')} style={{ cursor: 'pointer' }}>
                   Token {sortBy === 'symbol' ? '▲' : ''}
                 </span>
-                <span style={{ textAlign: 'right' }}>Symbol</span>
+                <span onClick={() => setSortBy('mintable')} style={{ textAlign: 'right', cursor: 'pointer' }}>
+                  Symbol {sortBy === 'mintable' ? '▼' : ''}
+                </span>
                 <span onClick={() => setSortBy('supply')} style={{ textAlign: 'right', cursor: 'pointer' }}>
                   Supply {sortBy === 'supply' ? '▼' : ''}
+                </span>
+                <span onClick={() => setSortBy('holders')} style={{ textAlign: 'right', cursor: 'pointer' }}>
+                  Holders {sortBy === 'holders' ? '▼' : ''}
                 </span>
                 <span onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')} style={{ textAlign: 'right', cursor: 'pointer' }}>
                   Block {sortBy === 'newest' ? '▼' : sortBy === 'oldest' ? '▲' : ''}
@@ -413,7 +420,7 @@ const TokenGallery: React.FC = () => {
               <div>
                 {pagedTokens.map((tok, i) => (
                   <a key={tok.pubkey || tok.address} href={getContractOpscanUrl(tok.pubkey || tok.address)} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 90px 55px', gap: 4, padding: '7px 10px',
+                    style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', gap: 4, padding: '7px 10px',
                       alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,.03)',
                       textDecoration: 'none', color: 'inherit', transition: 'background .15s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
@@ -431,9 +438,18 @@ const TokenGallery: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', fontWeight: 700, fontSize: '.68rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>{tok.symbol}</div>
+                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                      <span style={{ fontWeight: 700, fontSize: '.68rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>{tok.symbol}</span>
+                      {tok.mintable === 1 && (
+                        <span style={{ fontSize: '.4rem', background: 'rgba(168,85,247,.12)', color: '#a855f7',
+                          padding: '1px 4px', borderRadius: 3, fontWeight: 700, lineHeight: 1.4, whiteSpace: 'nowrap' }}>MINT</span>
+                      )}
+                    </div>
                     <div style={{ textAlign: 'right', fontSize: '.62rem', color: 'var(--t2)', fontFamily: 'var(--fm)' }}>
                       {tok.total_supply && tok.total_supply !== '0' ? formatTokenBalance(tok.total_supply, tok.decimals) : '—'}
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: '.58rem', color: (tok.holder_count || 0) > 0 ? 'var(--t2)' : 'var(--t4)', fontFamily: 'var(--fm)' }}>
+                      {(tok.holder_count || 0) > 0 ? tok.holder_count!.toLocaleString() : '—'}
                     </div>
                     <div style={{ textAlign: 'right', fontSize: '.58rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
                       {tok.deploy_block > 0 ? `#${tok.deploy_block}` : '—'}

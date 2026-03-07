@@ -13,6 +13,8 @@ export interface IndexedToken {
     decimals: number;
     total_supply: string;
     deploy_block: number;
+    mintable?: number;     // -1=unknown, 0=no, 1=yes
+    holder_count?: number; // approximate unique addresses
 }
 
 export interface HolderBalance {

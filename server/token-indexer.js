@@ -1,6 +1,7 @@
 /**
  * Token Indexer — scans OPNet blocks for OP-20 contract deployments
  * using block.deployments[] array and btc_call for metadata.
+ * Also tracks holder counts from Transfer/Mint events and mintable status.
  *
  * Runs as a background loop inside server/index.js
  */
@@ -36,6 +37,8 @@ const SEL_NAME = getSelector('name()');
 const SEL_SYMBOL = getSelector('symbol()');
 const SEL_DECIMALS = getSelector('decimals()');
 const SEL_TOTAL_SUPPLY = getSelector('totalSupply()');
+const SEL_IS_PUBLIC_MINT = getSelector('isPublicMintEnabled()');
+const SEL_FREE_MINT_INFO = getSelector('getFreeMintInfo()');
 
 /** Call a view function on a contract, return raw bytes or null */
 async function callView(contractPubkey, selector) {
@@ -64,12 +67,9 @@ function decodeString(buf) {
 /** Decode a uint from btc_call result */
 function decodeUint(buf) {
     if (!buf || buf.length === 0) return 0;
-    // Read as big-endian BigInt
     let hex = buf.toString('hex');
     if (!hex) return 0;
-    try {
-        return BigInt('0x' + hex);
-    } catch { return 0n; }
+    try { return BigInt('0x' + hex); } catch { return 0n; }
 }
 
 // ── Probe contract via btc_call ──
@@ -97,6 +97,23 @@ async function probeOP20(contractPubkey) {
     }
 }
 
+// ── Check mintable status via btc_call ──
+async function checkMintable(contractPubkey) {
+    try {
+        // Try MintableToken: isPublicMintEnabled()
+        const buf = await callView(contractPubkey, SEL_IS_PUBLIC_MINT);
+        if (buf && buf.length > 0) {
+            return buf[buf.length - 1] > 0 ? 1 : 0;
+        }
+        // Try Factory OP20: getFreeMintInfo()
+        const fmBuf = await callView(contractPubkey, SEL_FREE_MINT_INFO);
+        if (fmBuf && fmBuf.length > 0) {
+            return 1;
+        }
+        return 0;
+    } catch { return 0; }
+}
+
 // ── BalanceOf via btc_call ──
 async function getTokenBalance(tokenPubkey, holderMLDSAHex, holderTweakedHex) {
     try {
@@ -122,7 +139,7 @@ class TokenIndexer {
         this.db = db;
         this._running = false;
         this._timer = null;
-        this._scanning = false; // prevent concurrent scans
+        this._scanning = false;
     }
 
     /** Initialize DB tables */
@@ -151,7 +168,19 @@ class TokenIndexer {
             );
         `);
 
-        // Seed known tokens
+        // Migration: add mintable and holder_count columns
+        try { this.db.exec(`ALTER TABLE indexed_tokens ADD COLUMN mintable INTEGER DEFAULT -1`); } catch {}
+        try { this.db.exec(`ALTER TABLE indexed_tokens ADD COLUMN holder_count INTEGER DEFAULT 0`); } catch {}
+
+        // Holder tracking table
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS token_holders (
+                token_pubkey TEXT NOT NULL,
+                holder_hash TEXT NOT NULL,
+                PRIMARY KEY (token_pubkey, holder_hash)
+            );
+        `);
+
         this._seedKnownTokens();
     }
 
@@ -161,33 +190,43 @@ class TokenIndexer {
                 address: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa',
                 pubkey: '0xdb2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d',
                 symbol: 'MINE', name: 'Mine Token', decimals: 8,
-                total_supply: '2100000000000000', deploy_block: 3822,
+                total_supply: '2100000000000000', deploy_block: 3822, mintable: 1,
             },
             {
                 address: 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl',
                 pubkey: '0x1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818',
                 symbol: 'VIBE', name: 'Vibe Token', decimals: 8,
-                total_supply: '10000000000000000', deploy_block: 3822,
+                total_supply: '10000000000000000', deploy_block: 3822, mintable: 1,
             },
         ];
 
         const insert = this.db.prepare(`
-            INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block, mintable)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         for (const t of known) {
-            insert.run(t.address, t.pubkey, t.symbol, t.name, t.decimals, t.total_supply, t.deploy_block);
+            insert.run(t.address, t.pubkey, t.symbol, t.name, t.decimals, t.total_supply, t.deploy_block, t.mintable);
         }
     }
 
+    // ── State helpers ──
+    _getState(key) {
+        const row = this.db.prepare('SELECT value FROM scanner_state WHERE key = ?').get(key);
+        return row ? row.value : null;
+    }
+
+    _setState(key, value) {
+        this.db.prepare('INSERT OR REPLACE INTO scanner_state (key, value) VALUES (?, ?)').run(key, String(value));
+    }
+
     _getLastBlock() {
-        const row = this.db.prepare('SELECT value FROM scanner_state WHERE key = ?').get('last_scanned_block');
-        return row ? parseInt(row.value, 10) : 0;
+        const v = this._getState('last_scanned_block');
+        return v ? parseInt(v, 10) : 0;
     }
 
     _setLastBlock(block) {
-        this.db.prepare('INSERT OR REPLACE INTO scanner_state (key, value) VALUES (?, ?)').run('last_scanned_block', String(block));
+        this._setState('last_scanned_block', block);
     }
 
     /** Start background scanning loop */
@@ -206,7 +245,7 @@ class TokenIndexer {
 
     /** Main scan loop */
     async _scan() {
-        if (this._scanning) return; // prevent overlap
+        if (this._scanning) return;
         this._scanning = true;
         try {
             const currentHeight = await this._getCurrentHeight();
@@ -214,21 +253,24 @@ class TokenIndexer {
 
             const lastScanned = this._getLastBlock();
             const behind = currentHeight - lastScanned;
-            // Backfill aggressively, normal otherwise
             const maxBlocks = behind > 200 ? 50 : 20;
             const endBlock = Math.min(lastScanned + maxBlocks, currentHeight);
 
             if (behind > 100 && behind % 200 < maxBlocks) {
-                console.log(`[TokenIndexer] Backfill: ${lastScanned}→${currentHeight} (${behind} blocks behind, ${this.getTokenCount()} tokens)`);
+                console.log(`[TokenIndexer] Backfill: ${lastScanned}->${currentHeight} (${behind} blocks behind, ${this.getTokenCount()} tokens)`);
             }
 
-            // Process blocks sequentially (each block may have many deployments to probe)
             for (let blockNum = lastScanned + 1; blockNum <= endBlock; blockNum++) {
                 await this._scanBlock(blockNum);
             }
 
             if (endBlock > lastScanned) {
                 this._setLastBlock(endBlock);
+            }
+
+            // Run enrichment when mostly caught up
+            if (behind <= 20) {
+                await this._enrichTokens();
             }
         } catch (e) {
             console.warn('[TokenIndexer] Scan error:', e.message);
@@ -248,51 +290,135 @@ class TokenIndexer {
         } catch { return null; }
     }
 
-    /** Scan a single block — read deployments[] array (requires prefetchTxs=true) */
+    /** Scan a single block — deployments + events */
     async _scanBlock(blockNum) {
         try {
             const hex = '0x' + blockNum.toString(16);
             const block = await rpc('btc_getBlockByNumber', [hex, true]);
             if (!block) return;
 
+            // 1. Process deployments
             const deployments = block.deployments || [];
-            if (deployments.length === 0) return;
+            if (deployments.length > 0) {
+                const newPubkeys = [];
+                for (const pk of deployments) {
+                    const existing = this.db.prepare('SELECT pubkey FROM indexed_tokens WHERE pubkey = ?').get(pk);
+                    if (!existing) newPubkeys.push(pk);
+                }
 
-            // Filter out already indexed pubkeys
-            const newPubkeys = [];
-            for (const pk of deployments) {
-                const existing = this.db.prepare('SELECT pubkey FROM indexed_tokens WHERE pubkey = ?').get(pk);
-                if (!existing) newPubkeys.push(pk);
-            }
+                if (newPubkeys.length > 0) {
+                    const BATCH = 5;
+                    for (let i = 0; i < newPubkeys.length; i += BATCH) {
+                        const batch = newPubkeys.slice(i, i + BATCH);
+                        const results = await Promise.allSettled(batch.map(pk => probeOP20(pk)));
 
-            if (newPubkeys.length === 0) return;
+                        for (let j = 0; j < batch.length; j++) {
+                            const pk = batch[j];
+                            const result = results[j];
+                            if (result.status !== 'fulfilled' || !result.value) continue;
 
-            // Probe in batches of 5 to avoid overloading RPC
-            const BATCH = 5;
-            for (let i = 0; i < newPubkeys.length; i += BATCH) {
-                const batch = newPubkeys.slice(i, i + BATCH);
-                const results = await Promise.allSettled(batch.map(pk => probeOP20(pk)));
-
-                for (let j = 0; j < batch.length; j++) {
-                    const pk = batch[j];
-                    const result = results[j];
-                    if (result.status !== 'fulfilled' || !result.value) continue;
-
-                    const info = result.value;
-                    this.db.prepare(`
-                        INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    `).run(pk, pk, info.symbol, info.name, info.decimals, info.totalSupply, blockNum);
+                            const info = result.value;
+                            this.db.prepare(`
+                                INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            `).run(pk, pk, info.symbol, info.name, info.decimals, info.totalSupply, blockNum);
+                        }
+                    }
+                    console.log(`[TokenIndexer] Block ${blockNum}: ${deployments.length} deployments, probed ${newPubkeys.length} new (total: ${this.getTokenCount()})`);
                 }
             }
 
-            const indexed = newPubkeys.length;
-            if (indexed > 0) {
-                console.log(`[TokenIndexer] Block ${blockNum}: ${deployments.length} deployments, probed ${indexed} new (total: ${this.getTokenCount()})`);
-            }
+            // 2. Process events for holder tracking
+            this._processBlockEvents(block);
         } catch (e) {
             // Block fetch failure — will retry next cycle
         }
+    }
+
+    /** Extract holder addresses from Transfer/Mint events in block */
+    _processBlockEvents(block) {
+        const txs = block.transactions || [];
+        const insertHolder = this.db.prepare(
+            'INSERT OR IGNORE INTO token_holders (token_pubkey, holder_hash) VALUES (?, ?)'
+        );
+        const ZERO = '0'.repeat(64);
+
+        for (const tx of txs) {
+            const events = tx.events || [];
+            for (const ev of events) {
+                if (!ev.contractAddress || !ev.data) continue;
+                if (ev.type !== 'Transferred' && ev.type !== 'Minted') continue;
+                try {
+                    const data = Buffer.from(ev.data, 'base64');
+                    if (ev.type === 'Transferred' && data.length >= 64) {
+                        // ABI: [from: ADDRESS(32), to: ADDRESS(32), value: UINT256(32)]
+                        const from = data.subarray(0, 32).toString('hex');
+                        const to = data.subarray(32, 64).toString('hex');
+                        if (from !== ZERO) insertHolder.run(ev.contractAddress, from);
+                        if (to !== ZERO) insertHolder.run(ev.contractAddress, to);
+                    } else if (ev.type === 'Minted' && data.length >= 32) {
+                        // ABI: [to: ADDRESS(32), amount: UINT256(32)]
+                        const to = data.subarray(0, 32).toString('hex');
+                        if (to !== ZERO) insertHolder.run(ev.contractAddress, to);
+                    }
+                } catch { /* ignore decode errors */ }
+            }
+        }
+    }
+
+    /** Enrichment: mintable detection + holder count backfill */
+    async _enrichTokens() {
+        try {
+            // 1. Backfill holder events for previously scanned blocks
+            const holderScan = parseInt(this._getState('holder_scan_block') || '0', 10);
+            const mainScan = this._getLastBlock();
+            if (holderScan < mainScan) {
+                // Larger batches for events-only scan (lightweight)
+                const gap = mainScan - holderScan;
+                const batchSize = gap > 1000 ? 100 : gap > 200 ? 50 : 30;
+                const batchEnd = Math.min(holderScan + batchSize, mainScan);
+                for (let b = holderScan + 1; b <= batchEnd; b++) {
+                    await this._scanBlockEventsOnly(b);
+                }
+                this._setState('holder_scan_block', batchEnd);
+                if (batchEnd < mainScan && (mainScan - batchEnd) % 500 < batchSize + 5) {
+                    console.log(`[TokenIndexer] Holder backfill: ${batchEnd}/${mainScan} (${gap} behind)`);
+                }
+            }
+
+            // 2. Check mintable for unknown tokens (batch of 10)
+            const unknown = this.db.prepare(
+                'SELECT pubkey FROM indexed_tokens WHERE mintable = -1 LIMIT 10'
+            ).all();
+            if (unknown.length > 0) {
+                const results = await Promise.allSettled(
+                    unknown.map(t => checkMintable(t.pubkey))
+                );
+                for (let i = 0; i < unknown.length; i++) {
+                    const val = results[i].status === 'fulfilled' ? results[i].value : 0;
+                    this.db.prepare('UPDATE indexed_tokens SET mintable = ? WHERE pubkey = ?')
+                        .run(val, unknown[i].pubkey);
+                }
+            }
+
+            // 3. Update holder counts from token_holders table
+            this.db.exec(`
+                UPDATE indexed_tokens SET holder_count = COALESCE(
+                    (SELECT COUNT(*) FROM token_holders WHERE token_pubkey = indexed_tokens.pubkey), 0
+                )
+            `);
+        } catch (e) {
+            console.warn('[TokenIndexer] Enrichment error:', e.message);
+        }
+    }
+
+    /** Scan a block only for events (holder backfill) */
+    async _scanBlockEventsOnly(blockNum) {
+        try {
+            const hex = '0x' + blockNum.toString(16);
+            const block = await rpc('btc_getBlockByNumber', [hex, true]);
+            if (block) this._processBlockEvents(block);
+        } catch { /* ignore */ }
     }
 
     // ── API Handlers ──
@@ -309,12 +435,13 @@ class TokenIndexer {
     getScanStatus() {
         const lastScanned = this._getLastBlock();
         const count = this.getTokenCount();
-        return { lastScannedBlock: lastScanned, tokenCount: count };
+        const mintableCount = this.db.prepare('SELECT COUNT(*) as cnt FROM indexed_tokens WHERE mintable = 1').get()?.cnt || 0;
+        const holderScan = parseInt(this._getState('holder_scan_block') || '0', 10);
+        return { lastScannedBlock: lastScanned, tokenCount: count, mintableCount, holderScanBlock: holderScan };
     }
 
     /** Manually add a token by hex pubkey or opt1 address */
     async addTokenByAddress(address) {
-        // Check if already indexed (by address or pubkey)
         const existing = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ? OR pubkey = ?').get(address, address);
         if (existing) return { ok: true, token: existing, existed: true };
 
@@ -344,12 +471,9 @@ class TokenIndexer {
             if (cached && (now - cached.cached_at) < BALANCE_CACHE_TTL_MS) {
                 if (cached.balance !== '0') {
                     results.push({
-                        token: token.address,
-                        pubkey: token.pubkey,
-                        symbol: token.symbol,
-                        name: token.name,
-                        decimals: token.decimals,
-                        balance: cached.balance,
+                        token: token.address, pubkey: token.pubkey,
+                        symbol: token.symbol, name: token.name,
+                        decimals: token.decimals, balance: cached.balance,
                     });
                 }
                 continue;
@@ -360,12 +484,9 @@ class TokenIndexer {
 
             if (balance !== '0') {
                 results.push({
-                    token: token.address,
-                    pubkey: token.pubkey,
-                    symbol: token.symbol,
-                    name: token.name,
-                    decimals: token.decimals,
-                    balance,
+                    token: token.address, pubkey: token.pubkey,
+                    symbol: token.symbol, name: token.name,
+                    decimals: token.decimals, balance,
                 });
             }
         }

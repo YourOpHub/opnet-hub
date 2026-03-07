@@ -1,86 +1,95 @@
 /**
  * Token Indexer — scans OPNet blocks for OP-20 contract deployments
- * and provides APIs for token discovery + balance queries.
+ * using block.deployments[] array and btc_call for metadata.
  *
  * Runs as a background loop inside server/index.js
  */
+
+const crypto = require('crypto');
 
 const OPNET_RPC = process.env.OPNET_RPC_URL || 'https://testnet.opnet.org/api/v1/json-rpc';
 const SCAN_INTERVAL_MS = 10_000; // 10 seconds
 const BALANCE_CACHE_TTL_MS = 60_000; // 60 seconds
 
 // ── RPC helper ──
+let rpcId = 1;
 async function rpc(method, params = []) {
     const res = await fetch(OPNET_RPC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() }),
-        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: rpcId++ }),
+        signal: AbortSignal.timeout(30000),
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
     return data.result;
 }
 
-// ── Storage slot helpers (OP-20: 0=name, 1=symbol, 2=decimals, 3=totalSupply) ──
-function slotToPointer(slot) {
-    const buf = new ArrayBuffer(32);
-    const view = new DataView(buf);
-    view.setUint32(28, slot, false);
-    const bytes = new Uint8Array(buf);
-    return Buffer.from(bytes).toString('base64');
+// ── btc_call helpers ──
+// OPNet selectors: first 4 bytes of SHA-256("functionName()")
+function getSelector(funcSig) {
+    const hash = crypto.createHash('sha256').update(funcSig).digest();
+    return hash.subarray(0, 4).toString('hex');
 }
 
-function decodeStorageVal(val) {
-    if (val == null) return '';
-    if (typeof val === 'number') return val;
-    if (typeof val === 'string') {
-        if (val.startsWith('0x')) {
-            try {
-                const n = BigInt(val);
-                if (n < 256n) return Number(n);
-                return val;
-            } catch { return val; }
-        }
-        return val;
-    }
-    if (typeof val === 'object') {
-        if (val.value !== undefined) return decodeStorageVal(val.value);
-        if (typeof val.valueHex === 'string' && val.valueHex.startsWith('0x')) {
-            return Number(BigInt(val.valueHex));
-        }
-    }
-    return String(val);
-}
+const SEL_NAME = getSelector('name()');
+const SEL_SYMBOL = getSelector('symbol()');
+const SEL_DECIMALS = getSelector('decimals()');
+const SEL_TOTAL_SUPPLY = getSelector('totalSupply()');
 
-async function getStorageAt(address, slot) {
-    const pointer = slotToPointer(slot);
+/** Call a view function on a contract, return raw bytes or null */
+async function callView(contractPubkey, selector) {
     try {
-        return await rpc('btc_getStorageAt', [address, pointer, false]);
+        const r = await rpc('btc_call', [contractPubkey, selector]);
+        if (!r || r.error || r.revert) return null;
+        const raw = typeof r.result === 'string' ? r.result : '';
+        if (!raw || raw === 'AA==') return null;
+        return Buffer.from(raw, 'base64');
     } catch { return null; }
 }
 
-// ── Check if contract is OP-20 by reading storage slots ──
+/** Decode a string result from btc_call (4-byte length prefix + UTF-8) */
+function decodeString(buf) {
+    if (!buf || buf.length === 0) return '';
+    if (buf.length >= 4) {
+        const len = buf.readUInt32BE(0);
+        if (len > 0 && len <= buf.length - 4) {
+            return buf.subarray(4, 4 + len).toString('utf-8').trim();
+        }
+    }
+    // Fallback: try full buffer as string
+    return buf.toString('utf-8').replace(/\0/g, '').trim();
+}
+
+/** Decode a uint from btc_call result */
+function decodeUint(buf) {
+    if (!buf || buf.length === 0) return 0;
+    // Read as big-endian BigInt
+    let hex = buf.toString('hex');
+    if (!hex) return 0;
+    try {
+        return BigInt('0x' + hex);
+    } catch { return 0n; }
+}
+
+// ── Probe contract via btc_call ──
 async function probeOP20(contractPubkey) {
     try {
-        const [nameR, symbolR, decimalsR, totalSupplyR] = await Promise.all([
-            getStorageAt(contractPubkey, 0),
-            getStorageAt(contractPubkey, 1),
-            getStorageAt(contractPubkey, 2),
-            getStorageAt(contractPubkey, 3),
+        const [nameB, symbolB, decimalsB, totalSupplyB] = await Promise.all([
+            callView(contractPubkey, SEL_NAME),
+            callView(contractPubkey, SEL_SYMBOL),
+            callView(contractPubkey, SEL_DECIMALS),
+            callView(contractPubkey, SEL_TOTAL_SUPPLY),
         ]);
 
-        const name = String(decodeStorageVal(nameR) || '').trim();
-        const symbol = String(decodeStorageVal(symbolR) || '').trim();
-        const decimals = Number(decodeStorageVal(decimalsR)) || 0;
-        const totalSupplyRaw = decodeStorageVal(totalSupplyR);
-        const totalSupply = typeof totalSupplyRaw === 'string' && totalSupplyRaw.startsWith('0x')
-            ? totalSupplyRaw : String(totalSupplyRaw || '0');
-
-        // Must have at least symbol or name to be considered OP-20
+        const name = decodeString(nameB);
+        const symbol = decodeString(symbolB);
         if (!symbol && !name) return null;
-        // Decimals sanity check
+
+        const decimals = decimalsB ? Number(decodeUint(decimalsB)) : 0;
         if (decimals < 0 || decimals > 18) return null;
+
+        const totalSupply = totalSupplyB ? decodeUint(totalSupplyB).toString() : '0';
 
         return { name: name || 'Unknown', symbol: symbol || '?', decimals, totalSupply };
     } catch {
@@ -89,26 +98,18 @@ async function probeOP20(contractPubkey) {
 }
 
 // ── BalanceOf via btc_call ──
-// btc_call params: [to, calldata, fromMLDSAHex, fromTweakedHex]
-async function getTokenBalance(tokenAddress, holderMLDSAHex, holderTweakedHex) {
+async function getTokenBalance(tokenPubkey, holderMLDSAHex, holderTweakedHex) {
     try {
-        const BALANCE_OF_SELECTOR = '5b46f8f6';
-        const calldata = BALANCE_OF_SELECTOR + holderMLDSAHex.replace('0x', '').padStart(64, '0');
-        const params = [tokenAddress, calldata, holderMLDSAHex];
+        const sel = getSelector('balanceOf(address)');
+        const calldata = sel + holderMLDSAHex.replace('0x', '').padStart(64, '0');
+        const params = [tokenPubkey, calldata, holderMLDSAHex];
         if (holderTweakedHex) params.push(holderTweakedHex);
         const r = await rpc('btc_call', params);
         if (!r || r.error || r.revert) return '0';
-        const raw = typeof r.result === 'string' ? r.result : (r.returnData || '');
+        const raw = typeof r.result === 'string' ? r.result : '';
         if (!raw || raw === 'AA==') return '0';
-        let hex = raw;
-        if (!hex.startsWith('0x')) {
-            // base64 decode
-            try {
-                const bin = Buffer.from(raw, 'base64');
-                hex = '0x' + bin.toString('hex');
-            } catch { return '0'; }
-        }
-        const n = BigInt(hex);
+        const bin = Buffer.from(raw, 'base64');
+        const n = BigInt('0x' + bin.toString('hex'));
         return n.toString();
     } catch { return '0'; }
 }
@@ -121,6 +122,7 @@ class TokenIndexer {
         this.db = db;
         this._running = false;
         this._timer = null;
+        this._scanning = false; // prevent concurrent scans
     }
 
     /** Initialize DB tables */
@@ -149,7 +151,7 @@ class TokenIndexer {
             );
         `);
 
-        // Seed known tokens if not already present
+        // Seed known tokens
         this._seedKnownTokens();
     }
 
@@ -157,13 +159,13 @@ class TokenIndexer {
         const known = [
             {
                 address: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa',
-                pubkey: 'db2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d',
+                pubkey: '0xdb2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d',
                 symbol: 'MINE', name: 'Mine Token', decimals: 8,
                 total_supply: '2100000000000000', deploy_block: 3822,
             },
             {
                 address: 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl',
-                pubkey: '1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818',
+                pubkey: '0x1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818',
                 symbol: 'VIBE', name: 'Vibe Token', decimals: 8,
                 total_supply: '10000000000000000', deploy_block: 3822,
             },
@@ -179,13 +181,11 @@ class TokenIndexer {
         }
     }
 
-    /** Get last scanned block */
     _getLastBlock() {
         const row = this.db.prepare('SELECT value FROM scanner_state WHERE key = ?').get('last_scanned_block');
         return row ? parseInt(row.value, 10) : 0;
     }
 
-    /** Set last scanned block */
     _setLastBlock(block) {
         this.db.prepare('INSERT OR REPLACE INTO scanner_state (key, value) VALUES (?, ?)').run('last_scanned_block', String(block));
     }
@@ -195,7 +195,7 @@ class TokenIndexer {
         if (this._running) return;
         this._running = true;
         console.log('[TokenIndexer] Starting background scanner');
-        this._scan(); // first scan immediately
+        this._scan();
         this._timer = setInterval(() => this._scan(), SCAN_INTERVAL_MS);
     }
 
@@ -204,22 +204,25 @@ class TokenIndexer {
         if (this._timer) clearInterval(this._timer);
     }
 
-    /** Scan new blocks for deployments */
+    /** Main scan loop */
     async _scan() {
+        if (this._scanning) return; // prevent overlap
+        this._scanning = true;
         try {
             const currentHeight = await this._getCurrentHeight();
             if (!currentHeight) return;
 
             const lastScanned = this._getLastBlock();
-            // Backfill: if far behind (>200 blocks), scan aggressively (100/cycle), otherwise 50/cycle
             const behind = currentHeight - lastScanned;
-            const maxBlocks = behind > 200 ? 100 : 50;
+            // Backfill aggressively, normal otherwise
+            const maxBlocks = behind > 200 ? 50 : 20;
             const endBlock = Math.min(lastScanned + maxBlocks, currentHeight);
 
-            if (behind > 100 && behind % 500 < maxBlocks) {
-                console.log(`[TokenIndexer] Backfill: ${lastScanned}→${currentHeight} (${behind} blocks behind)`);
+            if (behind > 100 && behind % 200 < maxBlocks) {
+                console.log(`[TokenIndexer] Backfill: ${lastScanned}→${currentHeight} (${behind} blocks behind, ${this.getTokenCount()} tokens)`);
             }
 
+            // Process blocks sequentially (each block may have many deployments to probe)
             for (let blockNum = lastScanned + 1; blockNum <= endBlock; blockNum++) {
                 await this._scanBlock(blockNum);
             }
@@ -229,6 +232,8 @@ class TokenIndexer {
             }
         } catch (e) {
             console.warn('[TokenIndexer] Scan error:', e.message);
+        } finally {
+            this._scanning = false;
         }
     }
 
@@ -243,95 +248,97 @@ class TokenIndexer {
         } catch { return null; }
     }
 
+    /** Scan a single block — read deployments[] array (requires prefetchTxs=true) */
     async _scanBlock(blockNum) {
         try {
             const hex = '0x' + blockNum.toString(16);
             const block = await rpc('btc_getBlockByNumber', [hex, true]);
-            if (!block || !block.transactions) return;
+            if (!block) return;
 
-            for (const tx of block.transactions) {
-                // Look for deployment transactions (various field naming conventions)
-                const isDeploy = tx.OPNetType === 'Deployment' || tx.opnetType === 'Deployment' ||
-                    tx.type === 'Deployment' || tx.type === 'deployment';
-                const addr = tx.contractAddress || tx.deployedContract || tx.deployedAddress || '';
-                const pubkey = tx.contractPubKey || tx.deployedPubKey || tx.contractPubkey || '';
+            const deployments = block.deployments || [];
+            if (deployments.length === 0) return;
 
-                if ((isDeploy || addr) && addr) {
-                    await this._tryIndexToken(addr, pubkey.replace('0x', ''), blockNum);
+            // Filter out already indexed pubkeys
+            const newPubkeys = [];
+            for (const pk of deployments) {
+                const existing = this.db.prepare('SELECT pubkey FROM indexed_tokens WHERE pubkey = ?').get(pk);
+                if (!existing) newPubkeys.push(pk);
+            }
+
+            if (newPubkeys.length === 0) return;
+
+            // Probe in batches of 5 to avoid overloading RPC
+            const BATCH = 5;
+            for (let i = 0; i < newPubkeys.length; i += BATCH) {
+                const batch = newPubkeys.slice(i, i + BATCH);
+                const results = await Promise.allSettled(batch.map(pk => probeOP20(pk)));
+
+                for (let j = 0; j < batch.length; j++) {
+                    const pk = batch[j];
+                    const result = results[j];
+                    if (result.status !== 'fulfilled' || !result.value) continue;
+
+                    const info = result.value;
+                    this.db.prepare(`
+                        INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `).run(pk, pk, info.symbol, info.name, info.decimals, info.totalSupply, blockNum);
                 }
             }
-        } catch {
-            // Some blocks may not be fetched with txs — that's fine
+
+            const indexed = newPubkeys.length;
+            if (indexed > 0) {
+                console.log(`[TokenIndexer] Block ${blockNum}: ${deployments.length} deployments, probed ${indexed} new (total: ${this.getTokenCount()})`);
+            }
+        } catch (e) {
+            // Block fetch failure — will retry next cycle
         }
-    }
-
-    async _tryIndexToken(address, pubkey, blockNum) {
-        // Already indexed?
-        const existing = this.db.prepare('SELECT address FROM indexed_tokens WHERE address = ?').get(address);
-        if (existing) return;
-
-        // If no pubkey, we can't probe — try using address directly
-        const probeAddr = pubkey || address;
-        const info = await probeOP20(probeAddr);
-        if (!info) return; // Not an OP-20 or can't read
-
-        this.db.prepare(`
-            INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(address, pubkey, info.symbol, info.name, info.decimals, info.totalSupply, blockNum);
-
-        console.log(`[TokenIndexer] Found OP-20: ${info.symbol} (${info.name}) at ${address}`);
     }
 
     // ── API Handlers ──
 
-    /** GET /api/tokens — all known OP-20 tokens */
     getAllTokens() {
         return this.db.prepare('SELECT * FROM indexed_tokens ORDER BY deploy_block ASC').all();
     }
 
-    /** Token count */
     getTokenCount() {
         const row = this.db.prepare('SELECT COUNT(*) as cnt FROM indexed_tokens').get();
         return row?.cnt || 0;
     }
 
-    /** GET /api/tokens/status — scan progress */
     getScanStatus() {
         const lastScanned = this._getLastBlock();
         const count = this.getTokenCount();
         return { lastScannedBlock: lastScanned, tokenCount: count };
     }
 
-    /** POST /api/tokens/add — manually add a token by address */
+    /** Manually add a token by hex pubkey or opt1 address */
     async addTokenByAddress(address) {
-        const existing = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ?').get(address);
+        // Check if already indexed (by address or pubkey)
+        const existing = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ? OR pubkey = ?').get(address, address);
         if (existing) return { ok: true, token: existing, existed: true };
 
         const info = await probeOP20(address);
-        if (!info) return { ok: false, error: 'Not a valid OP-20 token or cannot read storage' };
+        if (!info) return { ok: false, error: 'Not a valid OP-20 token or cannot read metadata' };
 
         this.db.prepare(`
             INSERT OR IGNORE INTO indexed_tokens (address, pubkey, symbol, name, decimals, total_supply, deploy_block)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(address, '', info.symbol, info.name, info.decimals, info.totalSupply, 0);
+        `).run(address, address, info.symbol, info.name, info.decimals, info.totalSupply, 0);
 
         console.log(`[TokenIndexer] Manually added: ${info.symbol} (${info.name}) at ${address}`);
         const token = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ?').get(address);
         return { ok: true, token, existed: false };
     }
 
-    /** GET /api/holder/:pubkey/tokens — all balances for a holder
-     *  holderPubkey = MLDSA hash hex, holderTweaked = tweaked pubkey hex (optional but needed for balanceOf)
-     */
+    /** Get all token balances for a holder */
     async getHolderBalances(holderPubkey, holderTweaked) {
         const tokens = this.getAllTokens();
         const now = Date.now();
         const results = [];
 
-        // Check cache first, then fetch missing
         for (const token of tokens) {
-            const cacheKey = `${token.address}:${holderPubkey}`;
+            const cacheKey = `${token.pubkey}:${holderPubkey}`;
             const cached = this.db.prepare('SELECT balance, cached_at FROM balance_cache WHERE token_holder = ?').get(cacheKey);
 
             if (cached && (now - cached.cached_at) < BALANCE_CACHE_TTL_MS) {
@@ -348,10 +355,7 @@ class TokenIndexer {
                 continue;
             }
 
-            // Fetch on-chain balance — use opt1 address for btc_call (not hex pubkey)
-            const balance = await getTokenBalance(token.address, holderPubkey, holderTweaked);
-
-            // Cache it
+            const balance = await getTokenBalance(token.pubkey, holderPubkey, holderTweaked);
             this.db.prepare('INSERT OR REPLACE INTO balance_cache (token_holder, balance, cached_at) VALUES (?, ?, ?)').run(cacheKey, balance, now);
 
             if (balance !== '0') {

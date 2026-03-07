@@ -380,6 +380,16 @@ app.get('/api/holder/:pubkey/tokens', async (req, res) => {
   }
 });
 
+// ─── Motoswap Pools API ───
+app.get('/api/pools', (_req, res) => {
+  try {
+    const pools = indexer.getMotoswapPools();
+    res.json(pools);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch pools', message: e.message });
+  }
+});
+
 // ─── Swap Persistence API ───
 app.post('/api/swap/update', (req, res) => {
   const { id, market, order_id, wallet, direction, role, step, status, amounts, tx_ids, error } = req.body;

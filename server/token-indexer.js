@@ -39,6 +39,14 @@ const SEL_DECIMALS = getSelector('decimals()');
 const SEL_TOTAL_SUPPLY = getSelector('totalSupply()');
 const SEL_IS_PUBLIC_MINT = getSelector('isPublicMintEnabled()');
 const SEL_FREE_MINT_INFO = getSelector('getFreeMintInfo()');
+const SEL_GET_POOL = getSelector('getPool(address,address)');
+const SEL_GET_RESERVES = getSelector('getReserves()');
+const SEL_TOKEN0 = getSelector('token0()');
+const SEL_TOKEN1 = getSelector('token1()');
+
+// ── Motoswap Factory address ──
+const MOTOSWAP_FACTORY = '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
+const POOL_DISCOVERY_INTERVAL_MS = 120_000; // 2 minutes
 
 /** Call a view function on a contract, return raw bytes or null */
 async function callView(contractPubkey, selector) {
@@ -181,6 +189,22 @@ class TokenIndexer {
             );
         `);
 
+        // Motoswap pool discovery table
+        this.db.exec(`
+            CREATE TABLE IF NOT EXISTS motoswap_pools (
+                pool_pubkey TEXT PRIMARY KEY,
+                token0_pubkey TEXT NOT NULL,
+                token1_pubkey TEXT NOT NULL,
+                token0_symbol TEXT DEFAULT '?',
+                token1_symbol TEXT DEFAULT '?',
+                token0_decimals INTEGER DEFAULT 8,
+                token1_decimals INTEGER DEFAULT 8,
+                reserve0 TEXT DEFAULT '0',
+                reserve1 TEXT DEFAULT '0',
+                last_updated TEXT DEFAULT (datetime('now'))
+            );
+        `);
+
         this._seedKnownTokens();
     }
 
@@ -236,11 +260,21 @@ class TokenIndexer {
         console.log('[TokenIndexer] Starting background scanner');
         this._scan();
         this._timer = setInterval(() => this._scan(), SCAN_INTERVAL_MS);
+        // Pool discovery runs less frequently
+        this._poolTimer = setInterval(() => {
+            this.discoverMotoswapPools().catch(() => {});
+            this.updatePoolReserves().catch(() => {});
+        }, POOL_DISCOVERY_INTERVAL_MS);
+        // Initial pool discovery after 30s (let token scan get ahead first)
+        setTimeout(() => {
+            this.discoverMotoswapPools().catch(() => {});
+        }, 30_000);
     }
 
     stop() {
         this._running = false;
         if (this._timer) clearInterval(this._timer);
+        if (this._poolTimer) clearInterval(this._poolTimer);
     }
 
     /** Main scan loop */
@@ -456,6 +490,114 @@ class TokenIndexer {
         console.log(`[TokenIndexer] Manually added: ${info.symbol} (${info.name}) at ${address}`);
         const token = this.db.prepare('SELECT * FROM indexed_tokens WHERE address = ?').get(address);
         return { ok: true, token, existed: false };
+    }
+
+    // ── Motoswap Pool Discovery ──
+
+    /** Discover Motoswap pools by querying Factory.getPool for top token pairs */
+    async discoverMotoswapPools() {
+        try {
+            // Get top 30 tokens by holder count (most likely to have pools)
+            const topTokens = this.db.prepare(
+                'SELECT pubkey, symbol, decimals FROM indexed_tokens WHERE holder_count > 0 ORDER BY holder_count DESC LIMIT 30'
+            ).all();
+
+            if (topTokens.length < 2) return;
+
+            const ZERO = '0'.repeat(64);
+            let discovered = 0;
+
+            // Query getPool for each unique pair
+            for (let i = 0; i < topTokens.length && i < 30; i++) {
+                for (let j = i + 1; j < topTokens.length && j < 30; j++) {
+                    const a = topTokens[i];
+                    const b = topTokens[j];
+                    const pkA = a.pubkey.replace('0x', '').padStart(64, '0');
+                    const pkB = b.pubkey.replace('0x', '').padStart(64, '0');
+
+                    // Check if already discovered
+                    const pairKey = [pkA, pkB].sort().join(':');
+                    const existing = this.db.prepare(
+                        'SELECT pool_pubkey FROM motoswap_pools WHERE (token0_pubkey = ? AND token1_pubkey = ?) OR (token0_pubkey = ? AND token1_pubkey = ?)'
+                    ).get(a.pubkey, b.pubkey, b.pubkey, a.pubkey);
+                    if (existing) continue;
+
+                    try {
+                        const calldata = SEL_GET_POOL + pkA + pkB;
+                        const buf = await callView(MOTOSWAP_FACTORY, calldata);
+                        if (!buf || buf.length < 32) continue;
+
+                        const poolPk = buf.subarray(buf.length - 32).toString('hex');
+                        if (poolPk === ZERO || poolPk.length < 64) continue;
+
+                        // Pool exists! Get reserves
+                        const poolPubkey = '0x' + poolPk;
+                        const resBuf = await callView(poolPk, SEL_GET_RESERVES);
+                        let r0 = '0', r1 = '0';
+                        if (resBuf && resBuf.length >= 64) {
+                            r0 = BigInt('0x' + resBuf.subarray(0, 32).toString('hex')).toString();
+                            r1 = BigInt('0x' + resBuf.subarray(32, 64).toString('hex')).toString();
+                        }
+
+                        // Determine actual token0/token1 from pool contract
+                        const t0Buf = await callView(poolPk, SEL_TOKEN0);
+                        const t1Buf = await callView(poolPk, SEL_TOKEN1);
+                        let tok0pk = a.pubkey, tok1pk = b.pubkey;
+                        let tok0sym = a.symbol, tok1sym = b.symbol;
+                        let tok0dec = a.decimals, tok1dec = b.decimals;
+                        if (t0Buf && t0Buf.length >= 32) {
+                            const actualT0 = '0x' + t0Buf.subarray(t0Buf.length - 32).toString('hex');
+                            if (actualT0 === b.pubkey) {
+                                // Swap order
+                                tok0pk = b.pubkey; tok1pk = a.pubkey;
+                                tok0sym = b.symbol; tok1sym = a.symbol;
+                                tok0dec = b.decimals; tok1dec = a.decimals;
+                            }
+                        }
+
+                        this.db.prepare(`
+                            INSERT OR REPLACE INTO motoswap_pools (pool_pubkey, token0_pubkey, token1_pubkey, token0_symbol, token1_symbol, token0_decimals, token1_decimals, reserve0, reserve1, last_updated)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                        `).run(poolPubkey, tok0pk, tok1pk, tok0sym, tok1sym, tok0dec, tok1dec, r0, r1);
+
+                        discovered++;
+                        console.log(`[TokenIndexer] Motoswap pool found: ${tok0sym}/${tok1sym} at ${poolPubkey.slice(0, 16)}... reserves ${r0}/${r1}`);
+                    } catch { /* skip pair */ }
+                }
+            }
+
+            if (discovered > 0) {
+                console.log(`[TokenIndexer] Discovered ${discovered} new Motoswap pools`);
+            }
+        } catch (e) {
+            console.warn('[TokenIndexer] Pool discovery error:', e.message);
+        }
+    }
+
+    /** Update reserves for all known Motoswap pools */
+    async updatePoolReserves() {
+        try {
+            const pools = this.db.prepare('SELECT pool_pubkey FROM motoswap_pools').all();
+            for (const pool of pools) {
+                try {
+                    const pk = pool.pool_pubkey.replace('0x', '');
+                    const resBuf = await callView(pk, SEL_GET_RESERVES);
+                    if (resBuf && resBuf.length >= 64) {
+                        const r0 = BigInt('0x' + resBuf.subarray(0, 32).toString('hex')).toString();
+                        const r1 = BigInt('0x' + resBuf.subarray(32, 64).toString('hex')).toString();
+                        this.db.prepare('UPDATE motoswap_pools SET reserve0 = ?, reserve1 = ?, last_updated = datetime(\'now\') WHERE pool_pubkey = ?')
+                            .run(r0, r1, pool.pool_pubkey);
+                    }
+                } catch { /* skip pool */ }
+            }
+        } catch (e) {
+            console.warn('[TokenIndexer] Reserve update error:', e.message);
+        }
+    }
+
+    /** Get all discovered Motoswap pools */
+    getMotoswapPools() {
+        return this.db.prepare('SELECT * FROM motoswap_pools ORDER BY last_updated DESC').all();
     }
 
     /** Get all token balances for a holder */

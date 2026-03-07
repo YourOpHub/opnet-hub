@@ -4,7 +4,9 @@ import { Address, BinaryWriter } from '@btc-vision/transaction';
 import { Transaction } from '@btc-vision/bitcoin';
 import {
   JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  MOTOSWAP_ROUTER_ABI,
+  type IOP20Contract, type IMotoswapRouterContract,
+  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
@@ -15,9 +17,10 @@ import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHi
 import {
   TESTNET_CONTRACTS,
   POOL_ADDRESS, POOL_PUBKEY,
+  MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_PUBKEY,
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
-import { fetchAllTokens, fetchHolderBalances, type IndexedToken } from '../tokenApi';
+import { fetchAllTokens, fetchHolderBalances, fetchMotoswapPools, type IndexedToken, type MotoswapPool } from '../tokenApi';
 import LiquidityModal from './LiquidityModal';
 import { useOps } from '../contexts/OpsContext';
 
@@ -129,6 +132,22 @@ const SwapUI: React.FC = () => {
 
   // Tokens user actually holds (for pool creation picker)
   const [heldTokens, setHeldTokens] = useState<Token[]>([]);
+
+  // Motoswap pools discovered by backend
+  const [motoPools, setMotoPools] = useState<MotoswapPool[]>([]);
+
+  // Fetch Motoswap pools
+  useEffect(() => {
+    fetchMotoswapPools().then(pools => {
+      if (pools.length > 0) setMotoPools(pools);
+    }).catch(() => {});
+    const iv = setInterval(() => {
+      fetchMotoswapPools().then(pools => {
+        if (pools.length > 0) setMotoPools(pools);
+      }).catch(() => {});
+    }, 60_000);
+    return () => clearInterval(iv);
+  }, []);
 
   // Fetch tokens from indexer on mount
   useEffect(() => {
@@ -272,15 +291,54 @@ const SwapUI: React.FC = () => {
     return () => { opnetRpc.setNetwork(prevNet); };
   }, [walletAddress, hashedMLDSAKey, publicKey, balRefreshKey]);
 
-  // Swap only works with tokens that have pools — currently MINE/VIBE
-  const from = BASE_TOKENS[fromIdx] || BASE_TOKENS[0];
-  const to = BASE_TOKENS[toIdx] || BASE_TOKENS[1];
+  // Build swappable tokens list: BASE_TOKENS + unique tokens from Motoswap pools
+  const SWAP_TOKENS = useMemo(() => {
+    const known = new Set(BASE_TOKENS.map(t => t.pubkey));
+    const extra: Token[] = [];
+    for (const p of motoPools) {
+      if (!known.has(p.token0_pubkey)) {
+        known.add(p.token0_pubkey);
+        extra.push({ symbol: p.token0_symbol, name: p.token0_symbol, icon: '', decimals: p.token0_decimals, address: p.token0_pubkey, pubkey: p.token0_pubkey });
+      }
+      if (!known.has(p.token1_pubkey)) {
+        known.add(p.token1_pubkey);
+        extra.push({ symbol: p.token1_symbol, name: p.token1_symbol, icon: '', decimals: p.token1_decimals, address: p.token1_pubkey, pubkey: p.token1_pubkey });
+      }
+    }
+    return [...BASE_TOKENS, ...extra];
+  }, [motoPools]);
+
+  const from = SWAP_TOKENS[fromIdx] || SWAP_TOKENS[0];
+  const to = SWAP_TOKENS[toIdx] || SWAP_TOKENS[1];
   const fromVal = parseFloat(fromAmt) || 0;
 
+  // Find which pool handles this pair: SimplePool (MINE/VIBE) or Motoswap
+  const motoPool = useMemo(() => {
+    if (!from || !to) return null;
+    return motoPools.find(p =>
+      (p.token0_pubkey === from.pubkey && p.token1_pubkey === to.pubkey) ||
+      (p.token1_pubkey === from.pubkey && p.token0_pubkey === to.pubkey)
+    ) || null;
+  }, [from, to, motoPools]);
+
+  const isSimplePool = from && to && (
+    (from.symbol === 'MINE' && to.symbol === 'VIBE') ||
+    (from.symbol === 'VIBE' && to.symbol === 'MINE')
+  );
+
   // Determine reserves based on direction
-  const isAToB = from.symbol === 'MINE';
-  const rIn = isAToB ? reserveA : reserveB;
-  const rOut = isAToB ? reserveB : reserveA;
+  const isAToB = from?.symbol === 'MINE';
+  let rIn = 0, rOut = 0;
+  if (isSimplePool) {
+    rIn = isAToB ? reserveA : reserveB;
+    rOut = isAToB ? reserveB : reserveA;
+  } else if (motoPool) {
+    const isForward = from.pubkey === motoPool.token0_pubkey;
+    const mr0 = Number(BigInt(motoPool.reserve0)) / Math.pow(10, motoPool.token0_decimals);
+    const mr1 = Number(BigInt(motoPool.reserve1)) / Math.pow(10, motoPool.token1_decimals);
+    rIn = isForward ? mr0 : mr1;
+    rOut = isForward ? mr1 : mr0;
+  }
   const hasPool = rIn > 0 && rOut > 0;
   const quote = hasPool && fromVal > 0 ? getAmountOut(fromVal, rIn, rOut) : null;
   const toVal = quote?.out ?? 0;
@@ -300,21 +358,13 @@ const SwapUI: React.FC = () => {
   // senderAddr comes directly from useWalletConnect() as 'address'
 
   /**
-   * Execute a REAL on-chain swap via SimplePool AMM:
-   * Step 1: increaseAllowance(poolAddress, amountIn) on token-in
-   * Step 2: swap(tokenIn, amountIn, minAmountOut) on pool contract
-   * Uses getContract() from opnet — proper ABI encoding + wallet signing.
+   * Execute swap — routes through SimplePool (MINE/VIBE) or Motoswap Router.
    */
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
 
     if (!walletAddress || !walletInstance) {
       openConnectModal();
-      return;
-    }
-
-    if (!poolReady) {
-      setSwapResult({ type: 'error', error: 'Pool contract not yet deployed. Coming soon!' });
       return;
     }
 
@@ -330,39 +380,62 @@ const SwapUI: React.FC = () => {
       const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
       const minOut = BitcoinUtils.expandToDecimals(toVal * (1 - slippage / 100), to.decimals);
 
-      // STEP 1: Ensure allowance (check → approve → wait for block)
-      await ensureAllowance(
-        from.address, POOL_PUBKEY, rawAmount,
-        provider, senderAddr!, walletAddress!, setSwapStep, from.symbol,
-      );
-
-      // STEP 2: Call swap on pool
-      setSwapStep('Executing swap on pool...');
-      const poolContract = getContract<IPoolContract>(
-        POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr,
-      ) as unknown as IPoolContract;
-      const tokenInAddr = Address.fromString(from.pubkey);
-      const swapSim = await withRetry(() => poolContract.swap(tokenInAddr, rawAmount, minOut));
-
-      if ((swapSim as CallResult).revert) {
-        throw new Error(`Swap simulation reverted: ${(swapSim as CallResult).revert}`);
+      if (isSimplePool && poolReady) {
+        // ── SimplePool swap (MINE ↔ VIBE) ──
+        await ensureAllowance(
+          from.address, POOL_PUBKEY, rawAmount,
+          provider, senderAddr!, walletAddress!, setSwapStep, from.symbol,
+        );
+        setSwapStep('Executing swap on SimplePool...');
+        const poolContract = getContract<IPoolContract>(
+          POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr,
+        ) as unknown as IPoolContract;
+        const tokenInAddr = Address.fromString(from.pubkey);
+        const swapSim = await withRetry(() => poolContract.swap(tokenInAddr, rawAmount, minOut));
+        if ((swapSim as CallResult).revert) throw new Error(`Swap simulation reverted: ${(swapSim as CallResult).revert}`);
+        const txParams2 = await buildTxParams(provider, walletAddress!);
+        const swapOpId = `swap_${Date.now()}`;
+        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: '', role: '', step: `Swapping ${fromVal} ${from.symbol}→${to.symbol}...` });
+        const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
+        const txHash = swapReceipt.transactionId || '';
+        completeOp(swapOpId);
+        setSwapStep('');
+        setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
+        addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: walletAddress! });
+      } else if (motoPool) {
+        // ── Motoswap Router swap ──
+        await ensureAllowance(
+          from.pubkey, MOTOSWAP_ROUTER_PUBKEY, rawAmount,
+          provider, senderAddr!, walletAddress!, setSwapStep, from.symbol,
+        );
+        setSwapStep('Executing swap via Motoswap Router...');
+        const router = getContract<IMotoswapRouterContract>(
+          MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_ABI, provider, NETWORK, senderAddr,
+        );
+        const tokenInAddr = Address.fromString(from.pubkey);
+        const tokenOutAddr = Address.fromString(to.pubkey);
+        const toAddr = typeof senderAddr === 'string' ? Address.fromString(senderAddr) : senderAddr!;
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + 600); // 10 min
+        const swapSim = await withRetry(() =>
+          router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            rawAmount, minOut, [tokenInAddr, tokenOutAddr], toAddr, deadline,
+          )
+        );
+        if ((swapSim as CallResult).revert) throw new Error(`Motoswap swap reverted: ${(swapSim as CallResult).revert}`);
+        const txParams2 = await buildTxParams(provider, walletAddress!);
+        const swapOpId = `motoswap_${Date.now()}`;
+        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: 'motoswap', role: '', step: `Swapping via Motoswap...` });
+        const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
+        const txHash = swapReceipt.transactionId || '';
+        completeOp(swapOpId);
+        setSwapStep('');
+        setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
+        addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: walletAddress! });
+      } else {
+        throw new Error('No pool found for this pair');
       }
 
-      const txParams2 = await buildTxParams(provider, walletAddress!);
-      const swapOpId = `swap_${Date.now()}`;
-      trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: '', role: '', step: `Swapping ${fromVal} ${from.symbol}→${to.symbol}...` });
-      const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
-      const txHash = swapReceipt.transactionId || '';
-      completeOp(swapOpId);
-
-      setSwapStep('');
-      setSwapResult({
-        type: 'success', hash: txHash,
-        amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }),
-      });
-      addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: walletAddress! });
       localStorage.setItem('hub_swapped', '1');
-      // Refresh balances after swap
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
     } catch (e) {
       console.error('[Swap]', e);
@@ -371,7 +444,7 @@ const SwapUI: React.FC = () => {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, openConnectModal, provider, senderAddr]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr]);
 
   /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
   const mintTokens = useCallback(async (sym: string) => {
@@ -721,6 +794,63 @@ const SwapUI: React.FC = () => {
               </div>
             </div>
 
+            {/* Motoswap discovered pools */}
+            {motoPools.length > 0 && (() => {
+              const active = motoPools.filter(p => p.reserve0 !== '0' && p.reserve1 !== '0');
+              const empty = motoPools.filter(p => p.reserve0 === '0' || p.reserve1 === '0');
+              return (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <div style={{ fontSize: '.6rem', color: 'var(--t4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>Motoswap Pools</div>
+                  <span style={{ padding: '1px 6px', borderRadius: 5, fontSize: '.48rem', background: 'rgba(139,92,246,.1)', color: '#a78bfa', fontWeight: 700 }}>{motoPools.length} found</span>
+                </div>
+                {active.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {active.map(pool => {
+                      const r0 = Number(BigInt(pool.reserve0)) / Math.pow(10, pool.token0_decimals);
+                      const r1 = Number(BigInt(pool.reserve1)) / Math.pow(10, pool.token1_decimals);
+                      const rate = r0 > 0 ? (r1 / r0).toFixed(4) : '—';
+                      return (
+                        <div key={pool.pool_pubkey} style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontWeight: 700, fontSize: '.8rem' }}>{pool.token0_symbol} / {pool.token1_symbol}</span>
+                              <span style={{ padding: '2px 6px', borderRadius: 5, fontSize: '.48rem', background: 'rgba(16,185,129,.08)', color: 'var(--g)', fontWeight: 700 }}>LIVE</span>
+                            </div>
+                            <span style={{ fontSize: '.56rem', color: '#a78bfa', fontFamily: 'var(--fm)' }}>Motoswap</span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: '.62rem', marginBottom: 6 }}>
+                            <div style={{ textAlign: 'center', padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
+                              <div style={{ color: 'var(--t4)', marginBottom: 1, fontSize: '.52rem' }}>{pool.token0_symbol}</div>
+                              <div style={{ fontFamily: 'var(--fm)', color: 'var(--t2)', fontWeight: 600 }}>{r0 > 1000 ? (r0 / 1000).toFixed(1) + 'K' : r0.toFixed(2)}</div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
+                              <div style={{ color: 'var(--t4)', marginBottom: 1, fontSize: '.52rem' }}>{pool.token1_symbol}</div>
+                              <div style={{ fontFamily: 'var(--fm)', color: 'var(--t2)', fontWeight: 600 }}>{r1 > 1000 ? (r1 / 1000).toFixed(1) + 'K' : r1.toFixed(2)}</div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
+                              <div style={{ color: 'var(--t4)', marginBottom: 1, fontSize: '.52rem' }}>Rate</div>
+                              <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600 }}>{rate}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '.66rem', color: 'var(--t4)', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
+                    {empty.length} pools discovered but none have liquidity yet
+                  </div>
+                )}
+                {empty.length > 0 && active.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
+                    + {empty.length} empty pools (no liquidity)
+                  </div>
+                )}
+              </div>
+              );
+            })()}
+
             {/* User-created pools */}
             {userPools.length > 0 && (
               <div style={{ marginTop: 12 }}>
@@ -834,7 +964,7 @@ const SwapUI: React.FC = () => {
                 }}>MAX</button>
               )}
               <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={selectStyle}>
-                {BASE_TOKENS.map((t, i) => <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>)}
+                {SWAP_TOKENS.map((t, i) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
           </div>
@@ -865,7 +995,7 @@ const SwapUI: React.FC = () => {
                 {toVal > 0 ? toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0.0'}
               </div>
               <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={selectStyle}>
-                {BASE_TOKENS.map((t, i) => <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>)}
+                {SWAP_TOKENS.map((t, i) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
           </div>
@@ -895,8 +1025,13 @@ const SwapUI: React.FC = () => {
           {/* Pool badge */}
           {hasPool && (
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: '.6rem', color: 'var(--t4)' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: poolReady ? 'var(--g)' : 'var(--y)', display: 'inline-block' }} />
-              Pool: {reserveA.toLocaleString()} MINE / {reserveB.toLocaleString()} VIBE {poolReady ? '(on-chain)' : '(deploying)'}
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--g)', display: 'inline-block' }} />
+              {isSimplePool
+                ? `Pool: ${reserveA.toLocaleString()} MINE / ${reserveB.toLocaleString()} VIBE (SimplePool)`
+                : motoPool
+                  ? `Motoswap: ${rIn.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${from.symbol} / ${rOut.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${to.symbol}`
+                  : 'Pool active'
+              }
             </div>
           )}
 
@@ -925,7 +1060,7 @@ const SwapUI: React.FC = () => {
                 boxShadow: fromVal > 0 && hasPool ? '0 4px 16px rgba(247, 147, 26, .25)' : 'none',
                 opacity: swapping ? 0.7 : 1
               }}>
-              {swapping ? (swapStep || 'Processing...') : !poolReady ? 'Pool deploying soon...' : !hasPool ? 'No pool for this pair' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}` : 'Enter an amount'}
+              {swapping ? (swapStep || 'Processing...') : !hasPool ? 'No pool for this pair' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}${motoPool && !isSimplePool ? ' (Motoswap)' : ''}` : 'Enter an amount'}
             </button>
           ) : (
             <button onClick={openConnectModal} style={{

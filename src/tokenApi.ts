@@ -54,6 +54,32 @@ export async function fetchHolderBalances(pubkey: string, tweakedPubkey?: string
     }
 }
 
+export interface MotoswapPool {
+    pool_pubkey: string;
+    token0_pubkey: string;
+    token1_pubkey: string;
+    token0_symbol: string;
+    token1_symbol: string;
+    token0_decimals: number;
+    token1_decimals: number;
+    reserve0: string;
+    reserve1: string;
+    last_updated: string;
+}
+
+/** Fetch all discovered Motoswap liquidity pools */
+export async function fetchMotoswapPools(): Promise<MotoswapPool[]> {
+    try {
+        const res = await fetch(`${API_BASE}/api/pools`, {
+            signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) return [];
+        return await res.json();
+    } catch {
+        return [];
+    }
+}
+
 /** Format raw balance to human-readable (safe for large BigInts) */
 export function formatTokenBalance(rawBalance: string, decimals: number): string {
     const raw = BigInt(rawBalance);

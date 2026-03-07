@@ -92,7 +92,9 @@ const TokenGallery: React.FC = () => {
   const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'symbol' | 'supply' | 'holders' | 'mintable'>('newest');
+  const [sortField, setSortField] = useState<'block' | 'symbol' | 'supply' | 'holders'>('block');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [filterMintable, setFilterMintable] = useState(false);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
   // Manual import
@@ -144,29 +146,42 @@ const TokenGallery: React.FC = () => {
     } finally { setImporting(false); }
   }, [importAddr, API_BASE, loadAllTokens]);
 
+  const toggleSort = useCallback((field: typeof sortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'symbol' ? 'asc' : 'desc');
+    }
+  }, [sortField]);
+
+  const sortIcon = (field: typeof sortField) => sortField === field ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+
   const sortedFiltered = useMemo(() => {
     let list = allTokens;
     if (allSearch.trim()) {
       const q = allSearch.toLowerCase();
       list = list.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.includes(q));
     }
+    if (filterMintable) {
+      list = list.filter(t => t.mintable === 1);
+    }
     const sorted = [...list];
-    switch (sortBy) {
-      case 'newest': sorted.sort((a, b) => b.deploy_block - a.deploy_block); break;
-      case 'oldest': sorted.sort((a, b) => a.deploy_block - b.deploy_block); break;
-      case 'symbol': sorted.sort((a, b) => a.symbol.localeCompare(b.symbol)); break;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    switch (sortField) {
+      case 'block': sorted.sort((a, b) => dir * (a.deploy_block - b.deploy_block)); break;
+      case 'symbol': sorted.sort((a, b) => dir * a.symbol.localeCompare(b.symbol)); break;
       case 'supply': sorted.sort((a, b) => {
         const sa = BigInt(a.total_supply || '0'); const sb = BigInt(b.total_supply || '0');
-        return sa > sb ? -1 : sa < sb ? 1 : 0;
+        return dir * (sa > sb ? 1 : sa < sb ? -1 : 0);
       }); break;
-      case 'holders': sorted.sort((a, b) => (b.holder_count || 0) - (a.holder_count || 0)); break;
-      case 'mintable': sorted.sort((a, b) => (b.mintable ?? -1) - (a.mintable ?? -1)); break;
+      case 'holders': sorted.sort((a, b) => dir * ((a.holder_count || 0) - (b.holder_count || 0))); break;
     }
     return sorted;
-  }, [allTokens, allSearch, sortBy]);
+  }, [allTokens, allSearch, sortField, sortDir, filterMintable]);
 
   // Reset page when search/sort changes
-  useEffect(() => { setPage(0); }, [allSearch, sortBy]);
+  useEffect(() => { setPage(0); }, [allSearch, sortField, sortDir, filterMintable]);
 
   const totalPages = Math.ceil(sortedFiltered.length / PAGE_SIZE);
   const pagedTokens = useMemo(() => sortedFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [sortedFiltered, page]);
@@ -340,18 +355,26 @@ const TokenGallery: React.FC = () => {
             }}>{allLoading ? '...' : '↻'}</button>
           </div>
 
-          {/* Sort chips */}
+          {/* Sort chips + filter */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '.58rem', color: 'var(--t4)', fontWeight: 600, marginRight: 2 }}>Sort:</span>
-            {([['newest', 'Newest'], ['oldest', 'Oldest'], ['symbol', 'A → Z'], ['supply', 'Supply'], ['holders', 'Holders'], ['mintable', 'Mintable']] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setSortBy(id)} style={{
+            {([['block', 'Block'], ['symbol', 'A\u2194Z'], ['supply', 'Supply'], ['holders', 'Holders']] as const).map(([id, label]) => (
+              <button key={id} onClick={() => toggleSort(id)} style={{
                 padding: '4px 10px', borderRadius: 20, fontSize: '.6rem', fontWeight: 700,
-                background: sortBy === id ? 'rgba(247,147,26,.12)' : 'transparent',
-                border: `1px solid ${sortBy === id ? 'rgba(247,147,26,.3)' : 'rgba(255,255,255,.06)'}`,
-                color: sortBy === id ? 'var(--o)' : 'var(--t3)',
+                background: sortField === id ? 'rgba(247,147,26,.12)' : 'transparent',
+                border: `1px solid ${sortField === id ? 'rgba(247,147,26,.3)' : 'rgba(255,255,255,.06)'}`,
+                color: sortField === id ? 'var(--o)' : 'var(--t3)',
                 cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .15s',
-              }}>{label}</button>
+              }}>{label}{sortIcon(id)}</button>
             ))}
+            <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,.08)', margin: '0 2px' }} />
+            <button onClick={() => setFilterMintable(v => !v)} style={{
+              padding: '4px 10px', borderRadius: 20, fontSize: '.6rem', fontWeight: 700,
+              background: filterMintable ? 'rgba(168,85,247,.15)' : 'transparent',
+              border: `1px solid ${filterMintable ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.06)'}`,
+              color: filterMintable ? '#a855f7' : 'var(--t3)',
+              cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .15s',
+            }}>Mintable{filterMintable ? ' \u2713' : ''}</button>
             <span style={{ marginLeft: 'auto', fontSize: '.58rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
               {sortedFiltered.length.toLocaleString()} tokens
             </span>
@@ -398,22 +421,20 @@ const TokenGallery: React.FC = () => {
               {/* Table header — clickable for sorting */}
               <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', gap: 4, padding: '7px 10px',
                 fontSize: '.56rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700,
-                borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
-                <span style={{ textAlign: 'center', color: 'var(--t4)' }}>#</span>
-                <span onClick={() => setSortBy('symbol')} style={{ cursor: 'pointer' }}>
-                  Token {sortBy === 'symbol' ? '▲' : ''}
+                borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)', userSelect: 'none' }}>
+                <span style={{ textAlign: 'center' }}>#</span>
+                <span onClick={() => toggleSort('symbol')} style={{ cursor: 'pointer', color: sortField === 'symbol' ? 'var(--o)' : undefined }}>
+                  Token{sortIcon('symbol')}
                 </span>
-                <span onClick={() => setSortBy('mintable')} style={{ textAlign: 'right', cursor: 'pointer' }}>
-                  Symbol {sortBy === 'mintable' ? '▼' : ''}
+                <span style={{ textAlign: 'right' }}>Symbol</span>
+                <span onClick={() => toggleSort('supply')} style={{ textAlign: 'right', cursor: 'pointer', color: sortField === 'supply' ? 'var(--o)' : undefined }}>
+                  Supply{sortIcon('supply')}
                 </span>
-                <span onClick={() => setSortBy('supply')} style={{ textAlign: 'right', cursor: 'pointer' }}>
-                  Supply {sortBy === 'supply' ? '▼' : ''}
+                <span onClick={() => toggleSort('holders')} style={{ textAlign: 'right', cursor: 'pointer', color: sortField === 'holders' ? 'var(--o)' : undefined }}>
+                  Holders{sortIcon('holders')}
                 </span>
-                <span onClick={() => setSortBy('holders')} style={{ textAlign: 'right', cursor: 'pointer' }}>
-                  Holders {sortBy === 'holders' ? '▼' : ''}
-                </span>
-                <span onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')} style={{ textAlign: 'right', cursor: 'pointer' }}>
-                  Block {sortBy === 'newest' ? '▼' : sortBy === 'oldest' ? '▲' : ''}
+                <span onClick={() => toggleSort('block')} style={{ textAlign: 'right', cursor: 'pointer', color: sortField === 'block' ? 'var(--o)' : undefined }}>
+                  Block{sortIcon('block')}
                 </span>
               </div>
               {/* Rows */}

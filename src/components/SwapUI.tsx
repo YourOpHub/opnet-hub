@@ -17,7 +17,7 @@ import {
   POOL_ADDRESS, POOL_PUBKEY,
   getTxUrl, getContractOpscanUrl,
 } from '../contracts';
-import { fetchAllTokens, type IndexedToken } from '../tokenApi';
+import { fetchAllTokens, fetchHolderBalances, type IndexedToken } from '../tokenApi';
 import LiquidityModal from './LiquidityModal';
 import { useOps } from '../contexts/OpsContext';
 
@@ -127,6 +127,9 @@ const SwapUI: React.FC = () => {
     return [...BASE_TOKENS, ...extraTokens.filter(t => !known.has(t.address))];
   }, [extraTokens]);
 
+  // Tokens user actually holds (for pool creation picker)
+  const [heldTokens, setHeldTokens] = useState<Token[]>([]);
+
   // Fetch tokens from indexer on mount
   useEffect(() => {
     fetchAllTokens().then(indexed => {
@@ -143,6 +146,24 @@ const SwapUI: React.FC = () => {
       if (extra.length > 0) setExtraTokens(extra);
     }).catch(() => {});
   }, []);
+
+  // Load tokens user holds (for pool creation picker)
+  useEffect(() => {
+    if (!walletAddress || !hashedMLDSAKey) { setHeldTokens([]); return; }
+    const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
+    const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
+    fetchHolderBalances(mldsa, tweaked).then(results => {
+      const held: Token[] = results.map(r => ({
+        symbol: r.symbol, name: r.name, icon: '',
+        decimals: r.decimals, address: r.token, pubkey: r.pubkey,
+      }));
+      // Base tokens with balance first, then extra held tokens
+      const heldAddrs = new Set(held.map(t => t.pubkey));
+      const base = BASE_TOKENS.filter(bt => heldAddrs.has(bt.pubkey));
+      const extra = held.filter(t => !BASE_TOKENS.some(bt => bt.pubkey === t.pubkey));
+      setHeldTokens([...base, ...extra]);
+    }).catch(() => {});
+  }, [walletAddress, hashedMLDSAKey, publicKey]);
 
   const [fromIdx, setFromIdx] = useState(0);
   const [toIdx, setToIdx] = useState(1);
@@ -251,8 +272,9 @@ const SwapUI: React.FC = () => {
     return () => { opnetRpc.setNetwork(prevNet); };
   }, [walletAddress, hashedMLDSAKey, publicKey, balRefreshKey]);
 
-  const from = TOKENS[fromIdx] || TOKENS[0];
-  const to = TOKENS[toIdx] || TOKENS[1];
+  // Swap only works with tokens that have pools — currently MINE/VIBE
+  const from = BASE_TOKENS[fromIdx] || BASE_TOKENS[0];
+  const to = BASE_TOKENS[toIdx] || BASE_TOKENS[1];
   const fromVal = parseFloat(fromAmt) || 0;
 
   // Determine reserves based on direction
@@ -591,21 +613,33 @@ const SwapUI: React.FC = () => {
             {createPoolOpen && (
               <div className="P" style={{ padding: 18, marginBottom: 14 }}>
                 <div className="Lb" style={{ marginBottom: 12 }}>New Liquidity Pool</div>
-                {/* Quick select tokens */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
-                  {TOKENS.map(t => (
-                    <button key={t.symbol} onClick={() => {
-                      if (!poolTokenA) { setPoolTokenA(t.address); setPoolSymA(t.symbol); }
-                      else if (poolTokenA !== t.address && !poolTokenB) { setPoolTokenB(t.address); setPoolSymB(t.symbol); }
-                    }} style={{
-                      padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)',
-                      background: 'rgba(255,255,255,.03)', color: '#8b95a9', cursor: 'pointer',
-                      fontSize: '.6rem', fontWeight: 600, fontFamily: 'var(--ff)',
-                    }}>
-                      <TokenIcon token={t} size={16} /> {t.symbol}
-                    </button>
-                  ))}
-                </div>
+                {/* Quick select tokens — only tokens user holds */}
+                {walletAddress && heldTokens.length > 0 ? (
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: '.54rem', color: 'var(--t4)', marginBottom: 4, fontWeight: 600 }}>Your tokens ({heldTokens.length})</div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {heldTokens.map(t => (
+                        <button key={t.address} onClick={() => {
+                          if (!poolTokenA) { setPoolTokenA(t.address); setPoolSymA(t.symbol); }
+                          else if (poolTokenA !== t.address && !poolTokenB) { setPoolTokenB(t.address); setPoolSymB(t.symbol); }
+                        }} style={{
+                          padding: '4px 10px', borderRadius: 8,
+                          border: `1px solid ${poolTokenA === t.address || poolTokenB === t.address ? 'rgba(247,147,26,.3)' : 'rgba(255,255,255,.08)'}`,
+                          background: poolTokenA === t.address || poolTokenB === t.address ? 'rgba(247,147,26,.08)' : 'rgba(255,255,255,.03)',
+                          color: poolTokenA === t.address || poolTokenB === t.address ? 'var(--o)' : '#8b95a9',
+                          cursor: 'pointer', fontSize: '.6rem', fontWeight: 600, fontFamily: 'var(--ff)',
+                        }}>
+                          <TokenIcon token={t} size={16} /> {t.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '12px', marginBottom: 8, textAlign: 'center', fontSize: '.66rem', color: 'var(--t4)',
+                    background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
+                    {!walletAddress ? 'Connect wallet to see your tokens' : 'Loading your tokens...'}
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                   <div>
@@ -800,7 +834,7 @@ const SwapUI: React.FC = () => {
                 }}>MAX</button>
               )}
               <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={selectStyle}>
-                {TOKENS.map((t, i) => <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>)}
+                {BASE_TOKENS.map((t, i) => <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
           </div>
@@ -831,7 +865,7 @@ const SwapUI: React.FC = () => {
                 {toVal > 0 ? toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0.0'}
               </div>
               <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={selectStyle}>
-                {TOKENS.map((t, i) => <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>)}
+                {BASE_TOKENS.map((t, i) => <option key={t.symbol} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
           </div>

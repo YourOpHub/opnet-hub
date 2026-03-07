@@ -94,7 +94,7 @@ app.set('trust proxy', 1); // Trust first proxy (nginx)
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'https://yourophub.github.io,http://localhost:3000').split(',');
+const allowedOrigins = (process.env.CORS_ORIGINS || 'https://opnethub.xyz,https://yourophub.github.io,http://localhost:3000').split(',');
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) cb(null, true);
@@ -455,6 +455,22 @@ app.get('/api/swap/locks', (_req, res) => {
   const map = {};
   for (const r of rows) map[r.order_key] = r;
   res.json(map);
+});
+
+// ─── Faucet Proxy (CORS bypass for faucet.opnet.org) ───
+const FAUCET_UPSTREAM = process.env.FAUCET_URL || 'https://faucet.opnet.org';
+app.post('/api/faucet/claim', async (req, res) => {
+  try {
+    const upstream = await fetch(`${FAUCET_UPSTREAM}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const data = await upstream.json();
+    res.status(upstream.status).json(data);
+  } catch (e) {
+    res.status(502).json({ error: 'Faucet upstream error', message: e.message });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {

@@ -213,7 +213,7 @@ const DeployModal: React.FC<{
   const iStyle: React.CSSProperties = {
     width: '100%', padding: '9px 11px', borderRadius: 12,
     background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
-    fontSize: '.78rem', fontFamily: 'var(--ff)', outline: 'none',
+    fontSize: '.85rem', fontFamily: 'var(--ff)', outline: 'none',
   };
 
   return (
@@ -236,24 +236,24 @@ const DeployModal: React.FC<{
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <div style={{ flex: 2 }}>
-            <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Name *</label>
+            <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Name *</label>
             <input style={iStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Bitcoin Pepe" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Ticker *</label>
+            <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Ticker *</label>
             <input style={{ ...iStyle, textTransform: 'uppercase' }} value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="BPEPE" maxLength={6} />
           </div>
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Description</label>
+          <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Description</label>
           <textarea style={{ ...iStyle, minHeight: 60, resize: 'vertical' }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Tell the world about your token..." />
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Total Supply (Max Supply)</label>
+          <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Total Supply (Max Supply)</label>
           <input style={iStyle} type="text" inputMode="numeric" value={supply} onChange={e => setSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000000" />
-          <div style={{ fontSize: '.56rem', color: 'var(--t4)', marginTop: 2 }}>
+          <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginTop: 3 }}>
             {initialMintPct}% to you ({((parseFloat(supply) || 0) * initialMintPct / 100).toLocaleString()}) &middot; {100 - initialMintPct}% public mint &middot; Max/tx: {maxMintPerTx || ((parseFloat(supply) || 0) * 0.01).toLocaleString()}
           </div>
         </div>
@@ -262,11 +262,11 @@ const DeployModal: React.FC<{
         <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.12)', borderRadius: 10 }}>
           {/* Row 1: Initial mint slider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: '.58rem', color: 'var(--t3)', whiteSpace: 'nowrap', minWidth: 60 }}>Your mint</span>
+            <span style={{ fontSize: '.72rem', color: 'var(--t3)', whiteSpace: 'nowrap', minWidth: 60 }}>Your mint</span>
             <input type="range" min={0} max={100} step={5} value={initialMintPct}
               onChange={e => setInitialMintPct(Number(e.target.value))}
               style={{ flex: 1, accentColor: '#a855f7', height: 4 }} />
-            <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--w)', minWidth: 30, textAlign: 'right' }}>{initialMintPct}%</span>
+            <span style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--w)', minWidth: 30, textAlign: 'right' }}>{initialMintPct}%</span>
           </div>
           {/* Row 2: Public mint toggle + Max per TX */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -279,12 +279,12 @@ const DeployModal: React.FC<{
                 position: 'absolute', top: 2, left: publicMintEnabled ? 16 : 2, transition: 'left .2s',
               }} />
             </button>
-            <span style={{ fontSize: '.56rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Public mint</span>
+            <span style={{ fontSize: '.72rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Public mint</span>
             {publicMintEnabled && (
               <>
-                <span style={{ fontSize: '.56rem', color: 'var(--t4)' }}>|</span>
-                <span style={{ fontSize: '.56rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Max/tx:</span>
-                <input style={{ ...iStyle, fontSize: '.66rem', padding: '4px 7px', width: 90 }} type="text" inputMode="numeric"
+                <span style={{ fontSize: '.72rem', color: 'var(--t4)' }}>|</span>
+                <span style={{ fontSize: '.72rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Max/tx:</span>
+                <input style={{ ...iStyle, fontSize: '.78rem', padding: '5px 8px', width: 100 }} type="text" inputMode="numeric"
                   value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder={String(Math.floor((parseFloat(supply) || 0) * 0.01))} />
               </>
@@ -294,24 +294,24 @@ const DeployModal: React.FC<{
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.58rem', color: 'var(--t4)' }}>Website</label>
-            <input style={{ ...iStyle, fontSize: '.7rem' }} value={website} onChange={e => setWebsite(e.target.value)} placeholder="example.com" />
+            <label style={{ fontSize: '.72rem', color: 'var(--t3)' }}>Website</label>
+            <input style={{ ...iStyle, fontSize: '.8rem' }} value={website} onChange={e => setWebsite(e.target.value)} placeholder="example.com" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.58rem', color: 'var(--t4)' }}>Twitter</label>
-            <input style={{ ...iStyle, fontSize: '.7rem' }} value={twitter} onChange={e => setTwitter(e.target.value)} placeholder="@handle" />
+            <label style={{ fontSize: '.72rem', color: 'var(--t3)' }}>Twitter</label>
+            <input style={{ ...iStyle, fontSize: '.8rem' }} value={twitter} onChange={e => setTwitter(e.target.value)} placeholder="@handle" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.58rem', color: 'var(--t4)' }}>Telegram</label>
-            <input style={{ ...iStyle, fontSize: '.7rem' }} value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="t.me/group" />
+            <label style={{ fontSize: '.72rem', color: 'var(--t3)' }}>Telegram</label>
+            <input style={{ ...iStyle, fontSize: '.8rem' }} value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="t.me/group" />
           </div>
         </div>
 
-        <div style={{ padding: '8px 10px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 10, fontSize: '.65rem', color: 'var(--t3)', marginBottom: 12 }}>
+        <div style={{ padding: '10px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 10, fontSize: '.78rem', color: 'var(--t2)', marginBottom: 12 }}>
           Deploy cost: <strong style={{ color: 'var(--o)' }}>~50K sats (~0.0005 BTC)</strong> &middot; Contract goes live on Bitcoin L1
         </div>
 
-        {error && <div style={{ padding: '8px 10px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8, color: '#ef4444', fontSize: '.72rem', marginBottom: 10 }}>{error}</div>}
+        {error && <div style={{ padding: '10px 12px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8, color: '#ef4444', fontSize: '.8rem', marginBottom: 10 }}>{error}</div>}
 
         <button onClick={deploy} disabled={deploying} className="lbtn" style={{ width: '100%', opacity: deploying ? 0.6 : 1 }}>
           {deploying ? step || 'Deploying...' : walletAddress ? `Deploy $${symbol || 'TOKEN'}` : 'Connect Wallet'}

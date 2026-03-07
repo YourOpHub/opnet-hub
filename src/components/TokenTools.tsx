@@ -1087,68 +1087,77 @@ function GasTool() {
   );
 }
 
-/* ─── Faucet ─── */
+/* ─── Faucet (direct publicMint on contract) ─── */
+const MINT_ABI: BitcoinInterfaceAbi = [
+  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
+];
+interface IMintable extends BaseContractProperties { publicMint(amount: bigint): Promise<CallResult>; }
+
 function FaucetTool() {
-  const [addr, setAddr] = useState('');
+  const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
+  const provider = useMemo(() => getProvider(), []);
   const [token, setToken] = useState<'MINE' | 'VIBE'>('MINE');
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [msg, setMsg] = useState('');
-  const FAUCET_URL = import.meta.env.VITE_FAUCET_URL || 'https://faucet.opnet.org';
 
-  const claim = useCallback(async () => {
-    if (!addr.trim()) return;
-    setStatus('loading'); setMsg('');
+  const info = token === 'MINE' ? TESTNET_CONTRACTS.MINE : TESTNET_CONTRACTS.VIBE;
+  const mintAmount = BigInt(info.maxMintPerTx) * 100_000_000n; // to raw units (8 decimals)
+
+  const mint = useCallback(async () => {
+    if (!walletAddress || !senderAddr) { openConnectModal(); return; }
+    setStatus('loading'); setMsg('Simulating publicMint...');
     try {
-      const res = await fetch(`${FAUCET_URL}/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token.toLowerCase(), address: addr.trim() }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const data = await res.json();
-      if (data.error) { setMsg(data.error); setStatus('error'); }
-      else { setMsg(`Claimed ${token === 'MINE' ? '100K MINE' : '500K VIBE'}! TX should confirm in ~30s.`); setStatus('done'); }
+      const contract = getContract<IMintable>(info.address, MINT_ABI, provider, NETWORK, senderAddr);
+      const sim = await contract.publicMint(mintAmount);
+      if ((sim as CallResult).revert) throw new Error(`Reverted: ${(sim as CallResult).revert}`);
+      setMsg('Sign transaction in wallet...');
+      const tp = await buildTxParams(provider, walletAddress);
+      await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+      setMsg(`Minted ${info.maxMintPerTx.toLocaleString()} ${info.symbol}! TX sent — confirm in ~5 min.`);
+      setStatus('done');
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Faucet error');
+      setMsg(formatTxError(e));
       setStatus('error');
     }
-  }, [addr, token]);
+  }, [walletAddress, senderAddr, token, info, mintAmount]);
 
   return (
     <div style={cardS}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: '.75rem', color: 'var(--t2)' }}>Get testnet tokens:</span>
+        <span style={{ fontSize: '.78rem', color: 'var(--t2)' }}>Mint testnet tokens (publicMint):</span>
         {(['MINE', 'VIBE'] as const).map(t => (
-          <button key={t} className={`fbn ${token === t ? 'on' : ''}`} style={{ padding: '5px 14px', fontSize: '.7rem' }} onClick={() => setToken(t)}>
-            {t === 'MINE' ? '⛏️' : '🌊'} {t}
+          <button key={t} className={`fbn ${token === t ? 'on' : ''}`} style={{ padding: '5px 14px', fontSize: '.72rem' }} onClick={() => setToken(t)}>
+            {t === 'MINE' ? '⛏️' : '⚡'} {t}
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input style={{ ...inputS, flex: 1 }} value={addr} onChange={e => setAddr(e.target.value)} placeholder="Your OPNet address (opt1sq...)" onKeyDown={e => e.key === 'Enter' && claim()} />
-        <button style={{ ...btnS, opacity: status === 'loading' ? .6 : 1 }} onClick={claim} disabled={status === 'loading'}>
-          {status === 'loading' ? '⏳' : '🚰 Claim'}
-        </button>
-      </div>
-      {msg && (
-        <div style={{ fontSize: '.72rem', color: status === 'done' ? 'var(--g)' : 'var(--r)', padding: '8px 12px', background: status === 'done' ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)', borderRadius: 10, marginTop: 4 }}>
+      {!walletAddress && (
+        <div style={{ fontSize: '.75rem', color: 'var(--t3)', marginBottom: 10, textAlign: 'center' }}>
+          Connect wallet to mint tokens
+        </div>
+      )}
+      <button style={{ ...btnS, width: '100%', opacity: status === 'loading' ? .6 : 1 }} onClick={mint} disabled={status === 'loading'}>
+        {status === 'loading' ? '⏳ ' + msg : walletAddress ? `Mint ${info.maxMintPerTx.toLocaleString()} ${info.symbol}` : 'Connect Wallet'}
+      </button>
+      {msg && status !== 'loading' && (
+        <div style={{ fontSize: '.75rem', color: status === 'done' ? 'var(--g)' : 'var(--r)', padding: '8px 12px', background: status === 'done' ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)', borderRadius: 10, marginTop: 8 }}>
           {msg}
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
         <div style={{ padding: 10, background: 'rgba(234,179,8,.05)', borderRadius: 10, textAlign: 'center' }}>
           <div style={{ fontSize: '.85rem' }}>⛏️</div>
-          <div style={{ ...monoSm, fontWeight: 700, color: 'var(--y)' }}>100K MINE</div>
-          <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>per claim · 5min cooldown</div>
+          <div style={{ ...monoSm, fontWeight: 700, color: 'var(--y)' }}>1M MINE</div>
+          <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>per mint tx</div>
         </div>
-        <div style={{ padding: 10, background: 'rgba(14,165,233,.05)', borderRadius: 10, textAlign: 'center' }}>
-          <div style={{ fontSize: '.85rem' }}>🌊</div>
-          <div style={{ ...monoSm, fontWeight: 700, color: 'var(--c)' }}>500K VIBE</div>
-          <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>per claim · 5min cooldown</div>
+        <div style={{ padding: 10, background: 'rgba(168,85,247,.05)', borderRadius: 10, textAlign: 'center' }}>
+          <div style={{ fontSize: '.85rem' }}>⚡</div>
+          <div style={{ ...monoSm, fontWeight: 700, color: 'var(--p)' }}>5M VIBE</div>
+          <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>per mint tx</div>
         </div>
       </div>
-      <div style={{ marginTop: 10, fontSize: '.55rem', color: 'var(--t4)', textAlign: 'center' }}>
-        Faucet runs on VPS · Tokens minted via OP-20 publicMint on Bitcoin L1
+      <div style={{ marginTop: 10, fontSize: '.65rem', color: 'var(--t3)', textAlign: 'center' }}>
+        Calls publicMint on OP-20 contract · Requires ~330 sats gas
       </div>
     </div>
   );

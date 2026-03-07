@@ -16,6 +16,7 @@ import {
 } from '../launchpad/types';
 import { loadTokens, saveTokens, addToken, addTrade } from '../launchpad/store';
 import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api';
+import { useOps } from '../contexts/OpsContext';
 const OP20_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
   { name: 'totalSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
@@ -327,6 +328,7 @@ const DeployModal: React.FC<{
 const Launchpad: React.FC = () => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { trackOp, completeOp, failOp } = useOps();
 
   const [tokens, setTokens] = useState<LaunchToken[]>(() => loadTokens());
   const [selected, setSelected] = useState<LaunchToken | null>(null);
@@ -476,7 +478,10 @@ const Launchpad: React.FC = () => {
 
       setMintStep('Sign in your wallet...');
       const txParams = await buildTxParams(provider, walletAddress);
+      const lpOpId = `mint_${selected.symbol}_${Date.now()}`;
+      trackOp({ id: lpOpId, market: 'mint', orderId: selected.symbol, direction: '', role: '', step: `Minting ${amount.toLocaleString()} ${selected.symbol}...` });
       const receipt = await callRes.sendTransaction(txParams as TransactionParameters);
+      completeOp(lpOpId);
       const txHash = receipt?.transactionId || '';
 
       setMintStep(`TX: ${txHash ? txHash.slice(0, 20) + '...' : 'broadcast'}`);

@@ -13,6 +13,7 @@ import {
   getContractOpscanUrl,
 } from '../contracts';
 import * as opnetRpc from '../opnet';
+import { useOps } from '../contexts/OpsContext';
 import { addTxRecord } from '../txHistory';
 
 /** Staking ABI — matches SimpleStaking contract */
@@ -43,6 +44,7 @@ const STAKING_TOKEN = TESTNET_CONTRACTS.MINE;
 const Staking: React.FC = () => {
   const { walletAddress, walletInstance, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { trackOp, completeOp, failOp } = useOps();
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');
@@ -147,7 +149,10 @@ const Staking: React.FC = () => {
       const stakeSim = await withRetry(() => stakingContract.stake(rawAmount));
       if ((stakeSim as CallResult).revert) throw new Error(`Stake failed: ${(stakeSim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
+      const sOpId = `stake_${Date.now()}`;
+      trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Staking ${amt.toLocaleString()} MINE...` });
       const receipt = await (stakeSim as CallResult).sendTransaction(txParams);
+      completeOp(sOpId);
 
       setStep('');
       setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE! TX: ${receipt.transactionId}` });
@@ -177,7 +182,10 @@ const Staking: React.FC = () => {
       const sim = await withRetry(() => stakingContract.unstake(rawAmount));
       if ((sim as CallResult).revert) throw new Error(`Unstake failed: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress);
+      const uOpId = `unstake_${Date.now()}`;
+      trackOp({ id: uOpId, market: 'stake', orderId: 'Unstake', direction: '', role: '', step: `Unstaking ${amt.toLocaleString()} MINE...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      completeOp(uOpId);
 
       setStep('');
       setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE! TX: ${receipt.transactionId}` });
@@ -203,7 +211,10 @@ const Staking: React.FC = () => {
       const sim = await withRetry(() => stakingContract.claim());
       if ((sim as CallResult).revert) throw new Error(`Claim failed: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress);
+      const cOpId = `claim_${Date.now()}`;
+      trackOp({ id: cOpId, market: 'stake', orderId: 'Claim', direction: '', role: '', step: 'Claiming staking rewards...' });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      completeOp(cOpId);
 
       setStep('');
       setResult({ type: 'success', msg: `Rewards claimed! TX: ${receipt.transactionId}` });

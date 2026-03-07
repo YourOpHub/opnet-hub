@@ -12,6 +12,7 @@ import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
+import { useOps } from '../contexts/OpsContext';
 
 const POOL_ABI: BitcoinInterfaceAbi = [
   { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
@@ -45,6 +46,7 @@ type PoolType = 'simplepool' | 'nativeswap' | 'custom';
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { trackOp, completeOp, failOp } = useOps();
 
   const [poolType, setPoolType] = useState<PoolType>('simplepool');
   const [tab, setTab] = useState<'add' | 'remove'>('add');
@@ -143,7 +145,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       const addSim = await withRetry(() => poolContract.addLiquidity(mineRaw, vibeRaw));
       if ((addSim as CallResult).revert) throw new Error(`addLiquidity failed: ${(addSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress!);
+      const aOpId = `lp_add_${Date.now()}`;
+      trackOp({ id: aOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: `Adding ${mAmt} MINE + ${vAmt} VIBE...` });
       const addReceipt = await (addSim as CallResult).sendTransaction(tp);
+      completeOp(aOpId);
 
       setStep('');
       setResult({ ok: true, msg: `Added ${mAmt.toLocaleString()} MINE + ${vAmt.toLocaleString()} VIBE on-chain!` });
@@ -175,7 +180,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       const removeSim = await withRetry(() => poolContract.removeLiquidity(mineRaw, vibeRaw));
       if ((removeSim as CallResult).revert) throw new Error(`removeLiquidity failed: ${(removeSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
+      const rOpId = `lp_rm_${Date.now()}`;
+      trackOp({ id: rOpId, market: 'liquidity', orderId: 'Remove LP', direction: '', role: '', step: `Removing ${m} MINE + ${v} VIBE...` });
       const receipt = await (removeSim as CallResult).sendTransaction(tp);
+      completeOp(rOpId);
 
       setStep('');
       setLpMine(prev => Math.max(0, prev - m));

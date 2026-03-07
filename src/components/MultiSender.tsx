@@ -6,6 +6,7 @@ import { TESTNET_CONTRACTS } from '../contracts';
 import { NETWORK } from '../config';
 import { getProvider } from '../contractCache';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
+import { useOps } from '../contexts/OpsContext';
 
 /* ═══════════════════════════════════════════════════════════════
    MultiSender — Batch OP-20 token transfers (4-step wizard)
@@ -107,6 +108,7 @@ function formatAmount(amount: string, decimals: number): bigint {
 const MultiSender: React.FC = () => {
   const { walletAddress, openConnectModal, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { trackOp, completeOp, failOp } = useOps();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Wizard state
@@ -217,7 +219,10 @@ const MultiSender: React.FC = () => {
         });
 
         const txParams = await buildTxParams(provider, walletAddress);
+        const tOpId = `transfer_${i}_${Date.now()}`;
+        trackOp({ id: tOpId, market: 'transfer', orderId: `#${i + 1}/${validRecipients.length}`, direction: '', role: '', step: `Sending ${validRecipients[i].amount} to ${validRecipients[i].address.slice(0, 12)}...` });
         await (sim as CallResult).sendTransaction(txParams);
+        completeOp(tOpId);
 
         setResults(prev => prev.map((r, idx) =>
           idx === i ? { ...r, status: 'success' } : r,

@@ -4,6 +4,13 @@ import { useOps, type OpEntry } from '../contexts/OpsContext';
 const MARKET_LABELS: Record<string, { label: string; color: string }> = {
   fractalswap: { label: 'FractalSwap', color: '#8b5cf6' },
   p2p: { label: 'P2P Market', color: '#f59e0b' },
+  mint: { label: 'Mint', color: '#22c55e' },
+  swap: { label: 'Swap', color: '#3b82f6' },
+  stake: { label: 'Staking', color: '#eab308' },
+  liquidity: { label: 'Liquidity', color: '#06b6d4' },
+  transfer: { label: 'Transfer', color: '#f97316' },
+  split: { label: 'UTXO Split', color: '#a855f7' },
+  deploy: { label: 'Deploy', color: '#ec4899' },
 };
 
 const STATUS_STYLES: Record<string, { bg: string; color: string }> = {

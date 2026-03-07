@@ -11,6 +11,7 @@ import { NETWORK } from '../config';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
+import { useOps } from '../contexts/OpsContext';
 
 /** ABI for MintableToken publicMint method */
 const MINTABLE_ABI: BitcoinInterfaceAbi = [
@@ -72,6 +73,7 @@ const genLogo = (sym: string): string => {
 
 const TokenGallery: React.FC = () => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
+  const { trackOp, completeOp, failOp } = useOps();
   const [tokens, setTokens] = useState<DeployedToken[]>([]);
   const [chainInfo, setChainInfo] = useState<Record<string, { totalSupply: bigint; confirmed: boolean }>>({});
   const [mintAddr, setMintAddr] = useState<string | null>(null);
@@ -142,7 +144,10 @@ const TokenGallery: React.FC = () => {
       const sim = await contract.publicMint(rawAmount);
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
+      const fmOpId = `mint_${tok.symbol}_${Date.now()}`;
+      trackOp({ id: fmOpId, market: 'mint', orderId: tok.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${tok.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      completeOp(fmOpId);
       const txHash = receipt.transactionId || '';
       setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}! TX: ${txHash}` });
       addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress! });
@@ -193,7 +198,10 @@ const TokenGallery: React.FC = () => {
       }
 
       const txParams = await buildTxParams(provider, walletAddress!);
+      const umOpId = `mint_${token.symbol}_${Date.now()}`;
+      trackOp({ id: umOpId, market: 'mint', orderId: token.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${token.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      completeOp(umOpId);
 
       const txHash = receipt.transactionId || '';
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });

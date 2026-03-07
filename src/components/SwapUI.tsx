@@ -19,6 +19,7 @@ import {
 } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import LiquidityModal from './LiquidityModal';
+import { useOps } from '../contexts/OpsContext';
 
 type SwapMainTab = 'swap' | 'pools';
 
@@ -117,6 +118,7 @@ const POOL_CREATE_ABI: BitcoinInterfaceAbi = [
 
 const SwapUI: React.FC = () => {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
+  const { trackOp, completeOp, failOp } = useOps();
 
   // Dynamic token list: base + indexer-discovered
   const [extraTokens, setExtraTokens] = useState<Token[]>([]);
@@ -325,8 +327,11 @@ const SwapUI: React.FC = () => {
       }
 
       const txParams2 = await buildTxParams(provider, walletAddress!);
+      const swapOpId = `swap_${Date.now()}`;
+      trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: '', role: '', step: `Swapping ${fromVal} ${from.symbol}→${to.symbol}...` });
       const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
       const txHash = swapReceipt.transactionId || '';
+      completeOp(swapOpId);
 
       setSwapStep('');
       setSwapResult({
@@ -360,7 +365,10 @@ const SwapUI: React.FC = () => {
       const sim = await withRetry(() => contract.publicMint(rawAmount));
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress!);
+      const mOpId = `mint_${sym}_${Date.now()}`;
+      trackOp({ id: mOpId, market: 'mint', orderId: sym, direction: '', role: '', step: `Minting ${MINT_AMOUNT.toLocaleString()} ${sym}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      completeOp(mOpId);
       const txHash = receipt.transactionId || '';
       setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}! TX: ${txHash.slice(0, 16)}…` });
       addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: walletAddress! });
@@ -387,7 +395,9 @@ const SwapUI: React.FC = () => {
 
     setAddingLP(true);
     setLpResult(null);
+    const lpOpId = `lp_add_${Date.now()}`;
     try {
+      trackOp({ id: lpOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: `Adding ${mineAmt} MINE + ${vibeAmt} VIBE...` });
       const poolAddr = Address.fromString(POOL_ADDRESS);
 
       // 1. Transfer MINE to pool
@@ -425,6 +435,7 @@ const SwapUI: React.FC = () => {
       if ((syncSim as CallResult).revert) throw new Error(`Sync failed: ${(syncSim as CallResult).revert}`);
       const txParams3 = await buildTxParams(provider, walletAddress);
       const syncReceipt = await (syncSim as CallResult).sendTransaction(txParams3);
+      completeOp(lpOpId);
 
       setLpStep('');
       setLpResult({ ok: true, msg: `Liquidity added! ${mineAmt} MINE + ${vibeAmt} VIBE. Sync TX: ${syncReceipt.transactionId}` });
@@ -434,6 +445,7 @@ const SwapUI: React.FC = () => {
       // Refresh reserves + balances after LP
       setTimeout(() => { fetchReserves(); setBalRefreshKey(k => k + 1); }, 3000);
     } catch (e) {
+      failOp(lpOpId, formatTxError(e));
       let msg = e instanceof Error ? e.message : 'Add liquidity failed';
       if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC: https://faucet.opnet.org';
       setLpStep('');

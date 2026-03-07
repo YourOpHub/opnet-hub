@@ -7,6 +7,7 @@ import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY } from '../contracts';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { buildTxParams, formatTxError, waitForNextBlock } from '../txUtils';
+import { useOps } from '../contexts/OpsContext';
 
 /* ═══════════════════════════════════════════════════════════════
    TOOLS — Swiss army knife for OPNet developers & users
@@ -727,6 +728,7 @@ function BlockExplorer() {
 function UTXOSplitter() {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { trackOp, completeOp, failOp } = useOps();
 
   const [utxos, setUtxos] = useState<Array<{ transactionId: string; outputIndex: number; value: string | number }>>([]);
   const [balance, setBalance] = useState<bigint>(0n);
@@ -814,16 +816,21 @@ function UTXOSplitter() {
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = BigInt(splitSats);
 
       setStep(`Sending split tx (${splitCount} UTXOs of ~${perSplitSats.toLocaleString()} sats)...`);
-      await (sim as CallResult).sendTransaction(tp);
-
-      setStep('');
-      setErr('');
-
-      // Wait for confirmation then refresh
-      setStep('Waiting for block confirmation...');
-      await waitForNextBlock(provider, setStep, 90_000);
-      setStep('');
-      fetchUTXOs();
+      const opId = `split_${Date.now()}`;
+      trackOp({ id: opId, market: 'split', orderId: `${splitCount}x`, direction: '', role: '', step: `Splitting into ${splitCount} UTXOs...` });
+      try {
+        await (sim as CallResult).sendTransaction(tp);
+        setStep('');
+        setErr('');
+        setStep('Waiting for block confirmation...');
+        await waitForNextBlock(provider, setStep, 90_000);
+        completeOp(opId);
+        setStep('');
+        fetchUTXOs();
+      } catch (e2) {
+        failOp(opId, formatTxError(e2));
+        throw e2;
+      }
     } catch (e) {
       setErr(formatTxError(e));
       setStep('');
@@ -1096,6 +1103,7 @@ interface IMintable extends BaseContractProperties { publicMint(amount: bigint):
 function FaucetTool() {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const { trackOp, completeOp, failOp } = useOps();
   const [token, setToken] = useState<'MINE' | 'VIBE'>('MINE');
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [msg, setMsg] = useState('');
@@ -1106,16 +1114,20 @@ function FaucetTool() {
   const mint = useCallback(async () => {
     if (!walletAddress || !senderAddr) { openConnectModal(); return; }
     setStatus('loading'); setMsg('Simulating publicMint...');
+    const opId = `mint_${info.symbol}_${Date.now()}`;
     try {
       const contract = getContract<IMintable>(info.address, MINT_ABI, provider, NETWORK, senderAddr);
       const sim = await contract.publicMint(mintAmount);
       if ((sim as CallResult).revert) throw new Error(`Reverted: ${(sim as CallResult).revert}`);
       setMsg('Sign transaction in wallet...');
       const tp = await buildTxParams(provider, walletAddress);
+      trackOp({ id: opId, market: 'mint', orderId: info.symbol, direction: '', role: '', step: `Minting ${info.maxMintPerTx.toLocaleString()} ${info.symbol}...` });
       await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+      completeOp(opId);
       setMsg(`Minted ${info.maxMintPerTx.toLocaleString()} ${info.symbol}! TX sent — confirm in ~5 min.`);
       setStatus('done');
     } catch (e) {
+      failOp(opId, formatTxError(e));
       setMsg(formatTxError(e));
       setStatus('error');
     }

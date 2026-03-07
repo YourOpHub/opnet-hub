@@ -2380,13 +2380,13 @@ a:hover {
   bottom: 24px;
   right: 84px;
   z-index: 150;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: rgba(59,130,246,.85);
   border: none;
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(59,130,246,.3);
   display: flex;
@@ -2456,7 +2456,7 @@ a:hover {
 
 @media(max-width:600px) {
   .ops-panel { width: 100%; right: -100% }
-  .ops-fab { bottom: 16px; right: 72px; width: 40px; height: 40px; font-size: .95rem }
+  .ops-fab { bottom: 16px; right: 72px; width: 46px; height: 46px; font-size: 1.1rem }
 }
 
 /* ═══ MINE ZONE WRAP ═══ */

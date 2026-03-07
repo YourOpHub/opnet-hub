@@ -10,6 +10,7 @@ import { buildTxParams, withRetry } from '../txUtils';
 import { TESTNET_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
 import * as api from '../api';
+import { useOps } from '../contexts/OpsContext';
 
 /* ─── Types ─── */
 interface Up { id: string; name: string; icon: string; desc: string; flavor: string; base: number; g: number; pc?: number; ps?: number; lv: number; cat: 'c' | 'a' | 's' }
@@ -89,6 +90,7 @@ const SPRITE_RIG = `${BASE}mining-rig.png`;
 const SatoshiMiner: React.FC = () => {
     const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
     const gameProvider = React.useMemo(() => getProvider(), []);
+    const { trackOp, completeOp, failOp } = useOps();
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
     const [tot, setTot] = useState<number>(() => ld('sm_t', 0));
     const [ups, setUps] = useState<Up[]>(() => ld('sm_u', UPS));
@@ -553,7 +555,10 @@ const SatoshiMiner: React.FC = () => {
                                 const sim = await withRetry(() => contract.publicMint(rawAmount));
                                 if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
                                 const txParams = await buildTxParams(gameProvider, walletAddress!);
+                                const mOpId = `mint_MINE_${Date.now()}`;
+                                trackOp({ id: mOpId, market: 'mint', orderId: 'MINE', direction: '', role: '', step: `Claiming ${claimAmount.toLocaleString()} MINE...` });
                                 await (sim as CallResult).sendTransaction(txParams);
+                                completeOp(mOpId);
 
                                 setClaimStatus('done');
                                 setMineBalance(prev => Math.max(0, prev - claimAmount));

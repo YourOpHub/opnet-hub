@@ -92,6 +92,9 @@ const TokenGallery: React.FC = () => {
   const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
   const [allLoading, setAllLoading] = useState(false);
   const [allSearch, setAllSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'symbol' | 'supply'>('newest');
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
   // Manual import
   const [importAddr, setImportAddr] = useState('');
   const [importing, setImporting] = useState(false);
@@ -117,8 +120,8 @@ const TokenGallery: React.FC = () => {
 
   const API_BASE = import.meta.env.VITE_API_URL || '';
   const doImportToken = useCallback(async () => {
-    if (!importAddr || !importAddr.startsWith('opt1')) {
-      setImportResult({ ok: false, msg: 'Enter a valid opt1... address' });
+    if (!importAddr || (!importAddr.startsWith('opt1') && !importAddr.startsWith('0x'))) {
+      setImportResult({ ok: false, msg: 'Enter a valid opt1... or 0x... address' });
       return;
     }
     setImporting(true); setImportResult(null);
@@ -141,11 +144,30 @@ const TokenGallery: React.FC = () => {
     } finally { setImporting(false); }
   }, [importAddr, API_BASE, loadAllTokens]);
 
-  const filteredAll = useMemo(() => {
-    if (!allSearch.trim()) return allTokens;
-    const q = allSearch.toLowerCase();
-    return allTokens.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.includes(q));
-  }, [allTokens, allSearch]);
+  const sortedFiltered = useMemo(() => {
+    let list = allTokens;
+    if (allSearch.trim()) {
+      const q = allSearch.toLowerCase();
+      list = list.filter(t => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.includes(q));
+    }
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'newest': sorted.sort((a, b) => b.deploy_block - a.deploy_block); break;
+      case 'oldest': sorted.sort((a, b) => a.deploy_block - b.deploy_block); break;
+      case 'symbol': sorted.sort((a, b) => a.symbol.localeCompare(b.symbol)); break;
+      case 'supply': sorted.sort((a, b) => {
+        const sa = BigInt(a.total_supply || '0'); const sb = BigInt(b.total_supply || '0');
+        return sa > sb ? -1 : sa < sb ? 1 : 0;
+      }); break;
+    }
+    return sorted;
+  }, [allTokens, allSearch, sortBy]);
+
+  // Reset page when search/sort changes
+  useEffect(() => { setPage(0); }, [allSearch, sortBy]);
+
+  const totalPages = Math.ceil(sortedFiltered.length / PAGE_SIZE);
+  const pagedTokens = useMemo(() => sortedFiltered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [sortedFiltered, page]);
 
   // Load user-deployed tokens from localStorage
   useEffect(() => {
@@ -305,43 +327,64 @@ const TokenGallery: React.FC = () => {
       {/* All Tokens from Indexer */}
       {tab === 'all' && (
         <div>
-          {/* Search + Import */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-            <input style={{ ...inputStyle, flex: 1 }} type="text" value={allSearch}
-              onChange={e => setAllSearch(e.target.value)} placeholder="Search by name, symbol, or address..." />
+          {/* Search + Sort row */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            <input style={{ ...inputStyle, flex: 1, minWidth: 140 }} type="text" value={allSearch}
+              onChange={e => setAllSearch(e.target.value)} placeholder="Search name, symbol, address..." />
             <button onClick={loadAllTokens} disabled={allLoading} style={{
-              padding: '8px 14px', borderRadius: '14px', fontSize: '.7rem', fontWeight: 700,
+              padding: '8px 12px', borderRadius: '14px', fontSize: '.7rem', fontWeight: 700,
               background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--t2)',
-              cursor: allLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)', whiteSpace: 'nowrap',
+              cursor: allLoading ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
             }}>{allLoading ? '...' : '↻'}</button>
           </div>
 
-          {/* Manual import */}
-          <div className="P" style={{ padding: 12, marginBottom: 10 }}>
-            <div style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--t2)', marginBottom: 6 }}>Import Token by Address</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input style={{ ...inputStyle, flex: 1, fontSize: '.72rem' }} type="text" value={importAddr}
-                onChange={e => setImportAddr(e.target.value)} placeholder="opt1sq..." />
-              <button onClick={doImportToken} disabled={importing} style={{
-                padding: '8px 14px', borderRadius: '14px', fontSize: '.68rem', fontWeight: 700,
-                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none',
-                color: 'white', cursor: importing ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
-                opacity: importing ? 0.6 : 1, whiteSpace: 'nowrap',
-              }}>{importing ? '...' : 'Import'}</button>
-            </div>
-            {importResult && (
-              <div style={{ marginTop: 6, padding: '6px 8px', borderRadius: 6, fontSize: '.62rem',
-                background: importResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
-                border: `1px solid ${importResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`,
-                color: importResult.ok ? 'var(--g)' : '#ef4444',
-              }}>{importResult.msg}</div>
-            )}
+          {/* Sort chips */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '.58rem', color: 'var(--t4)', fontWeight: 600, marginRight: 2 }}>Sort:</span>
+            {([['newest', 'Newest'], ['oldest', 'Oldest'], ['symbol', 'A → Z'], ['supply', 'Supply']] as const).map(([id, label]) => (
+              <button key={id} onClick={() => setSortBy(id)} style={{
+                padding: '4px 10px', borderRadius: 20, fontSize: '.6rem', fontWeight: 700,
+                background: sortBy === id ? 'rgba(247,147,26,.12)' : 'transparent',
+                border: `1px solid ${sortBy === id ? 'rgba(247,147,26,.3)' : 'rgba(255,255,255,.06)'}`,
+                color: sortBy === id ? 'var(--o)' : 'var(--t3)',
+                cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .15s',
+              }}>{label}</button>
+            ))}
+            <span style={{ marginLeft: 'auto', fontSize: '.58rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
+              {sortedFiltered.length.toLocaleString()} tokens
+            </span>
           </div>
+
+          {/* Manual import (collapsible) */}
+          <details style={{ marginBottom: 10 }}>
+            <summary style={{ fontSize: '.68rem', fontWeight: 700, color: 'var(--t3)', cursor: 'pointer', padding: '6px 0' }}>
+              + Import token by address
+            </summary>
+            <div className="P" style={{ padding: 12, marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input style={{ ...inputStyle, flex: 1, fontSize: '.72rem' }} type="text" value={importAddr}
+                  onChange={e => setImportAddr(e.target.value)} placeholder="0x... or opt1sq..." />
+                <button onClick={doImportToken} disabled={importing} style={{
+                  padding: '8px 14px', borderRadius: '14px', fontSize: '.68rem', fontWeight: 700,
+                  background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none',
+                  color: 'white', cursor: importing ? 'not-allowed' : 'pointer', fontFamily: 'var(--ff)',
+                  opacity: importing ? 0.6 : 1, whiteSpace: 'nowrap',
+                }}>{importing ? '...' : 'Import'}</button>
+              </div>
+              {importResult && (
+                <div style={{ marginTop: 6, padding: '6px 8px', borderRadius: 6, fontSize: '.62rem',
+                  background: importResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+                  border: `1px solid ${importResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`,
+                  color: importResult.ok ? 'var(--g)' : '#ef4444',
+                }}>{importResult.msg}</div>
+              )}
+            </div>
+          </details>
 
           {/* Token table */}
           {allLoading && allTokens.length === 0 ? (
             <div className="P" style={{ padding: 30, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>Loading tokens...</div>
-          ) : filteredAll.length === 0 ? (
+          ) : sortedFiltered.length === 0 ? (
             <div className="P" style={{ padding: 30, textAlign: 'center' }}>
               <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🔍</div>
               <div style={{ color: 'var(--t3)', fontSize: '.78rem' }}>
@@ -350,41 +393,83 @@ const TokenGallery: React.FC = () => {
             </div>
           ) : (
             <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid var(--bd)', background: 'var(--bg2)' }}>
-              {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 80px 100px 60px', gap: 4, padding: '8px 12px',
-                fontSize: '.58rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700,
+              {/* Table header — clickable for sorting */}
+              <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 90px 55px', gap: 4, padding: '7px 10px',
+                fontSize: '.56rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700,
                 borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
-                <span></span>
-                <span>Token</span>
+                <span style={{ textAlign: 'center', color: 'var(--t4)' }}>#</span>
+                <span onClick={() => setSortBy('symbol')} style={{ cursor: 'pointer' }}>
+                  Token {sortBy === 'symbol' ? '▲' : ''}
+                </span>
                 <span style={{ textAlign: 'right' }}>Symbol</span>
-                <span style={{ textAlign: 'right' }}>Supply</span>
-                <span style={{ textAlign: 'right' }}>Block</span>
+                <span onClick={() => setSortBy('supply')} style={{ textAlign: 'right', cursor: 'pointer' }}>
+                  Supply {sortBy === 'supply' ? '▼' : ''}
+                </span>
+                <span onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')} style={{ textAlign: 'right', cursor: 'pointer' }}>
+                  Block {sortBy === 'newest' ? '▼' : sortBy === 'oldest' ? '▲' : ''}
+                </span>
               </div>
               {/* Rows */}
-              <div style={{ maxHeight: 480, overflowY: 'auto' }}>
-                {filteredAll.map(tok => (
-                  <a key={tok.address} href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'grid', gridTemplateColumns: '48px 1fr 80px 100px 60px', gap: 4, padding: '8px 12px',
+              <div>
+                {pagedTokens.map((tok, i) => (
+                  <a key={tok.pubkey || tok.address} href={getContractOpscanUrl(tok.pubkey || tok.address)} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'grid', gridTemplateColumns: '36px 1fr 70px 90px 55px', gap: 4, padding: '7px 10px',
                       alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,.03)',
                       textDecoration: 'none', color: 'inherit', transition: 'background .15s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,.06)' }}
-                      dangerouslySetInnerHTML={{ __html: genLogo(tok.symbol) }} />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '.75rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.name}</div>
-                      <div style={{ fontFamily: 'var(--fm)', fontSize: '.5rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.address}</div>
+                    <span style={{ textAlign: 'center', fontSize: '.55rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
+                      {page * PAGE_SIZE + i + 1}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}
+                        dangerouslySetInnerHTML={{ __html: genLogo(tok.symbol) }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '.72rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.name}</div>
+                        <div style={{ fontFamily: 'var(--fm)', fontSize: '.46rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {(tok.pubkey || tok.address).slice(0, 20)}...
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right', fontWeight: 700, fontSize: '.72rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>{tok.symbol}</div>
-                    <div style={{ textAlign: 'right', fontSize: '.65rem', color: 'var(--t2)', fontFamily: 'var(--fm)' }}>
+                    <div style={{ textAlign: 'right', fontWeight: 700, fontSize: '.68rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>{tok.symbol}</div>
+                    <div style={{ textAlign: 'right', fontSize: '.62rem', color: 'var(--t2)', fontFamily: 'var(--fm)' }}>
                       {tok.total_supply && tok.total_supply !== '0' ? formatTokenBalance(tok.total_supply, tok.decimals) : '—'}
                     </div>
-                    <div style={{ textAlign: 'right', fontSize: '.6rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
+                    <div style={{ textAlign: 'right', fontSize: '.58rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
                       {tok.deploy_block > 0 ? `#${tok.deploy_block}` : '—'}
                     </div>
                   </a>
                 ))}
               </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px',
+                  borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.3)' }}>
+                  <button onClick={() => setPage(0)} disabled={page === 0} style={{
+                    padding: '4px 8px', borderRadius: 6, fontSize: '.58rem', fontWeight: 700,
+                    background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)',
+                    cursor: page === 0 ? 'default' : 'pointer', fontFamily: 'var(--ff)',
+                  }}>{'<<'}</button>
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={{
+                    padding: '4px 10px', borderRadius: 6, fontSize: '.58rem', fontWeight: 700,
+                    background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)',
+                    cursor: page === 0 ? 'default' : 'pointer', fontFamily: 'var(--ff)',
+                  }}>{'<'}</button>
+                  <span style={{ fontSize: '.62rem', color: 'var(--t2)', fontFamily: 'var(--fm)', minWidth: 80, textAlign: 'center' }}>
+                    {page + 1} / {totalPages}
+                  </span>
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} style={{
+                    padding: '4px 10px', borderRadius: 6, fontSize: '.58rem', fontWeight: 700,
+                    background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)',
+                    cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontFamily: 'var(--ff)',
+                  }}>{'>'}</button>
+                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} style={{
+                    padding: '4px 8px', borderRadius: 6, fontSize: '.58rem', fontWeight: 700,
+                    background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)',
+                    cursor: page >= totalPages - 1 ? 'default' : 'pointer', fontFamily: 'var(--ff)',
+                  }}>{'>>'}</button>
+                </div>
+              )}
             </div>
           )}
         </div>

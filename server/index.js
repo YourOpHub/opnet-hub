@@ -355,8 +355,8 @@ app.get('/api/tokens/status', (_req, res) => {
 app.post('/api/tokens/add', async (req, res) => {
   try {
     const { address } = req.body;
-    if (!address || typeof address !== 'string' || !address.startsWith('opt1')) {
-      return res.status(400).json({ error: 'Invalid address — must be opt1 format' });
+    if (!address || typeof address !== 'string' || (!address.startsWith('opt1') && !address.startsWith('0x'))) {
+      return res.status(400).json({ error: 'Invalid address — must be opt1 or 0x format' });
     }
     const result = await indexer.addTokenByAddress(address);
     if (!result.ok) return res.status(400).json(result);

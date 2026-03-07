@@ -52,6 +52,7 @@ const FEATURES = [
   { icon: '🚀', title: 'Build', desc: 'Deploy smart contracts with WASM — AssemblyScript or Rust', color: '#0ea5e9', tab: 'launch' },
   { icon: '⛏️', title: 'Mine', desc: 'Clicker game that earns real $MINE tokens on Bitcoin L1', color: '#22c55e', tab: 'game' },
   { icon: '🤝', title: 'Market', desc: 'P2P OTC marketplace for trustless OP-20 token trading', color: '#ec4899', tab: 'market' },
+  { icon: '🪙', title: 'Explorer', desc: '22,000+ indexed tokens with holder counts and mintable detection', color: '#f59e0b', tab: 'explorer' },
   { icon: '🔧', title: 'Tools', desc: 'Block explorer, UTXO viewer, gas monitor and more', color: '#eab308', tab: 'tools' },
   { icon: '📤', title: 'MultiSend', desc: 'Batch transfer tokens to multiple recipients in one session', color: '#38bdf8', tab: 'multisend' },
   { icon: '⚡', title: 'FractalSwap', desc: 'Swap BTC \u2194 Fractal BTC via trustless atomic swaps \u2014 1% fee', color: '#8b5cf6', tab: 'xchain' },

@@ -26,6 +26,7 @@ const Staking = lazy(() => import('./components/Staking'));
 const Marketplace = lazy(() => import('./components/Marketplace'));
 const MultiSender = lazy(() => import('./components/MultiSender'));
 const CrossChainMarketplace = lazy(() => import('./components/CrossChainMarketplace'));
+const TokenGallery = lazy(() => import('./components/TokenGallery'));
 
 const LazyFallback = () => (
     <div style={{ padding: '40px 0' }}>
@@ -60,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
     {
         id: 'tokens', label: 'Tokens', icon: '\u2B22',
         items: [
+            { id: 'explorer', label: 'Explorer' },
             { id: 'launch', label: 'Launchpad' },
             { id: 'tools', label: 'Tools' },
             { id: 'multisend', label: 'MultiSend' },
@@ -201,6 +203,7 @@ const App: React.FC = () => {
             case 'news': return <NewsFeed />;
             case 'eco': return <EcosystemDir />;
             case 'multisend': return <MultiSender />;
+            case 'explorer': return <TokenGallery />;
             default: return <Landing onNav={navigate} />;
         }
     };

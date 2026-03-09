@@ -202,7 +202,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
           <div className="pm-l">Total (USD)</div>
         </div>
         <div className="P pm">
-          <div className="pm-v fs-lg word-break" style={{ color: 'var(--y)' }}>
+          <div className="pm-v fs-lg word-break c-y">
             {priceLoading ? '…' : totBtc.toFixed(8) + ' BTC'}
           </div>
           <div className="pm-l">BTC Value</div>
@@ -219,7 +219,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
         </div>
       </div>
 
-      <div className="P" style={{ overflow: 'auto' }}>
+      <div className="P overflow-auto">
         <div className="Lb">
           💼 Consensus-Verified Holdings
           {walletAddress && <span className="tag tag-g">Live BTC</span>}
@@ -315,7 +315,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             <div className="lp-empty">Loading LP position...</div>
           ) : hasLP ? (
             <div className="flex-col gap-10">
-              <div className="flex-center gap-10" style={{ flexWrap: 'wrap' }}>
+              <div className="flex-center gap-10 flex-wrap">
                 <div className="lp-card">
                   <div className="flex-between mb-8">
                     <div className="fw-700 c-w fs-md">MINE / VIBE</div>

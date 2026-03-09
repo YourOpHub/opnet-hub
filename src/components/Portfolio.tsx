@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI,
-  type IOP20Contract,
+  getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes,
+  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
@@ -9,7 +9,16 @@ import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
-import { getTxHistory, formatTimeAgo, addTxRecord } from '../txHistory';
+import { getTxHistory, formatTimeAgo } from '../txHistory';
+
+/** SimplePool ABI — only liquidityOf needed for portfolio view */
+const POOL_LP_ABI: BitcoinInterfaceAbi = [
+  { name: 'liquidityOf', constant: true, inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+];
+
+interface IPoolLPContract extends BaseContractProperties {
+  liquidityOf(account: unknown): Promise<CallResult>;
+}
 
 function detectNetwork(addr: string): opnet.Network | null {
   if (addr.startsWith('opt1')) return 'testnet';
@@ -34,9 +43,11 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
   const [tokenBalances, setTokenBalances] = useState<Record<string, TokenBalance>>({});
   const provider = useMemo(() => getProvider(), []);
 
-  // LP position from localStorage
-  const [lpMine, setLpMine] = useState(() => { try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch { return 0; } });
-  const [lpVibe, setLpVibe] = useState(() => { try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch { return 0; } });
+  // LP position — on-chain via liquidityOf(), fallback to localStorage
+  const [lpMine, setLpMine] = useState(0);
+  const [lpVibe, setLpVibe] = useState(0);
+  const [lpLoading, setLpLoading] = useState(false);
+  const [lpOnChain, setLpOnChain] = useState(false); // true = fetched from chain
   const [reserveA, setReserveA] = useState(0);
   const [reserveB, setReserveB] = useState(0);
   const hasLP = lpMine > 0 || lpVibe > 0;
@@ -44,10 +55,6 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
   const poolShareVibe = reserveB > 0 ? (lpVibe / reserveB) * 100 : 0;
   const poolShare = Math.max(poolShareMine, poolShareVibe);
 
-  // Remove liquidity state
-  const [removing, setRemoving] = useState(false);
-  const [removeStep, setRemoveStep] = useState('');
-  const [removeResult, setRemoveResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -79,20 +86,65 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
     fetchRes();
   }, [refreshKey]);
 
-  // Remove liquidity: SimplePool v1 tracks LP locally (no on-chain LP tokens)
-  // Clears the local position record. Tokens remain in pool until v2 with on-chain withdrawal.
-  const removeLiquidity = useCallback(() => {
-    if (!walletAddress || !hasLP) return;
-    const prevMine = lpMine;
-    const prevVibe = lpVibe;
-    localStorage.setItem('hub_lp_mine', '0');
-    localStorage.setItem('hub_lp_vibe', '0');
-    setLpMine(0);
-    setLpVibe(0);
-    setRemoveResult({ ok: true, msg: `Position cleared: ${prevMine.toLocaleString()} MINE + ${prevVibe.toLocaleString()} VIBE removed from tracking.` });
-    addTxRecord({ type: 'claim', txHash: '', tokenA: 'LP', amountA: `${prevMine}+${prevVibe}`, status: 'confirmed', wallet: walletAddress });
-    setTimeout(() => setRefreshKey(k => k + 1), 3000);
-  }, [walletAddress, lpMine, lpVibe, hasLP]);
+  // Fetch LP position on-chain via liquidityOf(senderAddress)
+  useEffect(() => {
+    if (!senderAddress || !POOL_ADDRESS) {
+      // Fallback to localStorage when wallet not connected
+      try {
+        const m = Number(localStorage.getItem('hub_lp_mine') || '0');
+        const v = Number(localStorage.getItem('hub_lp_vibe') || '0');
+        setLpMine(m);
+        setLpVibe(v);
+        setLpOnChain(false);
+      } catch { /* ignore */ }
+      return;
+    }
+    let cancelled = false;
+    setLpLoading(true);
+    (async () => {
+      try {
+        const poolContract = getContract<IPoolLPContract>(POOL_ADDRESS, POOL_LP_ABI, provider, NETWORK, senderAddress);
+        const res = await poolContract.liquidityOf(senderAddress) as CallResult;
+        if (cancelled) return;
+        if (!res.revert && res.properties) {
+          const props = res.properties as Record<string, unknown>;
+          const a = Number(props.amountA ?? 0n) / 1e8;
+          const b = Number(props.amountB ?? 0n) / 1e8;
+          setLpMine(a);
+          setLpVibe(b);
+          setLpOnChain(true);
+        } else {
+          // On-chain call reverted — fallback to localStorage
+          try {
+            const m = Number(localStorage.getItem('hub_lp_mine') || '0');
+            const v = Number(localStorage.getItem('hub_lp_vibe') || '0');
+            setLpMine(m);
+            setLpVibe(v);
+            setLpOnChain(false);
+          } catch { /* ignore */ }
+        }
+      } catch {
+        // Network error — fallback to localStorage
+        if (!cancelled) {
+          try {
+            const m = Number(localStorage.getItem('hub_lp_mine') || '0');
+            const v = Number(localStorage.getItem('hub_lp_vibe') || '0');
+            setLpMine(m);
+            setLpVibe(v);
+            setLpOnChain(false);
+          } catch { /* ignore */ }
+        }
+      } finally {
+        if (!cancelled) setLpLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [senderAddress, provider, refreshKey]);
+
+  // Refresh LP position (triggers on-chain re-fetch)
+  const refreshLP = useCallback(() => {
+    setRefreshKey(k => k + 1);
+  }, []);
 
   useEffect(() => {
     const net = walletAddress ? detectNetwork(walletAddress) : null;
@@ -247,14 +299,22 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
       {/* Liquidity Positions */}
       {walletAddress && POOL_ADDRESS && (
         <div className="P" style={{ marginTop: 14 }}>
-          <div className="Lb">🌊 Liquidity Positions</div>
-          {hasLP ? (
+          <div className="Lb" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            🌊 Liquidity Positions
+            {lpOnChain && <span className="tag tag-g" style={{ fontSize: '.55rem' }}>On-Chain</span>}
+            {!lpOnChain && hasLP && <span className="tag" style={{ fontSize: '.55rem', background: 'rgba(247,147,26,.12)', color: 'var(--o)' }}>Cached</span>}
+          </div>
+          {lpLoading ? (
+            <div style={{ padding: 14, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>
+              Loading LP position...
+            </div>
+          ) : hasLP ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {/* MINE/VIBE Pool card */}
                 <div style={{ flex: 1, minWidth: 220, padding: '12px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--bd)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.82rem' }}>⛏️ MINE / ⚡ VIBE</div>
+                    <div style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.82rem' }}>MINE / VIBE</div>
                     <span style={{ fontSize: '.62rem', padding: '2px 8px', background: 'rgba(247,147,26,.12)', color: 'var(--o)', borderRadius: 6, fontWeight: 700 }}>
                       {poolShare.toFixed(2)}% pool share
                     </span>
@@ -278,31 +338,22 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                     </div>
                   </div>
                   <button
-                    onClick={removeLiquidity}
-                    disabled={removing}
+                    onClick={refreshLP}
+                    disabled={lpLoading}
                     style={{
                       marginTop: 10, width: '100%', padding: '8px', borderRadius: 8,
-                      border: '1px solid rgba(239,68,68,.3)', background: 'rgba(239,68,68,.08)',
-                      color: '#ef4444', fontWeight: 700, fontSize: '.72rem', cursor: 'pointer',
-                      fontFamily: 'var(--ff)', opacity: removing ? 0.5 : 1,
+                      border: '1px solid rgba(14,165,233,.3)', background: 'rgba(14,165,233,.08)',
+                      color: 'var(--c2)', fontWeight: 700, fontSize: '.72rem', cursor: 'pointer',
+                      fontFamily: 'var(--ff)', opacity: lpLoading ? 0.5 : 1,
                     }}
                   >
-                    {removing ? removeStep || 'Removing...' : 'Remove Liquidity'}
+                    {lpLoading ? 'Refreshing...' : 'Refresh Position'}
                   </button>
                 </div>
               </div>
-              {removeResult && (
-                <div style={{
-                  padding: '8px 12px', borderRadius: 8, fontSize: '.72rem',
-                  background: removeResult.ok ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
-                  border: `1px solid ${removeResult.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`,
-                  color: removeResult.ok ? 'var(--g)' : '#ef4444',
-                }}>
-                  {removeResult.msg}
-                </div>
-              )}
               <div style={{ fontSize: '.6rem', color: 'var(--t4)', padding: '0 2px' }}>
-                SimplePool v1 — LP positions tracked locally. On-chain LP tokens & withdrawal in v2.
+                SimplePool v4 — LP position queried via <code>liquidityOf()</code> on-chain.
+                {!lpOnChain && ' (fallback: cached data)'}
               </div>
             </div>
           ) : (

@@ -42,7 +42,7 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
     refundTo,
-    maximumAllowedSatToSpend: 250_000n,
+    maximumAllowedSatToSpend: 50_000n,
     network: NETWORK,
     feeRate,
     priorityFee,

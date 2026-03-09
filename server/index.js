@@ -111,6 +111,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// M-01: stricter rate limits for write endpoints
+const writeLimiter = rateLimit({ windowMs: 60_000, max: 15, standardHeaders: true, legacyHeaders: false });
+
 // ─── $MINE Token Constants ───
 const MINE_TOTAL_SUPPLY = 21_000_000;
 const MINE_GAME_POOL = 10_500_000;
@@ -202,7 +205,7 @@ app.post('/api/rpc', async (req, res) => {
 });
 
 // ─── Player Sync (save game state to server) ───
-app.post('/api/player/sync', (req, res) => {
+app.post('/api/player/sync', writeLimiter, (req, res) => {
   const { address, mine_balance, total_sats_mined, total_clicks, hash_rate } = req.body;
   if (!address || typeof address !== 'string' || !address.startsWith('opt1') || address.length < 20) {
     return res.status(400).json({ error: 'Invalid address — must be opt1 format' });
@@ -262,7 +265,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS claim_cooldowns (
   last_claim_at INTEGER NOT NULL
 )`);
 
-app.post('/api/claim', (req, res) => {
+app.post('/api/claim', writeLimiter, (req, res) => {
   const { address, amount } = req.body;
   if (!address || typeof amount !== 'number' || !isFinite(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Invalid claim — amount must be a positive number' });
@@ -478,7 +481,7 @@ app.get('/api/orders/rates', (_req, res) => {
 });
 
 // ─── Order Lock API ───
-app.post('/api/swap/lock', (req, res) => {
+app.post('/api/swap/lock', writeLimiter, (req, res) => {
   const { order_key, wallet } = req.body;
   if (!order_key || !wallet) return res.status(400).json({ error: 'order_key, wallet required' });
   // Clean expired locks (>10 min)
@@ -515,7 +518,8 @@ app.get('/api/swap/locks', (_req, res) => {
 
 // ─── Faucet Proxy (CORS bypass for faucet.opnet.org) ───
 const FAUCET_UPSTREAM = process.env.FAUCET_URL || 'https://faucet.opnet.org';
-app.post('/api/faucet/claim', async (req, res) => {
+const faucetLimiter = rateLimit({ windowMs: 300_000, max: 3, standardHeaders: true, legacyHeaders: false });
+app.post('/api/faucet/claim', faucetLimiter, async (req, res) => {
   try {
     const upstream = await fetch(`${FAUCET_UPSTREAM}/claim`, {
       method: 'POST',

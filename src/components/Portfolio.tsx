@@ -196,19 +196,19 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
     <div>
       <div className="ph">
         <div className="P pm">
-          <div className="pm-v" style={{ color: 'var(--o)', fontSize: '1rem', wordBreak: 'break-all' }}>
+          <div className="pm-v fs-lg c-o word-break">
             {priceLoading ? '…' : '$' + (tot >= 1e6 ? (tot / 1e6).toFixed(2) + 'M' : tot.toLocaleString(undefined, { maximumFractionDigits: 2 }))}
           </div>
           <div className="pm-l">Total (USD)</div>
         </div>
         <div className="P pm">
-          <div className="pm-v" style={{ color: 'var(--y)', fontSize: '1rem', wordBreak: 'break-all' }}>
+          <div className="pm-v fs-lg word-break" style={{ color: 'var(--y)' }}>
             {priceLoading ? '…' : totBtc.toFixed(8) + ' BTC'}
           </div>
           <div className="pm-l">BTC Value</div>
         </div>
         <div className="P pm">
-          <div className="pm-v" style={{ color: 'var(--g)', fontSize: '1rem', wordBreak: 'break-all' }}>
+          <div className="pm-v fs-lg c-g word-break">
             {walletAddress ? (btcLoading ? '…' : opnet.formatSats(btcSats ?? 0n)) : '—'}
           </div>
           <div className="pm-l">Your BTC (chain)</div>
@@ -231,11 +231,11 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
           <tbody>
             <tr>
               <td>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ fontSize: '1rem' }}>₿</span>
+                <div className="asset-row">
+                  <span className="fs-lg">₿</span>
                   <div>
-                    <div style={{ fontWeight: 600, color: 'var(--w)' }}>Bitcoin</div>
-                    <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>BTC</div>
+                    <div className="asset-name">Bitcoin</div>
+                    <div className="asset-sym">BTC</div>
                   </div>
                 </div>
               </td>
@@ -246,7 +246,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
               </td>
               <td className="mono">{priceLoading ? '…' : '$' + btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
               <td className="mono" style={{ color: btcChange >= 0 ? 'var(--g)' : 'var(--r)' }}>{btcChange >= 0 ? '+' : ''}{btcChange.toFixed(1)}%</td>
-              <td className="mono" style={{ color: 'var(--o)' }}>
+              <td className="mono c-o">
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
             </tr>
@@ -258,13 +258,13 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
               return (
                 <tr key={tok.symbol}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{ fontSize: '1rem' }}>{tok.icon}</span>
+                    <div className="asset-row">
+                      <span className="fs-lg">{tok.icon}</span>
                       <div>
-                        <div style={{ fontWeight: 600, color: 'var(--w)' }}>{tok.name}</div>
-                        <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>
+                        <div className="asset-name">{tok.name}</div>
+                        <div className="asset-sym">
                           <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                            style={{ color: 'var(--c2)', textDecoration: 'none' }}>{tok.symbol} ↗</a>
+                            className="c-c2 no-decoration">{tok.symbol} ↗</a>
                         </div>
                       </div>
                     </div>
@@ -273,11 +273,11 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                     {!walletAddress ? '—'
                       : tb?.loading ? '…'
                       : rawBal > 0n ? humanBal.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                      : isDeployer && tb?.error ? <span style={{ fontSize: '.6rem', color: 'var(--r)' }}>Contract pending</span>
-                      : <span style={{ fontSize: '.65rem', color: 'var(--t4)' }}>0 {tok.symbol}</span>}
+                      : isDeployer && tb?.error ? <span className="fs-xs c-r">Contract pending</span>
+                      : <span className="fs-xs c-t4">0 {tok.symbol}</span>}
                   </td>
-                  <td className="mono" style={{ color: 'var(--t3)' }}>—</td>
-                  <td className="mono" style={{ color: 'var(--t3)' }}>—</td>
+                  <td className="mono c-t3">—</td>
+                  <td className="mono c-t3">—</td>
                   <td className="mono" style={{ color: rawBal > 0n ? 'var(--o)' : 'var(--t3)' }}>—</td>
                 </tr>
               );

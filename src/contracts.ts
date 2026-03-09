@@ -87,6 +87,11 @@ const MAINNET_CONTRACTS: ContractsMap = {
 /** Network-aware contract config — selects testnet or mainnet based on CURRENT_ENV */
 export const DEPLOYED_CONTRACTS: ContractsMap = CURRENT_ENV === 'mainnet' ? MAINNET_CONTRACTS : TESTNET_CONTRACTS;
 
+// Mainnet safety guard — warn if mainnet selected but contracts not configured
+if (CURRENT_ENV === 'mainnet' && (!DEPLOYED_CONTRACTS.MINE.address || !DEPLOYED_CONTRACTS.VIBE.address)) {
+  console.error('[FATAL] Mainnet contracts not configured! Set VITE_MINE_ADDRESS and VITE_VIBE_ADDRESS env vars.');
+}
+
 export const DEPLOYER_ADDRESS = import.meta.env.VITE_DEPLOYER_ADDRESS || 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';
 
 /** Deployer public key hashes (public, NOT private keys) — used for fee recipient P2OP */

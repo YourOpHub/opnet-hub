@@ -3260,6 +3260,11 @@ input:focus-visible, textarea:focus-visible {
 .ob-mono { font-family: var(--fm); }
 .ob-scroll { max-height: 440px; overflow-y: auto; }
 .ob-empty { text-align: center; padding: 32px 10px; color: var(--t3); font-size: .76rem; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--t3); }
+.empty-state-icon { font-size: 2.4rem; margin-bottom: 12px; opacity: .6; }
+.empty-state-title { font-size: .88rem; font-weight: 700; color: var(--t2); margin-bottom: 6px; }
+.empty-state-desc { font-size: .74rem; color: var(--t3); line-height: 1.5; }
+.empty-state-card { background: var(--bg3); border: 1px solid var(--bd); border-radius: 16px; padding: 32px 24px; text-align: center; }
 .ob-badge { padding: 3px 8px; border-radius: 5px; font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 .ob-act { display: flex; gap: 5px; justify-content: flex-end; align-items: center; }
 .ob-act button { font-family: var(--ff); }

@@ -112,7 +112,7 @@ const TokenGallery: React.FC = () => {
     try {
       const list = await fetchAllTokens();
       setAllTokens(list);
-    } catch { /* ignore */ }
+    } catch (e) { console.warn('[TokenGallery] Failed to fetch all tokens:', e); }
     setAllLoading(false);
   }, []);
 
@@ -191,7 +191,7 @@ const TokenGallery: React.FC = () => {
     try {
       const raw = localStorage.getItem('hub_deployed_tokens');
       if (raw) setTokens(JSON.parse(raw));
-    } catch { /* ignore */ }
+    } catch (e) { console.warn('[TokenGallery] Failed to load deployed tokens from localStorage:', e); }
   }, []);
 
   // Check on-chain status for user tokens
@@ -408,12 +408,17 @@ const TokenGallery: React.FC = () => {
 
           {/* Token table */}
           {allLoading && allTokens.length === 0 ? (
-            <div className="P" style={{ padding: 30, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>Loading tokens...</div>
+            <div className="P empty-state">
+              <div className="empty-state-icon">⏳</div>
+              <div className="empty-state-title">Loading tokens...</div>
+              <div className="empty-state-desc">Fetching the full token index from the OP_NET blockchain.</div>
+            </div>
           ) : sortedFiltered.length === 0 ? (
-            <div className="P" style={{ padding: 30, textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>🔍</div>
-              <div style={{ color: 'var(--t3)', fontSize: '.78rem' }}>
-                {allSearch ? 'No tokens match your search' : 'No tokens indexed yet. The indexer is scanning blocks...'}
+            <div className="P empty-state">
+              <div className="empty-state-icon">🔍</div>
+              <div className="empty-state-title">{allSearch ? 'No tokens match your search' : 'No tokens found'}</div>
+              <div className="empty-state-desc">
+                {allSearch ? 'Try a different search term or clear the filter.' : 'The indexer is scanning blocks — tokens will appear as they are discovered.'}
               </div>
             </div>
           ) : (

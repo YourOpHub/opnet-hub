@@ -197,7 +197,7 @@ const DeployModal: React.FC<{
               onCreated(token);
               break;
             }
-          } catch { /* not yet */ }
+          } catch (e) { console.warn('[Launchpad] Polling for contract confirmation:', e); }
         }
       };
       pollConfirm().catch(() => {});
@@ -604,7 +604,7 @@ const Launchpad: React.FC = () => {
             balance: String(h.balance || h.amount || '0'),
           })));
         }
-      } catch { /* */ }
+      } catch (e) { console.warn('[Launchpad] Holder data fetch failed:', e); }
     })();
   }, [selected?.address]);
   const holderCount = opscanHolders !== null ? opscanHolders : localHolderCount;

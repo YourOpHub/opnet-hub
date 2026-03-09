@@ -241,10 +241,10 @@ const Marketplace: React.FC = () => {
             status: statusStr,
             fills: [],
           });
-        } catch { /* skip unreadable orders */ }
+        } catch (e) { console.warn(`[Marketplace] Skipping unreadable order #${i}:`, e); }
       }
       return chainOrders;
-    } catch { return []; }
+    } catch (e) { console.warn('[Marketplace] Failed to fetch on-chain orders:', e); return []; }
   }, [provider]);
 
   // Fetch token list (server first, hardcoded fallback)
@@ -266,7 +266,7 @@ const Marketplace: React.FC = () => {
         setLoading(false);
         return;
       }
-    } catch { /* server offline */ }
+    } catch (e) { console.warn('[Marketplace] Token server offline, using fallback:', e); }
     // Fallback: use hardcoded known tokens
     setTokenList(KNOWN_TOKENS);
     setLoading(false);
@@ -366,7 +366,7 @@ const Marketplace: React.FC = () => {
           }),
           signal: AbortSignal.timeout(5000),
         }).catch(() => {});
-      } catch { /* indexer optional */ }
+      } catch (e) { console.warn('[Marketplace] Indexer notification failed:', e); }
 
       waitForNextBlock(provider).then(() => {
         toast('Order confirmed on-chain!', 'success');
@@ -692,7 +692,10 @@ const Marketplace: React.FC = () => {
               <span className="ob-badge" style={{ background: 'rgba(239,68,68,.1)', color: '#ef4444', marginLeft: 'auto' }}>{sellOrders.length}</span>
             </div>
             {sellOrders.length === 0 ? (
-              <div className="ob-empty">No sell orders yet</div>
+              <div className="ob-empty">
+                <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>📋</div>
+                No sell orders yet — be the first to create one!
+              </div>
             ) : (
               <div className="ob-scroll">
                 <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
@@ -751,7 +754,10 @@ const Marketplace: React.FC = () => {
               <span className="ob-badge" style={{ background: 'rgba(16,185,129,.1)', color: 'var(--g)', marginLeft: 'auto' }}>{buyOrders.length}</span>
             </div>
             {buyOrders.length === 0 ? (
-              <div className="ob-empty">No buy orders yet</div>
+              <div className="ob-empty">
+                <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>📋</div>
+                No buy orders yet — be the first to create one!
+              </div>
             ) : (
               <div className="ob-scroll">
                 <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 60px auto' }}>

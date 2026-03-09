@@ -81,7 +81,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             if (r1 > 0) setReserveB(r1);
           }
         }
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('[Portfolio] Pool reserves fetch failed:', e); }
     };
     fetchRes();
   }, [refreshKey]);
@@ -96,7 +96,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
         setLpMine(m);
         setLpVibe(v);
         setLpOnChain(false);
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('[Portfolio] LP localStorage fallback failed:', e); }
       return;
     }
     let cancelled = false;
@@ -121,10 +121,11 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             setLpMine(m);
             setLpVibe(v);
             setLpOnChain(false);
-          } catch { /* ignore */ }
+          } catch (e) { console.warn('[Portfolio] LP localStorage fallback failed:', e); }
         }
-      } catch {
+      } catch (e) {
         // Network error — fallback to localStorage
+        console.warn('[Portfolio] LP on-chain fetch failed:', e);
         if (!cancelled) {
           try {
             const m = Number(localStorage.getItem('hub_lp_mine') || '0');
@@ -132,7 +133,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             setLpMine(m);
             setLpVibe(v);
             setLpOnChain(false);
-          } catch { /* ignore */ }
+          } catch (e2) { console.warn('[Portfolio] LP localStorage fallback failed:', e2); }
         }
       } finally {
         if (!cancelled) setLpLoading(false);
@@ -172,7 +173,8 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             const sim = await op20.balanceOf(senderAddress);
             const bal = sim?.properties?.balance ?? 0n;
             if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: BigInt(bal.toString()), loading: false, error: false } }));
-          } catch {
+          } catch (e) {
+            console.warn(`[Portfolio] Failed to fetch ${sym} balance:`, e);
             if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } }));
           }
         })();
@@ -283,8 +285,13 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
           </tbody>
         </table>
         {!walletAddress && (
-          <div style={{ marginTop: 12, padding: 12, background: 'rgba(14,165,233,.06)', borderRadius: '14px', fontSize: '.8rem', color: 'var(--t2)' }}>
-            Connect your OP_WALLET in the header to see your live BTC balance from OP_NET consensus.
+          <div className="empty-state-card" style={{ marginTop: 16 }}>
+            <div className="empty-state-icon">🔐</div>
+            <div className="empty-state-title">Connect Wallet to View Portfolio</div>
+            <div className="empty-state-desc">
+              Link your OP_WALLET to see live BTC balance, OP-20 token holdings,
+              and liquidity positions — all verified through OP_NET consensus.
+            </div>
           </div>
         )}
         {walletAddress && (

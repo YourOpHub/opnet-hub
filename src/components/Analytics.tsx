@@ -32,7 +32,7 @@ function loadSnapshots(): PoolSnapshot[] {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     return arr.filter(validateSnapshot);
-  } catch { return []; }
+  } catch (e) { console.warn('[Analytics] Failed to load snapshots from localStorage:', e); return []; }
 }
 
 function saveSnapshot(snap: PoolSnapshot) {
@@ -186,7 +186,7 @@ const Analytics: React.FC = () => {
             }
           }
         }
-      } catch { if (!cancelled) setPoolError(true); }
+      } catch (e) { console.warn('[Analytics] Pool reserves fetch failed:', e); if (!cancelled) setPoolError(true); }
 
       // Token supplies
       let supplyFail = false;
@@ -194,7 +194,7 @@ const Analytics: React.FC = () => {
         try {
           const supply = await opnetRpc.getTokenTotalSupply(tok.address);
           if (!cancelled) setSupplies(prev => ({ ...prev, [sym]: supply }));
-        } catch { supplyFail = true; }
+        } catch (e) { console.warn(`[Analytics] ${sym} supply fetch failed:`, e); supplyFail = true; }
       }
       if (!cancelled) setSupplyError(supplyFail);
 
@@ -203,19 +203,19 @@ const Analytics: React.FC = () => {
       try {
         const h = await opnetRpc.getBlockHeight();
         if (!cancelled) setBlockHeight(h);
-      } catch { chainFail = true; }
+      } catch (e) { console.warn('[Analytics] Block height fetch failed:', e); chainFail = true; }
 
       // Gas
       try {
         const gp = await opnetRpc.getGasParameters();
         if (!cancelled && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative) });
-      } catch { chainFail = true; }
+      } catch (e) { console.warn('[Analytics] Gas params fetch failed:', e); chainFail = true; }
 
       // Mempool
       try {
         const mp = await opnetRpc.getMempoolInfo();
         if (!cancelled && mp) setMempoolInfo(mp);
-      } catch { chainFail = true; }
+      } catch (e) { console.warn('[Analytics] Mempool info fetch failed:', e); chainFail = true; }
       if (!cancelled) setChainError(chainFail);
 
       if (!cancelled) setLoading(false);

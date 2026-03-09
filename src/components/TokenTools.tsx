@@ -264,7 +264,7 @@ function TokenExplorer() {
             const arr = hd?.results || hd || [];
             if (Array.isArray(arr)) holders = arr.length;
           }
-        } catch { /* */ }
+        } catch (e) { console.warn('[TokenTools] Holder count fetch failed:', e); }
       }
 
       if (known) {

@@ -119,7 +119,7 @@ const Staking: React.FC = () => {
           const decoded = (rateRes.value as CallResult).properties as Record<string, unknown>;
           if (decoded?.rate) setRewardRate(BigInt(String(decoded.rate)));
         }
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('[Staking] Failed to fetch staking stats:', e); }
     };
     fetchStats();
     const iv = setInterval(fetchStats, 30000);

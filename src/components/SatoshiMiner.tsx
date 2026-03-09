@@ -169,7 +169,7 @@ const SatoshiMiner: React.FC = () => {
                     setChainHash(ep?.hash ?? ('0x' + height.toString(16).padStart(8, '0') + 'a'.repeat(56)));
                     setChainSynced(true);
                 }
-            } catch { /* chain sync optional */ }
+            } catch (e) { console.warn('[SatoshiMiner] Chain sync failed:', e); }
         };
         sync();
         const iv = setInterval(sync, 15000);
@@ -243,7 +243,7 @@ const SatoshiMiner: React.FC = () => {
                 await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps });
                 const lb = await api.getLeaderboard(10);
                 if (lb) { setLeaderboard(lb.leaderboard); setServerPool(lb.stats.remaining); }
-            } catch { /* silent */ }
+            } catch (e) { console.warn('[SatoshiMiner] Leaderboard sync failed:', e); }
         };
         doSync();
         const iv = setInterval(doSync, 30000);

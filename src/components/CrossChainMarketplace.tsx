@@ -445,7 +445,7 @@ const CrossChainMarketplace: React.FC = () => {
       try {
         const b = await provider.getBlockNumber();
         if (!cancelled) setCurrentBlock(Number(b));
-      } catch { /* */ }
+      } catch (e) { console.warn('[CrossChain] Block height poll failed:', e); }
     };
     poll();
     const iv = setInterval(poll, 15000);
@@ -461,7 +461,7 @@ const CrossChainMarketplace: React.FC = () => {
         const r = await c.getFeeInfo();
         const feeProps = r?.properties as Record<string, unknown> | undefined;
         if (feeProps?.feeBps) setFeeBps(Number(feeProps.feeBps));
-      } catch { /* */ }
+      } catch (e) { console.warn('[CrossChain] Fee info fetch failed:', e); }
     })();
   }, [provider, contractReady]);
 
@@ -494,10 +494,10 @@ const CrossChainMarketplace: React.FC = () => {
             takerAddr: (p.takerAddr ?? 0n).toString(16).padStart(64, '0'),
             feePaid: p.feePaid ?? 0n,
           });
-        } catch { /* skip */ }
+        } catch (e) { console.warn(`[CrossChain] Skipping unreadable order #${i}:`, e); }
       }
       setOrders(fetched);
-    } catch { /* */ }
+    } catch (e) { console.warn('[CrossChain] Failed to fetch orders:', e); }
     setLoading(false);
   }, [provider, contractReady]);
 
@@ -544,7 +544,7 @@ const CrossChainMarketplace: React.FC = () => {
       try {
         const r = await fetch(`${API_URL}/api/orders/rates`, { signal: AbortSignal.timeout(5000) });
         if (r.ok) setServerRates(await r.json());
-      } catch { /* */ }
+      } catch (e) { console.warn('[CrossChain] Server rates fetch failed:', e); }
     })();
   }, [API_URL]);
 
@@ -555,7 +555,7 @@ const CrossChainMarketplace: React.FC = () => {
       const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
       stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
-    } catch { /* */ }
+    } catch (e) { console.warn('[CrossChain] Failed to save rate to localStorage:', e); }
     // Server (non-blocking)
     if (API_URL) {
       fetch(`${API_URL}/api/orders/rate`, {
@@ -1266,10 +1266,10 @@ const CrossChainMarketplace: React.FC = () => {
             takerAddr: (p.takerAddr ?? 0n).toString(16).padStart(64, '0'),
             feePaid: p.feePaid ?? 0n,
           });
-        } catch { /* skip */ }
+        } catch (e) { console.warn(`[CrossChain] Skipping unreadable escrow order #${i}:`, e); }
       }
       setEscrowOrders(fetched);
-    } catch { /* */ }
+    } catch (e) { console.warn('[CrossChain] Failed to fetch escrow orders:', e); }
     setEscrowLoading(false);
   }, [provider, escrowReady]);
 
@@ -2304,7 +2304,10 @@ const CrossChainMarketplace: React.FC = () => {
           {loading ? (
             <div style={{ padding: 28, textAlign: 'center', color: 'var(--t2)' }}>Loading...</div>
           ) : availBuyFb.length === 0 ? (
-            <div className="ob-empty">No FB for sale</div>
+            <div className="ob-empty">
+              <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>🔗</div>
+              No cross-chain swaps yet — create one above!
+            </div>
           ) : (
             <div className="ob-scroll">
               <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
@@ -2327,7 +2330,10 @@ const CrossChainMarketplace: React.FC = () => {
           {loading ? (
             <div style={{ padding: 28, textAlign: 'center', color: 'var(--t2)' }}>Loading...</div>
           ) : availGetBtc.length === 0 ? (
-            <div className="ob-empty">No BTC for sale</div>
+            <div className="ob-empty">
+              <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>🔗</div>
+              No cross-chain swaps yet — create one above!
+            </div>
           ) : (
             <div className="ob-scroll">
               <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>

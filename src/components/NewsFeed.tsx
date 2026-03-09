@@ -150,7 +150,7 @@ function LiveFeed() {
                                 });
                             }
                         }
-                    } catch { /* continue */ }
+                    } catch (e) { console.warn('[NewsFeed] Block event parse failed:', e); }
                 }
             }
 
@@ -173,7 +173,7 @@ function LiveFeed() {
                         }
                     }
                 }
-            } catch { /* ok */ }
+            } catch (e) { console.warn('[NewsFeed] Pool reserves fetch failed:', e); }
 
             // Token supply data
             for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
@@ -189,7 +189,7 @@ function LiveFeed() {
                             icon: tok.icon,
                         });
                     }
-                } catch { /* ok */ }
+                } catch (e) { console.warn(`[NewsFeed] ${sym} supply fetch failed:`, e); }
             }
 
             // Mempool activity
@@ -232,7 +232,7 @@ function LiveFeed() {
                         });
                     }
                 }
-            } catch { /* ok */ }
+            } catch (e) { console.warn('[NewsFeed] Epoch info fetch failed:', e); }
 
             // Sort by time descending
             items.sort((a, b) => b.time - a.time);

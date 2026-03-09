@@ -249,7 +249,7 @@ const SwapUI: React.FC = () => {
           if (r1 > 0) setReserveB(r1);
         }
       }
-    } catch { /* fallback to init */ }
+    } catch (e) { console.warn('[SwapUI] Pool reserves fetch failed:', e); }
   }, []);
 
   useEffect(() => { fetchReserves(); }, [fetchReserves]);

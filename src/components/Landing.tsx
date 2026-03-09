@@ -82,8 +82,8 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   useEffect(() => {
     let c = false;
     const load = async () => {
-      try { const p = await fetchBtcPrice(); if (!c && p) { setBtc(p.usd); setBtcChange(p.usd_24h_change); } } catch { /* */ }
-      try { const b = await opnet.getBlockHeight(); if (!c && b) setBlock(b); } catch { /* */ }
+      try { const p = await fetchBtcPrice(); if (!c && p) { setBtc(p.usd); setBtcChange(p.usd_24h_change); } } catch (e) { console.warn('[Landing] BTC price fetch failed:', e); }
+      try { const b = await opnet.getBlockHeight(); if (!c && b) setBlock(b); } catch (e) { console.warn('[Landing] Block height fetch failed:', e); }
       try {
         const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');
         if (!c && res) {
@@ -94,7 +94,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
             if (r0 > 0) setPoolRate(r1 / r0);
           }
         }
-      } catch { /* */ }
+      } catch (e) { console.warn('[Landing] Pool rate fetch failed:', e); }
     };
     load();
     const iv = setInterval(load, 45000);

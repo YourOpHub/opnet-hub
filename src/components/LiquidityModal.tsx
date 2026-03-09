@@ -91,7 +91,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           setLpMine(a);
           setLpVibe(b);
         }
-      } catch { /* ignore */ }
+      } catch (e) { console.warn('[LiquidityModal] LP position fetch failed:', e); }
     })();
   }, [open, senderAddr, provider]);
 

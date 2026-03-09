@@ -450,8 +450,7 @@ const TokenGallery: React.FC = () => {
                       {page * PAGE_SIZE + i + 1}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }}
-                        dangerouslySetInnerHTML={{ __html: genLogo(tok.symbol) }} />
+                      <img src={genLogo(tok.symbol)} alt={tok.symbol} style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(255,255,255,.06)', flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: '.72rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tok.name}</div>
                         <div style={{ fontFamily: 'var(--fm)', fontSize: '.46rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -627,8 +626,7 @@ const TokenGallery: React.FC = () => {
                 return (
                   <div key={tok.address || idx} className="P" style={{ padding: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '2px solid rgba(255,255,255,.08)' }}
-                        dangerouslySetInnerHTML={{ __html: genLogo(tok.symbol) }} />
+                      <img src={genLogo(tok.symbol)} alt={tok.symbol} style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, border: '2px solid rgba(255,255,255,.08)' }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 800, fontSize: '.9rem', color: 'var(--w)' }}>{tok.name}</span>

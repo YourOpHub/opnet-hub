@@ -168,7 +168,7 @@ app.post('/api/bob', async (req, res) => {
     res.set('Content-Type', 'text/plain');
     res.send(text);
   } catch (e) {
-    res.status(502).json({ error: 'Bob MCP upstream error', message: e.message });
+    res.status(502).json({ error: 'Bob MCP upstream error' });
   }
 });
 
@@ -197,7 +197,7 @@ app.post('/api/rpc', async (req, res) => {
     const data = await upstream.json();
     res.json(data);
   } catch (e) {
-    res.status(502).json({ error: 'RPC error', message: e.message });
+    res.status(502).json({ error: 'RPC error' });
   }
 });
 
@@ -214,8 +214,19 @@ app.post('/api/player/sync', (req, res) => {
   const numClicks = typeof total_clicks === 'number' && isFinite(total_clicks) ? Math.max(0, Math.floor(total_clicks)) : 0;
   const numHash = typeof hash_rate === 'number' && isFinite(hash_rate) ? Math.max(0, hash_rate) : 0;
 
+  // H-03: server-side rate validation — cap balance increase to max mining rate
+  const existing = db.prepare('SELECT mine_balance, last_sync FROM players WHERE address = ?').get(address);
+  const prevBalance = existing?.mine_balance || 0;
+  const lastSync = existing?.last_sync ? new Date(existing.last_sync).getTime() : 0;
+  const elapsed = lastSync ? Math.max(Date.now() - lastSync, 1000) : 60_000;
+  const dailyRate = getDailyEmission();
+  // Max possible earnings: daily rate per ms * elapsed * 2x tolerance
+  const maxIncrease = (dailyRate / 86_400_000) * elapsed * 2;
+  const cappedIncrease = Math.min(numBalance - prevBalance, maxIncrease);
+  const validatedBalance = prevBalance + Math.max(0, cappedIncrease);
+
   const poolRemaining = MINE_GAME_POOL - getTotalDistributed();
-  const cappedBalance = Math.min(numBalance, poolRemaining > 0 ? numBalance : 0);
+  const cappedBalance = Math.min(validatedBalance, poolRemaining > 0 ? validatedBalance : 0);
 
   const stmt = db.prepare(`
     INSERT INTO players (address, mine_balance, total_sats_mined, total_clicks, hash_rate, last_sync, updated_at)
@@ -243,8 +254,13 @@ app.get('/api/player/:address', (req, res) => {
 });
 
 // ─── Claim $MINE tokens ───
-const claimCooldowns = new Map(); // address → timestamp
 const CLAIM_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
+// L-02: cooldown in SQLite (survives restart)
+db.exec(`CREATE TABLE IF NOT EXISTS claim_cooldowns (
+  address TEXT PRIMARY KEY,
+  last_claim_at INTEGER NOT NULL
+)`);
 
 app.post('/api/claim', (req, res) => {
   const { address, amount } = req.body;
@@ -252,7 +268,8 @@ app.post('/api/claim', (req, res) => {
     return res.status(400).json({ error: 'Invalid claim — amount must be a positive number' });
   }
 
-  const lastClaim = claimCooldowns.get(address);
+  const cooldownRow = db.prepare('SELECT last_claim_at FROM claim_cooldowns WHERE address = ?').get(address);
+  const lastClaim = cooldownRow?.last_claim_at || 0;
   if (lastClaim && Date.now() - lastClaim < CLAIM_COOLDOWN_MS) {
     const waitSec = Math.ceil((CLAIM_COOLDOWN_MS - (Date.now() - lastClaim)) / 1000);
     return res.status(429).json({ error: `Claim cooldown: wait ${waitSec}s` });
@@ -269,7 +286,7 @@ app.post('/api/claim', (req, res) => {
 
   // Deduct from player balance
   db.prepare('UPDATE players SET mine_balance = mine_balance - ? WHERE address = ?').run(amount, address);
-  claimCooldowns.set(address, Date.now());
+  db.prepare('INSERT INTO claim_cooldowns (address, last_claim_at) VALUES (?, ?) ON CONFLICT(address) DO UPDATE SET last_claim_at = ?').run(address, Date.now(), Date.now());
 
   res.json({
     ok: true,
@@ -326,7 +343,7 @@ app.get('/api/claims/pending', (req, res) => {
   if (!adminKey) {
     return res.status(503).json({ error: 'Admin endpoint not configured' });
   }
-  const key = req.headers['x-admin-key'] || req.query.key;
+  const key = req.headers['x-admin-key'];
   if (!key || key !== adminKey) {
     return res.status(403).json({ error: 'Forbidden' });
   }
@@ -335,12 +352,14 @@ app.get('/api/claims/pending', (req, res) => {
 });
 
 // ─── Token Indexer API ───
-app.get('/api/tokens', (_req, res) => {
+app.get('/api/tokens', (req, res) => {
   try {
-    const tokens = indexer.getAllTokens();
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 500, 1), 2000);
+    const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+    const tokens = indexer.getAllTokens(limit, offset);
     res.json(tokens);
   } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch tokens', message: e.message });
+    res.status(500).json({ error: 'Failed to fetch tokens' });
   }
 });
 
@@ -348,7 +367,7 @@ app.get('/api/tokens/status', (_req, res) => {
   try {
     res.json(indexer.getScanStatus());
   } catch (e) {
-    res.status(500).json({ error: 'Failed', message: e.message });
+    res.status(500).json({ error: 'Failed to get status' });
   }
 });
 
@@ -362,7 +381,7 @@ app.post('/api/tokens/add', async (req, res) => {
     if (!result.ok) return res.status(400).json(result);
     res.json(result);
   } catch (e) {
-    res.status(500).json({ error: 'Failed to add token', message: e.message });
+    res.status(500).json({ error: 'Failed to add token' });
   }
 });
 
@@ -376,7 +395,7 @@ app.get('/api/holder/:pubkey/tokens', async (req, res) => {
     const balances = await indexer.getHolderBalances(pubkey, tweaked);
     res.json(balances);
   } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch balances', message: e.message });
+    res.status(500).json({ error: 'Failed to fetch balances' });
   }
 });
 
@@ -386,7 +405,7 @@ app.get('/api/pools', (_req, res) => {
     const pools = indexer.getMotoswapPools();
     res.json(pools);
   } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch pools', message: e.message });
+    res.status(500).json({ error: 'Failed to fetch pools' });
   }
 });
 
@@ -476,8 +495,13 @@ app.post('/api/swap/lock', (req, res) => {
 
 app.post('/api/swap/unlock', (req, res) => {
   const { order_key, wallet } = req.body;
-  if (!order_key) return res.status(400).json({ error: 'order_key required' });
-  db.prepare('UPDATE order_locks SET released = 1 WHERE order_key = ? AND (locked_by = ? OR ? IS NULL)').run(order_key, wallet || null, wallet || null);
+  if (!order_key || !wallet) return res.status(400).json({ error: 'order_key and wallet required' });
+  // H-04: only the lock owner can unlock
+  const lock = db.prepare('SELECT locked_by FROM order_locks WHERE order_key = ? AND released = 0').get(order_key);
+  if (lock && lock.locked_by !== wallet) {
+    return res.status(403).json({ error: 'Only lock owner can unlock' });
+  }
+  db.prepare('UPDATE order_locks SET released = 1 WHERE order_key = ? AND locked_by = ?').run(order_key, wallet);
   res.json({ ok: true });
 });
 
@@ -501,7 +525,7 @@ app.post('/api/faucet/claim', async (req, res) => {
     const data = await upstream.json();
     res.status(upstream.status).json(data);
   } catch (e) {
-    res.status(502).json({ error: 'Faucet upstream error', message: e.message });
+    res.status(502).json({ error: 'Faucet upstream error' });
   }
 });
 

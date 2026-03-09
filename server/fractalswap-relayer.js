@@ -13,11 +13,11 @@ const OPNET_RPC = process.env.OPNET_RPC_URL || 'https://testnet.opnet.org/api/v1
 const OPNET_BASE = process.env.OPNET_RPC_URL
     ? process.env.OPNET_RPC_URL.replace('/api/v1/json-rpc', '')
     : 'https://testnet.opnet.org';
-const FRACTAL_API = 'https://mempool-testnet.fractalbitcoin.io/api';
-const POLL_INTERVAL_MS = 30_000;
+const FRACTAL_API = process.env.FRACTAL_API_URL || 'https://mempool-testnet.fractalbitcoin.io/api';
+const POLL_INTERVAL_MS = parseInt(process.env.RELAYER_POLL_MS || '30000');
 
-const CROSSCHAIN_ADDRESS = 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
-const CROSSCHAIN_PUBKEY = '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
+const CROSSCHAIN_ADDRESS = process.env.CROSSCHAIN_ADDRESS || 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
+const CROSSCHAIN_PUBKEY = process.env.CROSSCHAIN_PUBKEY || '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
 
 const SEL_GET_NEXT_ORDER_ID = 'f4920cae';
 const SEL_GET_ORDER = 'e9489555';
@@ -73,6 +73,7 @@ function buildP2OPScript(mldsaHashHex) {
 class FractalSwapRelayer {
     constructor() {
         this.processedOrders = new Set();
+        this.completedTxids = new Set(); // H-02: txid deduplication
         this.running = false;
         this.sdkReady = false;
         this.wallet = null;
@@ -190,15 +191,25 @@ class FractalSwapRelayer {
         return bytes.slice(0, end).toString('utf-8');
     }
 
+    /** H-02: Check Fractal payment with confirmation requirement and txid dedup */
     async checkFractalPayment(address, minSats) {
+        const MIN_CONFIRMATIONS = parseInt(process.env.FRACTAL_MIN_CONFIRMATIONS || '1');
         try {
             const res = await fetch(`${FRACTAL_API}/address/${address}/txs`, {
                 signal: AbortSignal.timeout(10000),
             });
-            if (!res.ok) return false;
+            if (!res.ok) return null;
             const txs = await res.json();
 
             for (const tx of txs) {
+                // Skip already-used txids (prevent replay)
+                if (tx.txid && this.completedTxids.has(tx.txid)) continue;
+
+                // Check confirmation count
+                const confirmed = tx.status?.confirmed === true;
+                const confirmations = confirmed ? (tx.status?.block_height ? 1 : 0) : 0;
+                if (MIN_CONFIRMATIONS > 0 && confirmations < MIN_CONFIRMATIONS) continue;
+
                 let received = 0;
                 for (const vout of (tx.vout || [])) {
                     if (vout.scriptpubkey_address === address) {
@@ -206,14 +217,14 @@ class FractalSwapRelayer {
                     }
                 }
                 if (received >= Number(minSats)) {
-                    console.log(`[Relayer] Fractal payment found: ${received} sats to ${address} (tx: ${tx.txid?.slice(0, 12)}...)`);
-                    return true;
+                    console.log(`[Relayer] Fractal payment found: ${received} sats to ${address} (tx: ${tx.txid?.slice(0, 12)}..., confirmed: ${confirmed})`);
+                    return tx.txid; // return txid for dedup tracking
                 }
             }
-            return false;
+            return null;
         } catch (e) {
             console.error(`[Relayer] Fractal API error for ${address}:`, e.message);
-            return false;
+            return null;
         }
     }
 
@@ -335,13 +346,14 @@ class FractalSwapRelayer {
                     continue;
                 }
 
-                const paid = await this.checkFractalPayment(fractalAddr, order.wantAmount);
-                if (paid) {
-                    console.log(`[Relayer] Order #${i}: Fractal payment detected! Auto-completing...`);
+                const paymentTxid = await this.checkFractalPayment(fractalAddr, order.wantAmount);
+                if (paymentTxid) {
+                    console.log(`[Relayer] Order #${i}: Fractal payment detected (${paymentTxid.slice(0, 12)}...)! Auto-completing...`);
 
                     const success = await this.completeOrderOnChain(i, order);
                     if (success) {
                         this.processedOrders.add(i);
+                        this.completedTxids.add(paymentTxid); // H-02: mark txid as used
                         console.log(`[Relayer] Order #${i}: COMPLETED on-chain!`);
                     } else {
                         console.log(`[Relayer] Order #${i}: completion failed, will retry next poll`);

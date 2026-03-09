@@ -471,7 +471,7 @@ const TokenLauncher: React.FC = () => {
         <div className="P" style={{ textAlign: 'center', padding: 18 }}>
           <div className="Lb" style={{ justifyContent: 'center' }}>Live Preview</div>
           <div style={{ width: 80, height: 80, margin: '8px auto', borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(255,255,255,.08)' }}>
-            {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div dangerouslySetInnerHTML={{ __html: genLogo(tokenSymbol) }} />}
+            {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={genLogo(tokenSymbol)} alt={tokenSymbol} style={{ width: '100%', height: '100%' }} />}
           </div>
           <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--w)', marginTop: 6 }}>{tokenName || 'Token Name'}</div>
           <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.82rem' }}>${tokenSymbol || 'TKN'}</div>

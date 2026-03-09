@@ -457,8 +457,8 @@ class TokenIndexer {
 
     // ── API Handlers ──
 
-    getAllTokens() {
-        return this.db.prepare('SELECT * FROM indexed_tokens ORDER BY deploy_block ASC').all();
+    getAllTokens(limit = 500, offset = 0) {
+        return this.db.prepare('SELECT * FROM indexed_tokens ORDER BY deploy_block ASC LIMIT ? OFFSET ?').all(limit, offset);
     }
 
     getTokenCount() {
@@ -602,7 +602,7 @@ class TokenIndexer {
 
     /** Get all token balances for a holder */
     async getHolderBalances(holderPubkey, holderTweaked) {
-        const tokens = this.getAllTokens();
+        const tokens = this.getAllTokens(100000, 0); // internal: get all for balance scan
         const now = Date.now();
         const results = [];
 

@@ -106,12 +106,12 @@ export const MARKET_SELECTORS = {
 export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
 export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
 
-/** Motoswap DEX contracts (OPNet Testnet) — discovered from motoswap.org frontend */
-export const MOTOSWAP_FACTORY_ADDRESS = 'opt1sqzs3e6qrtkgyfu0x592x6rdfe4r9dpjxqycyhr7w';
-export const MOTOSWAP_FACTORY_PUBKEY = '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
-export const MOTOSWAP_ROUTER_ADDRESS = 'opt1sqqavlf5dr8tjgrsrvjzhk5yrkgnha0z4ty9xwwf6';
-export const MOTOSWAP_ROUTER_PUBKEY = '0x0e6ff1f2d7db7556cb37729e3738f4dae82659b984b2621fab08e1111b1b937a';
-export const MOTO_TOKEN_PUBKEY = '0xfd4473840751d58d9f8b73bdd57d6c5260453d5518bd7cd02d0a4cf3df9bf4dd';
+/** Motoswap DEX contracts — env-overridable for mainnet migration */
+export const MOTOSWAP_FACTORY_ADDRESS = import.meta.env.VITE_MOTOSWAP_FACTORY_ADDRESS || 'opt1sqzs3e6qrtkgyfu0x592x6rdfe4r9dpjxqycyhr7w';
+export const MOTOSWAP_FACTORY_PUBKEY = import.meta.env.VITE_MOTOSWAP_FACTORY_PUBKEY || '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
+export const MOTOSWAP_ROUTER_ADDRESS = import.meta.env.VITE_MOTOSWAP_ROUTER_ADDRESS || 'opt1sqqavlf5dr8tjgrsrvjzhk5yrkgnha0z4ty9xwwf6';
+export const MOTOSWAP_ROUTER_PUBKEY = import.meta.env.VITE_MOTOSWAP_ROUTER_PUBKEY || '0x0e6ff1f2d7db7556cb37729e3738f4dae82659b984b2621fab08e1111b1b937a';
+export const MOTO_TOKEN_PUBKEY = import.meta.env.VITE_MOTO_TOKEN_PUBKEY || '0xfd4473840751d58d9f8b73bdd57d6c5260453d5518bd7cd02d0a4cf3df9bf4dd';
 
 /** TokenEscrowBridge — removed from UI (duplicates Marketplace), not redeployed */
 export const TOKEN_ESCROW_ADDRESS = '';
@@ -174,19 +174,20 @@ export const TOKEN_ESCROW_SELECTORS = {
     setFeeBps: 0xfdd3c00b,       // setFeeBps(uint256)
 } as const;
 
-/** OPScan explorer — works for testnet contract/tx inspection */
+/** OPScan explorer — network-aware */
+import { OPSCAN_NETWORK } from './config';
 const OPSCAN = 'https://opscan.org';
 
 export function getTxUrl(txid: string): string {
-    return `${OPSCAN}/transactions/${txid}?network=op_testnet`;
+    return `${OPSCAN}/transactions/${txid}?network=${OPSCAN_NETWORK}`;
 }
 
 export function getContractOpscanUrl(address: string): string {
-    return `${OPSCAN}/accounts/${address}?network=op_testnet`;
+    return `${OPSCAN}/accounts/${address}?network=${OPSCAN_NETWORK}`;
 }
 
 export function getAddressUrl(address: string): string {
-    return `${OPSCAN}/accounts/${address}?network=op_testnet`;
+    return `${OPSCAN}/accounts/${address}?network=${OPSCAN_NETWORK}`;
 }
 
 /** Map opt1 addresses → hex pubkeys (for RPC calls that need pubkey format) */

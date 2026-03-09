@@ -438,7 +438,7 @@ const Marketplace: React.FC = () => {
         // Use raw script for P2OP outputs — PSBT can't decode P2OP addresses
         (tp as unknown as Record<string, unknown>).extraOutputs = [{
           script: sellerP2OPScript,
-          value: btcPaymentSats,
+          value: Number(btcPaymentSats),
         }];
         (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
         await (sim as CallResult).sendTransaction(tp as TransactionParameters);
@@ -537,7 +537,7 @@ const Marketplace: React.FC = () => {
       // Use raw script for P2OP outputs — PSBT can't decode P2OP addresses
       (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: sellerP2OPScript,
-        value: btcPaymentSats,
+        value: Number(btcPaymentSats),
       }];
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp as TransactionParameters);

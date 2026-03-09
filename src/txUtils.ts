@@ -10,7 +10,7 @@
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
-import { NETWORK } from './config';
+import { NETWORK, CURRENT_ENV } from './config';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 
 /**
@@ -26,15 +26,18 @@ const approvedThisSession = new Set<string>();
 
 export async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<TxParams> {
   const gas = await provider.gasParameters();
-  // Use low fee rate for testnet (cheaper, still confirms quickly)
-  const feeRate = gas.bitcoin.recommended.low || gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 2;
+  const isMainnet = CURRENT_ENV === 'mainnet';
+  const feeRate = isMainnet
+    ? (gas.bitcoin.recommended.medium || gas.bitcoin.recommended.low || gas.bitcoin.conservative || 5)
+    : (gas.bitcoin.recommended.low || gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 2);
   const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
   const priorityFeeSats = gas.baseGas / gasPerSat;
-  // Cap priority fee: min 500, max 10000 sats (testnet doesn't need high fees)
-  const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > 10_000n ? 10_000n : priorityFeeSats;
+  const maxPriority = isMainnet ? 100_000n : 10_000n;
+  const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > maxPriority ? maxPriority : priorityFeeSats;
+  const maxSats = isMainnet ? 200_000n : 50_000n;
   // Frontend: NO signer/mldsaSigner keys — wallet extension handles signing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { refundTo, maximumAllowedSatToSpend: 50_000n, network: NETWORK, feeRate, priorityFee } as any;
+  return { refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee } as any;
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -172,7 +175,7 @@ export async function getMinBtcRequired(
 export function formatTxError(e: unknown): string {
   let msg = e instanceof Error ? e.message : 'Transaction failed';
   const lower = msg.toLowerCase();
-  if (lower.includes('no utxo')) return 'No BTC UTXOs. Get testnet BTC first.';
+  if (lower.includes('no utxo')) return 'No BTC UTXOs.' + (CURRENT_ENV !== 'mainnet' ? ' Get testnet BTC from the faucet.' : ' Fund your wallet first.');
   if (lower.includes('insufficient allowance') || lower.includes('allowance')) return 'Allowance not yet confirmed. Please wait ~30s and try again (approval already sent).';
   if (lower.includes('timeout') || lower.includes('fetch')) return 'Network timeout — try again in a few seconds.';
   if (lower.includes('cannot accept own order') || lower.includes('own order')) return 'Cannot fill your own order. Use a different wallet.';
@@ -180,6 +183,6 @@ export function formatTxError(e: unknown): string {
   if (lower.includes('signer is not allowed')) return 'Wallet rejected signer params. Refresh and retry.';
   if (lower.includes('502') || lower.includes('bad gateway')) return 'RPC server temporarily unavailable (502). Try again in a moment.';
   if (lower.includes('cors')) return 'CORS error — RPC temporarily blocked. Try again.';
-  if (lower.includes('revert')) msg += ' (Try again — testnet can be flaky)';
+  if (lower.includes('revert')) msg += CURRENT_ENV !== 'mainnet' ? ' (Try again — testnet can be flaky)' : ' (Transaction reverted)';
   return msg;
 }

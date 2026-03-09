@@ -602,37 +602,63 @@ class TokenIndexer {
         return this.db.prepare('SELECT * FROM motoswap_pools ORDER BY last_updated DESC').all();
     }
 
-    /** Get all token balances for a holder */
+    /** Get all token balances for a holder — optimized: only scan tokens with known holder records + top tokens */
     async getHolderBalances(holderPubkey, holderTweaked) {
-        const tokens = this.getAllTokens(100000, 0); // internal: get all for balance scan
         const now = Date.now();
         const results = [];
 
-        for (const token of tokens) {
-            const cacheKey = `${token.pubkey}:${holderPubkey}`;
-            const cached = this.db.prepare('SELECT balance, cached_at FROM balance_cache WHERE token_holder = ?').get(cacheKey);
+        // 1. Check cached balances first (fast path — no RPC)
+        const cachedRows = this.db.prepare(
+            'SELECT bc.token_holder, bc.balance, bc.cached_at FROM balance_cache bc WHERE bc.token_holder LIKE ? AND bc.balance != ? AND bc.cached_at > ?'
+        ).all(`%:${holderPubkey}`, '0', now - BALANCE_CACHE_TTL_MS);
 
-            if (cached && (now - cached.cached_at) < BALANCE_CACHE_TTL_MS) {
-                if (cached.balance !== '0') {
-                    results.push({
-                        token: token.address, pubkey: token.pubkey,
-                        symbol: token.symbol, name: token.name,
-                        decimals: token.decimals, balance: cached.balance,
-                    });
-                }
-                continue;
-            }
-
-            const balance = await getTokenBalance(token.pubkey, holderPubkey, holderTweaked);
-            this.db.prepare('INSERT OR REPLACE INTO balance_cache (token_holder, balance, cached_at) VALUES (?, ?, ?)').run(cacheKey, balance, now);
-
-            if (balance !== '0') {
+        const cachedTokenPubkeys = new Set();
+        for (const row of cachedRows) {
+            const tokenPubkey = row.token_holder.split(':')[0];
+            cachedTokenPubkeys.add(tokenPubkey);
+            const token = this.db.prepare('SELECT address, pubkey, symbol, name, decimals FROM indexed_tokens WHERE pubkey = ?').get(tokenPubkey);
+            if (token) {
                 results.push({
                     token: token.address, pubkey: token.pubkey,
                     symbol: token.symbol, name: token.name,
-                    decimals: token.decimals, balance,
+                    decimals: token.decimals, balance: row.balance,
                 });
             }
+        }
+
+        // 2. For uncached: only scan tokens where this holder appears in token_holders + top 50 by holders
+        const holderHash = holderPubkey.slice(0, 16);
+        const knownTokens = this.db.prepare(
+            `SELECT DISTINCT t.address, t.pubkey, t.symbol, t.name, t.decimals
+             FROM token_holders th JOIN indexed_tokens t ON t.pubkey = th.token_pubkey
+             WHERE th.holder_hash = ?
+             UNION
+             SELECT address, pubkey, symbol, name, decimals FROM indexed_tokens
+             WHERE holders > 0 ORDER BY holders DESC LIMIT 50`
+        ).all(holderHash);
+
+        // 3. Batch RPC calls (max 20 concurrent)
+        const unchecked = knownTokens.filter(t => !cachedTokenPubkeys.has(t.pubkey));
+        const BATCH = 20;
+        for (let i = 0; i < unchecked.length; i += BATCH) {
+            const batch = unchecked.slice(i, i + BATCH);
+            const promises = batch.map(async (token) => {
+                try {
+                    const balance = await getTokenBalance(token.pubkey, holderPubkey, holderTweaked);
+                    const cacheKey = `${token.pubkey}:${holderPubkey}`;
+                    this.db.prepare('INSERT OR REPLACE INTO balance_cache (token_holder, balance, cached_at) VALUES (?, ?, ?)').run(cacheKey, balance, now);
+                    if (balance !== '0') {
+                        results.push({
+                            token: token.address, pubkey: token.pubkey,
+                            symbol: token.symbol, name: token.name,
+                            decimals: token.decimals, balance,
+                        });
+                    }
+                } catch (e) {
+                    console.warn(`[TokenIndexer] getHolderBalances RPC error for ${token.symbol}:`, e.message);
+                }
+            });
+            await Promise.all(promises);
         }
 
         return results;

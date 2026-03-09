@@ -14,6 +14,16 @@ interface PoolSnapshot {
 
 const SNAPSHOT_KEY = 'hub_pool_snapshots';
 const MAX_SNAPSHOTS = 200;
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+function validateSnapshot(s: unknown): s is PoolSnapshot {
+  if (!s || typeof s !== 'object') return false;
+  const snap = s as Record<string, unknown>;
+  return typeof snap.ts === 'number' && !isNaN(snap.ts)
+    && typeof snap.reserveMINE === 'number' && !isNaN(snap.reserveMINE)
+    && typeof snap.reserveVIBE === 'number' && !isNaN(snap.reserveVIBE)
+    && typeof snap.rate === 'number' && !isNaN(snap.rate);
+}
 
 function loadSnapshots(): PoolSnapshot[] {
   try {
@@ -21,15 +31,7 @@ function loadSnapshots(): PoolSnapshot[] {
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    // Validate each snapshot
-    return arr.filter((s: unknown) => {
-      if (!s || typeof s !== 'object') return false;
-      const snap = s as Record<string, unknown>;
-      return typeof snap.ts === 'number' && !isNaN(snap.ts)
-        && typeof snap.reserveMINE === 'number' && !isNaN(snap.reserveMINE)
-        && typeof snap.reserveVIBE === 'number' && !isNaN(snap.reserveVIBE)
-        && typeof snap.rate === 'number' && !isNaN(snap.rate);
-    }) as PoolSnapshot[];
+    return arr.filter(validateSnapshot);
   } catch { return []; }
 }
 
@@ -40,6 +42,35 @@ function saveSnapshot(snap: PoolSnapshot) {
   all.push(snap);
   if (all.length > MAX_SNAPSHOTS) all.splice(0, all.length - MAX_SNAPSHOTS);
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(all));
+}
+
+/** Merge server snapshots with local cache — dedup by timestamp, sorted ascending */
+function mergeSnapshots(server: PoolSnapshot[], local: PoolSnapshot[]): PoolSnapshot[] {
+  const map = new Map<number, PoolSnapshot>();
+  for (const s of server) map.set(s.ts, s);
+  for (const s of local) {
+    if (!map.has(s.ts)) map.set(s.ts, s);
+  }
+  const merged = Array.from(map.values()).sort((a, b) => a.ts - b.ts);
+  // Keep last MAX_SNAPSHOTS
+  if (merged.length > MAX_SNAPSHOTS) merged.splice(0, merged.length - MAX_SNAPSHOTS);
+  return merged;
+}
+
+/** Fetch pool snapshot history from server */
+async function fetchServerSnapshots(pool: string, limit = 500): Promise<PoolSnapshot[]> {
+  if (!API_BASE) return [];
+  try {
+    const resp = await fetch(`${API_BASE}/api/pool/history?pool=${encodeURIComponent(pool)}&limit=${limit}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    if (!data.snapshots || !Array.isArray(data.snapshots)) return [];
+    return data.snapshots.filter(validateSnapshot);
+  } catch {
+    return [];
+  }
 }
 
 /** Simple SVG line chart */
@@ -114,6 +145,25 @@ const Analytics: React.FC = () => {
   const [poolError, setPoolError] = useState(false);
   const [supplyError, setSupplyError] = useState(false);
   const [chainError, setChainError] = useState(false);
+  const [serverLoaded, setServerLoaded] = useState(false);
+
+  // Load server snapshots on mount — one-time fetch
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const serverSnaps = await fetchServerSnapshots(POOL_ADDRESS, 500);
+      if (cancelled) return;
+      if (serverSnaps.length > 0) {
+        const local = loadSnapshots();
+        const merged = mergeSnapshots(serverSnaps, local);
+        // Update localStorage cache with merged data
+        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(merged));
+        setSnapshots(merged);
+      }
+      setServerLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +181,7 @@ const Analytics: React.FC = () => {
               setPoolError(false);
               const snap: PoolSnapshot = { ts: Date.now(), reserveMINE: r0, reserveVIBE: r1, rate: r1 / r0 };
               saveSnapshot(snap);
+              // Reload from localStorage (which now includes server data)
               setSnapshots(loadSnapshots());
             }
           }
@@ -238,8 +289,8 @@ const Analytics: React.FC = () => {
         <div className="P" style={{ padding: 16, marginBottom: 16 }}>
           <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '.55rem', color: 'var(--t4)' }}>
-            <span>{new Date(snapshots[0].ts).toLocaleTimeString()}</span>
-            <span>{snapshots.length} data points</span>
+            <span>{new Date(snapshots[0].ts).toLocaleDateString()} {new Date(snapshots[0].ts).toLocaleTimeString()}</span>
+            <span>{snapshots.length} pts{serverLoaded && API_BASE ? ' (server+local)' : ' (local)'}</span>
             <span>{new Date(snapshots[snapshots.length - 1].ts).toLocaleTimeString()}</span>
           </div>
         </div>

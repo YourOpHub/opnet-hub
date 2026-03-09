@@ -78,6 +78,17 @@ db.exec(`
     locked_at TEXT DEFAULT (datetime('now')),
     released INTEGER DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS pool_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pool_address TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    reserve0 TEXT NOT NULL,
+    reserve1 TEXT NOT NULL,
+    price REAL NOT NULL,
+    tvl_sats REAL NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pool_snapshots_pool_ts ON pool_snapshots(pool_address, timestamp);
 `);
 
 // ─── Token Indexer ───
@@ -537,9 +548,139 @@ app.post('/api/faucet/claim', faucetLimiter, async (req, res) => {
   }
 });
 
+// ─── Pool Snapshots API ───
+const POOL_SNAPSHOT_ADDRESS = process.env.POOL_ADDRESS || 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
+const POOL_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const GET_RESERVES_SELECTOR = '06374bfc';
+
+/** Fetch pool reserves from RPC and save snapshot */
+async function collectPoolSnapshot() {
+  try {
+    const calldata = GET_RESERVES_SELECTOR;
+    const rpcBody = {
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method: 'btc_call',
+      params: [POOL_SNAPSHOT_ADDRESS, calldata],
+    };
+    const resp = await fetch(OPNET_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rpcBody),
+    });
+    const json = await resp.json();
+    if (json.error) {
+      console.error('[PoolSnapshot] RPC error:', json.error);
+      return;
+    }
+    // Result is base64 on OPNet RPC
+    let hex;
+    if (json.result && typeof json.result === 'string') {
+      // Try base64 first, fall back to hex
+      try {
+        hex = Buffer.from(json.result, 'base64').toString('hex');
+      } catch {
+        hex = json.result.replace(/^0x/, '');
+      }
+    } else if (json.result && json.result.result) {
+      try {
+        hex = Buffer.from(json.result.result, 'base64').toString('hex');
+      } catch {
+        hex = String(json.result.result).replace(/^0x/, '');
+      }
+    }
+    if (!hex || hex.length < 128) {
+      console.error('[PoolSnapshot] Invalid reserves hex, length:', hex?.length);
+      return;
+    }
+    const reserve0Raw = BigInt('0x' + hex.slice(0, 64));
+    const reserve1Raw = BigInt('0x' + hex.slice(64, 128));
+    const reserve0 = Number(reserve0Raw) / 1e8;
+    const reserve1 = Number(reserve1Raw) / 1e8;
+    if (reserve0 <= 0 || reserve1 <= 0) {
+      console.log('[PoolSnapshot] Reserves are zero, skipping');
+      return;
+    }
+    const price = reserve1 / reserve0;
+    const tvlSats = reserve0 + reserve1;
+    const now = Date.now();
+
+    // Deduplicate: skip if last snapshot < 5 min ago
+    const lastSnap = db.prepare(
+      'SELECT timestamp FROM pool_snapshots WHERE pool_address = ? ORDER BY timestamp DESC LIMIT 1'
+    ).get(POOL_SNAPSHOT_ADDRESS);
+    if (lastSnap && now - lastSnap.timestamp < 5 * 60 * 1000) {
+      return;
+    }
+
+    db.prepare(
+      'INSERT INTO pool_snapshots (pool_address, timestamp, reserve0, reserve1, price, tvl_sats) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(POOL_SNAPSHOT_ADDRESS, now, reserve0Raw.toString(), reserve1Raw.toString(), price, tvlSats);
+    console.log(`[PoolSnapshot] Saved: MINE=${reserve0.toFixed(0)} VIBE=${reserve1.toFixed(0)} price=${price.toFixed(4)}`);
+
+    // Prune old snapshots (keep last 2000 per pool)
+    const count = db.prepare('SELECT COUNT(*) as c FROM pool_snapshots WHERE pool_address = ?').get(POOL_SNAPSHOT_ADDRESS);
+    if (count && count.c > 2000) {
+      db.prepare(
+        'DELETE FROM pool_snapshots WHERE pool_address = ? AND id NOT IN (SELECT id FROM pool_snapshots WHERE pool_address = ? ORDER BY timestamp DESC LIMIT 2000)'
+      ).run(POOL_SNAPSHOT_ADDRESS, POOL_SNAPSHOT_ADDRESS);
+    }
+  } catch (e) {
+    console.error('[PoolSnapshot] Error:', e.message);
+  }
+}
+
+// Collect on startup + every 10 minutes
+collectPoolSnapshot();
+setInterval(collectPoolSnapshot, POOL_SNAPSHOT_INTERVAL_MS);
+
+// GET /api/pool/history — return pool snapshots
+app.get('/api/pool/history', (req, res) => {
+  try {
+    const pool = req.query.pool || POOL_SNAPSHOT_ADDRESS;
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 100, 1), 2000);
+    const rows = db.prepare(
+      'SELECT timestamp, reserve0, reserve1, price, tvl_sats FROM pool_snapshots WHERE pool_address = ? ORDER BY timestamp ASC LIMIT ?'
+    ).all(pool, limit);
+    // Convert to frontend-friendly format
+    const snapshots = rows.map(r => ({
+      ts: r.timestamp,
+      reserveMINE: Number(BigInt(r.reserve0)) / 1e8,
+      reserveVIBE: Number(BigInt(r.reserve1)) / 1e8,
+      rate: r.price,
+    }));
+    res.json({ pool, count: snapshots.length, snapshots });
+  } catch (e) {
+    console.error('[PoolHistory] Error:', e.message);
+    res.status(500).json({ error: 'Failed to fetch pool history' });
+  }
+});
+
+// POST /api/pool/snapshot — admin endpoint to manually record a snapshot
+app.post('/api/pool/snapshot', writeLimiter, (req, res) => {
+  const adminKey = process.env.ADMIN_API_KEY;
+  if (!adminKey) {
+    return res.status(503).json({ error: 'Admin endpoint not configured' });
+  }
+  const key = req.headers['x-admin-key'];
+  if (!key || key !== adminKey) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { pool_address, reserve0, reserve1, price, tvl_sats } = req.body;
+  if (!pool_address || reserve0 == null || reserve1 == null) {
+    return res.status(400).json({ error: 'pool_address, reserve0, reserve1 required' });
+  }
+  const now = Date.now();
+  db.prepare(
+    'INSERT INTO pool_snapshots (pool_address, timestamp, reserve0, reserve1, price, tvl_sats) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(pool_address, now, String(reserve0), String(reserve1), price || 0, tvl_sats || 0);
+  res.json({ ok: true, timestamp: now });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[OPNet Hub Server] Running on port ${PORT}`);
   console.log(`[Bob MCP Proxy] → ${BOB_MCP_URL}`);
   console.log(`[OP_NET RPC Proxy] → ${OPNET_RPC}`);
+  console.log(`[Pool Snapshots] Collecting every ${POOL_SNAPSHOT_INTERVAL_MS / 60000}min for ${POOL_SNAPSHOT_ADDRESS}`);
   console.log(`[$MINE] Pool: ${MINE_GAME_POOL.toLocaleString()} | Daily: ${getDailyEmission().toLocaleString()}`);
 });

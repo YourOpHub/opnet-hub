@@ -85,7 +85,8 @@ export async function getBalance(address: string, filterOrdinals = true): Promis
   const s = r.startsWith('0x') ? r.slice(2) : r;
   try {
     return BigInt('0x' + s);
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getBalance BigInt parse error:', e);
     return 0n;
   }
 }
@@ -95,7 +96,8 @@ export async function getCode(address: string, onlyBytecode = false): Promise<{ 
   try {
     const r = await rpc('btc_getCode', [address, onlyBytecode]) as { bytecode?: string; contractAddress?: string };
     return r && (r.bytecode || r.contractAddress) ? r : null;
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getCode error:', e);
     return null;
   }
 }
@@ -120,8 +122,8 @@ export async function getStorageAt(address: string, slot: number, proofs = false
   const resolved = addressToPubkey(address);
   try {
     return await rpc('btc_getStorageAt', [resolved, pointer, proofs]);
-  } catch {
-    // Silently fail — callers handle null/missing gracefully
+  } catch (e) {
+    console.warn('[opnet] getStorageAt error:', e);
     return null;
   }
 }
@@ -138,7 +140,8 @@ export async function getGasParameters(): Promise<GasParams | null> {
   try {
     const r = await rpc('btc_gas', []) as GasParams;
     return r || null;
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getGasParameters error:', e);
     return null;
   }
 }
@@ -148,7 +151,8 @@ export async function getLatestEpoch(): Promise<{ number?: number; hash?: string
   try {
     const r = await rpc('btc_latestEpoch', []) as { number?: number; hash?: string };
     return r || null;
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getLatestEpoch error:', e);
     return null;
   }
 }
@@ -158,7 +162,8 @@ export async function getMempoolInfo(): Promise<{ count?: number; opnetCount?: n
   try {
     const r = await rpc('btc_getMempoolInfo', []) as { count?: number; opnetCount?: number; sizeBytes?: number };
     return r || null;
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getMempoolInfo error:', e);
     return null;
   }
 }
@@ -177,7 +182,7 @@ function parseCallResult(r: Record<string, unknown>): string | null {
   const raw = typeof r.result === 'string' ? r.result : (typeof r.returnData === 'string' ? r.returnData : null);
   if (!raw || raw === 'AA==') return null;
   if (raw.startsWith('0x')) return raw;
-  try { return '0x' + base64ToHex(raw); } catch { return raw; }
+  try { return '0x' + base64ToHex(raw); } catch (e) { console.warn('[opnet] parseCallResult base64 decode error:', e); return raw; }
 }
 
 /** Simulate contract call (read-only).
@@ -196,7 +201,7 @@ export async function callContract(
     const r = await rpc('btc_call', params) as Record<string, unknown>;
     const result = parseCallResult(r);
     if (result) return result;
-  } catch { /* */ }
+  } catch (e) { console.warn('[opnet] callContract error:', e); }
   return null;
 }
 
@@ -214,7 +219,8 @@ export async function getTokenBalance(
     const hex = result.startsWith('0x') ? result.slice(2) : result;
     if (!hex || hex.length < 2) return 0n;
     return BigInt('0x' + hex);
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getTokenBalance error:', e);
     return 0n;
   }
 }
@@ -229,7 +235,8 @@ export async function getTokenTotalSupply(tokenAddress: string): Promise<bigint>
     if (typeof decoded === 'string' && decoded.startsWith('0x')) return BigInt(decoded);
     if (typeof decoded === 'string' && decoded !== '' && decoded !== '0') return BigInt(decoded);
     return 0n;
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getTokenTotalSupply error:', e);
     return 0n;
   }
 }
@@ -277,7 +284,8 @@ export async function getOP20Info(contractAddress: string): Promise<{
     const decimals = Number(decodeStorageVal(decimalsR)) || 0;
     const totalSupply = String(decodeStorageVal(totalSupplyR));
     return { name: name || 'Unknown', symbol: symbol || '?', decimals, totalSupply: totalSupply || '0' };
-  } catch {
+  } catch (e) {
+    console.warn('[opnet] getOP20Info error:', e);
     return null;
   }
 }
@@ -290,7 +298,7 @@ export async function getUTXOs(address: string): Promise<Array<{ transactionId: 
     // Result may be { confirmed: [...] } or a direct array
     const items = Array.isArray(r) ? r : (Array.isArray((r as Record<string, unknown>)?.confirmed) ? (r as Record<string, unknown>).confirmed : []);
     return items as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
-  } catch { return []; }
+  } catch (e) { console.warn('[opnet] getUTXOs error:', e); return []; }
 }
 
 /** Get transaction by hash — tries both with and without 0x prefix */
@@ -300,20 +308,20 @@ export async function getTransaction(txHash: string): Promise<Record<string, unk
   try {
     const r = await rpc('btc_getTransactionByHash', [hash], 12000) as Record<string, unknown>;
     if (r) return r;
-  } catch { /* try alternative */ }
+  } catch (e) { console.warn('[opnet] getTransaction error (as-is):', e); }
   // Try with 0x prefix if missing
   if (!hash.startsWith('0x')) {
     try {
       const r = await rpc('btc_getTransactionByHash', ['0x' + hash], 12000) as Record<string, unknown>;
       if (r) return r;
-    } catch { /* fall through */ }
+    } catch (e) { console.warn('[opnet] getTransaction error (0x-prefixed):', e); }
   }
   // Try without 0x prefix
   if (hash.startsWith('0x')) {
     try {
       const r = await rpc('btc_getTransactionByHash', [hash.slice(2)], 12000) as Record<string, unknown>;
       if (r) return r;
-    } catch { /* fall through */ }
+    } catch (e) { console.warn('[opnet] getTransaction error (no-prefix):', e); }
   }
   return null;
 }
@@ -324,9 +332,9 @@ export async function getTransactionReceipt(txHash: string): Promise<Record<stri
   try {
     const r = await rpc('btc_getTransactionReceipt', [hash], 12000) as Record<string, unknown>;
     if (r) return r;
-  } catch { /* try alt */ }
+  } catch (e) { console.warn('[opnet] getTransactionReceipt error:', e); }
   if (!hash.startsWith('0x')) {
-    try { return await rpc('btc_getTransactionReceipt', ['0x' + hash], 12000) as Record<string, unknown>; } catch { /* */ }
+    try { return await rpc('btc_getTransactionReceipt', ['0x' + hash], 12000) as Record<string, unknown>; } catch (e) { console.warn('[opnet] getTransactionReceipt error (0x-prefixed):', e); }
   }
   return null;
 }
@@ -336,7 +344,7 @@ export async function getLatestPendingTxs(limit = 10): Promise<Array<Record<stri
   try {
     const r = await rpc('btc_getLatestPendingTransactions', [undefined, undefined, limit], 10000) as Array<Record<string, unknown>>;
     return Array.isArray(r) ? r : [];
-  } catch { return []; }
+  } catch (e) { console.warn('[opnet] getLatestPendingTxs error:', e); return []; }
 }
 
 /** Get block by number */
@@ -345,7 +353,7 @@ export async function getBlockByNumber(blockNumber: number | string, prefetchTxs
     const hex = typeof blockNumber === 'number' ? '0x' + blockNumber.toString(16) : blockNumber;
     const r = await rpc('btc_getBlockByNumber', [hex, prefetchTxs]) as Record<string, unknown>;
     return r || null;
-  } catch { return null; }
+  } catch (e) { console.warn('[opnet] getBlockByNumber error:', e); return null; }
 }
 
 /** Get public key info for addresses */
@@ -353,7 +361,7 @@ export async function getPublicKeyInfo(addresses: string[]): Promise<Record<stri
   try {
     const r = await rpc('btc_getPublicKeyInfo', [addresses]) as Record<string, unknown>;
     return r || null;
-  } catch { return null; }
+  } catch (e) { console.warn('[opnet] getPublicKeyInfo error:', e); return null; }
 }
 
 /** Format satoshis to human-readable string */

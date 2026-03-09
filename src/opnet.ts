@@ -39,22 +39,38 @@ interface RpcResponse {
   error?: { code?: number; message: string };
 }
 
-async function rpc(method: string, params: unknown[] = [], timeoutMs = 8000): Promise<unknown> {
+async function rpc(method: string, params: unknown[] = [], timeoutMs = 8000, retries = 2): Promise<unknown> {
   const url = getRpcUrl();
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const data = (await res.json()) as RpcResponse;
-    if (data.error) throw new Error(data.error.message || 'RPC error');
-    return data.result;
-  } catch (e) {
-    console.warn(`[OP_NET RPC] ${method} failed:`, e);
-    throw e;
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method, params, id: Date.now() }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.status === 429) {
+        // Rate limited — wait and retry
+        const wait = Math.min(1000 * (attempt + 1), 3000);
+        console.warn(`[OP_NET RPC] ${method} rate-limited (429), retry in ${wait}ms`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      const data = (await res.json()) as RpcResponse;
+      if (data.error) throw new Error(data.error.message || 'RPC error');
+      return data.result;
+    } catch (e) {
+      lastError = e;
+      if (attempt < retries) {
+        const wait = Math.min(500 * (attempt + 1), 2000);
+        console.warn(`[OP_NET RPC] ${method} attempt ${attempt + 1} failed, retry in ${wait}ms:`, e);
+        await new Promise(r => setTimeout(r, wait));
+      }
+    }
   }
+  console.warn(`[OP_NET RPC] ${method} failed after ${retries + 1} attempts:`, lastError);
+  throw lastError;
 }
 
 /** Parse hex number from RPC (e.g. "0x81b" -> 2075) */

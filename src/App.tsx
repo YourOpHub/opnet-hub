@@ -362,7 +362,7 @@ const App: React.FC = () => {
                         ['Docs', 'https://docs.opnet.org'],
                         ['OPScan', OPSCAN_EXPLORER_URL],
                         ['GitHub', 'https://github.com/btc-vision'],
-                        ['Faucet', 'https://faucet.opnet.org'],
+                        ...(CURRENT_ENV !== 'mainnet' ? [['Faucet', 'https://faucet.opnet.org']] : []),
                     ].map(([l, u]) => (
                         <a key={l} href={u} target="_blank" rel="noopener noreferrer" className="footer-link">
                             {l}

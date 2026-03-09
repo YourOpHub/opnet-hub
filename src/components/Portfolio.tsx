@@ -196,7 +196,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
             </tr>
-            {isTestnet && Object.entries(TESTNET_CONTRACTS).map(([sym, tok]: [string, any]) => {
+            {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]: [string, any]) => {
               const tb = tokenBalances[sym];
               const rawBal = tb?.balance ?? 0n;
               const humanBal = Number(rawBal) / Math.pow(10, tok.decimals);

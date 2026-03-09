@@ -655,7 +655,7 @@ const CrossChainMarketplace: React.FC = () => {
       if (formDirection === SwapDirection.BTC_TO_FB) {
         (tp as unknown as Record<string, unknown>).extraOutputs = [{
           script: contractP2OPScript,
-          value: contractBtcAmount,
+          value: Number(contractBtcAmount),
         }];
         (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = contractBtcAmount + 50_000n;
       }
@@ -755,11 +755,11 @@ const CrossChainMarketplace: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
-      const extraOuts: Array<{ script: Buffer; value: bigint }> = [
-        { script: feeRecipientScript, value: feeSats },
+      const extraOuts: Array<{ script: Buffer; value: number }> = [
+        { script: feeRecipientScript, value: Number(feeSats) },
       ];
       if (isFbToBtc) {
-        extraOuts.push({ script: contractP2OPScript, value: order.btcAmount });
+        extraOuts.push({ script: contractP2OPScript, value: Number(order.btcAmount) });
       }
       (tp as unknown as Record<string, unknown>).extraOutputs = extraOuts;
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
@@ -817,7 +817,7 @@ const CrossChainMarketplace: React.FC = () => {
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: myScript,
-        value: order.btcAmount,
+        value: Number(order.btcAmount),
       }];
       await (sim as CallResult).sendTransaction(tp);
 
@@ -875,7 +875,7 @@ const CrossChainMarketplace: React.FC = () => {
         const myScript = getMyP2OPScript();
         (tp as unknown as Record<string, unknown>).extraOutputs = [{
           script: myScript,
-          value: order.btcAmount,
+          value: Number(order.btcAmount),
         }];
       }
 
@@ -929,7 +929,7 @@ const CrossChainMarketplace: React.FC = () => {
       setMsg(`Fractal BTC sent! TX: ${txid.slice(0, 16)}... — Now call Complete to claim locked BTC.`);
       setTimeout(() => setMsg(''), 12000);
 
-      window.open(getFractalTxUrl(txid), '_blank');
+      window.open(getFractalTxUrl(txid, CURRENT_ENV !== 'mainnet'), '_blank');
     } catch (e) {
       setActionStep(e instanceof Error ? e.message : 'Fractal send failed');
       setTimeout(() => setActionStep(''), 5000);
@@ -989,8 +989,8 @@ const CrossChainMarketplace: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
-      const extraOuts: Array<{ script: Buffer; value: bigint }> = [{ script: feeRecipientScript, value: feeSats }];
-      if (isFbToBtc) extraOuts.push({ script: contractP2OPScript, value: order.btcAmount });
+      const extraOuts: Array<{ script: Buffer; value: number }> = [{ script: feeRecipientScript, value: Number(feeSats) }];
+      if (isFbToBtc) extraOuts.push({ script: contractP2OPScript, value: Number(order.btcAmount) });
       (tp as unknown as Record<string, unknown>).extraOutputs = extraOuts;
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
       await (sim as CallResult).sendTransaction(tp);
@@ -1213,7 +1213,7 @@ const CrossChainMarketplace: React.FC = () => {
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: myScript,
-        value: order.btcAmount,
+        value: Number(order.btcAmount),
       }];
       await (sim as CallResult).sendTransaction(tp);
 
@@ -1402,7 +1402,7 @@ const CrossChainMarketplace: React.FC = () => {
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{
         script: feeRecipientScript,
-        value: feeSats,
+        value: Number(feeSats),
       }];
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp);

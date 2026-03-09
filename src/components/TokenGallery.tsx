@@ -7,7 +7,7 @@ import {
   type TransactionParameters,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -198,7 +198,7 @@ const TokenGallery: React.FC = () => {
   useEffect(() => {
     if (tokens.length === 0) return;
     const prevNet = opnet.getNetwork();
-    opnet.setNetwork('testnet');
+    opnet.setNetwork(CURRENT_ENV);
     tokens.forEach(t => {
       if (!t.address) return;
       opnet.getTokenTotalSupply(t.address).then(supply => {

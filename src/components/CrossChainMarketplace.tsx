@@ -7,7 +7,7 @@ import {
 } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import { lockOrder, unlockOrder, getActiveLocks, type OrderLock } from '../swapApi';
 import { useOps } from '../contexts/OpsContext';
 import { buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
@@ -341,7 +341,7 @@ const CrossChainMarketplace: React.FC = () => {
   const handleConnectUnisat = useCallback(async () => {
     setUnisatConnecting(true);
     try {
-      const state = await connectUnisat(true); // testnet
+      const state = await connectUnisat(CURRENT_ENV !== 'mainnet');
       setUnisat(state);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'UniSat connection failed');
@@ -919,8 +919,9 @@ const CrossChainMarketplace: React.FC = () => {
       if (end === -1) end = 32;
       const targetFractalAddr = new TextDecoder().decode(addrBytes.slice(0, end));
 
+      const _validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
       if (!targetFractalAddr.startsWith('bc1') && !targetFractalAddr.startsWith('tb1')) {
-        throw new Error(`Invalid Fractal address: ${targetFractalAddr}`);
+        throw new Error(`Invalid Fractal address for ${CURRENT_ENV}: ${targetFractalAddr}`);
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
@@ -1012,8 +1013,9 @@ const CrossChainMarketplace: React.FC = () => {
       if (end === -1) end = 32;
       const targetFractalAddr = new TextDecoder().decode(addrBytesTarget.slice(0, end));
 
+      const _validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
       if (!targetFractalAddr.startsWith('bc1') && !targetFractalAddr.startsWith('tb1')) {
-        throw new Error(`Invalid Fractal address: ${targetFractalAddr}`);
+        throw new Error(`Invalid Fractal address for ${CURRENT_ENV}: ${targetFractalAddr}`);
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
@@ -1080,8 +1082,9 @@ const CrossChainMarketplace: React.FC = () => {
       if (end === -1) end = 32;
       const targetFractalAddr = new TextDecoder().decode(addrBytes.slice(0, end));
 
+      const _validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
       if (!targetFractalAddr.startsWith('bc1') && !targetFractalAddr.startsWith('tb1')) {
-        throw new Error(`Invalid Fractal address: ${targetFractalAddr}`);
+        throw new Error(`Invalid Fractal address for ${CURRENT_ENV}: ${targetFractalAddr}`);
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);

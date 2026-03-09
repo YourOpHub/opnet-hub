@@ -175,8 +175,9 @@ export const TOKEN_ESCROW_SELECTORS = {
 } as const;
 
 /** OPScan explorer — network-aware */
-import { OPSCAN_NETWORK } from './config';
+import { OPSCAN_NETWORK, CURRENT_ENV } from './config';
 const OPSCAN = 'https://opscan.org';
+const OPSCAN_EXPLORER = CURRENT_ENV === 'mainnet' ? 'https://opscan.org' : `https://${CURRENT_ENV}.opscan.org`;
 
 export function getTxUrl(txid: string): string {
     return `${OPSCAN}/transactions/${txid}?network=${OPSCAN_NETWORK}`;
@@ -189,6 +190,16 @@ export function getContractOpscanUrl(address: string): string {
 export function getAddressUrl(address: string): string {
     return `${OPSCAN}/accounts/${address}?network=${OPSCAN_NETWORK}`;
 }
+
+export function getBlockUrl(height: number): string {
+    return `${OPSCAN}/blocks/${height}?network=${OPSCAN_NETWORK}`;
+}
+
+/** OPScan API base for token/holder queries */
+export const OPSCAN_API_BASE = `https://api.opscan.org/v1/${OPSCAN_NETWORK}`;
+
+/** OPScan explorer base URL (e.g. https://testnet.opscan.org) */
+export const OPSCAN_EXPLORER_URL = OPSCAN_EXPLORER;
 
 /** Map opt1 addresses → hex pubkeys (for RPC calls that need pubkey format) */
 const PUBKEY_MAP: Record<string, string> = {

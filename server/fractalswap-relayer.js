@@ -96,7 +96,9 @@ class FractalSwapRelayer {
             // CJS require for opnet (works in both modes)
             const opnet = require('opnet');
 
-            this.network = { ...btcMod.networks.testnet, bech32: btcMod.networks.testnet.bech32Opnet };
+            const netName = process.env.OPNET_NETWORK || 'testnet';
+            const baseNet = netName === 'mainnet' ? btcMod.networks.bitcoin : btcMod.networks.testnet;
+            this.network = { ...baseNet, bech32: baseNet.bech32Opnet };
             const mnemonicObj = new txMod.Mnemonic(mnemonic, '', this.network);
             this.wallet = mnemonicObj.deriveOPWallet(undefined, 0);
 
@@ -287,6 +289,12 @@ class FractalSwapRelayer {
             }
             console.log(`[Relayer] Order #${orderId}: simulation OK`);
 
+            // B-02: safety check — Number(btcAmount) must not lose precision
+            if (btcAmount > BigInt(Number.MAX_SAFE_INTEGER)) {
+                console.error(`[Relayer] Order #${orderId}: BTC amount ${btcAmount} exceeds safe Number range, aborting`);
+                return false;
+            }
+
             // Send transaction
             console.log(`[Relayer] Order #${orderId}: sending TX...`);
             const result = await sim.sendTransaction({
@@ -297,6 +305,7 @@ class FractalSwapRelayer {
                 feeRate: 10,
                 priorityFee: BigInt(5000),
                 maximumAllowedSatToSpend: btcAmount + 100_000n,
+                // SDK requires Number for value (BigInt causes reduce(0) bug)
                 extraOutputs: [{ script: recipientScript, value: Number(btcAmount) }],
             });
 

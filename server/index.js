@@ -520,6 +520,10 @@ app.get('/api/swap/locks', (_req, res) => {
 const FAUCET_UPSTREAM = process.env.FAUCET_URL || 'https://faucet.opnet.org';
 const faucetLimiter = rateLimit({ windowMs: 300_000, max: 3, standardHeaders: true, legacyHeaders: false });
 app.post('/api/faucet/claim', faucetLimiter, async (req, res) => {
+  // R-03: disable faucet on mainnet
+  if ((process.env.OPNET_NETWORK || 'testnet') === 'mainnet') {
+    return res.status(403).json({ error: 'Faucet not available on mainnet' });
+  }
   try {
     const upstream = await fetch(`${FAUCET_UPSTREAM}/claim`, {
       method: 'POST',

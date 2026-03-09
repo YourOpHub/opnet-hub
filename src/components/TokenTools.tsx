@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, ABIDataTypes, BitcoinAbiTypes, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties, type TransactionParameters } from 'opnet';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY } from '../contracts';
+import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, OPSCAN_API_BASE, OPSCAN_EXPLORER_URL, getContractOpscanUrl } from '../contracts';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { buildTxParams, formatTxError, waitForNextBlock } from '../txUtils';
@@ -161,7 +161,7 @@ function TokenExplorer() {
   useEffect(() => {
     (async () => {
       try {
-        const resp = await fetch('https://api.opscan.org/v1/op_testnet/tokens');
+        const resp = await fetch('${OPSCAN_API_BASE}/tokens');
         if (!resp.ok) throw new Error('OPScan API error');
         const data = await resp.json();
         const results = data?.results || data || [];
@@ -191,7 +191,7 @@ function TokenExplorer() {
             const counts = await Promise.all(chunk.map(async (tok) => {
               try {
                 const hex = tok.address.startsWith('0x') ? tok.address : '0x' + tok.address;
-                const r = await fetch(`https://api.opscan.org/v1/op_testnet/tokens/${hex}/holders`);
+                const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hex}/holders`);
                 if (!r.ok) return 0;
                 const d = await r.json();
                 const arr = d?.results || d || [];
@@ -258,7 +258,7 @@ function TokenExplorer() {
       const hexAddr = a.startsWith('0x') ? a : (a.startsWith('opt1sq') ? undefined : '0x' + a);
       if (hexAddr) {
         try {
-          const hr = await fetch(`https://api.opscan.org/v1/op_testnet/tokens/${hexAddr}/holders`);
+          const hr = await fetch(`${OPSCAN_API_BASE}/tokens/${hexAddr}/holders`);
           if (hr.ok) {
             const hd = await hr.json();
             const arr = hd?.results || hd || [];
@@ -326,7 +326,7 @@ function TokenExplorer() {
               </div>
             ))}
             {result.isContract && <div style={{ marginTop: 8, textAlign: 'center' }}>
-              <a href={`https://testnet.opscan.org/contract/${addr.trim()}`} target="_blank" rel="noopener noreferrer"
+              <a href={getContractOpscanUrl(addr.trim())} target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: '.65rem', color: 'var(--c)', textDecoration: 'none' }}>View on OPScan \u2192</a>
             </div>}
           </div>

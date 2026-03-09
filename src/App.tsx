@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, laz
 import logoUrl from './assets/logo.png';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
-import { NETWORK } from './config';
+import { NETWORK, CURRENT_ENV } from './config';
 import { getProvider } from './contractCache';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
@@ -10,7 +10,7 @@ import OpsPanel from './components/OpsPanel';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { OpsProvider } from './contexts/OpsContext';
-import { TESTNET_CONTRACTS } from './contracts';
+import { TESTNET_CONTRACTS, OPSCAN_EXPLORER_URL } from './contracts';
 import { fetchHolderBalances, type HolderBalance } from './tokenApi';
 
 const BobChat = lazy(() => import('./components/BobChat'));
@@ -219,6 +219,14 @@ const App: React.FC = () => {
                     <div className="Lo" onClick={() => { navigate('home'); setOpenGroup(null); }}>
                         <img src={logoUrl} alt="OPNet Hub" style={{ height: 32, objectFit: 'contain' }} />
                     </div>
+                    {CURRENT_ENV !== 'mainnet' && (
+                        <span style={{
+                            padding: '2px 8px', borderRadius: 4, fontSize: '.55rem', fontWeight: 800,
+                            background: CURRENT_ENV === 'testnet' ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.15)',
+                            color: CURRENT_ENV === 'testnet' ? '#f59e0b' : '#ef4444',
+                            letterSpacing: '.08em', textTransform: 'uppercase',
+                        }}>{CURRENT_ENV}</span>
+                    )}
 
                     {/* Grouped nav — desktop */}
                     <nav className="N nav-desktop">
@@ -352,7 +360,7 @@ const App: React.FC = () => {
                 <div className="footer-links">
                     {[
                         ['Docs', 'https://docs.opnet.org'],
-                        ['OPScan', 'https://testnet.opscan.org'],
+                        ['OPScan', OPSCAN_EXPLORER_URL],
                         ['GitHub', 'https://github.com/btc-vision'],
                         ['Faucet', 'https://faucet.opnet.org'],
                     ].map(([l, u]) => (

@@ -5,7 +5,7 @@ import {
   type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, RPC_URL } from '../config';
 import { buildTxParams, withRetry } from '../txUtils';
 import { TESTNET_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
@@ -51,7 +51,7 @@ const MINE_HALVING_DAYS = 7;
 const MINE_DECIMALS = 8;
 const MINE_CONTRACT = TESTNET_CONTRACTS.MINE.address;
 const GAME_NETWORK = NETWORK;
-const GAME_RPC_URL = 'https://testnet.opnet.org/api/v1/json-rpc';
+const GAME_RPC_URL = RPC_URL;
 const MINTABLE_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
 ];

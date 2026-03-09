@@ -10,6 +10,8 @@
  * @see https://docs.opnet.org
  */
 
+import { CURRENT_ENV } from './config';
+
 export type Network = 'regtest' | 'testnet' | 'mainnet';
 
 const RPC_BASE: Record<Network, string> = {
@@ -18,7 +20,7 @@ const RPC_BASE: Record<Network, string> = {
   mainnet: 'https://mainnet.opnet.org/api/v1/json-rpc',
 };
 
-let currentNetwork: Network = 'testnet';
+let currentNetwork: Network = CURRENT_ENV;
 
 export function getRpcUrl(): string {
   return RPC_BASE[currentNetwork];

@@ -7,7 +7,7 @@ import {
   type BitcoinInterfaceAbi, type CallResult,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
 
@@ -247,7 +247,7 @@ const TokenLauncher: React.FC = () => {
     setVerifyResult(null);
     const prevNet = opnet.getNetwork();
     try {
-      opnet.setNetwork('testnet');
+      opnet.setNetwork(CURRENT_ENV);
       const code = await opnet.getCode(verifyAddr.trim(), true);
       if (code?.bytecode) {
         const supply = await opnet.getTokenTotalSupply(verifyAddr.trim());

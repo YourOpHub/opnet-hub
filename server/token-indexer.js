@@ -44,8 +44,8 @@ const SEL_GET_RESERVES = getSelector('getReserves()');
 const SEL_TOKEN0 = getSelector('token0()');
 const SEL_TOKEN1 = getSelector('token1()');
 
-// ── Motoswap Factory address ──
-const MOTOSWAP_FACTORY = '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
+// ── Motoswap Factory address (env-overridable for mainnet) ──
+const MOTOSWAP_FACTORY = process.env.MOTOSWAP_FACTORY_PUBKEY || '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
 const POOL_DISCOVERY_INTERVAL_MS = 120_000; // 2 minutes
 
 /** Call a view function on a contract, return raw bytes or null */
@@ -209,7 +209,9 @@ class TokenIndexer {
     }
 
     _seedKnownTokens() {
-        const known = [
+        // Seed tokens from env (JSON array) or use testnet defaults
+        const envSeed = process.env.SEED_TOKENS;
+        const known = envSeed ? JSON.parse(envSeed) : [
             {
                 address: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa',
                 pubkey: '0xdb2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d',

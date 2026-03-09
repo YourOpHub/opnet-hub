@@ -9,6 +9,7 @@ import {
 } from 'opnet';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
+import { OPSCAN_API_BASE, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
 import {
@@ -592,7 +593,7 @@ const Launchpad: React.FC = () => {
     if (!hexAddr) return;
     (async () => {
       try {
-        const r = await fetch(`https://api.opscan.org/v1/op_testnet/tokens/${hexAddr}/holders`);
+        const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hexAddr}/holders`);
         if (!r.ok) return;
         const data = await r.json();
         const arr = data?.results || data || [];
@@ -844,13 +845,13 @@ const Launchpad: React.FC = () => {
               <div className="Lb" style={{ marginBottom: 8 }}>Links & Trade</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
                 {isReal && (
-                  <a href={`https://testnet.opscan.org/contract/${selected.address}`} target="_blank" rel="noopener noreferrer"
+                  <a href={getContractOpscanUrl(selected.address)} target="_blank" rel="noopener noreferrer"
                     style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.15)', color: 'var(--c)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
                     OPScan
                   </a>
                 )}
                 {isReal && selected.txHash && (
-                  <a href={`https://testnet.opnet.org/tx/${selected.txHash}`} target="_blank" rel="noopener noreferrer"
+                  <a href={getTxUrl(selected.txHash)} target="_blank" rel="noopener noreferrer"
                     style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)', color: 'var(--o)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
                     Deploy TX
                   </a>

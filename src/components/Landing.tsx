@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { POOL_ADDRESS } from '../contracts';
+import { POOL_ADDRESS, OPSCAN_EXPLORER_URL } from '../contracts';
 
 /** Scroll-triggered fade-in hook with blur */
 function useReveal(delay = 0) {
@@ -67,7 +67,7 @@ const TECH = [
 
 const LINKS = [
   { label: 'Documentation', href: 'https://docs.opnet.org' },
-  { label: 'OPScan Explorer', href: 'https://testnet.opscan.org' },
+  { label: 'OPScan Explorer', href: OPSCAN_EXPLORER_URL },
   { label: 'Vibecode Challenge', href: 'https://vibecode.finance/challenge' },
   { label: 'Ecosystem', href: 'https://vibecode.finance/ecosystem' },
 ];

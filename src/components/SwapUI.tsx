@@ -9,7 +9,7 @@ import {
   type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
@@ -257,7 +257,7 @@ const SwapUI: React.FC = () => {
 
   useEffect(() => {
     const prevNet = opnetRpc.getNetwork();
-    opnetRpc.setNetwork('testnet');
+    opnetRpc.setNetwork(CURRENT_ENV);
     Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
       opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
         if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
@@ -270,7 +270,7 @@ const SwapUI: React.FC = () => {
   useEffect(() => {
     if (!walletAddress || !hashedMLDSAKey) { setBalances({}); return; }
     const prevNet = opnetRpc.getNetwork();
-    opnetRpc.setNetwork('testnet');
+    opnetRpc.setNetwork(CURRENT_ENV);
     setBalLoading(true);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, POOL_ADDRESS } from '../contracts';
+import { TESTNET_CONTRACTS, POOL_ADDRESS, getBlockUrl } from '../contracts';
 
 /* ═══════════════════════════════════════════════════════════════
    News Feed — Live on-chain activity + curated social posts
@@ -130,7 +130,7 @@ function LiveFeed() {
                     title: `Block #${height.toLocaleString()} confirmed`,
                     detail: gasParams?.blockNumber ? `Base gas: ${Number(BigInt(gasParams.baseGas || '0')).toLocaleString()}` : 'New block on Bitcoin L1',
                     time: now, color: 'var(--g)', icon: '\u26D3\uFE0F',
-                    link: `https://opscan.org/blocks/${height}?network=op_testnet`,
+                    link: getBlockUrl(height),
                 });
 
                 // Fetch recent blocks for activity
@@ -146,7 +146,7 @@ function LiveFeed() {
                                     detail: block.hash ? `Hash: ${String(block.hash).slice(0, 16)}...` : '',
                                     time: now - (height - i) * 30000, // ~30s per block
                                     color: 'var(--c)', icon: '\u{1F4E6}',
-                                    link: `https://opscan.org/blocks/${i}?network=op_testnet`,
+                                    link: getBlockUrl(i),
                                 });
                             }
                         }

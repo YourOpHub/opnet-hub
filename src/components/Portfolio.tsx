@@ -237,9 +237,9 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
         )}
         {walletAddress && (
           <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(247,147,26,.05)', borderRadius: '14px', fontSize: '.72rem', color: 'var(--t3)' }}>
-            OP-20 balances fetched via <code>btc_call → balanceOf()</code> on OP_NET testnet consensus.
-            {' '}<a href={`https://testnet.opnet.org/tx/${MINE_DEPLOY_TXID}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>MINE deploy tx</a>
-            {' · '}<a href={`https://testnet.opnet.org/tx/${VIBE_DEPLOY_TXID}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>VIBE deploy tx</a>
+            OP-20 balances fetched via <code>btc_call → balanceOf()</code> on OP_NET consensus.
+            {' '}<a href={getTxUrl(MINE_DEPLOY_TXID)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>MINE deploy tx</a>
+            {' · '}<a href={getTxUrl(VIBE_DEPLOY_TXID)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>VIBE deploy tx</a>
           </div>
         )}
       </div>

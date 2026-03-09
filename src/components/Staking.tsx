@@ -5,7 +5,7 @@ import {
   type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
@@ -77,7 +77,7 @@ const Staking: React.FC = () => {
   useEffect(() => {
     if (!walletAddress || !hashedMLDSAKey) { setMineBalance(0n); setVibeBalance(0n); setBtcBalance(0n); return; }
     const prevNet = opnetRpc.getNetwork();
-    opnetRpc.setNetwork('testnet');
+    opnetRpc.setNetwork(CURRENT_ENV);
     setBalLoading(true);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;

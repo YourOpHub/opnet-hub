@@ -187,24 +187,30 @@ const App: React.FC = () => {
 
     const activeGroup = findGroup(tab);
 
+    const wrap = (child: React.ReactNode) => (
+        <ErrorBoundary onReset={() => setTab('home')}>
+            <Suspense fallback={<LazyFallback />}>{child}</Suspense>
+        </ErrorBoundary>
+    );
+
     const P = () => {
         switch (tab) {
-            case 'home': return <Landing onNav={navigate} />;
-            case 'portfolio': return <Portfolio walletAddress={wAddr} senderAddress={senderAddr} />;
-            case 'bob': return <BobChat />;
-            case 'tools': return <TokenTools />;
-            case 'swap': return <SwapUI />;
-            case 'staking': return <Staking />;
-            case 'analytics': return <Analytics />;
-            case 'launch': return <Launchpad />;
-            case 'market': return <Marketplace />;
-            case 'xchain': return <CrossChainMarketplace />;
-            case 'game': return <SatoshiMiner />;
-            case 'news': return <NewsFeed />;
-            case 'eco': return <EcosystemDir />;
-            case 'multisend': return <MultiSender />;
-            case 'explorer': return <TokenGallery />;
-            default: return <Landing onNav={navigate} />;
+            case 'home': return wrap(<Landing onNav={navigate} />);
+            case 'portfolio': return wrap(<Portfolio walletAddress={wAddr} senderAddress={senderAddr} />);
+            case 'bob': return wrap(<BobChat />);
+            case 'tools': return wrap(<TokenTools />);
+            case 'swap': return wrap(<SwapUI />);
+            case 'staking': return wrap(<Staking />);
+            case 'analytics': return wrap(<Analytics />);
+            case 'launch': return wrap(<Launchpad />);
+            case 'market': return wrap(<Marketplace />);
+            case 'xchain': return wrap(<CrossChainMarketplace />);
+            case 'game': return wrap(<SatoshiMiner />);
+            case 'news': return wrap(<NewsFeed />);
+            case 'eco': return wrap(<EcosystemDir />);
+            case 'multisend': return wrap(<MultiSender />);
+            case 'explorer': return wrap(<TokenGallery />);
+            default: return wrap(<Landing onNav={navigate} />);
         }
     };
 
@@ -351,9 +357,7 @@ const App: React.FC = () => {
             )}
 
             <main className="M" key={tab}>
-                <ErrorBoundary onReset={() => setTab('home')}>
-                    <Suspense fallback={<LazyFallback />}>{P()}</Suspense>
-                </ErrorBoundary>
+                {P()}
             </main>
 
             <footer className="site-footer">

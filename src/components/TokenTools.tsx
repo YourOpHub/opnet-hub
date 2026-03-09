@@ -808,7 +808,7 @@ function UTXOSplitter() {
       for (let i = 0; i < splitCount - 1; i++) {
         extraOutputs.push({
           address: walletAddress,
-          value: BigInt(perSplitSats),
+          value: Number(perSplitSats),
         });
       }
       (tp as unknown as Record<string, unknown>).extraOutputs = extraOutputs;

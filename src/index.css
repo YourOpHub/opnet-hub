@@ -3301,3 +3301,26 @@ input:focus-visible, textarea:focus-visible {
 .asset-name { font-weight: 600; color: var(--w); }
 .asset-sym { font-size: .6rem; color: var(--t3); }
 .section-label { display: flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; color: var(--t2); margin-bottom: 8px; }
+
+/* ── LP Position card ── */
+.lp-card { flex: 1; min-width: 220px; padding: 12px 14px; background: var(--bg3); border-radius: 10px; border: 1px solid var(--bd); }
+.lp-cached-tag { background: rgba(247,147,26,.12); color: var(--o); }
+.lp-share-tag { font-size: .62rem; padding: 2px 8px; background: rgba(247,147,26,.12); color: var(--o); border-radius: 6px; font-weight: 700; }
+.lp-stat-row { display: flex; justify-content: space-between; font-size: .74rem; color: var(--t2); margin-bottom: 4px; }
+.lp-divider { border-top: 1px solid var(--bd); margin: 8px 0; padding-top: 6px; }
+.lp-reserve-row { display: flex; justify-content: space-between; font-size: .66rem; color: var(--t3); }
+.lp-empty { padding: 14px; text-align: center; color: var(--t3); font-size: .78rem; }
+.lp-refresh-btn { margin-top: 10px; width: 100%; padding: 8px; border-radius: 8px;
+  border: 1px solid rgba(14,165,233,.3); background: rgba(14,165,233,.08);
+  color: var(--c2); font-weight: 700; font-size: .72rem; cursor: pointer; font-family: var(--ff); }
+.lp-refresh-btn:hover { background: rgba(14,165,233,.14); }
+
+/* ── TX History ── */
+.tx-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg3); border-radius: 8px; font-size: .72rem; }
+.tx-icon { font-size: .9rem; width: 22px; text-align: center; }
+.tx-info { flex: 1; min-width: 0; }
+.tx-link { font-size: .56rem; color: var(--c2); text-decoration: none; white-space: nowrap; }
+.tx-link:hover { color: var(--c3); }
+
+/* ── Deploy info footer ── */
+.deploy-info { margin-top: 10px; padding: 8px 12px; background: rgba(247,147,26,.05); border-radius: 14px; font-size: .72rem; color: var(--t3); }

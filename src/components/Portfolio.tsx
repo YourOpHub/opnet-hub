@@ -8,7 +8,7 @@ import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID, type ContractTokenInfo } from '../contracts';
 import { getTxHistory, formatTimeAgo } from '../txHistory';
 
 /** SimplePool ABI — only liquidityOf needed for portfolio view */
@@ -250,7 +250,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
             </tr>
-            {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]: [string, any]) => {
+            {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]: [string, ContractTokenInfo]) => {
               const tb = tokenBalances[sym];
               const rawBal = tb?.balance ?? 0n;
               const humanBal = Number(rawBal) / Math.pow(10, tok.decimals);
@@ -295,76 +295,62 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
           </div>
         )}
         {walletAddress && (
-          <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(247,147,26,.05)', borderRadius: '14px', fontSize: '.72rem', color: 'var(--t3)' }}>
+          <div className="deploy-info">
             OP-20 balances fetched via <code>btc_call → balanceOf()</code> on OP_NET consensus.
-            {' '}<a href={getTxUrl(MINE_DEPLOY_TXID)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>MINE deploy tx</a>
-            {' · '}<a href={getTxUrl(VIBE_DEPLOY_TXID)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>VIBE deploy tx</a>
+            {' '}<a href={getTxUrl(MINE_DEPLOY_TXID)} target="_blank" rel="noopener noreferrer" className="c-c2">MINE deploy tx</a>
+            {' · '}<a href={getTxUrl(VIBE_DEPLOY_TXID)} target="_blank" rel="noopener noreferrer" className="c-c2">VIBE deploy tx</a>
           </div>
         )}
       </div>
 
       {/* Liquidity Positions */}
       {walletAddress && POOL_ADDRESS && (
-        <div className="P" style={{ marginTop: 14 }}>
-          <div className="Lb" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="P mt-12">
+          <div className="Lb flex-center gap-8">
             🌊 Liquidity Positions
-            {lpOnChain && <span className="tag tag-g" style={{ fontSize: '.55rem' }}>On-Chain</span>}
-            {!lpOnChain && hasLP && <span className="tag" style={{ fontSize: '.55rem', background: 'rgba(247,147,26,.12)', color: 'var(--o)' }}>Cached</span>}
+            {lpOnChain && <span className="tag tag-g fs-xs">On-Chain</span>}
+            {!lpOnChain && hasLP && <span className="tag fs-xs lp-cached-tag">Cached</span>}
           </div>
           {lpLoading ? (
-            <div style={{ padding: 14, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>
-              Loading LP position...
-            </div>
+            <div className="lp-empty">Loading LP position...</div>
           ) : hasLP ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {/* MINE/VIBE Pool card */}
-                <div style={{ flex: 1, minWidth: 220, padding: '12px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--bd)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ fontWeight: 700, color: 'var(--w)', fontSize: '.82rem' }}>MINE / VIBE</div>
-                    <span style={{ fontSize: '.62rem', padding: '2px 8px', background: 'rgba(247,147,26,.12)', color: 'var(--o)', borderRadius: 6, fontWeight: 700 }}>
-                      {poolShare.toFixed(2)}% pool share
-                    </span>
+            <div className="flex-col gap-10">
+              <div className="flex-center gap-10" style={{ flexWrap: 'wrap' }}>
+                <div className="lp-card">
+                  <div className="flex-between mb-8">
+                    <div className="fw-700 c-w fs-md">MINE / VIBE</div>
+                    <span className="lp-share-tag">{poolShare.toFixed(2)}% pool share</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem', color: 'var(--t2)', marginBottom: 4 }}>
+                  <div className="lp-stat-row">
                     <span>Your MINE</span>
-                    <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)' }}>{lpMine.toLocaleString()}</span>
+                    <span className="mono c-w">{lpMine.toLocaleString()}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.74rem', color: 'var(--t2)', marginBottom: 4 }}>
+                  <div className="lp-stat-row">
                     <span>Your VIBE</span>
-                    <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)' }}>{lpVibe.toLocaleString()}</span>
+                    <span className="mono c-w">{lpVibe.toLocaleString()}</span>
                   </div>
-                  <div style={{ borderTop: '1px solid var(--bd)', margin: '8px 0', paddingTop: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--t3)' }}>
+                  <div className="lp-divider">
+                    <div className="lp-reserve-row">
                       <span>Pool MINE reserve</span>
-                      <span style={{ fontFamily: 'var(--fm)' }}>{reserveA > 0 ? reserveA.toLocaleString() : '...'}</span>
+                      <span className="mono">{reserveA > 0 ? reserveA.toLocaleString() : '...'}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.66rem', color: 'var(--t3)', marginTop: 2 }}>
+                    <div className="lp-reserve-row mt-4">
                       <span>Pool VIBE reserve</span>
-                      <span style={{ fontFamily: 'var(--fm)' }}>{reserveB > 0 ? reserveB.toLocaleString() : '...'}</span>
+                      <span className="mono">{reserveB > 0 ? reserveB.toLocaleString() : '...'}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={refreshLP}
-                    disabled={lpLoading}
-                    style={{
-                      marginTop: 10, width: '100%', padding: '8px', borderRadius: 8,
-                      border: '1px solid rgba(14,165,233,.3)', background: 'rgba(14,165,233,.08)',
-                      color: 'var(--c2)', fontWeight: 700, fontSize: '.72rem', cursor: 'pointer',
-                      fontFamily: 'var(--ff)', opacity: lpLoading ? 0.5 : 1,
-                    }}
-                  >
+                  <button onClick={refreshLP} disabled={lpLoading} className="lp-refresh-btn" style={{ opacity: lpLoading ? 0.5 : 1 }}>
                     {lpLoading ? 'Refreshing...' : 'Refresh Position'}
                   </button>
                 </div>
               </div>
-              <div style={{ fontSize: '.6rem', color: 'var(--t4)', padding: '0 2px' }}>
+              <div className="fs-xs c-t4">
                 SimplePool v4 — LP position queried via <code>liquidityOf()</code> on-chain.
                 {!lpOnChain && ' (fallback: cached data)'}
               </div>
             </div>
           ) : (
-            <div style={{ padding: 14, textAlign: 'center', color: 'var(--t3)', fontSize: '.78rem' }}>
+            <div className="lp-empty">
               No liquidity positions. Add liquidity in the <strong>Swap</strong> tab.
             </div>
           )}
@@ -373,20 +359,20 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
 
       {/* Transaction History */}
       {history.length > 0 && (
-        <div className="P" style={{ marginTop: 14 }}>
+        <div className="P mt-12">
           <div className="Lb">📝 Transaction History</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="flex-col gap-4">
             {history.slice(0, 20).map(tx => (
-              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 8, fontSize: '.72rem' }}>
-                <span style={{ fontSize: '.9rem', width: 22, textAlign: 'center' }}>{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: 'var(--w)' }}>
+              <div key={tx.id} className="tx-row">
+                <span className="tx-icon">{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'}</span>
+                <div className="tx-info">
+                  <div className="fw-700 c-w">
                     {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : tx.type === 'mint' ? `Minted ${Number(tx.amountA||0).toLocaleString()} ${tx.tokenA}` : `Claimed ${Number(tx.amountA||0).toLocaleString()} ${tx.tokenA}`}
                   </div>
-                  <div style={{ fontSize: '.58rem', color: 'var(--t4)' }}>{formatTimeAgo(tx.ts)}</div>
+                  <div className="fs-xs c-t4">{formatTimeAgo(tx.ts)}</div>
                 </div>
                 {tx.txHash && (
-                  <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.56rem', color: 'var(--c2)', textDecoration: 'none', whiteSpace: 'nowrap' }}>TX ↗</a>
+                  <a href={getTxUrl(tx.txHash)} target="_blank" rel="noopener noreferrer" className="tx-link">TX ↗</a>
                 )}
               </div>
             ))}

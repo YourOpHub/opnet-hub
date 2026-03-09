@@ -8,7 +8,7 @@ import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
 import { getTxHistory, formatTimeAgo } from '../txHistory';
 
 /** SimplePool ABI — only liquidityOf needed for portfolio view */
@@ -165,7 +165,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
 
     // Fetch OP-20 token balances via opnet SDK (getContract + balanceOf)
     if (senderAddress) {
-      Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
+      Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
         setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
         (async () => {
           try {
@@ -250,7 +250,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
             </tr>
-            {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]: [string, any]) => {
+            {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]: [string, any]) => {
               const tb = tokenBalances[sym];
               const rawBal = tb?.balance ?? 0n;
               const humanBal = Number(rawBal) / Math.pow(10, tok.decimals);

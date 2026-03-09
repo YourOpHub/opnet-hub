@@ -1,6 +1,6 @@
 /**
  * Token Indexer API — frontend helpers for querying the backend token indexer.
- * Falls back to hardcoded TESTNET_CONTRACTS when API is unavailable.
+ * Falls back to hardcoded DEPLOYED_CONTRACTS when API is unavailable.
  */
 
 const API_BASE = import.meta.env.VITE_API_URL || '';

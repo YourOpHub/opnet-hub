@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, POOL_ADDRESS, getBlockUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getBlockUrl } from '../contracts';
 
 /* ═══════════════════════════════════════════════════════════════
    News Feed — Live on-chain activity + curated social posts
@@ -176,7 +176,7 @@ function LiveFeed() {
             } catch (e) { console.warn('[NewsFeed] Pool reserves fetch failed:', e); }
 
             // Token supply data
-            for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
+            for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
                 try {
                     const supply = await opnet.getTokenTotalSupply(tok.address);
                     if (supply > 0n) {

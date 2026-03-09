@@ -9,7 +9,7 @@ import {
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
-import { TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import { useOps } from '../contexts/OpsContext';
 import { fetchAllTokens, type IndexedToken, formatTokenBalance } from '../tokenApi';
@@ -209,7 +209,7 @@ const TokenGallery: React.FC = () => {
   }, [tokens]);
 
   // Featured tokens (our pre-deployed MINE and VIBE)
-  const featured = Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => ({
+  const featured = Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => ({
     address: tok.address,
     symbol: tok.symbol,
     name: tok.name,

@@ -10,7 +10,7 @@ import { NETWORK } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
-import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import { useOps } from '../contexts/OpsContext';
 
@@ -127,14 +127,14 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
       // Step 1: Ensure MINE allowance (check → approve → wait for block)
       const mineApproved = await ensureAllowance(
-        TESTNET_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
+        DEPLOYED_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
         provider, senderAddr!, walletAddress!, setStep, 'MINE',
       );
 
       // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
       if (mineApproved) await waitForNextBlock(provider, setStep);
       const vibeApproved = await ensureAllowance(
-        TESTNET_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
+        DEPLOYED_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
         provider, senderAddr!, walletAddress!, setStep, 'VIBE',
       );
       if (vibeApproved) await waitForNextBlock(provider, setStep);

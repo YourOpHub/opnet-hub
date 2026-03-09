@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  TESTNET_CONTRACTS,
+  DEPLOYED_CONTRACTS,
   DEPLOYER_ADDRESS,
   POOL_ADDRESS,
   STAKING_ADDRESS,
@@ -13,9 +13,9 @@ import {
   getContractOpscanUrl,
 } from '../contracts';
 
-describe('TESTNET_CONTRACTS', () => {
+describe('DEPLOYED_CONTRACTS', () => {
   it('MINE has correct properties', () => {
-    const mine = TESTNET_CONTRACTS.MINE;
+    const mine = DEPLOYED_CONTRACTS.MINE;
     expect(mine.address).toMatch(/^opt1/);
     expect(mine.symbol).toBe('MINE');
     expect(mine.decimals).toBe(8);
@@ -24,7 +24,7 @@ describe('TESTNET_CONTRACTS', () => {
   });
 
   it('VIBE has correct properties', () => {
-    const vibe = TESTNET_CONTRACTS.VIBE;
+    const vibe = DEPLOYED_CONTRACTS.VIBE;
     expect(vibe.address).toMatch(/^opt1/);
     expect(vibe.symbol).toBe('VIBE');
     expect(vibe.decimals).toBe(8);
@@ -42,8 +42,8 @@ describe('contract addresses', () => {
 
   it('all addresses are distinct', () => {
     const addrs = [
-      TESTNET_CONTRACTS.MINE.address,
-      TESTNET_CONTRACTS.VIBE.address,
+      DEPLOYED_CONTRACTS.MINE.address,
+      DEPLOYED_CONTRACTS.VIBE.address,
       POOL_ADDRESS,
       STAKING_ADDRESS,
       MARKET_ADDRESS,

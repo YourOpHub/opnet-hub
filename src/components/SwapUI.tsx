@@ -15,7 +15,7 @@ import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import {
-  TESTNET_CONTRACTS,
+  DEPLOYED_CONTRACTS,
   POOL_ADDRESS, POOL_PUBKEY,
   MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_PUBKEY,
   getTxUrl, getContractOpscanUrl,
@@ -105,8 +105,8 @@ function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): 
 interface Token { symbol: string; name: string; icon: string; decimals: number; address: string; pubkey: string; }
 
 const BASE_TOKENS: Token[] = [
-  { symbol: 'MINE', name: TESTNET_CONTRACTS.MINE.name, icon: TESTNET_CONTRACTS.MINE.icon, decimals: 8, address: TESTNET_CONTRACTS.MINE.address, pubkey: TESTNET_CONTRACTS.MINE.pubkey },
-  { symbol: 'VIBE', name: TESTNET_CONTRACTS.VIBE.name, icon: TESTNET_CONTRACTS.VIBE.icon, decimals: 8, address: TESTNET_CONTRACTS.VIBE.address, pubkey: TESTNET_CONTRACTS.VIBE.pubkey },
+  { symbol: 'MINE', name: DEPLOYED_CONTRACTS.MINE.name, icon: DEPLOYED_CONTRACTS.MINE.icon, decimals: 8, address: DEPLOYED_CONTRACTS.MINE.address, pubkey: DEPLOYED_CONTRACTS.MINE.pubkey },
+  { symbol: 'VIBE', name: DEPLOYED_CONTRACTS.VIBE.name, icon: DEPLOYED_CONTRACTS.VIBE.icon, decimals: 8, address: DEPLOYED_CONTRACTS.VIBE.address, pubkey: DEPLOYED_CONTRACTS.VIBE.pubkey },
 ];
 
 const TokenIcon: React.FC<{ token: Token; size?: number }> = ({ token, size = 24 }) =>
@@ -258,7 +258,7 @@ const SwapUI: React.FC = () => {
   useEffect(() => {
     const prevNet = opnetRpc.getNetwork();
     opnetRpc.setNetwork(CURRENT_ENV);
-    Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
+    Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
       opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
         if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
       }).catch(() => {});
@@ -275,7 +275,7 @@ const SwapUI: React.FC = () => {
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
     const jobs: Promise<void>[] = [];
-    for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
+    for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
       jobs.push(
         opnetRpc.getTokenBalance(tok.address, mldsa, tweaked)
           .then(b => setBalances(prev => ({ ...prev, [sym]: b })))
@@ -453,7 +453,7 @@ const SwapUI: React.FC = () => {
     setMinting(sym);
     setMintResult(null);
     try {
-      const tok = TESTNET_CONTRACTS[sym as keyof typeof TESTNET_CONTRACTS];
+      const tok = DEPLOYED_CONTRACTS[sym as keyof typeof DEPLOYED_CONTRACTS];
       if (!tok) throw new Error('Unknown token');
       const rawAmount = BitcoinUtils.expandToDecimals(MINT_AMOUNT, tok.decimals);
       const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
@@ -497,7 +497,7 @@ const SwapUI: React.FC = () => {
 
       // 1. Transfer MINE to pool
       setLpStep('Transferring MINE to pool...');
-      const mineContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr);
+      const mineContract = getContract<IOP20Contract>(DEPLOYED_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr);
       const mineRaw = BitcoinUtils.expandToDecimals(mineAmt, 8);
       const mineSim = await withRetry(() => mineContract.transfer(poolAddr, mineRaw));
       if (mineSim.revert) throw new Error(`MINE transfer failed: ${mineSim.revert}`);
@@ -511,7 +511,7 @@ const SwapUI: React.FC = () => {
 
       // 2. Transfer VIBE to pool — fresh txParams (UTXOs changed)
       setLpStep('Transferring VIBE to pool...');
-      const vibeContract = getContract<IOP20Contract>(TESTNET_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr);
+      const vibeContract = getContract<IOP20Contract>(DEPLOYED_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr);
       const vibeRaw = BitcoinUtils.expandToDecimals(vibeAmt, 8);
       const vibeSim = await withRetry(() => vibeContract.transfer(poolAddr, vibeRaw));
       if (vibeSim.revert) throw new Error(`VIBE transfer failed: ${vibeSim.revert}`);
@@ -1102,7 +1102,7 @@ const SwapUI: React.FC = () => {
             <span style={{ fontSize: '.52rem', color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Mint {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} Tokens</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            {Object.entries(TESTNET_CONTRACTS).map(([sym]) => (
+            {Object.entries(DEPLOYED_CONTRACTS).map(([sym]) => (
               <button key={sym} onClick={() => mintTokens(sym)} disabled={minting === sym}
                 style={{
                   flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: minting === sym ? 'wait' : 'pointer',

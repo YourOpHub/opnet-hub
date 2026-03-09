@@ -11,7 +11,7 @@ import { NETWORK } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { fmtNum, hashColor, genLogo, timeAgo } from '../launchpad/types';
-import { MARKET_ADDRESS, MARKET_PUBKEY, TESTNET_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
+import { MARKET_ADDRESS, MARKET_PUBKEY, DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
 import { SkeletonOrderbook, SkeletonCard, SkeletonStyle } from './Skeleton';
 import { useToast } from './Toast';
 import { lockOrder, unlockOrder, getActiveLocks, type OrderLock } from '../swapApi';
@@ -101,7 +101,7 @@ interface MarketToken {
 }
 
 /** Hardcoded known tokens — always available even when LP_API is offline */
-const KNOWN_TOKENS: MarketToken[] = Object.values(TESTNET_CONTRACTS).map(t => ({
+const KNOWN_TOKENS: MarketToken[] = Object.values(DEPLOYED_CONTRACTS).map(t => ({
   address: t.address,
   pubkey: t.pubkey,
   symbol: t.symbol,

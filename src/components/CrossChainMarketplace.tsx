@@ -15,7 +15,7 @@ import { ensureAllowance } from '../txUtils';
 import {
   CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX,
   TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_PUBKEY,
-  TESTNET_CONTRACTS,
+  DEPLOYED_CONTRACTS,
   getContractOpscanUrl,
 } from '../contracts';
 import { SUPPORTED_CHAINS, suggestedExpiryBlocks } from '../crosschain/chains';
@@ -205,7 +205,7 @@ interface TokenEscrowContract extends BaseContractProperties {
 }
 
 /** Token options for the bridge */
-const TOKEN_OPTIONS = Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => ({
+const TOKEN_OPTIONS = Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => ({
   symbol: sym,
   address: tok.address,
   pubkey: tok.pubkey,

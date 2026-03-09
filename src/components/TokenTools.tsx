@@ -3,7 +3,7 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, ABIDataTypes, BitcoinAbiTypes, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties, type TransactionParameters } from 'opnet';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, OPSCAN_API_BASE, OPSCAN_EXPLORER_URL, getContractOpscanUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, OPSCAN_API_BASE, OPSCAN_EXPLORER_URL, getContractOpscanUrl } from '../contracts';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import { buildTxParams, formatTxError, waitForNextBlock } from '../txUtils';
@@ -125,7 +125,7 @@ function ConverterTool() {
 
 /* ─── Known tokens database ─── */
 const KNOWN_TOKENS: Record<string, { name: string; symbol: string; decimals: number; type: string }> = {};
-for (const [sym, tok] of Object.entries(TESTNET_CONTRACTS)) {
+for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
   KNOWN_TOKENS[tok.address] = { name: `${sym} Token`, symbol: sym, decimals: tok.decimals, type: 'OP-20 (MintableToken)' };
 }
 
@@ -301,7 +301,7 @@ function TokenExplorer() {
         </div>
         {/* Quick links to known tokens */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-          {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => (
+          {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => (
             <button key={sym} onClick={() => lookupAddr(tok.address)}
               style={{ padding: '4px 12px', fontSize: '.62rem', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: addr === tok.address ? 'rgba(247,147,26,.1)' : 'rgba(255,255,255,.03)', color: addr === tok.address ? 'var(--o)' : 'var(--t3)', cursor: 'pointer', fontWeight: 600 }}>
               {tok.icon} {sym}
@@ -792,7 +792,7 @@ function UTXOSplitter() {
       }];
 
       // Use pool contract if available, otherwise use any known contract
-      const targetContract = POOL_ADDRESS || TESTNET_CONTRACTS.MINE.address;
+      const targetContract = POOL_ADDRESS || DEPLOYED_CONTRACTS.MINE.address;
       interface IReservesContract extends BaseContractProperties {
         getReserves(): Promise<CallResult>;
       }
@@ -1108,7 +1108,7 @@ function FaucetTool() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [msg, setMsg] = useState('');
 
-  const info = token === 'MINE' ? TESTNET_CONTRACTS.MINE : TESTNET_CONTRACTS.VIBE;
+  const info = token === 'MINE' ? DEPLOYED_CONTRACTS.MINE : DEPLOYED_CONTRACTS.VIBE;
   const mintAmount = BigInt(info.maxMintPerTx) * 100_000_000n; // to raw units (8 decimals)
 
   const mint = useCallback(async () => {

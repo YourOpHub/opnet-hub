@@ -10,7 +10,7 @@ import OpsPanel from './components/OpsPanel';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { OpsProvider } from './contexts/OpsContext';
-import { TESTNET_CONTRACTS, OPSCAN_EXPLORER_URL } from './contracts';
+import { DEPLOYED_CONTRACTS, OPSCAN_EXPLORER_URL } from './contracts';
 import { fetchHolderBalances, type HolderBalance } from './tokenApi';
 
 const BobChat = lazy(() => import('./components/BobChat'));
@@ -147,7 +147,7 @@ const App: React.FC = () => {
         }
 
         // Fallback: hardcoded tokens via SDK (always runs as backup)
-        Object.entries(TESTNET_CONTRACTS).forEach(([sym, tok]) => {
+        Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
             (async () => {
                 try {
                     const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, NETWORK, senderAddr);
@@ -289,7 +289,7 @@ const App: React.FC = () => {
                                 <div className="wallet-dropdown">
                                     <div className="wd-addr">{wAddr}</div>
                                     {/* Hardcoded tokens first */}
-                                    {Object.entries(TESTNET_CONTRACTS).map(([sym, tok]) => (
+                                    {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => (
                                         <div key={sym} className="wd-row">
                                             <span className="wd-token">{tok.icon} {sym}</span>
                                             <span className="wd-bal">{balances[sym] ?? '...'}</span>
@@ -297,7 +297,7 @@ const App: React.FC = () => {
                                     ))}
                                     {/* Extra tokens from indexer (not in hardcoded list) */}
                                     {indexerBalances
-                                        .filter(b => !Object.keys(TESTNET_CONTRACTS).includes(b.symbol))
+                                        .filter(b => !Object.keys(DEPLOYED_CONTRACTS).includes(b.symbol))
                                         .map(b => (
                                             <div key={b.token} className="wd-row">
                                                 <span className="wd-token">{b.symbol}</span>

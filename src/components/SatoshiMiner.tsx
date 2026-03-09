@@ -7,7 +7,7 @@ import {
 import { getProvider } from '../contractCache';
 import { NETWORK, RPC_URL } from '../config';
 import { buildTxParams, withRetry } from '../txUtils';
-import { TESTNET_CONTRACTS } from '../contracts';
+import { DEPLOYED_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
 import * as api from '../api';
 import { useOps } from '../contexts/OpsContext';
@@ -49,7 +49,7 @@ const MINE_GAME_POOL = 10_500_000;
 const MINE_DAILY_BASE = 350_000;
 const MINE_HALVING_DAYS = 7;
 const MINE_DECIMALS = 8;
-const MINE_CONTRACT = TESTNET_CONTRACTS.MINE.address;
+const MINE_CONTRACT = DEPLOYED_CONTRACTS.MINE.address;
 const GAME_NETWORK = NETWORK;
 const GAME_RPC_URL = RPC_URL;
 const MINTABLE_ABI: BitcoinInterfaceAbi = [

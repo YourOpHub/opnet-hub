@@ -9,7 +9,7 @@ import { NETWORK, CURRENT_ENV } from '../config';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
-  TESTNET_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
+  DEPLOYED_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
   getContractOpscanUrl,
 } from '../contracts';
 import * as opnetRpc from '../opnet';
@@ -39,7 +39,7 @@ interface StakingContract extends BaseContractProperties {
 }
 
 /** The staking token is MINE — same token used in swap pool and minting */
-const STAKING_TOKEN = TESTNET_CONTRACTS.MINE;
+const STAKING_TOKEN = DEPLOYED_CONTRACTS.MINE;
 
 const Staking: React.FC = () => {
   const { walletAddress, walletInstance, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
@@ -82,8 +82,8 @@ const Staking: React.FC = () => {
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
     Promise.allSettled([
-      opnetRpc.getTokenBalance(TESTNET_CONTRACTS.MINE.address, mldsa, tweaked).then(b => setMineBalance(b)),
-      opnetRpc.getTokenBalance(TESTNET_CONTRACTS.VIBE.address, mldsa, tweaked).then(b => setVibeBalance(b)),
+      opnetRpc.getTokenBalance(DEPLOYED_CONTRACTS.MINE.address, mldsa, tweaked).then(b => setMineBalance(b)),
+      opnetRpc.getTokenBalance(DEPLOYED_CONTRACTS.VIBE.address, mldsa, tweaked).then(b => setVibeBalance(b)),
       opnetRpc.getBalance(walletAddress).then(b => setBtcBalance(b)),
     ]).finally(() => setBalLoading(false));
     return () => { opnetRpc.setNetwork(prevNet); };

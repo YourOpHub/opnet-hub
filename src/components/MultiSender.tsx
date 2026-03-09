@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
 import { Address } from '@btc-vision/transaction';
-import { TESTNET_CONTRACTS } from '../contracts';
+import { DEPLOYED_CONTRACTS } from '../contracts';
 import { NETWORK } from '../config';
 import { getProvider } from '../contractCache';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
@@ -29,18 +29,18 @@ type WizardStep = 1 | 2 | 3 | 4;
 
 const KNOWN_TOKENS = [
   {
-    symbol: TESTNET_CONTRACTS.MINE.symbol,
-    name: TESTNET_CONTRACTS.MINE.name,
-    address: TESTNET_CONTRACTS.MINE.address,
-    decimals: TESTNET_CONTRACTS.MINE.decimals,
-    icon: TESTNET_CONTRACTS.MINE.icon,
+    symbol: DEPLOYED_CONTRACTS.MINE.symbol,
+    name: DEPLOYED_CONTRACTS.MINE.name,
+    address: DEPLOYED_CONTRACTS.MINE.address,
+    decimals: DEPLOYED_CONTRACTS.MINE.decimals,
+    icon: DEPLOYED_CONTRACTS.MINE.icon,
   },
   {
-    symbol: TESTNET_CONTRACTS.VIBE.symbol,
-    name: TESTNET_CONTRACTS.VIBE.name,
-    address: TESTNET_CONTRACTS.VIBE.address,
-    decimals: TESTNET_CONTRACTS.VIBE.decimals,
-    icon: TESTNET_CONTRACTS.VIBE.icon,
+    symbol: DEPLOYED_CONTRACTS.VIBE.symbol,
+    name: DEPLOYED_CONTRACTS.VIBE.name,
+    address: DEPLOYED_CONTRACTS.VIBE.address,
+    decimals: DEPLOYED_CONTRACTS.VIBE.decimals,
+    icon: DEPLOYED_CONTRACTS.VIBE.icon,
   },
 ];
 

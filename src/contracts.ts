@@ -2,6 +2,8 @@
  * Deployed OP-20 contract addresses on OP_NET testnet
  * Deployed: 2026-03-04 by OPNet Hub (post-testnet-reset)
  */
+import { OPSCAN_NETWORK, CURRENT_ENV } from './config';
+
 /** v6 deployment — MintableToken with publicMint (post-testnet-reset #2, block ~3821) */
 export const TESTNET_CONTRACTS = {
     MINE: {
@@ -31,6 +33,59 @@ export const TESTNET_CONTRACTS = {
         maxMintPerTx: 5_000_000, // 5M VIBE per tx
     },
 } as const;
+
+/** Shared shape for contract token entries (widens literal types from `as const`) */
+export interface ContractTokenInfo {
+    address: string;
+    pubkey: string;
+    symbol: string;
+    name: string;
+    decimals: number;
+    supply: number;
+    icon: string;
+    description: string;
+    deployTxid: string;
+    publicMint: boolean;
+    maxMintPerTx: number;
+}
+
+export interface ContractsMap {
+    MINE: ContractTokenInfo;
+    VIBE: ContractTokenInfo;
+}
+
+/** Mainnet contract addresses — placeholder until mainnet deployment */
+const MAINNET_CONTRACTS: ContractsMap = {
+    MINE: {
+        address: import.meta.env.VITE_MINE_ADDRESS || '',
+        pubkey: import.meta.env.VITE_MINE_PUBKEY || '',
+        symbol: 'MINE',
+        name: 'Mine Token',
+        decimals: 8,
+        supply: 21_000_000,
+        icon: '⛏️',
+        description: 'OPNet Hub game token — earned by Epoch Miners',
+        deployTxid: '',
+        publicMint: true,
+        maxMintPerTx: 1_000_000,
+    },
+    VIBE: {
+        address: import.meta.env.VITE_VIBE_ADDRESS || '',
+        pubkey: import.meta.env.VITE_VIBE_PUBKEY || '',
+        symbol: 'VIBE',
+        name: 'Vibe Token',
+        decimals: 8,
+        supply: 100_000_000,
+        icon: '⚡',
+        description: 'Vibecoding Challenge token — built for #opnetvibecode',
+        deployTxid: '',
+        publicMint: true,
+        maxMintPerTx: 5_000_000,
+    },
+};
+
+/** Network-aware contract config — selects testnet or mainnet based on CURRENT_ENV */
+export const DEPLOYED_CONTRACTS: ContractsMap = CURRENT_ENV === 'mainnet' ? MAINNET_CONTRACTS : TESTNET_CONTRACTS;
 
 export const DEPLOYER_ADDRESS = import.meta.env.VITE_DEPLOYER_ADDRESS || 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';
 
@@ -175,7 +230,6 @@ export const TOKEN_ESCROW_SELECTORS = {
 } as const;
 
 /** OPScan explorer — network-aware */
-import { OPSCAN_NETWORK, CURRENT_ENV } from './config';
 const OPSCAN = 'https://opscan.org';
 const OPSCAN_EXPLORER = CURRENT_ENV === 'mainnet' ? 'https://opscan.org' : `https://${CURRENT_ENV}.opscan.org`;
 
@@ -203,8 +257,8 @@ export const OPSCAN_EXPLORER_URL = OPSCAN_EXPLORER;
 
 /** Map opt1 addresses → hex pubkeys (for RPC calls that need pubkey format) */
 const PUBKEY_MAP: Record<string, string> = {
-    [TESTNET_CONTRACTS.MINE.address]: TESTNET_CONTRACTS.MINE.pubkey.replace('0x', ''),
-    [TESTNET_CONTRACTS.VIBE.address]: TESTNET_CONTRACTS.VIBE.pubkey.replace('0x', ''),
+    [DEPLOYED_CONTRACTS.MINE.address]: DEPLOYED_CONTRACTS.MINE.pubkey.replace('0x', ''),
+    [DEPLOYED_CONTRACTS.VIBE.address]: DEPLOYED_CONTRACTS.VIBE.pubkey.replace('0x', ''),
     [POOL_ADDRESS]: POOL_HEX,
     [STAKING_ADDRESS]: STAKING_PUBKEY.replace('0x', ''),
     [MARKET_ADDRESS]: MARKET_HEX,

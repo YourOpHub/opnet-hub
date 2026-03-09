@@ -606,7 +606,7 @@ const SwapUI: React.FC = () => {
       if (deployTx) await provider2.sendRawTransaction(deployTx, false);
 
       let txid = '';
-      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch {}
+      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { console.warn('[SwapUI] pool deploy txid parse error:', e); }
 
       const newPool: UserPool = {
         address: result.contractAddress || txid,

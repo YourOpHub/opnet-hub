@@ -167,7 +167,7 @@ const DeployModal: React.FC<{
       if (deployTx) await provider.sendRawTransaction(deployTx, false);
 
       let txid = '';
-      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch {}
+      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { console.warn('[Launchpad] token deploy txid parse error:', e); }
 
       const publicMintShare = supplyNum * (100 - initialMintPct) / 100;
       const token: LaunchToken = {

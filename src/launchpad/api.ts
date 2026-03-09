@@ -18,7 +18,8 @@ async function checkServer(): Promise<boolean> {
   try {
     const res = await fetch(`${LP_API}/health`, { signal: AbortSignal.timeout(3000) });
     serverAvailable = res.ok;
-  } catch {
+  } catch (e) {
+    console.warn('[launchpad/api] checkServer error:', e);
     serverAvailable = false;
   }
   lastCheck = Date.now();
@@ -66,7 +67,7 @@ export async function registerToken(token: LaunchToken): Promise<boolean> {
   try {
     await lpApi('/create', { method: 'POST', body: JSON.stringify(token) });
     return true;
-  } catch { return false; }
+  } catch (e) { console.warn('[launchpad/api] registerToken error:', e); return false; }
 }
 
 /** Post reply */
@@ -75,7 +76,7 @@ export async function serverReply(address: string, wallet: string, text: string)
   try {
     await lpApi('/reply', { method: 'POST', body: JSON.stringify({ address, wallet, text }) });
     return true;
-  } catch { return false; }
+  } catch (e) { console.warn('[launchpad/api] serverReply error:', e); return false; }
 }
 
 /** Like token */
@@ -84,5 +85,5 @@ export async function serverLike(address: string): Promise<boolean> {
   try {
     await lpApi('/like', { method: 'POST', body: JSON.stringify({ address }) });
     return true;
-  } catch { return false; }
+  } catch (e) { console.warn('[launchpad/api] serverLike error:', e); return false; }
 }

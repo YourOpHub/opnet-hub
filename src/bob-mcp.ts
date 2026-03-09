@@ -28,11 +28,11 @@ function parseSSE(text: string): unknown | null {
     if (line.startsWith('data: ')) {
       try {
         return JSON.parse(line.slice(6));
-      } catch { /* not valid JSON */ }
+      } catch (e) { console.warn('[bob-mcp] parseSSE line parse error:', e); }
     }
   }
   // Try parsing as direct JSON
-  try { return JSON.parse(text); } catch { return null; }
+  try { return JSON.parse(text); } catch (e) { console.warn('[bob-mcp] parseSSE fallback parse error:', e); return null; }
 }
 
 async function mcpCall(method: string, params?: Record<string, unknown>, id?: number): Promise<unknown> {
@@ -70,7 +70,8 @@ export async function initBob(): Promise<boolean> {
     }, 1) as { result?: { serverInfo?: { name: string } } };
     initialized = !!res?.result?.serverInfo;
     if (initialized) { vpsAvailable = (getUrl() === VPS_URL); return true; }
-  } catch {
+  } catch (e) {
+    console.warn('[bob-mcp] initBob primary connection error:', e);
     if (vpsAvailable === null) {
       vpsAvailable = false;
       sessionId = null;
@@ -82,7 +83,8 @@ export async function initBob(): Promise<boolean> {
         }, 1) as { result?: { serverInfo?: { name: string } } };
         initialized = !!res?.result?.serverInfo;
         return initialized;
-      } catch {
+      } catch (e2) {
+        console.warn('[bob-mcp] initBob fallback connection error:', e2);
         return false;
       }
     }

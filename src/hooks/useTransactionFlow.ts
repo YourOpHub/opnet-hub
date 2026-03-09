@@ -25,20 +25,20 @@ function loadState(flowId: string): TxFlowState {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + flowId);
     if (raw) return JSON.parse(raw) as TxFlowState;
-  } catch { /* corrupt data — start fresh */ }
+  } catch (e) { console.warn('[useTransactionFlow] loadState parse error:', e); }
   return { step: 'idle' };
 }
 
 function saveState(flowId: string, state: TxFlowState): void {
   try {
     localStorage.setItem(STORAGE_PREFIX + flowId, JSON.stringify(state));
-  } catch { /* storage full or blocked — non-critical */ }
+  } catch (e) { console.warn('[useTransactionFlow] saveState error:', e); }
 }
 
 function clearState(flowId: string): void {
   try {
     localStorage.removeItem(STORAGE_PREFIX + flowId);
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[useTransactionFlow] clearState error:', e); }
 }
 
 export function useTransactionFlow(flowId: string) {
@@ -70,8 +70,8 @@ export function useTransactionFlow(flowId: string) {
           // Block advanced — ready for execution
           setState(prev => prev.step === 'waiting' ? { ...prev, step: 'executing' } : prev);
         }
-      } catch {
-        // Network hiccup — keep polling
+      } catch (e) {
+        console.warn('[useTransactionFlow] block polling error:', e);
       }
     }, POLL_INTERVAL);
 
@@ -92,7 +92,7 @@ export function useTransactionFlow(flowId: string) {
     try {
       const provider = getProvider();
       blockHeight = Number(await provider.getBlockNumber());
-    } catch { /* fallback to 0 — polling will still work */ }
+    } catch (e) { console.warn('[useTransactionFlow] startWaiting getBlockNumber error:', e); }
     setState({ step: 'waiting', waitingSince: blockHeight });
   }, []);
 

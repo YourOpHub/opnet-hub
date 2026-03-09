@@ -5,7 +5,7 @@ import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, OPSCAN_API_BASE, OPSCAN_EXPLORER_URL, getContractOpscanUrl } from '../contracts';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import { buildTxParams, formatTxError, waitForNextBlock } from '../txUtils';
 import { useOps } from '../contexts/OpsContext';
 
@@ -161,7 +161,7 @@ function TokenExplorer() {
   useEffect(() => {
     (async () => {
       try {
-        const resp = await fetch('${OPSCAN_API_BASE}/tokens');
+        const resp = await fetch(`${OPSCAN_API_BASE}/tokens`);
         if (!resp.ok) throw new Error('OPScan API error');
         const data = await resp.json();
         const results = data?.results || data || [];
@@ -1136,7 +1136,7 @@ function FaucetTool() {
   return (
     <div style={cardS}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: '.78rem', color: 'var(--t2)' }}>Mint testnet tokens (publicMint):</span>
+        <span style={{ fontSize: '.78rem', color: 'var(--t2)' }}>Mint {CURRENT_ENV} tokens (publicMint):</span>
         {(['MINE', 'VIBE'] as const).map(t => (
           <button key={t} className={`fbn ${token === t ? 'on' : ''}`} style={{ padding: '5px 14px', fontSize: '.72rem' }} onClick={() => setToken(t)}>
             {t === 'MINE' ? '⛏️' : '⚡'} {t}

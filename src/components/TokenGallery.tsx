@@ -248,7 +248,7 @@ const TokenGallery: React.FC = () => {
       setHistRefresh(k => k + 1);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs. Get testnet BTC: ${FAUCET}`;
+      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`;
       setFeatMintResult({ ok: false, msg });
     } finally { setFeatMinting(false); }
   }, [walletAddress, walletInstance, featMintAmt, openConnectModal, provider, senderAddr]);
@@ -304,7 +304,7 @@ const TokenGallery: React.FC = () => {
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
       if (msg.toLowerCase().includes('no utxo')) {
-        msg = `No BTC UTXOs. Get testnet BTC: ${FAUCET}`;
+        msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`;
       }
       setMintResult({ ok: false, msg });
     } finally {
@@ -324,7 +324,7 @@ const TokenGallery: React.FC = () => {
       <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>🪙 Tokens</div>
         <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 480, margin: '0 auto' }}>
-          OPNet testnet tokens. Mint directly from your wallet — max 1,000 per transaction.
+          OPNet {CURRENT_ENV} tokens. Mint directly from your wallet — max 1,000 per transaction.
         </div>
       </div>
 
@@ -750,7 +750,7 @@ const TokenGallery: React.FC = () => {
           <strong>Mintable tokens</strong> with public mint enabled allow anyone to mint directly from this page using their OP_WALLET.
         </p>
         <div style={{ marginTop: 8, padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: '14px', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
-          Need testnet BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a>
+          {CURRENT_ENV !== 'mainnet' && <>Need {CURRENT_ENV} BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a></>}
         </div>
       </div>
     </div>

@@ -271,7 +271,7 @@ const Staking: React.FC = () => {
           <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.12)', textDecoration: 'none', fontSize: '.58rem', color: '#10b981', fontWeight: 600 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            Live on Testnet ↗
+            Live on {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} ↗
           </a>
         )}
       </div>

@@ -97,7 +97,7 @@ class FractalSwapRelayer {
             const opnet = require('opnet');
 
             const netName = process.env.OPNET_NETWORK || 'testnet';
-            const baseNet = netName === 'mainnet' ? btcMod.networks.bitcoin : btcMod.networks.testnet;
+            const baseNet = netName === 'mainnet' ? btcMod.networks.bitcoin : btcMod.networks.opnetTestnet;
             this.network = { ...baseNet, bech32: baseNet.bech32Opnet };
             const mnemonicObj = new txMod.Mnemonic(mnemonic, '', this.network);
             this.wallet = mnemonicObj.deriveOPWallet(undefined, 0);

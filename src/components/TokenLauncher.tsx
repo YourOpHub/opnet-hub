@@ -157,7 +157,7 @@ const TokenLauncher: React.FC = () => {
         address: walletAddress,
       });
       if (!utxos || utxos.length === 0) {
-        throw new Error(`No UTXOs found for your address. Get testnet BTC: ${FAUCET}`);
+        throw new Error(`No UTXOs found for your address.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`);
       }
 
       // 4. Deploy via Web3Provider
@@ -230,7 +230,7 @@ const TokenLauncher: React.FC = () => {
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Deployment failed';
       if (msg.toLowerCase().includes('no utxo')) {
-        msg = 'Your wallet has no BTC UTXOs. Get testnet BTC from the faucet first: https://faucet.opnet.org';
+        msg = `Your wallet has no BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC from the faucet first: https://faucet.opnet.org` : ''}`;
       }
       console.error('[Deploy]', e);
       setDeployError(msg);
@@ -476,7 +476,7 @@ const TokenLauncher: React.FC = () => {
           <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--w)', marginTop: 6 }}>{tokenName || 'Token Name'}</div>
           <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.82rem' }}>${tokenSymbol || 'TKN'}</div>
           <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 4 }}>Supply: {Number(tokenSupply || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · Testnet</div>
+          <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)}</div>
 
           {/* Deploy cost — compact */}
           <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: '14px', fontSize: '.66rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -496,7 +496,7 @@ const TokenLauncher: React.FC = () => {
           </div>
 
           <div style={{ marginTop: 10, textAlign: 'left', padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: '14px', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
-            Need testnet BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a>
+            {CURRENT_ENV !== 'mainnet' && <>Need {CURRENT_ENV} BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a></>}
           </div>
         </div>
       </div>

@@ -919,9 +919,9 @@ const CrossChainMarketplace: React.FC = () => {
       if (end === -1) end = 32;
       const targetFractalAddr = new TextDecoder().decode(addrBytes.slice(0, end));
 
-      const _validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
-      if (!targetFractalAddr.startsWith('bc1') && !targetFractalAddr.startsWith('tb1')) {
-        throw new Error(`Invalid Fractal address for ${CURRENT_ENV}: ${targetFractalAddr}`);
+      const validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
+      if (!targetFractalAddr.startsWith(validPfx)) {
+        throw new Error(`Invalid Fractal address for ${CURRENT_ENV} (expected ${validPfx}): ${targetFractalAddr}`);
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
@@ -1013,9 +1013,9 @@ const CrossChainMarketplace: React.FC = () => {
       if (end === -1) end = 32;
       const targetFractalAddr = new TextDecoder().decode(addrBytesTarget.slice(0, end));
 
-      const _validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
-      if (!targetFractalAddr.startsWith('bc1') && !targetFractalAddr.startsWith('tb1')) {
-        throw new Error(`Invalid Fractal address for ${CURRENT_ENV}: ${targetFractalAddr}`);
+      const validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
+      if (!targetFractalAddr.startsWith(validPfx)) {
+        throw new Error(`Invalid Fractal address for ${CURRENT_ENV} (expected ${validPfx}): ${targetFractalAddr}`);
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
@@ -1034,7 +1034,7 @@ const CrossChainMarketplace: React.FC = () => {
       if ((sim2 as CallResult).revert) throw new Error(`Revert: ${(sim2 as CallResult).revert}`);
 
       const tp2 = await buildTxParams(provider, walletAddress);
-      (tp2 as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: order.btcAmount }];
+      (tp2 as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
       await (sim2 as CallResult).sendTransaction(tp2);
 
       updateOpStep(opId, 'Auto-swap complete! Settling...');
@@ -1082,9 +1082,9 @@ const CrossChainMarketplace: React.FC = () => {
       if (end === -1) end = 32;
       const targetFractalAddr = new TextDecoder().decode(addrBytes.slice(0, end));
 
-      const _validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
-      if (!targetFractalAddr.startsWith('bc1') && !targetFractalAddr.startsWith('tb1')) {
-        throw new Error(`Invalid Fractal address for ${CURRENT_ENV}: ${targetFractalAddr}`);
+      const validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
+      if (!targetFractalAddr.startsWith(validPfx)) {
+        throw new Error(`Invalid Fractal address for ${CURRENT_ENV} (expected ${validPfx}): ${targetFractalAddr}`);
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
@@ -1103,7 +1103,7 @@ const CrossChainMarketplace: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
-      (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: order.btcAmount }];
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
       await (sim as CallResult).sendTransaction(tp);
 
       updateOpStep(opId, 'Auto-claim complete! Settling...');
@@ -2120,7 +2120,7 @@ const CrossChainMarketplace: React.FC = () => {
           <div style={{ fontSize: '2rem', marginBottom: 8 }}>{'\u{1F6A7}'}</div>
           <h3 style={{ margin: '0 0 8px', fontWeight: 800 }}>Contract Pending Deployment</h3>
           <p style={{ color: 'var(--t2)', fontSize: '.82rem', maxWidth: 500, margin: '0 auto' }}>
-            The FractalSwap contract is ready. Once deployed to OPNet testnet,
+            The FractalSwap contract is ready. Once deployed to OPNet {CURRENT_ENV},
             you can swap native BTC with Fractal Bitcoin via trustless atomic swaps.
           </p>
           <div style={{ marginTop: 12, fontSize: '.72rem', color: 'var(--t3)' }}>

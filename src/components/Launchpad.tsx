@@ -8,7 +8,7 @@ import {
   type TransactionParameters,
 } from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import { OPSCAN_API_BASE, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { buildTxParams, withRetry, formatTxError } from '../txUtils';
 import type { LaunchToken, TradeRecord } from '../launchpad/types';
@@ -152,7 +152,7 @@ const DeployModal: React.FC<{
 
       setStep('Fetching UTXOs...');
       const utxos = await provider.utxoManager.getUTXOs({ address: walletAddress });
-      if (!utxos?.length) throw new Error('No UTXOs. Get testnet BTC from faucet.');
+      if (!utxos?.length) throw new Error(`No UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC from faucet.' : ''}`);
 
       setStep('Sign deployment in your wallet...');
       const result = await (web3 as { deployContract: (...args: unknown[]) => Promise<{ contractAddress?: string; transaction: string[] }> }).deployContract({

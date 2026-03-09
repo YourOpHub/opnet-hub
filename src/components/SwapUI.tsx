@@ -470,7 +470,7 @@ const SwapUI: React.FC = () => {
       setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC: https://faucet.opnet.org';
+      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC: https://faucet.opnet.org' : ''}`;
       setMintResult({ sym, ok: false, msg });
     } finally {
       setMinting(null);
@@ -542,7 +542,7 @@ const SwapUI: React.FC = () => {
     } catch (e) {
       failOp(lpOpId, formatTxError(e));
       let msg = e instanceof Error ? e.message : 'Add liquidity failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = 'No BTC UTXOs. Get testnet BTC: https://faucet.opnet.org';
+      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC: https://faucet.opnet.org' : ''}`;
       setLpStep('');
       setLpResult({ ok: false, msg });
     } finally {
@@ -589,7 +589,8 @@ const SwapUI: React.FC = () => {
       setPoolDeployStep('Fetching UTXOs...');
       const provider2 = getProvider();
       const utxos = await provider2.utxoManager.getUTXOs({ address: walletAddress });
-      if (!utxos?.length) throw new Error('No UTXOs. Get testnet BTC from faucet.');
+      if (!utxos?.length) throw new Error(`No UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC from faucet.' : ''}`);
+
 
       setPoolDeployStep('Sign in your wallet...');
       const deployFn = (web3 as { deployContract: (...args: unknown[]) => Promise<{ transaction: string[]; contractAddress?: string }> }).deployContract;
@@ -1098,7 +1099,7 @@ const SwapUI: React.FC = () => {
         {/* Mint tokens */}
         <div style={{ marginTop: 14, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,.015)', border: '1px solid rgba(255,255,255,.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: '.52rem', color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Mint Testnet Tokens</span>
+            <span style={{ fontSize: '.52rem', color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Mint {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} Tokens</span>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {Object.entries(TESTNET_CONTRACTS).map(([sym]) => (

@@ -5,7 +5,7 @@ import {
 } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { TESTNET_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID } from '../contracts';
@@ -160,7 +160,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
           <div className="pm-l">Your BTC (chain)</div>
         </div>
         <div className="P pm">
-          <div className="pm-v">{isTestnet ? 'Testnet' : walletAddress ? '1' : '—'}</div>
+          <div className="pm-v">{isTestnet ? CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1) : walletAddress ? '1' : '—'}</div>
           <div className="pm-l">{isTestnet ? 'Network' : 'Assets'}</div>
         </div>
       </div>

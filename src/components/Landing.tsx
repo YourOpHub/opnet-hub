@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { POOL_ADDRESS, OPSCAN_EXPLORER_URL } from '../contracts';
+import { CURRENT_ENV } from '../config';
 
 /** Scroll-triggered fade-in hook with blur */
 function useReveal(delay = 0) {
@@ -166,7 +167,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
         <div className="tk-s" />
         <div className="tk" style={{ cursor: 'pointer' }} onClick={() => nav('analytics')}>
           <div className="tk-l">Network</div>
-          <div className="tk-v" style={{ color: '#10b981' }}>Testnet</div>
+          <div className="tk-v" style={{ color: '#10b981' }}>{CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)}</div>
         </div>
       </div>
 

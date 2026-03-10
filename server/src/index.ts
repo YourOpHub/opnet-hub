@@ -7,13 +7,11 @@ import Database from "better-sqlite3";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// CJS modules imported from sibling files (not migrated)
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { TokenIndexer } = require("../token-indexer") as {
+// CJS modules imported from sibling files (not yet migrated to ESM)
+const { TokenIndexer } = (await import("../token-indexer")) as unknown as {
   TokenIndexer: new (db: Database.Database) => TokenIndexerInstance;
 };
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { FractalSwapRelayer } = require("../fractalswap-relayer") as {
+const { FractalSwapRelayer } = (await import("../fractalswap-relayer")) as unknown as {
   FractalSwapRelayer: new () => FractalSwapRelayerInstance;
 };
 

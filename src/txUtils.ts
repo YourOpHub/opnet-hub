@@ -7,7 +7,7 @@
  * 3. Wait for next block (poll getBlockNumber) — NOT polling allowance
  * 4. Proceed with operation
  */
-import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult, type TransactionParameters } from 'opnet';
+import { type JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult, type TransactionParameters } from 'opnet';
 import { logger } from './logger';
 import { Address } from '@btc-vision/transaction';
 import { NETWORK, CURRENT_ENV } from './config';

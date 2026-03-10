@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  JSONRpcProvider, getContract, BitcoinUtils,
+  type JSONRpcProvider, getContract, BitcoinUtils,
   type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { MINTABLE_ABI } from '../abis';

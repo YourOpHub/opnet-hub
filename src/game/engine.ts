@@ -1,4 +1,4 @@
-import { Particle, GameState } from '../types';
+import { type Particle, type GameState } from '../types';
 import { randomBetween, distance } from '../utils/format';
 
 const PARTICLE_COLORS = [

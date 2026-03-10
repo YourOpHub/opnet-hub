@@ -46,7 +46,7 @@ const Marketplace: React.FC = () => {
             className="br-10 c-t3 fs-74 pointer ff-ui p-6-14 bd-bd bg-bg3">
             &larr; Back
           </button>
-          <img src={genLogo(selInfo?.symbol || '??')} alt="" className="w-36 h-36 br-50" />
+          <img src={genLogo(selInfo?.symbol || '??')} alt={`${selInfo?.symbol || 'Token'} logo`} className="w-36 h-36 br-50" />
           <div>
             <div className="fw-800 fs-88 c-w fs-110">{selInfo?.symbol || selectedToken.slice(-8)}</div>
             <div className="fs-62 c-t4 text-mono">{selectedToken}</div>
@@ -54,7 +54,7 @@ const Marketplace: React.FC = () => {
         </div>
 
         {msg && (
-          <div className={`br-10 fs-74 mb-12 p-10-14 ${msg.startsWith('Error') || msg.startsWith('Revert') ? 'bg-err c-red' : 'bg-ok c-g'}`}>
+          <div className={`br-10 fs-74 mb-12 p-10-14 ${msg.startsWith('Error') || msg.startsWith('Revert') ? 'bg-err c-red' : 'bg-ok c-g'}`} role="alert" aria-live="polite">
             {msg}
             {lastTxId && <a href={getTxUrl(lastTxId)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, color: 'var(--ac)', textDecoration: 'underline' }}>View on OPScan</a>}
           </div>
@@ -104,6 +104,7 @@ const Marketplace: React.FC = () => {
                           <div className="flex-center gap-4">
                             <input value={fillAmount} onChange={e => setFillAmount(e.target.value.replace(/[^0-9.]/g, ''))}
                               placeholder={`${fmtNum(remaining)}`}
+                              aria-label="Partial fill amount"
                               className="fs-64" style={{ ...iStyle, width: 80, padding: '3px 6px' }} />
                             <button className="ob-btn green" onClick={() => handleFill(o.id, parseFloat(fillAmount) || remaining)} disabled={filling}>
                               {filling ? '..' : 'OK'}
@@ -192,7 +193,7 @@ const Marketplace: React.FC = () => {
         )}
 
         {/* Create order form */}
-        <div className="P p-18 mb-16">
+        <div className="P p-18 mb-16" role="form" aria-label="Place a marketplace order">
           <div className="Lb mb-10">Place Order</div>
           <div className="flex-center gap-6 mb-12">
             {(['sell', 'buy'] as const).map(t => (
@@ -208,12 +209,14 @@ const Marketplace: React.FC = () => {
                 {orderType === 'sell' ? 'Amount to sell' : 'Amount you want'}
               </label>
               <input style={iStyle} type="text" inputMode="numeric" value={orderAmount}
-                onChange={e => setOrderAmount(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="100000" />
+                onChange={e => setOrderAmount(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="100000"
+                aria-label={orderType === 'sell' ? 'Amount to sell' : 'Amount you want'} />
             </div>
             <div className="flex-1">
               <label className="lbl-xs d-block">Price (sats/token)</label>
               <input style={iStyle} type="text" inputMode="decimal" value={orderPrice}
-                onChange={e => setOrderPrice(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="0.5" />
+                onChange={e => setOrderPrice(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="0.5"
+                aria-label="Price in sats per token" />
             </div>
           </div>
           {orderAmount && orderPrice && (
@@ -294,6 +297,7 @@ const Marketplace: React.FC = () => {
       <div className="flex-center gap-8 mb-14">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, symbol or paste contract address..."
           onKeyDown={e => e.key === 'Enter' && handleSearchSelect()}
+          aria-label="Search tokens by name, symbol, or contract address"
           className="flex-1" style={{ ...iStyle }} />
         {search.startsWith('opt1sq') && search.length > 20 && (
           <button onClick={handleSearchSelect} className="lbtn fs-74 flex-shrink-0" style={{ padding: '10px 18px' }}>
@@ -311,16 +315,18 @@ const Marketplace: React.FC = () => {
           <div className="c-t4 fs-66">Paste a contract address above to open its orderbook</div>
         </div>
       ) : (
-        <div className="d-grid gap-10 grid-auto-260">
+        <div className="d-grid gap-10 grid-auto-260" role="list" aria-label="Available tokens">
           {filteredTokens.map((t: MarketToken) => {
             const [c1] = hashColor(t.symbol);
             return (
               <div key={t.address} onClick={() => setSelectedToken(t.address)}
-                className="p-16 pointer" style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, transition: 'border-color .15s' }}
+                className="p-16 pointer" role="listitem" tabIndex={0} aria-label={`${t.symbol} - ${t.name}`}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedToken(t.address); } }}
+                style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, transition: 'border-color .15s' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = c1)}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--bd)')}>
                 <div className="flex-center gap-10 mb-8">
-                  <img src={genLogo(t.symbol)} alt="" className="w-36 h-36 br-50" />
+                  <img src={genLogo(t.symbol)} alt={`${t.symbol} logo`} className="w-36 h-36 br-50" />
                   <div>
                     <div className="fw-700 c-w fs-90">{t.symbol}</div>
                     <div className="fs-62 c-t4">{t.name}</div>

@@ -17,7 +17,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, type BaseContractProperties, type CallResult } from 'opnet';
-import { Address } from '@btc-vision/transaction';
+import { type Address } from '@btc-vision/transaction';
 import { FRACTALSWAP_ABI, TOKEN_ESCROW_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';

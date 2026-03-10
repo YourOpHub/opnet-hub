@@ -230,10 +230,10 @@ const App: React.FC = () => {
             <div className="site-bg" />
             <div className="particles"><span /><span /><span /><span /><span /><span /><span /><span /></div>
 
-            <header className="H">
+            <header className="H" role="banner">
                 <div className="Hi">
-                    <div className="Lo" onClick={() => { navigate('home'); setOpenGroup(null); }}>
-                        <img src={logoUrl} alt="OPNet Hub" style={{ height: 32, objectFit: 'contain' }} />
+                    <div className="Lo" onClick={() => { navigate('home'); setOpenGroup(null); }} role="button" tabIndex={0} aria-label="Go to home page" onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('home'); setOpenGroup(null); } }}>
+                        <img src={logoUrl} alt="OPNet Hub logo" style={{ height: 32, objectFit: 'contain' }} />
                     </div>
                     {CURRENT_ENV !== 'mainnet' && (
                         <span style={{
@@ -245,7 +245,7 @@ const App: React.FC = () => {
                     )}
 
                     {/* Grouped nav — desktop */}
-                    <nav className="N nav-desktop">
+                    <nav className="N nav-desktop" role="navigation" aria-label="Main navigation">
                         <div className="Ni">
                             <button
                                 className={`Nt ${tab === 'home' ? 'on' : ''}`}
@@ -261,18 +261,22 @@ const App: React.FC = () => {
                                     <button
                                         className={`Nt ${activeGroup === g.id ? 'on' : ''}`}
                                         onClick={() => setOpenGroup(openGroup === g.id ? null : g.id)}
+                                        aria-expanded={openGroup === g.id}
+                                        aria-haspopup="true"
+                                        aria-label={`${g.label} menu`}
                                     >
-                                        <span className="nav-group-icon">{g.icon}</span>
+                                        <span className="nav-group-icon" aria-hidden="true">{g.icon}</span>
                                         {g.label}
-                                        <span className={`nav-chevron ${openGroup === g.id ? 'open' : ''}`} />
+                                        <span className={`nav-chevron ${openGroup === g.id ? 'open' : ''}`} aria-hidden="true" />
                                     </button>
                                     {openGroup === g.id && (
-                                        <div className="nav-dropdown">
+                                        <div className="nav-dropdown" role="menu" aria-label={`${g.label} submenu`}>
                                             {g.items.map(item => (
                                                 <button
                                                     key={item.id}
                                                     className={`nav-drop-item ${tab === item.id ? 'active' : ''}`}
                                                     onClick={() => { navigate(item.id); setOpenGroup(null); }}
+                                                    role="menuitem"
                                                 >
                                                     {item.label}
                                                 </button>
@@ -292,11 +296,14 @@ const App: React.FC = () => {
                             <button className={`Wb ${wOn ? 'on' : ''}`}
                                 onClick={wOn ? () => setWDrop(v => !v) : handleWallet}
                                 disabled={connecting}
+                                aria-label={connecting ? 'Connecting wallet' : wOn ? 'Wallet menu' : 'Connect wallet'}
+                                aria-expanded={wDrop && wOn}
+                                aria-haspopup={wOn ? 'true' : undefined}
                             >
                                 {connecting ? 'Connecting...' : wOn ? `${wAddr.slice(0, 6)}...${wAddr.slice(-4)}` : 'Connect Wallet'}
                             </button>
                             {wDrop && wOn && (
-                                <div className="wallet-dropdown">
+                                <div className="wallet-dropdown" role="menu" aria-label="Wallet details">
                                     <div className="wd-addr">{wAddr}</div>
                                     {/* Hardcoded tokens first */}
                                     {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => (
@@ -331,12 +338,14 @@ const App: React.FC = () => {
             </header>
 
             {/* Mobile bottom nav */}
-            <nav className="mobile-nav">
-                <button className={`mn-item ${tab === 'home' ? 'on' : ''}`} onClick={() => navigate('home')}>
-                    <span className="mn-icon">{'\u2302'}</span><span className="mn-label">Home</span>
+            <nav className="mobile-nav" role="navigation" aria-label="Mobile navigation">
+                <button className={`mn-item ${tab === 'home' ? 'on' : ''}`} onClick={() => navigate('home')} aria-label="Home" aria-current={tab === 'home' ? 'page' : undefined}>
+                    <span className="mn-icon" aria-hidden="true">{'\u2302'}</span><span className="mn-label">Home</span>
                 </button>
                 {NAV_GROUPS.map(g => (
                     <button key={g.id} className={`mn-item ${activeGroup === g.id ? 'on' : ''}`}
+                        aria-label={g.label}
+                        aria-current={activeGroup === g.id ? 'true' : undefined}
                         onClick={() => {
                             if (activeGroup === g.id && openGroup === g.id) {
                                 setOpenGroup(null);
@@ -347,14 +356,14 @@ const App: React.FC = () => {
                             }
                         }}
                     >
-                        <span className="mn-icon">{g.icon}</span><span className="mn-label">{g.label}</span>
+                        <span className="mn-icon" aria-hidden="true">{g.icon}</span><span className="mn-label">{g.label}</span>
                     </button>
                 ))}
             </nav>
 
             {/* Sub-nav for active group on mobile */}
             {activeGroup && (
-                <div className="mobile-subnav">
+                <div className="mobile-subnav" role="navigation" aria-label="Section navigation">
                     {NAV_GROUPS.find(g => g.id === activeGroup)?.items.map(item => (
                         <button key={item.id}
                             className={`msn-item ${tab === item.id ? 'on' : ''}`}
@@ -366,11 +375,11 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <main className="M" key={tab}>
+            <main className="M" key={tab} role="main" aria-label="Page content">
                 {P()}
             </main>
 
-            <footer className="site-footer">
+            <footer className="site-footer" role="contentinfo">
                 <div className="footer-links">
                     {[
                         ['Docs', 'https://docs.opnet.org'],
@@ -388,8 +397,8 @@ const App: React.FC = () => {
                 </div>
             </footer>
 
-            <button className="q-fab" onClick={() => setQOpen(!qOpen)}>
-                <span>{'\u2737'}</span>
+            <button className="q-fab" onClick={() => setQOpen(!qOpen)} aria-label="Toggle quests panel" aria-expanded={qOpen}>
+                <span aria-hidden="true">{'\u2737'}</span>
             </button>
 
             <QuestPanel open={qOpen} onClose={() => setQOpen(false)} onNav={navigate} />

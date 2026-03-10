@@ -96,6 +96,15 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       'no-console': 'off',
+      'no-constant-binary-expression': 'off',
+    },
+  },
+
+  // ── Logger is the one file that legitimately wraps console ──
+  {
+    files: ['src/logger.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
 ];

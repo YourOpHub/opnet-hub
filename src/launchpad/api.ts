@@ -28,20 +28,16 @@ async function checkServer(): Promise<boolean> {
 }
 
 async function lpApi<T>(path: string, opts?: RequestInit): Promise<T | null> {
-  try {
-    const res = await fetch(`${LP_API}${path}`, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', ...opts?.headers },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as {error?: string}).error || `HTTP ${res.status}`);
-    }
-    return await res.json() as T;
-  } catch (e) {
-    throw e;
+  const res = await fetch(`${LP_API}${path}`, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...opts?.headers },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as {error?: string}).error || `HTTP ${res.status}`);
   }
+  return await res.json() as T;
 }
 
 /* ─── Public API ─── */

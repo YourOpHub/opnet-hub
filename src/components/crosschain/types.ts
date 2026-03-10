@@ -1,6 +1,6 @@
 /** Shared types for CrossChain sub-components */
 
-import { OrderStatus, SwapDirection } from '../../crosschain/types';
+import { OrderStatus, type SwapDirection } from '../../crosschain/types';
 export type { OrderStatus, SwapDirection };
 
 /** Token escrow order type */

@@ -10,6 +10,9 @@ import { satsToBtc } from './crosschain/types';
 
 const fractalChain = SUPPORTED_CHAINS[0]!; // Fractal Bitcoin
 
+// Token Bridge section hidden — functionality merged into Marketplace
+const SHOW_TOKEN_BRIDGE = false as boolean;
+
 const btnSmall: React.CSSProperties = {
   background: 'rgba(255,255,255,.08)', color: 'var(--t2)', border: '1px solid var(--bd)',
   borderRadius: 8, padding: '4px 10px', fontSize: '.68rem', fontWeight: 600, cursor: 'pointer',
@@ -225,7 +228,7 @@ const CrossChainMarketplace: React.FC = () => {
       </div>
 
       {/* Token Bridge removed — functionality merged into Marketplace */}
-      {false && (
+      {SHOW_TOKEN_BRIDGE && (
         <>
           {/* Contract not deployed notice */}
           {!escrowReady && (
@@ -498,7 +501,7 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Message */}
           {msg && (
-            <div className="cc-msg mb-12">
+            <div className="cc-msg mb-12" role="alert" aria-live="polite">
               {msg}
             </div>
           )}

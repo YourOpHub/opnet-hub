@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { logger } from '../../logger';
 
 export const monoSm: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace", fontSize: '.68rem', wordBreak: 'break-all' };

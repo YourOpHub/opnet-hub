@@ -1,4 +1,4 @@
-import { LeaderboardEntry } from '../types';
+import { type LeaderboardEntry } from '../types';
 
 export const DEMO_LEADERBOARD: LeaderboardEntry[] = [
     { rank: 1, address: 'opt1x8f3k...a9m2j7', score: 28450, chain: 47, level: 12, date: '2026-02-25' },

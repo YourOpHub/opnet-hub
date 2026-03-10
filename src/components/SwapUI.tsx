@@ -299,7 +299,7 @@ const SwapUI: React.FC = () => {
              SWAP TAB
            ══════════════════════════════════ */}
         {mainTab === 'swap' && (<>
-        <div className="swap-panel">
+        <div className="swap-panel" role="form" aria-label="Token swap">
           <div className="flex-between mb-16">
             <div className="flex-center gap-8">
               <span className="swap-title">Swap</span>
@@ -307,9 +307,9 @@ const SwapUI: React.FC = () => {
             </div>
             <div className="flex-center gap-6">
               <button onClick={() => { setShowLiquidity(!showLiquidity); setShowSettings(false); }}
-                className={`swap-icon-btn ${showLiquidity ? 'active' : ''}`}>💧</button>
+                className={`swap-icon-btn ${showLiquidity ? 'active' : ''}`} aria-label="Toggle liquidity panel" aria-expanded={showLiquidity}>💧</button>
               <button onClick={() => { setShowSettings(!showSettings); setShowLiquidity(false); }}
-                className="swap-icon-btn">⚙ {slippage}%</button>
+                className="swap-icon-btn" aria-label={`Slippage settings, currently ${slippage}%`} aria-expanded={showSettings}>⚙ {slippage}%</button>
             </div>
           </div>
 
@@ -350,12 +350,13 @@ const SwapUI: React.FC = () => {
               <input type="text" inputMode="decimal" value={fromAmt}
                 onChange={e => { setFromAmt(e.target.value); setSwapResult(null); }}
                 placeholder="0.0" className="swap-big-input"
+                aria-label={`Amount of ${from.symbol} to swap`}
               />
               {fromBal != null && fromBal > 0n && (
                 <button onClick={() => setFromAmt((Number(fromBal) / Math.pow(10, from.decimals)).toString())}
-                  className="swap-max-btn">MAX</button>
+                  className="swap-max-btn" aria-label={`Use maximum ${from.symbol} balance`}>MAX</button>
               )}
-              <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={selectStyle}>
+              <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={selectStyle} aria-label="Select token to swap from">
                 {SWAP_TOKENS.map((t: Token, i: number) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
@@ -363,7 +364,7 @@ const SwapUI: React.FC = () => {
 
           {/* Flip */}
           <div className="flex-jc-center z-2 m-n6-0">
-            <button onClick={flip} className="swap-flip-btn"
+            <button onClick={flip} className="swap-flip-btn" aria-label="Swap token direction"
               onMouseEnter={e => (e.currentTarget.style.transform = 'rotate(180deg)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'rotate(0deg)')}
             >↕</button>
@@ -379,7 +380,7 @@ const SwapUI: React.FC = () => {
               <div className="swap-out-val" style={{ color: toVal > 0 ? 'var(--w)' : 'var(--t4)' }}>
                 {toVal > 0 ? toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0.0'}
               </div>
-              <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={selectStyle}>
+              <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={selectStyle} aria-label="Select token to receive">
                 {SWAP_TOKENS.map((t: Token, i: number) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
@@ -453,7 +454,7 @@ const SwapUI: React.FC = () => {
 
           {/* Result */}
           {swapResult && (
-            <div className={swapResult.type === 'error' ? 'result-err' : 'result-ok'}>
+            <div className={swapResult.type === 'error' ? 'result-err' : 'result-ok'} role="alert" aria-live="assertive">
               {swapResult.type === 'success' && (
                 <>
                   <div className="c-g fw-700 mb-4">✓ Swap Executed On-Chain</div>
@@ -487,7 +488,7 @@ const SwapUI: React.FC = () => {
             ))}
           </div>
           {mintResult && (
-            <div className={`mt-8 p-10 br-10 fs-65 word-break ${mintResult.ok ? 'cc-result-ok' : 'cc-result-err'}`}>
+            <div className={`mt-8 p-10 br-10 fs-65 word-break ${mintResult.ok ? 'cc-result-ok' : 'cc-result-err'}`} role="alert">
               {mintResult.msg}
             </div>
           )}

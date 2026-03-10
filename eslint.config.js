@@ -50,7 +50,7 @@ export default [
         },
       ],
       '@typescript-eslint/explicit-function-return-type': [
-        'warn',
+        'error',
         {
           allowExpressions: true,
           allowTypedFunctionExpressions: true,
@@ -62,11 +62,28 @@ export default [
         'warn',
         { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
       ],
-      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': [
-        'warn',
+        'error',
         { checksVoidReturn: false },
       ],
+      '@typescript-eslint/strict-boolean-expressions': [
+        'warn',
+        {
+          allowString: true,
+          allowNumber: true,
+          allowNullableObject: true,
+          allowNullableBoolean: true,
+          allowNullableString: true,
+          allowNullableNumber: true,
+          allowAny: false,
+        },
+      ],
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
 
       // ── Console usage — use logger instead ──
       'no-console': 'error',
@@ -81,10 +98,10 @@ export default [
       'react-hooks/exhaustive-deps': 'warn',
 
       // ── General quality rules ──
-      'no-debugger': 'warn',
+      'no-debugger': 'error',
       'no-duplicate-imports': 'off', // handled by TS
-      'prefer-const': 'warn',
-      eqeqeq: ['warn', 'smart'],
+      'prefer-const': 'error',
+      eqeqeq: ['error', 'smart'],
     },
   },
 
@@ -96,6 +113,13 @@ export default [
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/consistent-type-imports': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
       'no-console': 'off',
       'no-constant-binary-expression': 'off',
     },

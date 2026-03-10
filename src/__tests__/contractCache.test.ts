@@ -123,7 +123,7 @@ describe('contractCache', () => {
       const c1 = mod.getCachedOP20('opt1xyz');
       const c2 = mod.getCachedOP20('opt1xyz', 'opt1sender');
       expect(c1).toBe(c2);
-      expect((c2 as { setSender: ReturnType<typeof vi.fn> }).setSender).toHaveBeenCalled();
+      expect((c2 as unknown as { setSender: ReturnType<typeof vi.fn> }).setSender).toHaveBeenCalled();
     });
 
     it('passes sender to getContract on first call when sender provided', () => {
@@ -134,7 +134,7 @@ describe('contractCache', () => {
 
     it('does not call setSender on first call without sender', () => {
       const c1 = mod.getCachedOP20('opt1nosender');
-      expect((c1 as { setSender: ReturnType<typeof vi.fn> }).setSender).not.toHaveBeenCalled();
+      expect((c1 as unknown as { setSender: ReturnType<typeof vi.fn> }).setSender).not.toHaveBeenCalled();
     });
   });
 
@@ -155,7 +155,7 @@ describe('contractCache', () => {
     it('calls setSender on cached mintable contract', () => {
       mod.getCachedMintable('opt1mint2');
       const c2 = mod.getCachedMintable('opt1mint2', 'opt1sender');
-      expect((c2 as { setSender: ReturnType<typeof vi.fn> }).setSender).toHaveBeenCalled();
+      expect((c2 as unknown as { setSender: ReturnType<typeof vi.fn> }).setSender).toHaveBeenCalled();
     });
 
     it('does not interfere with OP20 cache', () => {
@@ -196,7 +196,7 @@ describe('contractCache', () => {
       const abi = [{ name: 'swap' }] as unknown as import('opnet').BitcoinInterfaceAbi;
       mod.getCachedContract('opt1gen', abi);
       const c2 = mod.getCachedContract('opt1gen', abi, 'opt1sender');
-      expect((c2 as { setSender: ReturnType<typeof vi.fn> }).setSender).toHaveBeenCalled();
+      expect((c2 as unknown as { setSender: ReturnType<typeof vi.fn> }).setSender).toHaveBeenCalled();
     });
 
     it('different addresses with same ABI are cached separately', () => {

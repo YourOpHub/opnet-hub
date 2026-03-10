@@ -9,10 +9,10 @@ import { renderHook } from '@testing-library/react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 describe('useFocusTrap', () => {
-  let onClose: ReturnType<typeof vi.fn>;
+  let onClose: () => void;
 
   beforeEach(() => {
-    onClose = vi.fn();
+    onClose = vi.fn() as unknown as () => void;
   });
 
   afterEach(() => {

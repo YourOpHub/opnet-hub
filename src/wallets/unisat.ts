@@ -6,6 +6,8 @@
  * We use switchChain() to target the Fractal network.
  */
 
+import { logger } from '../logger';
+
 /* ── Types ── */
 
 export interface UnisatBalance {
@@ -116,7 +118,7 @@ export async function connectUnisat(testnet = true): Promise<UnisatWalletState> 
     try {
         chain = await unisat.switchChain(targetChain);
     } catch (e) {
-        console.warn('[unisat] Failed to switch chain (user may have rejected):', e);
+        logger.warn('[unisat] Failed to switch chain (user may have rejected):', e);
         // Try to get current chain instead
         chain = await unisat.getChain();
     }

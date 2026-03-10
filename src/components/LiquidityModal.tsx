@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract, BitcoinUtils,
@@ -83,7 +84,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           setLpMine(a);
           setLpVibe(b);
         }
-      } catch (e) { console.warn('[LiquidityModal] LP position fetch failed:', e); }
+      } catch (e) { logger.warn('[LiquidityModal] LP position fetch failed:', e); }
     })();
   }, [open, senderAddr, provider]);
 

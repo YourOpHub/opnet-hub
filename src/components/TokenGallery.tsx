@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   JSONRpcProvider, getContract, BitcoinUtils,
@@ -104,7 +105,7 @@ const TokenGallery: React.FC = () => {
     try {
       const list = await fetchAllTokens();
       setAllTokens(list);
-    } catch (e) { console.warn('[TokenGallery] Failed to fetch all tokens:', e); }
+    } catch (e) { logger.warn('[TokenGallery] Failed to fetch all tokens:', e); }
     setAllLoading(false);
   }, []);
 
@@ -183,7 +184,7 @@ const TokenGallery: React.FC = () => {
     try {
       const raw = localStorage.getItem('hub_deployed_tokens');
       if (raw) setTokens(JSON.parse(raw));
-    } catch (e) { console.warn('[TokenGallery] Failed to load deployed tokens from localStorage:', e); }
+    } catch (e) { logger.warn('[TokenGallery] Failed to load deployed tokens from localStorage:', e); }
   }, []);
 
   // Check on-chain status for user tokens

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { logger } from '../logger';
 import { getProvider } from '../contractCache';
 import * as opnetRpc from '../opnet';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, type ContractTokenInfo } from '../contracts';
@@ -31,7 +32,7 @@ function loadSnapshots(): PoolSnapshot[] {
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     return arr.filter(validateSnapshot);
-  } catch (e) { console.warn('[Analytics] Failed to load snapshots from localStorage:', e); return []; }
+  } catch (e) { logger.warn('[Analytics] Failed to load snapshots from localStorage:', e); return []; }
 }
 
 function saveSnapshot(snap: PoolSnapshot) {
@@ -68,7 +69,7 @@ async function fetchServerSnapshots(pool: string, limit = 500): Promise<PoolSnap
     if (!data.snapshots || !Array.isArray(data.snapshots)) return [];
     return data.snapshots.filter(validateSnapshot);
   } catch (e) {
-    console.warn('[Analytics] Failed to fetch server snapshots:', e);
+    logger.warn('[Analytics] Failed to fetch server snapshots:', e);
     return [];
   }
 }
@@ -186,7 +187,7 @@ const Analytics: React.FC = () => {
             }
           }
         }
-      } catch (e) { console.warn('[Analytics] Pool reserves fetch failed:', e); if (!cancelled) setPoolError(true); }
+      } catch (e) { logger.warn('[Analytics] Pool reserves fetch failed:', e); if (!cancelled) setPoolError(true); }
 
       // Token supplies
       let supplyFail = false;
@@ -194,7 +195,7 @@ const Analytics: React.FC = () => {
         try {
           const supply = await opnetRpc.getTokenTotalSupply(tok.address);
           if (!cancelled) setSupplies(prev => ({ ...prev, [sym]: supply }));
-        } catch (e) { console.warn(`[Analytics] ${sym} supply fetch failed:`, e); supplyFail = true; }
+        } catch (e) { logger.warn(`[Analytics] ${sym} supply fetch failed:`, e); supplyFail = true; }
       }
       if (!cancelled) setSupplyError(supplyFail);
 
@@ -203,19 +204,19 @@ const Analytics: React.FC = () => {
       try {
         const h = await opnetRpc.getBlockHeight();
         if (!cancelled) setBlockHeight(h);
-      } catch (e) { console.warn('[Analytics] Block height fetch failed:', e); chainFail = true; }
+      } catch (e) { logger.warn('[Analytics] Block height fetch failed:', e); chainFail = true; }
 
       // Gas
       try {
         const gp = await opnetRpc.getGasParameters();
         if (!cancelled && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative) });
-      } catch (e) { console.warn('[Analytics] Gas params fetch failed:', e); chainFail = true; }
+      } catch (e) { logger.warn('[Analytics] Gas params fetch failed:', e); chainFail = true; }
 
       // Mempool
       try {
         const mp = await opnetRpc.getMempoolInfo();
         if (!cancelled && mp) setMempoolInfo(mp);
-      } catch (e) { console.warn('[Analytics] Mempool info fetch failed:', e); chainFail = true; }
+      } catch (e) { logger.warn('[Analytics] Mempool info fetch failed:', e); chainFail = true; }
       if (!cancelled) setChainError(chainFail);
 
       if (!cancelled) setLoading(false);

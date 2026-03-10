@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../logger';
 import * as opnet from '../../opnet';
 import { cardS, rowS, labelS, valueS, monoSm, copyBtnS, parseHex } from './toolStyles';
 
@@ -26,7 +27,7 @@ const GasTool = React.memo(function GasTool() {
       setGas(g || null);
       setMempool(m || null);
       if (Array.isArray(pt)) setPendingTxs(pt.slice(0, 10));
-    } catch (e) { console.warn('[TokenTools] Failed to fetch gas/mempool data:', e); setGas(null); }
+    } catch (e) { logger.warn('[TokenTools] Failed to fetch gas/mempool data:', e); setGas(null); }
     finally { setLoading(false); }
   }, []);
 

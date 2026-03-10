@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '../../logger';
 import * as opnet from '../../opnet';
 import { DEPLOYED_CONTRACTS, OPSCAN_API_BASE, getContractOpscanUrl } from '../../contracts';
 import { cardS, inputS, btnS, rowS, labelS, valueS, formatBigNum } from './toolStyles';
@@ -75,7 +76,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
                 const d = await r.json();
                 const arr = d?.results || d || [];
                 return Array.isArray(arr) ? arr.length : 0;
-              } catch (e) { console.warn('[TokenTools] Failed to fetch holder count from OPScan:', e); return 0; }
+              } catch (e) { logger.warn('[TokenTools] Failed to fetch holder count from OPScan:', e); return 0; }
             }));
             setAllTokens(prev => {
               const next = [...prev];
@@ -88,7 +89,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
           }
         };
         batch(tokens, 5);
-      } catch (e) { console.warn('[TokenExplorer] OPScan fetch failed:', e); }
+      } catch (e) { logger.warn('[TokenExplorer] OPScan fetch failed:', e); }
       finally { setTokensLoading(false); }
     })();
   }, []);
@@ -143,7 +144,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             const arr = hd?.results || hd || [];
             if (Array.isArray(arr)) holders = arr.length;
           }
-        } catch (e) { console.warn('[TokenTools] Holder count fetch failed:', e); }
+        } catch (e) { logger.warn('[TokenTools] Holder count fetch failed:', e); }
       }
 
       if (known) {

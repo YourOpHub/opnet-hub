@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '../../logger';
 
 export const monoSm: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace", fontSize: '.68rem', wordBreak: 'break-all' };
 export const cardS: React.CSSProperties = { background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, padding: '16px 18px', marginBottom: 10 };
@@ -11,7 +12,7 @@ export const copyBtnS: React.CSSProperties = { background: 'none', border: '1px 
 
 export function parseHex(s: string): string {
   if (typeof s !== 'string') return '—';
-  if (s.startsWith('0x')) { try { return Number(BigInt(s)).toLocaleString(); } catch (e) { console.warn('[TokenTools] Failed to parse hex value as BigInt:', e); return s; } }
+  if (s.startsWith('0x')) { try { return Number(BigInt(s)).toLocaleString(); } catch (e) { logger.warn('[TokenTools] Failed to parse hex value as BigInt:', e); return s; } }
   return s;
 }
 
@@ -25,5 +26,5 @@ export function formatBigNum(s: string): string {
     if (n >= BigInt(1e6)) return (Number(n) / 1e6).toFixed(2) + 'M';
     if (n >= 1000n) return (Number(n) / 1e3).toFixed(2) + 'K';
     return n.toString();
-  } catch (e) { console.warn('[TokenTools] Failed to format big number:', e); return s; }
+  } catch (e) { logger.warn('[TokenTools] Failed to format big number:', e); return s; }
 }

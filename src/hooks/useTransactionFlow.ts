@@ -6,6 +6,7 @@
  * Polls block height to advance from 'waiting' to ready-for-execute.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '../logger';
 import { getProvider } from '../contractCache';
 
 export type TxStep = 'idle' | 'approving' | 'waiting' | 'executing' | 'done' | 'error';
@@ -25,20 +26,20 @@ function loadState(flowId: string): TxFlowState {
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + flowId);
     if (raw) return JSON.parse(raw) as TxFlowState;
-  } catch (e) { console.warn('[useTransactionFlow] loadState parse error:', e); }
+  } catch (e) { logger.warn('[useTransactionFlow] loadState parse error:', e); }
   return { step: 'idle' };
 }
 
 function saveState(flowId: string, state: TxFlowState): void {
   try {
     localStorage.setItem(STORAGE_PREFIX + flowId, JSON.stringify(state));
-  } catch (e) { console.warn('[useTransactionFlow] saveState error:', e); }
+  } catch (e) { logger.warn('[useTransactionFlow] saveState error:', e); }
 }
 
 function clearState(flowId: string): void {
   try {
     localStorage.removeItem(STORAGE_PREFIX + flowId);
-  } catch (e) { console.warn('[useTransactionFlow] clearState error:', e); }
+  } catch (e) { logger.warn('[useTransactionFlow] clearState error:', e); }
 }
 
 export function useTransactionFlow(flowId: string) {
@@ -71,7 +72,7 @@ export function useTransactionFlow(flowId: string) {
           setState(prev => prev.step === 'waiting' ? { ...prev, step: 'executing' } : prev);
         }
       } catch (e) {
-        console.warn('[useTransactionFlow] block polling error:', e);
+        logger.warn('[useTransactionFlow] block polling error:', e);
       }
     }, POLL_INTERVAL);
 
@@ -92,7 +93,7 @@ export function useTransactionFlow(flowId: string) {
     try {
       const provider = getProvider();
       blockHeight = Number(await provider.getBlockNumber());
-    } catch (e) { console.warn('[useTransactionFlow] startWaiting getBlockNumber error:', e); }
+    } catch (e) { logger.warn('[useTransactionFlow] startWaiting getBlockNumber error:', e); }
     setState({ step: 'waiting', waitingSince: blockHeight });
   }, []);
 

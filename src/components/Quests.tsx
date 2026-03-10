@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../logger';
 
 interface Quest {
     id: string; icon: string; title: string; desc: string; xp: number;
@@ -18,7 +19,7 @@ const makeQuests = (): Quest[] => [
     { id: 'q8', icon: '📰', title: 'Read the News', desc: 'Stay informed on OP_NET protocol updates and ecosystem growth.', xp: 20, reward: '📰 Informed', done: false, check: () => !!localStorage.getItem('hub_news_visited'), tab: 'news', tier: 'beginner' },
     { id: 'q4', icon: '🔧', title: 'Use Developer Tools', desc: 'Convert BTC/sats, inspect wallets, or check gas parameters.', xp: 20, reward: '🔧 Analyst', done: false, check: () => !!localStorage.getItem('hub_tools_used'), tab: 'tools', tier: 'explorer' },
     { id: 'q6', icon: '🌐', title: 'Explore Ecosystem', desc: 'Browse 26+ dApps built on OP_NET consensus layer.', xp: 30, reward: '🌐 Explorer', done: false, check: () => !!localStorage.getItem('hub_eco_visited'), tab: 'eco', tier: 'explorer' },
-    { id: 'q3', icon: '⛏️', title: 'Mine 100 Sats', desc: 'Learn about epochs by mining in the interactive Epoch Miner game.', xp: 40, reward: '💎 Miner', done: false, check: () => { try { return JSON.parse(localStorage.getItem('sm_t') || '0') >= 100 } catch (e) { console.warn('[Quests] Failed to parse mined sats from localStorage:', e); return false } }, tab: 'game', tier: 'explorer' },
+    { id: 'q3', icon: '⛏️', title: 'Mine 100 Sats', desc: 'Learn about epochs by mining in the interactive Epoch Miner game.', xp: 40, reward: '💎 Miner', done: false, check: () => { try { return JSON.parse(localStorage.getItem('sm_t') || '0') >= 100 } catch (e) { logger.warn('[Quests] Failed to parse mined sats from localStorage:', e); return false } }, tab: 'game', tier: 'explorer' },
     { id: 'q7', icon: '⬆️', title: 'Buy an Upgrade', desc: 'Invest sats in WASM, consensus, or mining infrastructure.', xp: 50, reward: '⬆️ Builder', done: false, check: () => !!localStorage.getItem('sm_upgraded'), tab: 'game', tier: 'builder' },
     { id: 'q5', icon: '🚀', title: 'Deploy a Token', desc: 'Configure and launch an OP-20 token on Bitcoin L1.', xp: 100, reward: '🚀 Creator', done: false, check: () => !!localStorage.getItem('hub_token_launched'), tab: 'launch', tier: 'builder' },
 ];
@@ -27,7 +28,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
     const [quests, setQuests] = useState<Quest[]>(() => {
         const saved = localStorage.getItem('hub_quest_state');
         const init = makeQuests();
-        if (saved) { try { const ids: string[] = JSON.parse(saved); return init.map(q => ({ ...q, done: ids.includes(q.id) })) } catch (e) { console.warn('[Quests] Failed to parse quest state from localStorage:', e); return init } }
+        if (saved) { try { const ids: string[] = JSON.parse(saved); return init.map(q => ({ ...q, done: ids.includes(q.id) })) } catch (e) { logger.warn('[Quests] Failed to parse quest state from localStorage:', e); return init } }
         return init;
     });
 

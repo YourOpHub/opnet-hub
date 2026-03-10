@@ -14,6 +14,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, type BaseContractProperties, type CallResult } from 'opnet';
 import { Address } from '@btc-vision/transaction';
@@ -245,7 +246,7 @@ export function useCrossChainState(): CrossChainState {
 
   // ── Preimage store ──
   const [preimageStore, setPreimageStore] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') || '{}'); } catch (e) { console.warn('[CrossChain] Failed to parse preimage store from localStorage:', e); return {}; }
+    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') || '{}'); } catch (e) { logger.warn('[CrossChain] Failed to parse preimage store from localStorage:', e); return {}; }
   });
   const savePreimage = useCallback((orderId: string, preimage: string) => {
     setPreimageStore(prev => {
@@ -300,7 +301,7 @@ export function useCrossChainState(): CrossChainState {
       try {
         const b = await provider.getBlockNumber();
         if (!cancelled) setCurrentBlock(Number(b));
-      } catch (e) { console.warn('[CrossChain] Block height poll failed:', e); }
+      } catch (e) { logger.warn('[CrossChain] Block height poll failed:', e); }
     };
     poll();
     const iv = setInterval(poll, 15000);
@@ -316,7 +317,7 @@ export function useCrossChainState(): CrossChainState {
         const r = await c.getFeeInfo();
         const feeProps = r?.properties as Record<string, unknown> | undefined;
         if (feeProps?.feeBps) setFeeBps(Number(feeProps.feeBps));
-      } catch (e) { console.warn('[CrossChain] Fee info fetch failed:', e); }
+      } catch (e) { logger.warn('[CrossChain] Fee info fetch failed:', e); }
     })();
   }, [provider, contractReady]);
 
@@ -349,10 +350,10 @@ export function useCrossChainState(): CrossChainState {
             takerAddr: (p.takerAddr ?? 0n).toString(16).padStart(64, '0'),
             feePaid: p.feePaid ?? 0n,
           });
-        } catch (e) { console.warn(`[CrossChain] Skipping unreadable order #${i}:`, e); }
+        } catch (e) { logger.warn(`[CrossChain] Skipping unreadable order #${i}:`, e); }
       }
       setOrders(fetched);
-    } catch (e) { console.warn('[CrossChain] Failed to fetch orders:', e); }
+    } catch (e) { logger.warn('[CrossChain] Failed to fetch orders:', e); }
     setLoading(false);
   }, [provider, contractReady]);
 
@@ -395,10 +396,10 @@ export function useCrossChainState(): CrossChainState {
             takerAddr: (p.takerAddr ?? 0n).toString(16).padStart(64, '0'),
             feePaid: p.feePaid ?? 0n,
           });
-        } catch (e) { console.warn(`[CrossChain] Skipping unreadable escrow order #${i}:`, e); }
+        } catch (e) { logger.warn(`[CrossChain] Skipping unreadable escrow order #${i}:`, e); }
       }
       setEscrowOrders(fetched);
-    } catch (e) { console.warn('[CrossChain] Failed to fetch escrow orders:', e); }
+    } catch (e) { logger.warn('[CrossChain] Failed to fetch escrow orders:', e); }
     setEscrowLoading(false);
   }, [provider, escrowReady]);
 
@@ -419,7 +420,7 @@ export function useCrossChainState(): CrossChainState {
       try {
         const r = await fetch(`${API_URL}/api/orders/rates`, { signal: AbortSignal.timeout(5000) });
         if (r.ok) setServerRates(await r.json());
-      } catch (e) { console.warn('[CrossChain] Server rates fetch failed:', e); }
+      } catch (e) { logger.warn('[CrossChain] Server rates fetch failed:', e); }
     })();
   }, [API_URL]);
 
@@ -428,7 +429,7 @@ export function useCrossChainState(): CrossChainState {
       const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
       stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
-    } catch (e) { console.warn('[CrossChain] Failed to save rate to localStorage:', e); }
+    } catch (e) { logger.warn('[CrossChain] Failed to save rate to localStorage:', e); }
     if (API_URL) {
       fetch(`${API_URL}/api/orders/rate`, {
         method: 'POST',

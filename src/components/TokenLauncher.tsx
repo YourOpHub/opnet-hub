@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { BinaryWriter } from '@btc-vision/transaction';
 import { Transaction } from '@btc-vision/bitcoin';
@@ -176,18 +177,18 @@ const TokenLauncher: React.FC = () => {
       // 5. Broadcast via RPC provider (wallet doesn't support broadcast method)
       setDeployStep('Broadcasting transactions...');
       const [fundingTxHex, deployTxHex] = result.transaction;
-      console.log('[Deploy] Contract address:', result.contractAddress);
-      console.log('[Deploy] Funding TX hex length:', fundingTxHex?.length);
-      console.log('[Deploy] Deploy TX hex length:', deployTxHex?.length);
+      logger.info('[Deploy] Contract address:', result.contractAddress);
+      logger.info('[Deploy] Funding TX hex length:', fundingTxHex?.length);
+      logger.info('[Deploy] Deploy TX hex length:', deployTxHex?.length);
 
       // Broadcast funding TX first, then deployment TX
       if (fundingTxHex) {
         const fundResult = await provider.sendRawTransaction(fundingTxHex, false);
-        console.log('[Deploy] Funding TX broadcast:', fundResult);
+        logger.info('[Deploy] Funding TX broadcast:', fundResult);
       }
       if (deployTxHex) {
         const deployResult = await provider.sendRawTransaction(deployTxHex, false);
-        console.log('[Deploy] Deploy TX broadcast:', deployResult);
+        logger.info('[Deploy] Deploy TX broadcast:', deployResult);
       }
 
       // Compute real txid from raw transaction hex
@@ -198,7 +199,7 @@ const TokenLauncher: React.FC = () => {
           txid = Transaction.fromHex(rawHex).getId();
         }
       } catch (txErr) {
-        console.warn('[Deploy] Could not compute txid from raw tx:', txErr);
+        logger.warn('[Deploy] Could not compute txid from raw tx:', txErr);
         txid = result.contractPubKey || result.contractAddress || '';
       }
 
@@ -231,7 +232,7 @@ const TokenLauncher: React.FC = () => {
       if (msg.toLowerCase().includes('no utxo')) {
         msg = `Your wallet has no BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC from the faucet first: https://faucet.opnet.org` : ''}`;
       }
-      console.error('[Deploy]', e);
+      logger.error('[Deploy]', e);
       setDeployError(msg);
       setDeployStep('');
     } finally {
@@ -257,7 +258,7 @@ const TokenLauncher: React.FC = () => {
         setVerifyResult({ ok: false, info: 'No contract found. Check address or wait for confirmation.' });
       }
     } catch (e) {
-      console.warn('[TokenLauncher] Contract verification RPC call failed:', e);
+      logger.warn('[TokenLauncher] Contract verification RPC call failed:', e);
       setVerifyResult({ ok: false, info: 'RPC error — try again.' });
     } finally {
       opnet.setNetwork(prevNet);

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Transaction } from '@btc-vision/bitcoin';
 import { BinaryWriter } from '@btc-vision/transaction';
@@ -160,7 +161,7 @@ const DeployModal: React.FC<{
       if (deployTx) await provider.sendRawTransaction(deployTx, false);
 
       let txid = '';
-      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { console.warn('[Launchpad] token deploy txid parse error:', e); }
+      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { logger.warn('[Launchpad] token deploy txid parse error:', e); }
 
       const publicMintShare = supplyNum * (100 - initialMintPct) / 100;
       const token: LaunchToken = {
@@ -190,7 +191,7 @@ const DeployModal: React.FC<{
               onCreated(token);
               break;
             }
-          } catch (e) { console.warn('[Launchpad] Polling for contract confirmation:', e); }
+          } catch (e) { logger.warn('[Launchpad] Polling for contract confirmation:', e); }
         }
       };
       pollConfirm().catch(() => {});
@@ -384,7 +385,7 @@ const Launchpad: React.FC = () => {
         return copy;
       });
       setSelected(prev => prev && prev.address === addr ? { ...prev, mintedSupply: minted } : prev);
-    } catch (e) { console.warn('[LP] sync failed:', e); }
+    } catch (e) { logger.warn('[LP] sync failed:', e); }
   }, [provider]);
 
   // On-chain balance for selected token
@@ -397,7 +398,7 @@ const Launchpad: React.FC = () => {
         const p = (res as CallResult).properties as Record<string, unknown>;
         setUserBal(Number(BigInt(String(p?.balance || 0))) / 1e8);
       }
-    } catch (e) { console.warn('[Launchpad] Failed to fetch user token balance:', e); setUserBal(0); }
+    } catch (e) { logger.warn('[Launchpad] Failed to fetch user token balance:', e); setUserBal(0); }
   }, [senderAddr, provider]);
 
   // Sync when selected changes
@@ -507,7 +508,7 @@ const Launchpad: React.FC = () => {
       };
       pollMint().catch(() => { setMintStep(''); });
     } catch (e) {
-      console.error('[LP Mint]', e);
+      logger.error('[LP Mint]', e);
       setMintStep(formatTxError(e));
       setTimeout(() => setMintStep(''), 6000);
     } finally {
@@ -597,7 +598,7 @@ const Launchpad: React.FC = () => {
             balance: String(h.balance || h.amount || '0'),
           })));
         }
-      } catch (e) { console.warn('[Launchpad] Holder data fetch failed:', e); }
+      } catch (e) { logger.warn('[Launchpad] Holder data fetch failed:', e); }
     })();
   }, [selected?.address]);
   const holderCount = opscanHolders !== null ? opscanHolders : localHolderCount;
@@ -744,7 +745,7 @@ const Launchpad: React.FC = () => {
                         <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{h.address}</span>
                       </div>
                       <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600, fontSize: '.6rem' }}>
-                        {(() => { try { const n = Number(BigInt(h.balance)) / Math.pow(10, selected.decimals); return fmtNum(n); } catch (e) { console.warn('[Launchpad] Failed to format holder balance:', e); return h.balance; } })()}
+                        {(() => { try { const n = Number(BigInt(h.balance)) / Math.pow(10, selected.decimals); return fmtNum(n); } catch (e) { logger.warn('[Launchpad] Failed to format holder balance:', e); return h.balance; } })()}
                       </span>
                     </div>
                   ))}

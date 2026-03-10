@@ -15,6 +15,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract,
@@ -123,7 +124,7 @@ export function useMarketplace() {
     try {
       const bytes = new Uint8Array(senderAddr as unknown as ArrayBufferLike);
       return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) { console.warn('[useMarketplace] Failed to convert senderAddr to hex:', e); return ''; }
+    } catch (e) { logger.warn('[useMarketplace] Failed to convert senderAddr to hex:', e); return ''; }
   }, [senderAddr]);
 
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
@@ -195,10 +196,10 @@ export function useMarketplace() {
             status: statusStr as Order['status'],
             fills: [],
           });
-        } catch (e) { console.warn(`[useMarketplace] Skipping unreadable order #${i}:`, e); }
+        } catch (e) { logger.warn(`[useMarketplace] Skipping unreadable order #${i}:`, e); }
       }
       return chainOrders;
-    } catch (e) { console.warn('[useMarketplace] Failed to fetch on-chain orders:', e); return []; }
+    } catch (e) { logger.warn('[useMarketplace] Failed to fetch on-chain orders:', e); return []; }
   }, [provider]);
 
   // Fetch token list
@@ -218,7 +219,7 @@ export function useMarketplace() {
         setLoading(false);
         return;
       }
-    } catch (e) { console.warn('[useMarketplace] Token server offline, using fallback:', e); }
+    } catch (e) { logger.warn('[useMarketplace] Token server offline, using fallback:', e); }
     setTokenList(KNOWN_TOKENS);
     setLoading(false);
   }, []);
@@ -309,7 +310,7 @@ export function useMarketplace() {
           }),
           signal: AbortSignal.timeout(5000),
         }).catch(() => {});
-      } catch (e) { console.warn('[useMarketplace] Indexer notification failed:', e); }
+      } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
       waitForNextBlock(provider).then(() => {
         toast('Order confirmed on-chain!', 'success');

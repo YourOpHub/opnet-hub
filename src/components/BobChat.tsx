@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { logger } from '../logger';
 import * as bobMcp from '../bob-mcp';
 
 interface Msg { id: number; role: 'bot' | 'user'; text: string; source?: 'mcp' | 'local' }
@@ -119,7 +120,7 @@ const BobChat: React.FC = () => {
                     reply = localAns(userText);
                 }
             } catch (e) {
-                console.warn('[BobChat] MCP query failed, falling back to local answers:', e);
+                logger.warn('[BobChat] MCP query failed, falling back to local answers:', e);
                 reply = localAns(userText);
             }
         } else {

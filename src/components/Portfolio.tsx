@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { logger } from '../logger';
 import {
   getContract, OP_20_ABI,
   type IOP20Contract, type CallResult, type BaseContractProperties,
@@ -78,7 +79,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             if (r1 > 0) setReserveB(r1);
           }
         }
-      } catch (e) { console.warn('[Portfolio] Pool reserves fetch failed:', e); }
+      } catch (e) { logger.warn('[Portfolio] Pool reserves fetch failed:', e); }
     };
     fetchRes();
   }, [refreshKey]);
@@ -93,7 +94,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
         setLpMine(m);
         setLpVibe(v);
         setLpOnChain(false);
-      } catch (e) { console.warn('[Portfolio] LP localStorage fallback failed:', e); }
+      } catch (e) { logger.warn('[Portfolio] LP localStorage fallback failed:', e); }
       return;
     }
     let cancelled = false;
@@ -118,11 +119,11 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             setLpMine(m);
             setLpVibe(v);
             setLpOnChain(false);
-          } catch (e) { console.warn('[Portfolio] LP localStorage fallback failed:', e); }
+          } catch (e) { logger.warn('[Portfolio] LP localStorage fallback failed:', e); }
         }
       } catch (e) {
         // Network error — fallback to localStorage
-        console.warn('[Portfolio] LP on-chain fetch failed:', e);
+        logger.warn('[Portfolio] LP on-chain fetch failed:', e);
         if (!cancelled) {
           try {
             const m = Number(localStorage.getItem('hub_lp_mine') || '0');
@@ -130,7 +131,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             setLpMine(m);
             setLpVibe(v);
             setLpOnChain(false);
-          } catch (e2) { console.warn('[Portfolio] LP localStorage fallback failed:', e2); }
+          } catch (e2) { logger.warn('[Portfolio] LP localStorage fallback failed:', e2); }
         }
       } finally {
         if (!cancelled) setLpLoading(false);
@@ -171,7 +172,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             const bal = sim?.properties?.balance ?? 0n;
             if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: BigInt(bal.toString()), loading: false, error: false } }));
           } catch (e) {
-            console.warn(`[Portfolio] Failed to fetch ${sym} balance:`, e);
+            logger.warn(`[Portfolio] Failed to fetch ${sym} balance:`, e);
             if (!cancelled) setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: false, error: true } }));
           }
         })();

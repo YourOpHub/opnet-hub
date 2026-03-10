@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { logger } from '../logger';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 
@@ -24,12 +25,12 @@ const Dashboard: React.FC = () => {
         const ep = await opnet.getLatestEpoch();
         epochNum = ep?.number ?? Math.floor(block / 5);
       } catch (e) {
-        console.warn('OP_NET RPC failed, using fallback', e);
+        logger.warn('OP_NET RPC failed, using fallback', e);
         try {
           const b = await fetch('https://blockchain.info/q/getblockcount').then(r => r.text());
           block = parseInt(b, 10) || 0;
           epochNum = Math.floor(block / 5);
-        } catch (e) { console.warn('[Dashboard] Fallback block height fetch failed:', e); }
+        } catch (e) { logger.warn('[Dashboard] Fallback block height fetch failed:', e); }
       }
 
       // 2. Fetch Price (multi-source with cache)
@@ -39,7 +40,7 @@ const Dashboard: React.FC = () => {
       try {
         const gp = await opnet.getGasParameters();
         if (!cancelled && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative), recommended: undefined });
-      } catch (e) { console.warn('[Dashboard] Gas parameters fetch failed:', e); }
+      } catch (e) { logger.warn('[Dashboard] Gas parameters fetch failed:', e); }
 
       if (!cancelled) {
         setP(priceInfo);

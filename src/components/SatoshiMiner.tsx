@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract, BitcoinUtils,
@@ -65,7 +66,7 @@ const getMineEmission = (daysSinceStart: number): number => {
 const MINE_PER_SAT = 0.001;
 const fs = (n: number): string => { if (n >= 1e8) return (n / 1e8).toFixed(4) + ' BTC'; if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n).toString() };
 const co = (u: Up) => Math.floor(u.base * Math.pow(u.g, u.lv));
-const ld = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d } catch (e) { console.warn(`[SatoshiMiner] Failed to load '${k}' from localStorage:`, e); return d } };
+const ld = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d } catch (e) { logger.warn(`[SatoshiMiner] Failed to load '${k}' from localStorage:`, e); return d } };
 
 /* ─── 6 evolution stages with pixel art sprites ─── */
 const STAGES = [
@@ -165,7 +166,7 @@ const SatoshiMiner: React.FC = () => {
                     setChainHash(ep?.hash ?? ('0x' + height.toString(16).padStart(8, '0') + 'a'.repeat(56)));
                     setChainSynced(true);
                 }
-            } catch (e) { console.warn('[SatoshiMiner] Chain sync failed:', e); }
+            } catch (e) { logger.warn('[SatoshiMiner] Chain sync failed:', e); }
         };
         sync();
         const iv = setInterval(sync, 15000);
@@ -239,7 +240,7 @@ const SatoshiMiner: React.FC = () => {
                 await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps });
                 const lb = await api.getLeaderboard(10);
                 if (lb) { setLeaderboard(lb.leaderboard); setServerPool(lb.stats.remaining); }
-            } catch (e) { console.warn('[SatoshiMiner] Leaderboard sync failed:', e); }
+            } catch (e) { logger.warn('[SatoshiMiner] Leaderboard sync failed:', e); }
         };
         doSync();
         const iv = setInterval(doSync, 30000);
@@ -344,7 +345,7 @@ const SatoshiMiner: React.FC = () => {
 
                 <div style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 16px', minHeight: 460 }}>
                     {/* Stage label */}
-                    <div style={{ fontFamily: 'var(--fm)', fontSize: '.58rem', color: stage.color, textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="text-mono flex-center gap-8 mb-12" style={{ fontSize: '.58rem', color: stage.color, textTransform: 'uppercase', letterSpacing: '.12em' }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: stage.color, boxShadow: `0 0 8px ${stage.color}`, animation: 'blink 2s infinite' }} />
                         {stage.name} · Stage {stageIdx + 1}/{STAGES.length}
                     </div>
@@ -417,14 +418,14 @@ const SatoshiMiner: React.FC = () => {
                         ))}
 
                         {/* Click hint */}
-                        <div style={{ textAlign: 'center', marginTop: 6, fontSize: '.55rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                        <div className="text-center mt-6 c-t4" style={{ fontSize: '.55rem', textTransform: 'uppercase', letterSpacing: '.06em' }}>
                             ⛏ Click to mine
                         </div>
                     </div>
 
                     {/* Auto miners visual (pixel art rigs) */}
                     {autoLv > 0 && (
-                        <div style={{ display: 'flex', gap: 6, marginTop: 14, alignItems: 'center' }}>
+                        <div className="flex-center gap-6 mt-14">
                             {Array.from({ length: Math.min(autoLv, 5) }).map((_, i) => (
                                 <img key={i} src={SPRITE_RIG} alt="Rig" draggable={false} style={{
                                     width: 38, height: 38, objectFit: 'contain', imageRendering: 'pixelated',
@@ -433,7 +434,7 @@ const SatoshiMiner: React.FC = () => {
                                     opacity: .85 + i * .03,
                                 }} />
                             ))}
-                            <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginLeft: 4 }}>⚡ {autoLv} miners</div>
+                            <div className="c-t4" style={{ fontSize: '.55rem', marginLeft: 4 }}>⚡ {autoLv} miners</div>
                         </div>
                     )}
 
@@ -453,7 +454,7 @@ const SatoshiMiner: React.FC = () => {
                         </div>
                     )}
                     {prestige > 0 && (
-                        <div style={{ fontSize: '.55rem', color: 'var(--p)', marginTop: 2 }}>
+                        <div className="mt-2" style={{ fontSize: '.55rem', color: 'var(--p)' }}>
                             Prestige {prestige} · +{prestige * 25}% all production
                         </div>
                     )}
@@ -466,7 +467,7 @@ const SatoshiMiner: React.FC = () => {
                         <span>💰 {br}/block</span>
                     </div>
                     <div className="hb"><div className="hf" style={{ width: `${(epochBlocks / EP) * 100}%`, background: `linear-gradient(90deg,${stage.color},var(--y))` }} /></div>
-                    <div style={{ fontSize: '.52rem', color: 'var(--t4)', marginTop: 2 }}>{epochBlocks}/{EP} blocks · {totalUpgrades} upgrades</div>
+                    <div className="mt-2 c-t4" style={{ fontSize: '.52rem' }}>{epochBlocks}/{EP} blocks · {totalUpgrades} upgrades</div>
                     <div className="ar">{ACHS.map(a => <span key={a.id} className={`ach ${a.c(tot) ? 'on' : ''}`}>{a.l}</span>)}</div>
                 </div>
             </div>
@@ -480,54 +481,54 @@ const SatoshiMiner: React.FC = () => {
                         {chainSynced ? '🔗 OP_NET Synced' : '⏳ Syncing...'}
                     </div>
                     {chainSynced && (
-                        <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.6 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="fs-sm c-t3" style={{ lineHeight: 1.6 }}>
+                            <div className="flex-between">
                                 <span>Chain Block</span>
-                                <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--o)' }}>#{chainBlock.toLocaleString()}</span>
+                                <span className="text-mono fw-700 c-o">#{chainBlock.toLocaleString()}</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <div className="flex-between">
                                 <span>Chain Epoch</span>
-                                <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)' }}>{chainEpoch.toLocaleString()}</span>
+                                <span className="text-mono fw-700" style={{ color: 'var(--p)' }}>{chainEpoch.toLocaleString()}</span>
                             </div>
-                            <div style={{ marginTop: 4, fontSize: '.55rem', color: 'var(--t4)', wordBreak: 'break-all', fontFamily: 'var(--fm)' }}>
+                            <div className="mt-4 c-t4 word-break text-mono" style={{ fontSize: '.55rem' }}>
                                 Target: {chainHash.slice(0, 18)}…
                             </div>
-                            <div style={{ marginTop: 4, fontSize: '.52rem', color: 'var(--c)', textAlign: 'center' }}>+{fs(spc * 10)} bonus on new block</div>
+                            <div className="mt-4 text-center" style={{ fontSize: '.52rem', color: 'var(--c)' }}>+{fs(spc * 10)} bonus on new block</div>
                         </div>
                     )}
                 </div>
                 <div className="P" style={{ padding: 12, marginBottom: 6 }}>
                     <div className="Lb" style={{ marginBottom: 4 }}>📊 Your Stats</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                        <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: stage.color, fontSize: '.85rem' }}>{fs(tot)}</div><div style={{ fontSize: '.48rem', color: 'var(--t4)' }}>Total Mined</div></div>
-                        <div style={{ textAlign: 'center' }}><div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)', fontSize: '.85rem' }}>{sps.toFixed(1)}/s</div><div style={{ fontSize: '.48rem', color: 'var(--t4)' }}>Hash Rate</div></div>
+                        <div className="text-center"><div className="text-mono fw-700" style={{ color: stage.color, fontSize: '.85rem' }}>{fs(tot)}</div><div className="c-t4" style={{ fontSize: '.48rem' }}>Total Mined</div></div>
+                        <div className="text-center"><div className="text-mono fw-700 c-g" style={{ fontSize: '.85rem' }}>{sps.toFixed(1)}/s</div><div className="c-t4" style={{ fontSize: '.48rem' }}>Hash Rate</div></div>
                     </div>
                 </div>
                 {/* $MINE Token Panel */}
                 <div className="P" style={{ padding: 12, marginBottom: 6, border: '1px solid rgba(234,179,8,.2)', background: 'rgba(234,179,8,.03)' }}>
                     <div className="Lb" style={{ marginBottom: 6, color: 'var(--y)' }}>🪙 $MINE Token</div>
-                    <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.7 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div className="fs-sm c-t3" style={{ lineHeight: 1.7 }}>
+                        <div className="flex-between">
                             <span>Your Balance</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--y)' }}>{mineBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} MINE</span>
+                            <span className="text-mono fw-700 c-y">{mineBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} MINE</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="flex-between">
                             <span>Daily Emission</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: 'var(--t2)' }}>{dailyEmission.toLocaleString()}/day</span>
+                            <span className="text-mono fw-600 c-t2">{dailyEmission.toLocaleString()}/day</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="flex-between">
                             <span>Pool Remaining</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: minePoolRemaining > 0 ? 'var(--g)' : 'var(--r)' }}>{(minePoolRemaining / 1e6).toFixed(2)}M</span>
+                            <span className="text-mono fw-600" style={{ color: minePoolRemaining > 0 ? 'var(--g)' : 'var(--r)' }}>{(minePoolRemaining / 1e6).toFixed(2)}M</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="flex-between">
                             <span>Halving</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: 'var(--c)' }}>Every {MINE_HALVING_DAYS} days</span>
+                            <span className="text-mono fw-600" style={{ color: 'var(--c)' }}>Every {MINE_HALVING_DAYS} days</span>
                         </div>
                         {/* Pool progress bar */}
                         <div style={{ marginTop: 6, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.06)' }}>
                             <div style={{ height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, var(--y), var(--o))', width: `${(1 - minePoolRemaining / MINE_GAME_POOL) * 100}%`, transition: 'width .3s' }} />
                         </div>
-                        <div style={{ fontSize: '.5rem', color: 'var(--t4)', textAlign: 'center', marginTop: 2 }}>{((1 - minePoolRemaining / MINE_GAME_POOL) * 100).toFixed(4)}% distributed</div>
+                        <div className="mt-2 c-t4 text-center" style={{ fontSize: '.5rem' }}>{((1 - minePoolRemaining / MINE_GAME_POOL) * 100).toFixed(4)}% distributed</div>
                     </div>
                     <button
                         onClick={async () => {
@@ -560,7 +561,7 @@ const SatoshiMiner: React.FC = () => {
                                 setMineBalance(prev => Math.max(0, prev - claimAmount));
                                 setTimeout(() => setClaimStatus('idle'), 3000);
                             } catch (e) {
-                                console.error('[Claim]', e);
+                                logger.error('[Claim]', e);
                                 setClaimStatus('error');
                                 setTimeout(() => setClaimStatus('idle'), 4000);
                             }
@@ -578,41 +579,41 @@ const SatoshiMiner: React.FC = () => {
                         {claimStatus === 'syncing' ? 'Syncing...' : claimStatus === 'claiming' ? 'Minting on-chain...' : claimStatus === 'done' ? 'Minted!' : claimStatus === 'error' ? 'Error — retry' : !walletAddress ? 'Connect Wallet to Claim' : mineBalance >= 1 ? `Claim ${Math.min(Math.floor(mineBalance), 1_000_000).toLocaleString()} MINE` : 'Mine to earn $MINE'}
                     </button>
                     {showClaim && (
-                        <div style={{ marginTop: 8, padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: '14px', fontSize: '.62rem', color: 'var(--t3)', lineHeight: 1.5 }}>
-                            <strong style={{ color: 'var(--y)' }}>On-Chain Claim via publicMint</strong><br />
-                            Token: <span style={{ fontFamily: 'var(--fm)', color: 'var(--c)' }}>$MINE (OP-20)</span><br />
+                        <div className="mt-8 fs-62 c-t3" style={{ padding: 10, background: 'rgba(0,0,0,.3)', borderRadius: '14px', lineHeight: 1.5 }}>
+                            <strong className="c-y">On-Chain Claim via publicMint</strong><br />
+                            Token: <span className="text-mono" style={{ color: 'var(--c)' }}>$MINE (OP-20)</span><br />
                             Max per TX: 1,000,000 MINE | Decimals: {MINE_DECIMALS}<br />
-                            Contract: <span style={{ fontFamily: 'var(--fm)', fontSize: '.55rem' }}>{MINE_CONTRACT}</span><br />
-                            <span style={{ color: 'var(--t4)' }}>Connect OP_WALLET → Sign ML-DSA tx → Tokens minted on Bitcoin L1</span>
+                            Contract: <span className="text-mono" style={{ fontSize: '.55rem' }}>{MINE_CONTRACT}</span><br />
+                            <span className="c-t4">Connect OP_WALLET → Sign ML-DSA tx → Tokens minted on Bitcoin L1</span>
                             <button onClick={() => setShowClaim(false)} style={{ marginTop: 4, background: 'none', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t3)', fontSize: '.55rem', padding: '2px 8px', cursor: 'pointer' }}>Close</button>
                         </div>
                     )}
-                    <div style={{ marginTop: 6, fontSize: '.5rem', color: 'var(--t4)', textAlign: 'center' }}>
+                    <div className="mt-6 c-t4 text-center" style={{ fontSize: '.5rem' }}>
                         OP-20 token on Bitcoin L1 · Secured by ML-DSA · Consensus-verified
                     </div>
                 </div>
                 {/* Prestige */}
                 <div className="P" style={{ padding: 12, marginBottom: 6 }}>
                     <div className="Lb" style={{ marginBottom: 4, color: 'var(--p)' }}>Prestige</div>
-                    <div style={{ fontSize: '.65rem', color: 'var(--t3)', lineHeight: 1.6, marginBottom: 6 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div className="c-t3 mb-6" style={{ fontSize: '.65rem', lineHeight: 1.6 }}>
+                        <div className="flex-between">
                             <span>Level</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)' }}>{prestige}</span>
+                            <span className="text-mono fw-700" style={{ color: 'var(--p)' }}>{prestige}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="flex-between">
                             <span>Bonus</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)' }}>+{prestige * 25}%</span>
+                            <span className="text-mono fw-700 c-g">+{prestige * 25}%</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="flex-between">
                             <span>Next level cost</span>
-                            <span style={{ fontFamily: 'var(--fm)', fontWeight: 600, color: 'var(--o)' }}>{fs(Math.pow(10, 5 + prestige))} sats</span>
+                            <span className="text-mono fw-600 c-o">{fs(Math.pow(10, 5 + prestige))} sats</span>
                         </div>
                     </div>
-                    <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginBottom: 6, lineHeight: 1.5 }}>
+                    <div className="c-t4 mb-6" style={{ fontSize: '.55rem', lineHeight: 1.5 }}>
                         Reset ALL sats + upgrades for a permanent +25% production multiplier. Your $MINE and total mined are kept.
                     </div>
                     {showPrestige ? (
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div className="flex-center gap-6">
                             <button onClick={() => {
                                 const cost = Math.pow(10, 5 + prestige);
                                 if (tot < cost) return;
@@ -638,12 +639,12 @@ const SatoshiMiner: React.FC = () => {
                     <div className="P" style={{ padding: 12, marginBottom: 6 }}>
                         <div className="Lb" style={{ marginBottom: 6 }}>🏆 Leaderboard</div>
                         {leaderboard.slice(0, 5).map((e, i) => (
-                            <div key={e.address} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', fontSize: '.6rem', borderBottom: i < 4 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
+                            <div key={e.address} className="flex-between fs-xs" style={{ padding: '3px 0', borderBottom: i < 4 ? '1px solid rgba(255,255,255,.04)' : 'none' }}>
                                 <span style={{ color: i === 0 ? 'var(--y)' : i === 1 ? 'var(--t2)' : i === 2 ? 'var(--o)' : 'var(--t3)', fontWeight: i < 3 ? 700 : 400 }}>#{e.rank} {e.address.slice(0, 8)}…</span>
-                                <span style={{ fontFamily: 'var(--fm)', color: 'var(--y)', fontWeight: 600 }}>{e.mine_balance.toFixed(1)}</span>
+                                <span className="text-mono fw-600 c-y">{e.mine_balance.toFixed(1)}</span>
                             </div>
                         ))}
-                        <div style={{ fontSize: '.48rem', color: 'var(--t4)', textAlign: 'center', marginTop: 4 }}>Live from VPS · Updates every 30s</div>
+                        <div className="mt-4 c-t4 text-center" style={{ fontSize: '.48rem' }}>Live from VPS · Updates every 30s</div>
                     </div>
                 )}
                 <div className="ucol">{ren('c', '⚙️ CONSENSUS')}{ren('a', '⛏️ MINING')}{ren('s', '✨ SPECIAL')}</div>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { logger } from '../logger';
 
 const STORAGE_KEY = 'hub_notifications';
 
@@ -13,7 +14,7 @@ function loadPreferences(): NotificationPreferences {
             return JSON.parse(raw) as NotificationPreferences;
         }
     } catch (e) {
-        console.warn('[useNotifications] Failed to parse notification preferences from localStorage:', e);
+        logger.warn('[useNotifications] Failed to parse notification preferences from localStorage:', e);
     }
     return { enabled: false };
 }
@@ -22,7 +23,7 @@ function savePreferences(prefs: NotificationPreferences): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
     } catch (e) {
-        console.warn('[useNotifications] Failed to save notification preferences to localStorage:', e);
+        logger.warn('[useNotifications] Failed to save notification preferences to localStorage:', e);
     }
 }
 

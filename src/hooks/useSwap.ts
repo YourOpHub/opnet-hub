@@ -16,6 +16,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address, BinaryWriter } from '@btc-vision/transaction';
 import { Transaction } from '@btc-vision/bitcoin';
@@ -178,7 +179,7 @@ export function useSwap() {
 
   // Pool creation state
   const [userPools, setUserPools] = useState<UserPool[]>(() => {
-    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch (e) { console.warn('[useSwap] Failed to parse user pools from localStorage:', e); return []; }
+    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch (e) { logger.warn('[useSwap] Failed to parse user pools from localStorage:', e); return []; }
   });
   const [createPoolOpen, setCreatePoolOpen] = useState(false);
   const [poolTokenA, setPoolTokenA] = useState('');
@@ -194,7 +195,7 @@ export function useSwap() {
 
   // LP position (read from localStorage, updated by addLiquidity)
   const [lpUserMine] = useState(() => {
-    try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch (e) { console.warn('[useSwap] Failed to parse LP MINE from localStorage:', e); return 0; }
+    try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch (e) { logger.warn('[useSwap] Failed to parse LP MINE from localStorage:', e); return 0; }
   });
 
   // TX history
@@ -221,7 +222,7 @@ export function useSwap() {
           if (r1 > 0) setReserveB(r1);
         }
       }
-    } catch (e) { console.warn('[useSwap] Pool reserves fetch failed:', e); }
+    } catch (e) { logger.warn('[useSwap] Pool reserves fetch failed:', e); }
   }, []);
 
   useEffect(() => { fetchReserves(); }, [fetchReserves]);
@@ -410,7 +411,7 @@ export function useSwap() {
       localStorage.setItem('hub_swapped', '1');
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
     } catch (e) {
-      console.error('[Swap]', e);
+      logger.error('[Swap]', e);
       setSwapStep('');
       setSwapResult({ type: 'error', error: formatTxError(e) });
     } finally {
@@ -491,7 +492,7 @@ export function useSwap() {
       if (deployTx) await provider2.sendRawTransaction(deployTx, false);
 
       let txid = '';
-      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { console.warn('[useSwap] pool deploy txid parse error:', e); }
+      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { logger.warn('[useSwap] pool deploy txid parse error:', e); }
 
       const newPool: UserPool = {
         address: result.contractAddress || txid,

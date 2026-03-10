@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../logger';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getBlockUrl } from '../contracts';
@@ -150,7 +151,7 @@ function LiveFeed() {
                                 });
                             }
                         }
-                    } catch (e) { console.warn('[NewsFeed] Block event parse failed:', e); }
+                    } catch (e) { logger.warn('[NewsFeed] Block event parse failed:', e); }
                 }
             }
 
@@ -173,7 +174,7 @@ function LiveFeed() {
                         }
                     }
                 }
-            } catch (e) { console.warn('[NewsFeed] Pool reserves fetch failed:', e); }
+            } catch (e) { logger.warn('[NewsFeed] Pool reserves fetch failed:', e); }
 
             // Token supply data
             for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
@@ -189,7 +190,7 @@ function LiveFeed() {
                             icon: tok.icon,
                         });
                     }
-                } catch (e) { console.warn(`[NewsFeed] ${sym} supply fetch failed:`, e); }
+                } catch (e) { logger.warn(`[NewsFeed] ${sym} supply fetch failed:`, e); }
             }
 
             // Mempool activity
@@ -232,7 +233,7 @@ function LiveFeed() {
                         });
                     }
                 }
-            } catch (e) { console.warn('[NewsFeed] Epoch info fetch failed:', e); }
+            } catch (e) { logger.warn('[NewsFeed] Epoch info fetch failed:', e); }
 
             // Sort by time descending
             items.sort((a, b) => b.time - a.time);
@@ -241,7 +242,7 @@ function LiveFeed() {
             setStats(prev => ({ ...prev, block: height, txCount: items.filter(i => i.type === 'block').length }));
             setLastUpdate(now);
         } catch (e) {
-            console.error('Feed fetch error:', e);
+            logger.error('Feed fetch error:', e);
         } finally {
             setLoading(false);
         }

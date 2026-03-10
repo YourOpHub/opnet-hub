@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract, BitcoinUtils,
@@ -109,7 +110,7 @@ const Staking: React.FC = () => {
           const decoded = (rateRes.value as CallResult).properties as Record<string, unknown>;
           if (decoded?.rate) setRewardRate(BigInt(String(decoded.rate)));
         }
-      } catch (e) { console.warn('[Staking] Failed to fetch staking stats:', e); }
+      } catch (e) { logger.warn('[Staking] Failed to fetch staking stats:', e); }
     };
     fetchStats();
     const iv = setInterval(fetchStats, 30000);
@@ -210,7 +211,7 @@ const Staking: React.FC = () => {
       setResult({ type: 'success', msg: `Rewards claimed! TX: ${receipt.transactionId}` });
       const ts = Date.now();
       setLastClaimTs(ts);
-      try { localStorage.setItem(claimKey, String(ts)); } catch (e) { console.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
+      try { localStorage.setItem(claimKey, String(ts)); } catch (e) { logger.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -241,7 +242,7 @@ const Staking: React.FC = () => {
   const CLAIM_COOLDOWN_MS = 5 * 60 * 1000;
   const claimKey = `hub_last_claim_${walletAddress || ''}`;
   const [lastClaimTs, setLastClaimTs] = useState<number>(() => {
-    try { return Number(localStorage.getItem(claimKey) || '0'); } catch (e) { console.warn('[Staking] Failed to read claim timestamp from localStorage:', e); return 0; }
+    try { return Number(localStorage.getItem(claimKey) || '0'); } catch (e) { logger.warn('[Staking] Failed to read claim timestamp from localStorage:', e); return 0; }
   });
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(iv); }, []);

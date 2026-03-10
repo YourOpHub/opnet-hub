@@ -39,3 +39,7 @@ nul
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+e2e/ext-opwallet/
+e2e/real-wallet.config.ts
+e2e/real-wallet.spec.ts
+*.png

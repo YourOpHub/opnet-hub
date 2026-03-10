@@ -4,7 +4,7 @@
  * Covers: initial render with mocked useMarketplace hook
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, act, screen } from '@testing-library/react';
 
 vi.mock('../logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -63,17 +63,29 @@ describe('Marketplace', () => {
     vi.useRealTimers();
   });
 
-  it('renders marketplace component', async () => {
+  it('renders marketplace heading', async () => {
     render(<Marketplace />);
     await act(async () => { await vi.advanceTimersByTimeAsync(100); });
-    const container = document.querySelector('div');
-    expect(container).toBeTruthy();
+    expect(screen.getByText('Marketplace')).toBeTruthy();
+    expect(screen.getByText('ON-CHAIN')).toBeTruthy();
   });
 
-  it('renders without crashing', () => {
+  it('renders search input', async () => {
     render(<Marketplace />);
-    // When no token is selected, should show token list/discovery view
-    const el = document.querySelector('div');
-    expect(el).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByLabelText(/Search tokens/)).toBeTruthy();
+  });
+
+  it('shows empty state when no tokens', async () => {
+    render(<Marketplace />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByText('No tokens found')).toBeTruthy();
+    expect(screen.getByText(/Paste a contract address/)).toBeTruthy();
+  });
+
+  it('renders description', async () => {
+    render(<Marketplace />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByText(/P2P orderbook/)).toBeTruthy();
   });
 });

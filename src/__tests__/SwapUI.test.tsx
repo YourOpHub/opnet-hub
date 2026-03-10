@@ -4,7 +4,7 @@
  * Covers: initial render with mocked useSwap hook
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, act, screen } from '@testing-library/react';
 
 vi.mock('../logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -16,8 +16,8 @@ vi.mock('../hooks/useSwap', () => ({
     connected: false,
     openConnectModal: vi.fn(),
     SWAP_TOKENS: [
-      { symbol: 'MINE', name: 'MINE', icon: '\u26CF', decimals: 8, address: 'addr1', pubkey: '' },
-      { symbol: 'VIBE', name: 'VIBE', icon: '\u26A1', decimals: 8, address: 'addr2', pubkey: '' },
+      { symbol: 'MINE', name: 'MINE', icon: '\u26CF', decimals: 8, address: 'addr1', pubkey: '0x111' },
+      { symbol: 'VIBE', name: 'VIBE', icon: '\u26A1', decimals: 8, address: 'addr2', pubkey: '0x222' },
     ],
     heldTokens: [],
     motoPools: [],
@@ -40,8 +40,8 @@ vi.mock('../hooks/useSwap', () => ({
     showSettings: false,
     setShowSettings: vi.fn(),
     balances: {},
-    from: { symbol: 'MINE', name: 'MINE', icon: '\u26CF', decimals: 8, address: 'addr1', pubkey: '' },
-    to: { symbol: 'VIBE', name: 'VIBE', icon: '\u26A1', decimals: 8, address: 'addr2', pubkey: '' },
+    from: { symbol: 'MINE', name: 'MINE', icon: '\u26CF', decimals: 8, address: 'addr1', pubkey: '0x111' },
+    to: { symbol: 'VIBE', name: 'VIBE', icon: '\u26A1', decimals: 8, address: 'addr2', pubkey: '0x222' },
     fromVal: 0,
     toVal: 0,
     hasPool: false,
@@ -97,8 +97,46 @@ describe('SwapUI', () => {
     expect(container).toBeTruthy();
   });
 
-  it('renders without crashing', () => {
-    const { container } = render(<SwapUI />);
-    expect(container.children.length).toBeGreaterThan(0);
+  it('renders swap form', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByRole('form', { name: /Token swap/ })).toBeTruthy();
+  });
+
+  it('renders Swap title', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getAllByText('Swap').length).toBeGreaterThan(0);
+  });
+
+  it('renders from section', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByText('From')).toBeTruthy();
+  });
+
+  it('renders token select dropdowns', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByLabelText(/token to swap from/)).toBeTruthy();
+    expect(screen.getByLabelText(/token to receive/)).toBeTruthy();
+  });
+
+  it('renders flip button', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByLabelText(/Swap token direction/)).toBeTruthy();
+  });
+
+  it('renders swap amount input', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByLabelText(/Amount of MINE to swap/)).toBeTruthy();
+  });
+
+  it('renders slippage settings button', async () => {
+    render(<SwapUI />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+    expect(screen.getByLabelText(/Slippage settings/)).toBeTruthy();
   });
 });

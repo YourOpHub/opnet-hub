@@ -35,7 +35,7 @@ import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import {
-  DEPLOYED_CONTRACTS,
+  DEPLOYED_CONTRACTS, type ContractTokenInfo,
   POOL_ADDRESS, POOL_PUBKEY,
   MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_PUBKEY,
   getTxUrl, getContractOpscanUrl,
@@ -261,7 +261,7 @@ export function useSwap(): UseSwapReturn {
 
   // Pool creation state
   const [userPools, setUserPools] = useState<UserPool[]>(() => {
-    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch (e) { logger.warn('[useSwap] Failed to parse user pools from localStorage:', e); return []; }
+    try { return JSON.parse(localStorage.getItem('hub_user_pools') ?? '[]') as UserPool[]; } catch (e) { logger.warn('[useSwap] Failed to parse user pools from localStorage:', e); return []; }
   });
   const [createPoolOpen, setCreatePoolOpen] = useState(false);
   const [poolTokenA, setPoolTokenA] = useState('');
@@ -313,7 +313,7 @@ export function useSwap(): UseSwapReturn {
   useEffect(() => {
     const prevNet = opnetRpc.getNetwork();
     opnetRpc.setNetwork(CURRENT_ENV);
-    Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
+    (Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).forEach(([sym, tok]) => {
       opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
         if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
       }).catch((e) => { logger.warn('[useSwap] Token supply fetch error:', e); });
@@ -330,7 +330,7 @@ export function useSwap(): UseSwapReturn {
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
     const jobs: Promise<void>[] = [];
-    for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
+    for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]) {
       jobs.push(
         opnetRpc.getTokenBalance(tok.address, mldsa, tweaked)
           .then(b => setBalances(prev => ({ ...prev, [sym]: b })))
@@ -370,14 +370,14 @@ export function useSwap(): UseSwapReturn {
 
   // Find which pool handles this pair: SimplePool (MINE/VIBE) or Motoswap
   const motoPool = useMemo(() => {
-    if (!from || !to) return null;
+    if (from == null || to == null) return null;
     return motoPools.find(p =>
       (p.token0_pubkey === from.pubkey && p.token1_pubkey === to.pubkey) ||
       (p.token1_pubkey === from.pubkey && p.token0_pubkey === to.pubkey)
-    ) || null;
+    ) ?? null;
   }, [from, to, motoPools]);
 
-  const isSimplePool = from && to && (
+  const isSimplePool = from != null && to != null && (
     (from.symbol === 'MINE' && to.symbol === 'VIBE') ||
     (from.symbol === 'VIBE' && to.symbol === 'MINE')
   );
@@ -388,7 +388,7 @@ export function useSwap(): UseSwapReturn {
   if (isSimplePool) {
     rIn = isAToB ? reserveA : reserveB;
     rOut = isAToB ? reserveB : reserveA;
-  } else if (motoPool && from) {
+  } else if (motoPool != null && from != null) {
     const isForward = from.pubkey === motoPool.token0_pubkey;
     const mr0 = Number(BigInt(motoPool.reserve0)) / Math.pow(10, motoPool.token0_decimals);
     const mr1 = Number(BigInt(motoPool.reserve1)) / Math.pow(10, motoPool.token1_decimals);
@@ -517,8 +517,9 @@ export function useSwap(): UseSwapReturn {
     setMinting(sym);
     setMintResult(null);
     try {
-      const tok = DEPLOYED_CONTRACTS[sym as keyof typeof DEPLOYED_CONTRACTS];
-      if (!tok) throw new Error('Unknown token');
+      const tokKey = sym as keyof typeof DEPLOYED_CONTRACTS;
+      if (!(tokKey in DEPLOYED_CONTRACTS)) throw new Error('Unknown token');
+      const tok = DEPLOYED_CONTRACTS[tokKey];
       const rawAmount = BitcoinUtils.expandToDecimals(MINT_AMOUNT, tok.decimals);
       const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => contract.publicMint(rawAmount));
@@ -548,13 +549,13 @@ export function useSwap(): UseSwapReturn {
     if (poolTokenA === poolTokenB) { setPoolDeployResult({ ok: false, msg: 'Token A and B must be different' }); return; }
 
     const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
-    const web3 = inst.web3 || inst;
-    if (!(web3 as Record<string, unknown>)?.deployContract) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
+    const web3 = inst.web3 ?? inst;
+    if ((web3 as Record<string, unknown>)?.deployContract == null) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
 
     setDeployingPool(true); setPoolDeployResult(null);
     try {
       setPoolDeployStep('Loading SimplePool bytecode...');
-      const base = import.meta.env.BASE_URL || '/';
+      const base = (import.meta.env.BASE_URL as string | undefined) ?? '/';
       const resp = await fetch(`${base}wasm/SimplePool.wasm`);
       if (!resp.ok) throw new Error('Failed to load SimplePool.wasm');
       const bytecode = new Uint8Array(await resp.arrayBuffer());

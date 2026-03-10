@@ -5,6 +5,11 @@
 import { OPSCAN_NETWORK, CURRENT_ENV } from './config';
 import { logger } from './logger';
 
+/** Type-safe env var reader — import.meta.env values are `string | undefined` at runtime */
+function env(key: string): string {
+    return (import.meta.env[key] as string | undefined) ?? '';
+}
+
 /** v6 deployment — MintableToken with publicMint (post-testnet-reset #2, block ~3821) */
 export const TESTNET_CONTRACTS = {
     MINE: {
@@ -58,8 +63,8 @@ export interface ContractsMap {
 /** Mainnet contract addresses — placeholder until mainnet deployment */
 const MAINNET_CONTRACTS: ContractsMap = {
     MINE: {
-        address: import.meta.env.VITE_MINE_ADDRESS || '',
-        pubkey: import.meta.env.VITE_MINE_PUBKEY || '',
+        address: env('VITE_MINE_ADDRESS'),
+        pubkey: env('VITE_MINE_PUBKEY'),
         symbol: 'MINE',
         name: 'Mine Token',
         decimals: 8,
@@ -71,8 +76,8 @@ const MAINNET_CONTRACTS: ContractsMap = {
         maxMintPerTx: 1_000_000,
     },
     VIBE: {
-        address: import.meta.env.VITE_VIBE_ADDRESS || '',
-        pubkey: import.meta.env.VITE_VIBE_PUBKEY || '',
+        address: env('VITE_VIBE_ADDRESS'),
+        pubkey: env('VITE_VIBE_PUBKEY'),
         symbol: 'VIBE',
         name: 'Vibe Token',
         decimals: 8,
@@ -93,18 +98,18 @@ if (CURRENT_ENV === 'mainnet' && (!DEPLOYED_CONTRACTS.MINE.address || !DEPLOYED_
   logger.error('[FATAL] Mainnet contracts not configured! Set VITE_MINE_ADDRESS and VITE_VIBE_ADDRESS env vars.');
 }
 
-export const DEPLOYER_ADDRESS = import.meta.env.VITE_DEPLOYER_ADDRESS || 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';
+export const DEPLOYER_ADDRESS = env('VITE_DEPLOYER_ADDRESS') || 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';
 
 /** Deployer public key hashes (public, NOT private keys) — used for fee recipient P2OP */
-export const DEPLOYER_MLDSA_HEX = import.meta.env.VITE_DEPLOYER_MLDSA || '4ca79348ed8d21c5d4bbacdde9fe4eb7b0b0b2ed495fa81e545d5fbc7b554aea';
-export const DEPLOYER_TWEAKED_HEX = import.meta.env.VITE_DEPLOYER_TWEAKED || '0fb4ee127879ea8e617377fc250f362f8ffab44328436e07e0d03ddca91e0f7f';
+export const DEPLOYER_MLDSA_HEX = env('VITE_DEPLOYER_MLDSA') || '4ca79348ed8d21c5d4bbacdde9fe4eb7b0b0b2ed495fa81e545d5fbc7b554aea';
+export const DEPLOYER_TWEAKED_HEX = env('VITE_DEPLOYER_TWEAKED') || '0fb4ee127879ea8e617377fc250f362f8ffab44328436e07e0d03ddca91e0f7f';
 
 export const MINE_DEPLOY_TXID = '0c49c38d168dd72b3a8cf622e41af707e6a22256ae3cf2e36d33a24307948fdb';
 export const VIBE_DEPLOY_TXID = '81debce471fa810f416caaa88210a251558acc032a4ac0c0584ea1427ae60a1a';
 
 /** SimplePool v4 AMM — LP shares + events (PoolLiquidityAdded/Removed/Swap) */
-export const POOL_ADDRESS = import.meta.env.VITE_POOL_ADDRESS || 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
-export const POOL_PUBKEY = import.meta.env.VITE_POOL_PUBKEY || '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
+export const POOL_ADDRESS = env('VITE_POOL_ADDRESS') || 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
+export const POOL_PUBKEY = env('VITE_POOL_PUBKEY') || '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
 export const POOL_HEX = POOL_PUBKEY.replace('0x', '');
 
 /** SimplePool v2 selectors (from opnet-transform build output) */
@@ -128,8 +133,8 @@ export const OP20_SELECTORS = {
 } as const;
 
 /** SimpleStaking v3 — events (Staked/Unstaked/RewardClaimed/RewardRateChanged) */
-export const STAKING_ADDRESS = import.meta.env.VITE_STAKING_ADDRESS || 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
-export const STAKING_PUBKEY = import.meta.env.VITE_STAKING_PUBKEY || '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
+export const STAKING_ADDRESS = env('VITE_STAKING_ADDRESS') || 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
+export const STAKING_PUBKEY = env('VITE_STAKING_PUBKEY') || '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
 /** Staking selectors (from opnet-transform build output) */
@@ -147,8 +152,8 @@ export const STAKING_SELECTORS = {
 } as const;
 
 /** P2PMarket v9 — output bitmap fix (prevents BTC double-counting in batch fills) */
-export const MARKET_ADDRESS = import.meta.env.VITE_MARKET_ADDRESS || 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt';
-export const MARKET_PUBKEY = import.meta.env.VITE_MARKET_PUBKEY || '0xd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
+export const MARKET_ADDRESS = env('VITE_MARKET_ADDRESS') || 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt';
+export const MARKET_PUBKEY = env('VITE_MARKET_PUBKEY') || '0xd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595';
 export const MARKET_HEX = MARKET_PUBKEY.replace('0x', '');
 
 /** P2PMarket v5 selectors — trustless buy orders (accept + execute) */
@@ -164,15 +169,15 @@ export const MARKET_SELECTORS = {
 } as const;
 
 /** FractalSwap v7 — real BTC escrow + relayer auto-complete */
-export const CROSSCHAIN_ADDRESS = import.meta.env.VITE_CROSSCHAIN_ADDRESS || 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
-export const CROSSCHAIN_PUBKEY = import.meta.env.VITE_CROSSCHAIN_PUBKEY || '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
+export const CROSSCHAIN_ADDRESS = env('VITE_CROSSCHAIN_ADDRESS') || 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
+export const CROSSCHAIN_PUBKEY = env('VITE_CROSSCHAIN_PUBKEY') || '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
 
 /** Motoswap DEX contracts — env-overridable for mainnet migration */
-export const MOTOSWAP_FACTORY_ADDRESS = import.meta.env.VITE_MOTOSWAP_FACTORY_ADDRESS || 'opt1sqzs3e6qrtkgyfu0x592x6rdfe4r9dpjxqycyhr7w';
-export const MOTOSWAP_FACTORY_PUBKEY = import.meta.env.VITE_MOTOSWAP_FACTORY_PUBKEY || '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
-export const MOTOSWAP_ROUTER_ADDRESS = import.meta.env.VITE_MOTOSWAP_ROUTER_ADDRESS || 'opt1sqqavlf5dr8tjgrsrvjzhk5yrkgnha0z4ty9xwwf6';
-export const MOTOSWAP_ROUTER_PUBKEY = import.meta.env.VITE_MOTOSWAP_ROUTER_PUBKEY || '0x0e6ff1f2d7db7556cb37729e3738f4dae82659b984b2621fab08e1111b1b937a';
-export const MOTO_TOKEN_PUBKEY = import.meta.env.VITE_MOTO_TOKEN_PUBKEY || '0xfd4473840751d58d9f8b73bdd57d6c5260453d5518bd7cd02d0a4cf3df9bf4dd';
+export const MOTOSWAP_FACTORY_ADDRESS = env('VITE_MOTOSWAP_FACTORY_ADDRESS') || 'opt1sqzs3e6qrtkgyfu0x592x6rdfe4r9dpjxqycyhr7w';
+export const MOTOSWAP_FACTORY_PUBKEY = env('VITE_MOTOSWAP_FACTORY_PUBKEY') || '0xa02aa5ca4c307107484d5fb690d811df1cf526f8de204d24528653dcae369a0f';
+export const MOTOSWAP_ROUTER_ADDRESS = env('VITE_MOTOSWAP_ROUTER_ADDRESS') || 'opt1sqqavlf5dr8tjgrsrvjzhk5yrkgnha0z4ty9xwwf6';
+export const MOTOSWAP_ROUTER_PUBKEY = env('VITE_MOTOSWAP_ROUTER_PUBKEY') || '0x0e6ff1f2d7db7556cb37729e3738f4dae82659b984b2621fab08e1111b1b937a';
+export const MOTO_TOKEN_PUBKEY = env('VITE_MOTO_TOKEN_PUBKEY') || '0xfd4473840751d58d9f8b73bdd57d6c5260453d5518bd7cd02d0a4cf3df9bf4dd';
 
 /** TokenEscrowBridge — removed from UI (duplicates Marketplace), not redeployed */
 export const TOKEN_ESCROW_ADDRESS = '';
@@ -180,8 +185,8 @@ export const TOKEN_ESCROW_PUBKEY = '';
 export const TOKEN_ESCROW_HEX = '';
 
 /** NativeSwapPool v5 — BTC/MINE AMM (dust check, min fee, audit-fixed, deployed 2026-03-05) */
-export const NATIVESWAP_ADDRESS = import.meta.env.VITE_NATIVESWAP_ADDRESS || 'opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj';
-export const NATIVESWAP_PUBKEY = import.meta.env.VITE_NATIVESWAP_PUBKEY || '0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
+export const NATIVESWAP_ADDRESS = env('VITE_NATIVESWAP_ADDRESS') || 'opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj';
+export const NATIVESWAP_PUBKEY = env('VITE_NATIVESWAP_PUBKEY') || '0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
 export const NATIVESWAP_HEX = NATIVESWAP_PUBKEY.replace('0x', '');
 
 /** NativeSwap selectors (from opnet-transform build output) */
@@ -269,8 +274,8 @@ const PUBKEY_MAP: Record<string, string> = {
     [STAKING_ADDRESS]: STAKING_PUBKEY.replace('0x', ''),
     [MARKET_ADDRESS]: MARKET_HEX,
     [CROSSCHAIN_ADDRESS]: CROSSCHAIN_PUBKEY.replace('0x', ''),
-    ...(TOKEN_ESCROW_ADDRESS ? { [TOKEN_ESCROW_ADDRESS]: TOKEN_ESCROW_HEX } : {}),
-    ...(NATIVESWAP_ADDRESS ? { [NATIVESWAP_ADDRESS]: NATIVESWAP_HEX } : {}),
+    ...(TOKEN_ESCROW_ADDRESS !== '' ? { [TOKEN_ESCROW_ADDRESS]: TOKEN_ESCROW_HEX } : {}),
+    ...(NATIVESWAP_ADDRESS !== '' ? { [NATIVESWAP_ADDRESS]: NATIVESWAP_HEX } : {}),
 };
 
 /** Get hex pubkey for an opt1 address, or return address as-is */

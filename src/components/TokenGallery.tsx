@@ -10,7 +10,7 @@ import { getProvider } from '../contractCache';
 import type { TxParams } from '../txUtils';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
-import { DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, type ContractTokenInfo, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import { useOps } from '../contexts/OpsContext';
 import { fetchAllTokens, type IndexedToken, formatTokenBalance } from '../tokenApi';
@@ -40,6 +40,14 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promi
     feeRate,
     priorityFee,
   };
+}
+
+/** Server response for token import */
+interface ImportTokenResponse {
+  ok?: boolean;
+  error?: string;
+  existed?: boolean;
+  token?: { symbol: string; name: string };
 }
 
 interface DeployedToken {
@@ -114,7 +122,7 @@ const TokenGallery: React.FC = () => {
     if (tab === 'all') void loadAllTokens();
   }, [tab, loadAllTokens]);
 
-  const API_BASE = import.meta.env.VITE_API_URL || '';
+  const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
   const doImportToken = useCallback(async () => {
     if (!importAddr || (!importAddr.startsWith('opt1') && !importAddr.startsWith('0x'))) {
       setImportResult({ ok: false, msg: 'Enter a valid opt1... or 0x... address' });
@@ -127,11 +135,11 @@ const TokenGallery: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: importAddr.trim() }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        setImportResult({ ok: false, msg: data.error || 'Token not found or not OP-20' });
+      const data = (await res.json()) as ImportTokenResponse;
+      if (!res.ok || data.ok !== true) {
+        setImportResult({ ok: false, msg: data.error ?? 'Token not found or not OP-20' });
       } else {
-        setImportResult({ ok: true, msg: `${data.existed ? 'Already indexed' : 'Added'}: ${data.token.symbol} (${data.token.name})` });
+        setImportResult({ ok: true, msg: `${data.existed === true ? 'Already indexed' : 'Added'}: ${data.token?.symbol ?? '?'} (${data.token?.name ?? '?'})` });
         setImportAddr('');
         void loadAllTokens();
       }
@@ -204,7 +212,7 @@ const TokenGallery: React.FC = () => {
   }, [tokens]);
 
   // Featured tokens (our pre-deployed MINE and VIBE)
-  const featured = Object.entries(DEPLOYED_CONTRACTS).map(([_sym, tok]) => ({
+  const featured = (Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).map(([_sym, tok]) => ({
     address: tok.address,
     symbol: tok.symbol,
     name: tok.name,

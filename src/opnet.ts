@@ -111,8 +111,8 @@ export async function getBalance(address: string, filterOrdinals = true): Promis
 /** Get contract code; returns { bytecode } or null if not a contract */
 export async function getCode(address: string, onlyBytecode = false): Promise<{ bytecode?: string } | null> {
   try {
-    const r = await rpc('btc_getCode', [address, onlyBytecode]) as { bytecode?: string; contractAddress?: string };
-    return r && (r.bytecode || r.contractAddress) ? r : null;
+    const r = await rpc('btc_getCode', [address, onlyBytecode]) as { bytecode?: string; contractAddress?: string } | null;
+    return r != null && (r.bytecode != null || r.contractAddress != null) ? r : null;
   } catch (e) {
     logger.warn('[opnet] getCode error:', e);
     return null;
@@ -159,8 +159,8 @@ export interface GasParams {
 
 export async function getGasParameters(): Promise<GasParams | null> {
   try {
-    const r = await rpc('btc_gas', []) as GasParams;
-    return r || null;
+    const r = await rpc('btc_gas', []) as GasParams | null;
+    return r ?? null;
   } catch (e) {
     logger.warn('[opnet] getGasParameters error:', e);
     return null;
@@ -170,8 +170,8 @@ export async function getGasParameters(): Promise<GasParams | null> {
 /** Latest epoch (5-block checkpoint) */
 export async function getLatestEpoch(): Promise<{ number?: number; hash?: string } | null> {
   try {
-    const r = await rpc('btc_latestEpoch', []) as { number?: number; hash?: string };
-    return r || null;
+    const r = await rpc('btc_latestEpoch', []) as { number?: number; hash?: string } | null;
+    return r ?? null;
   } catch (e) {
     logger.warn('[opnet] getLatestEpoch error:', e);
     return null;
@@ -181,8 +181,8 @@ export async function getLatestEpoch(): Promise<{ number?: number; hash?: string
 /** Mempool stats */
 export async function getMempoolInfo(): Promise<{ count?: number; opnetCount?: number; sizeBytes?: number } | null> {
   try {
-    const r = await rpc('btc_getMempoolInfo', []) as { count?: number; opnetCount?: number; sizeBytes?: number };
-    return r || null;
+    const r = await rpc('btc_getMempoolInfo', []) as { count?: number; opnetCount?: number; sizeBytes?: number } | null;
+    return r ?? null;
   } catch (e) {
     logger.warn('[opnet] getMempoolInfo error:', e);
     return null;
@@ -196,9 +196,9 @@ function base64ToHex(b64: string): string {
 }
 
 /** Parse btc_call result (base64 or hex) */
-function parseCallResult(r: Record<string, unknown>): string | null {
-  if (!r) return null;
-  if (r.error) return null;
+function parseCallResult(r: Record<string, unknown> | null): string | null {
+  if (r == null) return null;
+  if (r.error != null) return null;
   if (typeof r.revert === 'string' && r.revert.length > 4) return null;
   const raw = typeof r.result === 'string' ? r.result : (typeof r.returnData === 'string' ? r.returnData : null);
   if (!raw || raw === 'AA==') return null;
@@ -219,7 +219,7 @@ export async function callContract(
   // btc_call accepts opt1 addresses with positional params
   try {
     const params: (string | undefined)[] = [to, data, fromMLDSAHex, fromTweakedHex];
-    const r = await rpc('btc_call', params) as Record<string, unknown>;
+    const r = await rpc('btc_call', params) as Record<string, unknown> | null;
     const result = parseCallResult(r);
     if (result) return result;
   } catch (e) { logger.warn('[opnet] callContract error:', e); }
@@ -315,9 +315,9 @@ export async function getOP20Info(contractAddress: string): Promise<{
 export async function getUTXOs(address: string): Promise<Array<{ transactionId: string; outputIndex: number; value: string | number }>> {
   try {
     // btc_getUTXOs params: [address, optimize?, mergePendingUTXOs?]
-    const r = await rpc('btc_getUTXOs', [address, false, true], 15000) as Record<string, unknown>;
+    const r = await rpc('btc_getUTXOs', [address, false, true], 15000) as Record<string, unknown> | unknown[];
     // Result may be { confirmed: [...] } or a direct array
-    const items = Array.isArray(r) ? r : (Array.isArray((r as Record<string, unknown>)?.confirmed) ? (r as Record<string, unknown>).confirmed : []);
+    const items = Array.isArray(r) ? r : (Array.isArray((r as Record<string, unknown>).confirmed) ? (r as Record<string, unknown>).confirmed as unknown[] : []);
     return items as Array<{ transactionId: string; outputIndex: number; value: string | number }>;
   } catch (e) { logger.warn('[opnet] getUTXOs error:', e); return []; }
 }
@@ -327,21 +327,21 @@ export async function getTransaction(txHash: string): Promise<Record<string, unk
   const hash = txHash.trim();
   // Try as-is first
   try {
-    const r = await rpc('btc_getTransactionByHash', [hash], 12000) as Record<string, unknown>;
-    if (r) return r;
+    const r = await rpc('btc_getTransactionByHash', [hash], 12000) as Record<string, unknown> | null;
+    if (r != null) return r;
   } catch (e) { logger.warn('[opnet] getTransaction error (as-is):', e); }
   // Try with 0x prefix if missing
   if (!hash.startsWith('0x')) {
     try {
-      const r = await rpc('btc_getTransactionByHash', ['0x' + hash], 12000) as Record<string, unknown>;
-      if (r) return r;
+      const r = await rpc('btc_getTransactionByHash', ['0x' + hash], 12000) as Record<string, unknown> | null;
+      if (r != null) return r;
     } catch (e) { logger.warn('[opnet] getTransaction error (0x-prefixed):', e); }
   }
   // Try without 0x prefix
   if (hash.startsWith('0x')) {
     try {
-      const r = await rpc('btc_getTransactionByHash', [hash.slice(2)], 12000) as Record<string, unknown>;
-      if (r) return r;
+      const r = await rpc('btc_getTransactionByHash', [hash.slice(2)], 12000) as Record<string, unknown> | null;
+      if (r != null) return r;
     } catch (e) { logger.warn('[opnet] getTransaction error (no-prefix):', e); }
   }
   return null;
@@ -351,8 +351,8 @@ export async function getTransaction(txHash: string): Promise<Record<string, unk
 export async function getTransactionReceipt(txHash: string): Promise<Record<string, unknown> | null> {
   const hash = txHash.trim();
   try {
-    const r = await rpc('btc_getTransactionReceipt', [hash], 12000) as Record<string, unknown>;
-    if (r) return r;
+    const r = await rpc('btc_getTransactionReceipt', [hash], 12000) as Record<string, unknown> | null;
+    if (r != null) return r;
   } catch (e) { logger.warn('[opnet] getTransactionReceipt error:', e); }
   if (!hash.startsWith('0x')) {
     try { return await rpc('btc_getTransactionReceipt', ['0x' + hash], 12000) as Record<string, unknown>; } catch (e) { logger.warn('[opnet] getTransactionReceipt error (0x-prefixed):', e); }
@@ -363,7 +363,7 @@ export async function getTransactionReceipt(txHash: string): Promise<Record<stri
 /** Get latest pending transactions from mempool */
 export async function getLatestPendingTxs(limit = 10): Promise<Array<Record<string, unknown>>> {
   try {
-    const r = await rpc('btc_getLatestPendingTransactions', [undefined, undefined, limit], 10000) as Array<Record<string, unknown>>;
+    const r = await rpc('btc_getLatestPendingTransactions', [undefined, undefined, limit], 10000) as Array<Record<string, unknown>> | null;
     return Array.isArray(r) ? r : [];
   } catch (e) { logger.warn('[opnet] getLatestPendingTxs error:', e); return []; }
 }
@@ -372,16 +372,16 @@ export async function getLatestPendingTxs(limit = 10): Promise<Array<Record<stri
 export async function getBlockByNumber(blockNumber: number | string, prefetchTxs = false): Promise<Record<string, unknown> | null> {
   try {
     const hex = typeof blockNumber === 'number' ? '0x' + blockNumber.toString(16) : blockNumber;
-    const r = await rpc('btc_getBlockByNumber', [hex, prefetchTxs]) as Record<string, unknown>;
-    return r || null;
+    const r = await rpc('btc_getBlockByNumber', [hex, prefetchTxs]) as Record<string, unknown> | null;
+    return r ?? null;
   } catch (e) { logger.warn('[opnet] getBlockByNumber error:', e); return null; }
 }
 
 /** Get public key info for addresses */
 export async function getPublicKeyInfo(addresses: string[]): Promise<Record<string, unknown> | null> {
   try {
-    const r = await rpc('btc_getPublicKeyInfo', [addresses]) as Record<string, unknown>;
-    return r || null;
+    const r = await rpc('btc_getPublicKeyInfo', [addresses]) as Record<string, unknown> | null;
+    return r ?? null;
   } catch (e) { logger.warn('[opnet] getPublicKeyInfo error:', e); return null; }
 }
 

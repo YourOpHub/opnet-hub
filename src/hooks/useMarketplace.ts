@@ -27,6 +27,7 @@ import {
 import { MARKETPLACE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
+import type { ContractTokenInfo } from '../contracts';
 import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { MARKET_ADDRESS, MARKET_PUBKEY, DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
@@ -34,7 +35,12 @@ import { useToast } from '../components/Toast';
 import { lockOrder, unlockOrder, getActiveLocks } from '../swapApi';
 import { useOps } from '../contexts/OpsContext';
 
-const MARKET_API = import.meta.env.VITE_API_URL || '';
+const MARKET_API = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+
+/** Server response for /market/tokens */
+interface MarketTokensResponse {
+  tokens?: MarketToken[];
+}
 
 /** Typed interface for P2PMarket contract methods */
 interface MarketContract extends BaseContractProperties {
@@ -76,7 +82,7 @@ export interface MarketToken {
   totalVolume: number;
 }
 
-const KNOWN_TOKENS: MarketToken[] = Object.values(DEPLOYED_CONTRACTS).map(t => ({
+const KNOWN_TOKENS: MarketToken[] = (Object.values(DEPLOYED_CONTRACTS) as ContractTokenInfo[]).map(t => ({
   address: t.address,
   pubkey: t.pubkey,
   symbol: t.symbol,
@@ -215,7 +221,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await market.getOrder(BigInt(i));
-          if (!r?.properties) continue;
+          if (r?.properties == null) continue;
           const p = r.properties as Record<string, unknown>;
           const orderType = Number(p.orderType ?? 0n);
           const status = Number(p.status ?? 0n);
@@ -258,8 +264,9 @@ export function useMarketplace(): UseMarketplaceReturn {
     try {
       const res = await fetch(`${MARKET_API}/market/tokens`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
-        const serverTokens = (await res.json()).tokens || [];
-        const merged = serverTokens.map((st: MarketToken) => {
+        const body = (await res.json()) as MarketTokensResponse;
+        const serverTokens: MarketToken[] = body.tokens ?? [];
+        const merged: MarketToken[] = serverTokens.map((st: MarketToken) => {
           const known = KNOWN_TOKENS.find(k => k.address === st.address);
           return { ...st, pubkey: st.pubkey || known?.pubkey || '', decimals: st.decimals || known?.decimals || 8 };
         });

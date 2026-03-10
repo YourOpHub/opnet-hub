@@ -5,12 +5,12 @@
  * Imported by: useCrossChainState, useFractalSwap, useTokenEscrow, useCrossChain
  */
 
-import { DEPLOYED_CONTRACTS } from '../contracts';
+import { DEPLOYED_CONTRACTS, type ContractTokenInfo } from '../contracts';
 import { Address } from '@btc-vision/transaction';
 import { NETWORK } from '../config';
 
 /** Token options for the bridge */
-export const TOKEN_OPTIONS = Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => ({
+export const TOKEN_OPTIONS = (Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).map(([sym, tok]) => ({
   symbol: sym,
   address: tok.address,
   pubkey: tok.pubkey,
@@ -45,7 +45,7 @@ export interface TokenEscrowOrder {
 /** Resolve token hex back to known token info */
 export function resolveToken(tokenHex: string): { symbol: string; icon: string; decimals: number; address: string } | null {
   for (const tok of TOKEN_OPTIONS) {
-    const pubHex = tok.pubkey.replace('0x', '').toLowerCase();
+    const pubHex: string = tok.pubkey.replace('0x', '').toLowerCase();
     if (tokenHex.toLowerCase() === pubHex || tokenHex.toLowerCase().endsWith(pubHex.slice(-32))) {
       return { symbol: tok.symbol, icon: tok.icon, decimals: tok.decimals, address: tok.address };
     }

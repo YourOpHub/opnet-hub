@@ -14,10 +14,10 @@ interface PoolSnapshot {
 
 const SNAPSHOT_KEY = 'hub_pool_snapshots';
 const MAX_SNAPSHOTS = 200;
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 function validateSnapshot(s: unknown): s is PoolSnapshot {
-  if (!s || typeof s !== 'object') return false;
+  if (s == null || typeof s !== 'object') return false;
   const snap = s as Record<string, unknown>;
   return typeof snap.ts === 'number' && !isNaN(snap.ts)
     && typeof snap.reserveMINE === 'number' && !isNaN(snap.reserveMINE)
@@ -28,8 +28,8 @@ function validateSnapshot(s: unknown): s is PoolSnapshot {
 function loadSnapshots(): PoolSnapshot[] {
   try {
     const raw = localStorage.getItem(SNAPSHOT_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
+    if (raw == null) return [];
+    const arr: unknown = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     return arr.filter(validateSnapshot);
   } catch (e) { logger.warn('[Analytics] Failed to load snapshots from localStorage:', e); return []; }
@@ -59,15 +59,19 @@ function mergeSnapshots(server: PoolSnapshot[], local: PoolSnapshot[]): PoolSnap
 }
 
 /** Fetch pool snapshot history from server */
+interface PoolHistoryResponse {
+  snapshots?: unknown[];
+}
+
 async function fetchServerSnapshots(pool: string, limit = 500, signal?: AbortSignal): Promise<PoolSnapshot[]> {
-  if (!API_BASE) return [];
+  if (API_BASE === '') return [];
   try {
     const resp = await fetch(`${API_BASE}/api/pool/history?pool=${encodeURIComponent(pool)}&limit=${limit}`, {
       signal: signal ?? AbortSignal.timeout(8000),
     });
     if (!resp.ok) return [];
-    const data = await resp.json();
-    if (!data.snapshots || !Array.isArray(data.snapshots)) return [];
+    const data = (await resp.json()) as PoolHistoryResponse;
+    if (!Array.isArray(data.snapshots)) return [];
     return data.snapshots.filter(validateSnapshot);
   } catch (e) {
     if (signal?.aborted) return [];
@@ -199,7 +203,7 @@ const Analytics: React.FC = () => {
 
       // Token supplies
       let supplyFail = false;
-      for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
+      for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]) {
         try {
           const supply = await opnetRpc.getTokenTotalSupply(tok.address);
           if (!cancelled) setSupplies(prev => ({ ...prev, [sym]: supply }));
@@ -299,7 +303,7 @@ const Analytics: React.FC = () => {
           <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
           <div className="flex-between mt-6 fs-2xs c-t4">
             <span>{snapshots[0] ? `${new Date(snapshots[0].ts).toLocaleDateString()} ${new Date(snapshots[0].ts).toLocaleTimeString()}` : ''}</span>
-            <span>{snapshots.length} pts{serverLoaded && API_BASE ? ' (server+local)' : ' (local)'}</span>
+            <span>{snapshots.length} pts{serverLoaded && API_BASE !== '' ? ' (server+local)' : ' (local)'}</span>
             <span>{(() => { const last = snapshots[snapshots.length - 1]; return last ? new Date(last.ts).toLocaleTimeString() : ''; })()}</span>
           </div>
         </div>

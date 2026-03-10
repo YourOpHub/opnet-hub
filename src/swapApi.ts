@@ -1,6 +1,6 @@
 import { logger } from './logger';
 
-const API = import.meta.env.VITE_API_URL || '';
+const API = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 export interface SwapOp {
   id: string;
@@ -44,19 +44,19 @@ export async function updateSwapOp(data: SwapOpUpdate): Promise<void> {
 
 export async function getActiveOps(wallet: string, market?: string): Promise<SwapOp[]> {
   try {
-    const q = market ? `?market=${market}` : '';
+    const q = market !== undefined ? `?market=${market}` : '';
     const r = await fetch(`${API}/api/swap/active/${wallet}${q}`);
     if (!r.ok) return [];
-    return await r.json();
+    return (await r.json()) as SwapOp[];
   } catch (e) { logger.warn('[swapApi] getActiveOps error:', e); return []; }
 }
 
 export async function getHistory(wallet: string, market?: string): Promise<SwapOp[]> {
   try {
-    const q = market ? `?market=${market}` : '';
+    const q = market !== undefined ? `?market=${market}` : '';
     const r = await fetch(`${API}/api/swap/history/${wallet}${q}`);
     if (!r.ok) return [];
-    return await r.json();
+    return (await r.json()) as SwapOp[];
   } catch (e) { logger.warn('[swapApi] getHistory error:', e); return []; }
 }
 
@@ -81,7 +81,7 @@ export async function getRates(): Promise<Record<string, unknown>> {
   try {
     const r = await fetch(`${API}/api/orders/rates`);
     if (!r.ok) return {};
-    return await r.json();
+    return (await r.json()) as Record<string, unknown>;
   } catch (e) { logger.warn('[swapApi] getRates error:', e); return {}; }
 }
 
@@ -93,8 +93,8 @@ export async function lockOrder(orderKey: string, wallet: string): Promise<{ ok:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order_key: orderKey, wallet }),
     });
-    const data = await r.json();
-    if (!r.ok) return { ok: false, error: data.error || 'Lock failed' };
+    const data = (await r.json()) as { error?: string };
+    if (!r.ok) return { ok: false, error: data.error ?? 'Lock failed' };
     return { ok: true };
   } catch (e) { logger.warn('[swapApi] lockOrder error:', e); return { ok: false, error: 'Network error' }; }
 }
@@ -115,6 +115,6 @@ export async function getActiveLocks(): Promise<Record<string, OrderLock>> {
   try {
     const r = await fetch(`${API}/api/swap/locks`);
     if (!r.ok) return {};
-    return await r.json();
+    return (await r.json()) as Record<string, OrderLock>;
   } catch (e) { logger.warn('[swapApi] getActiveLocks error:', e); return {}; }
 }

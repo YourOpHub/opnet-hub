@@ -43,7 +43,7 @@ const Launchpad: React.FC = () => {
         if (serverTokens && serverTokens.length > 0) {
           merged = serverTokens.map(st => {
             const lt = merged.find(l => l.address === st.address);
-            return lt ? { ...lt, replies: st.replies || lt.replies, likes: st.likes || lt.likes } : st;
+            return lt != null ? { ...lt, replies: st.replies.length > 0 ? st.replies : lt.replies, likes: st.likes > 0 ? st.likes : lt.likes } : st;
           });
           const local = loadTokens();
           local.forEach(lt => { if (!merged.find(m => m.address === lt.address)) merged.push(lt); });
@@ -66,8 +66,8 @@ const Launchpad: React.FC = () => {
       if ((tsR as CallResult).revert || (msR as CallResult).revert) return;
       const tsP = (tsR as CallResult).properties as Record<string, unknown>;
       const msP = (msR as CallResult).properties as Record<string, unknown>;
-      const total = BigInt(String(tsP?.supply || 0));
-      const max = BigInt(String(msP?.supply || 0));
+      const total = BigInt(String(tsP?.supply ?? 0));
+      const max = BigInt(String(msP?.supply ?? 0));
       const half = max / 2n;
       const minted = total > half ? Number(total - half) / 1e8 : 0;
       setTokens(prev => {
@@ -87,7 +87,7 @@ const Launchpad: React.FC = () => {
       const res = await c.balanceOf(senderAddr);
       if (!(res as CallResult).revert) {
         const p = (res as CallResult).properties as Record<string, unknown>;
-        setUserBal(Number(BigInt(String(p?.balance || 0))) / 1e8);
+        setUserBal(Number(BigInt(String(p?.balance ?? 0))) / 1e8);
       }
     } catch (e) { logger.warn('[Launchpad] Failed to fetch user token balance:', e); setUserBal(0); }
   }, [senderAddr, provider]);
@@ -118,13 +118,13 @@ const Launchpad: React.FC = () => {
       try {
         const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hexAddr}/holders`);
         if (!r.ok) return;
-        const data = await r.json();
-        const arr = data?.results || data || [];
+        const data = (await r.json()) as { results?: Record<string, unknown>[] } | Record<string, unknown>[];
+        const arr: Record<string, unknown>[] = (Array.isArray(data) ? data : (data as { results?: Record<string, unknown>[] }).results) ?? [];
         if (Array.isArray(arr)) {
           setOpscanHolders(arr.length);
           setOpscanHolderList(arr.slice(0, 20).map((h: Record<string, unknown>) => ({
-            address: String(h.address || h.holderAddress || '').slice(0, 20) + '...',
-            balance: String(h.balance || h.amount || '0'),
+            address: String(h.address ?? h.holderAddress ?? '').slice(0, 20) + '...',
+            balance: String(h.balance ?? h.amount ?? '0'),
           })));
         }
       } catch (e) { logger.warn('[Launchpad] Holder data fetch failed:', e); }

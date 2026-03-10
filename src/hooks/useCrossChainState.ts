@@ -250,7 +250,7 @@ export function useCrossChainState(): CrossChainState {
 
   // ── Preimage store ──
   const [preimageStore, setPreimageStore] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') || '{}'); } catch (e) { logger.warn('[CrossChain] Failed to parse preimage store from localStorage:', e); return {}; }
+    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') ?? '{}') as Record<string, string>; } catch (e) { logger.warn('[CrossChain] Failed to parse preimage store from localStorage:', e); return {}; }
   });
   const savePreimage = useCallback((orderId: string, preimage: string) => {
     setPreimageStore(prev => {
@@ -320,7 +320,7 @@ export function useCrossChainState(): CrossChainState {
         const c = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK);
         const r = await c.getFeeInfo();
         const feeProps = r?.properties as Record<string, unknown> | undefined;
-        if (feeProps?.feeBps) setFeeBps(Number(feeProps.feeBps));
+        if (feeProps?.feeBps != null) setFeeBps(Number(feeProps.feeBps));
       } catch (e) { logger.warn('[CrossChain] Fee info fetch failed:', e); }
     })();
   }, [provider, contractReady]);
@@ -337,7 +337,7 @@ export function useCrossChainState(): CrossChainState {
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await market.getOrder(BigInt(i));
-          if (!r?.properties) continue;
+          if (r?.properties == null) continue;
           const p = r.properties as Record<string, bigint>;
           const status = Number(p.status ?? 0n);
           if (status === 0) continue;
@@ -380,7 +380,7 @@ export function useCrossChainState(): CrossChainState {
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await bridge.getOrder(BigInt(i));
-          if (!r?.properties) continue;
+          if (r?.properties == null) continue;
           const p = r.properties as Record<string, bigint>;
           const status = Number(p.status ?? 0n);
           if (status === 0) continue;
@@ -415,26 +415,26 @@ export function useCrossChainState(): CrossChainState {
   }, [mode, fetchEscrowOrders]);
 
   // ── Rate persistence ──
-  const API_URL = import.meta.env.VITE_API_URL || '';
+  const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
   const [, setServerRates] = useState<Record<string, { send_sats: string; receive_sats: string; send_unit: string; receive_unit: string; rate: number }>>({});
 
   useEffect(() => {
-    if (!API_URL) return;
+    if (API_URL === '') return;
     void (async () => {
       try {
         const r = await fetch(`${API_URL}/api/orders/rates`, { signal: AbortSignal.timeout(5000) });
-        if (r.ok) setServerRates(await r.json());
+        if (r.ok) setServerRates((await r.json()) as Record<string, { send_sats: string; receive_sats: string; send_unit: string; receive_unit: string; rate: number }>);
       } catch (e) { logger.warn('[CrossChain] Server rates fetch failed:', e); }
     })();
   }, [API_URL]);
 
   const saveRate = useCallback((orderId: string, rateNum: number, receiveSats: bigint, sendSats: bigint, sUnit: string, rUnit: string) => {
     try {
-      const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
+      const stored = JSON.parse(localStorage.getItem('fractalswap_rates') ?? '{}') as Record<string, { r: number; rx: string }>;
       stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
     } catch (e) { logger.warn('[CrossChain] Failed to save rate to localStorage:', e); }
-    if (API_URL) {
+    if (API_URL !== '') {
       fetch(`${API_URL}/api/orders/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

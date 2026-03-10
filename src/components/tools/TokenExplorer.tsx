@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../../logger';
 import * as opnet from '../../opnet';
-import { DEPLOYED_CONTRACTS, OPSCAN_API_BASE, getContractOpscanUrl } from '../../contracts';
+import { DEPLOYED_CONTRACTS, type ContractTokenInfo, OPSCAN_API_BASE, getContractOpscanUrl } from '../../contracts';
 import { cardS, inputS, btnS, rowS, labelS, valueS, formatBigNum } from './toolStyles';
 
 /* ─── Known tokens database ─── */
 const KNOWN_TOKENS: Record<string, { name: string; symbol: string; decimals: number; type: string }> = {};
-for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
+for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]) {
   KNOWN_TOKENS[tok.address] = { name: `${sym} Token`, symbol: sym, decimals: tok.decimals, type: 'OP-20 (MintableToken)' };
 }
 
@@ -20,6 +20,30 @@ interface OPScanToken {
   isPool: boolean;
   deployer: string;
   holders?: number;
+}
+
+/** OPScan API raw token entry */
+interface OPScanRawToken {
+  address?: string;
+  deployerAddress?: string;
+  op20Metadata?: {
+    symbol?: string;
+    name?: string;
+    decimals?: number;
+    totalSupply?: string | number;
+    maximumSupply?: string | number;
+    isPool?: boolean;
+  };
+}
+
+/** OPScan API response wrapper */
+interface OPScanResponse {
+  results?: OPScanRawToken[];
+}
+
+/** OPScan holders API response */
+interface OPScanHoldersResponse {
+  results?: unknown[];
 }
 
 type TokenSortKey = 'symbol' | 'supply' | 'holders';
@@ -44,23 +68,23 @@ const TokenExplorer = React.memo(function TokenExplorer() {
       try {
         const resp = await fetch(`${OPSCAN_API_BASE}/tokens`, { signal: ac.signal });
         if (!resp.ok) throw new Error('OPScan API error');
-        const data = await resp.json();
-        const results = data?.results || data || [];
+        const data = (await resp.json()) as OPScanResponse | OPScanRawToken[];
+        const results: OPScanRawToken[] = (Array.isArray(data) ? data : (data as OPScanResponse).results) ?? [];
         if (!Array.isArray(results)) return;
         const tokens: OPScanToken[] = [];
         for (const t of results) {
-          const meta = t.op20Metadata || {};
-          if (!meta.symbol) continue;
-          const dec = meta.decimals || 8;
+          const meta = t.op20Metadata ?? {};
+          if (meta.symbol == null) continue;
+          const dec = meta.decimals ?? 8;
           tokens.push({
-            address: String(t.address || '').replace('0x', ''),
+            address: String(t.address ?? '').replace('0x', ''),
             symbol: meta.symbol,
-            name: meta.name || meta.symbol,
+            name: meta.name ?? meta.symbol,
             decimals: dec,
-            totalSupply: Number(meta.totalSupply || 0) / Math.pow(10, dec),
-            maxSupply: Number(meta.maximumSupply || 0) / Math.pow(10, dec),
-            isPool: !!meta.isPool,
-            deployer: t.deployerAddress || '',
+            totalSupply: Number(meta.totalSupply ?? 0) / Math.pow(10, dec),
+            maxSupply: Number(meta.maximumSupply ?? 0) / Math.pow(10, dec),
+            isPool: meta.isPool === true,
+            deployer: t.deployerAddress ?? '',
             holders: undefined,
           });
         }
@@ -76,8 +100,8 @@ const TokenExplorer = React.memo(function TokenExplorer() {
                 const hex = tok.address.startsWith('0x') ? tok.address : '0x' + tok.address;
                 const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hex}/holders`, { signal: ac.signal });
                 if (!r.ok) return 0;
-                const d = await r.json();
-                const arr = d?.results || d || [];
+                const d = (await r.json()) as OPScanHoldersResponse | unknown[];
+                const arr: unknown[] = (Array.isArray(d) ? d : (d as OPScanHoldersResponse).results) ?? [];
                 return Array.isArray(arr) ? arr.length : 0;
               } catch (e) { if (!ac.signal.aborted) logger.warn('[TokenTools] Failed to fetch holder count from OPScan:', e); return 0; }
             }));
@@ -148,8 +172,8 @@ const TokenExplorer = React.memo(function TokenExplorer() {
         try {
           const hr = await fetch(`${OPSCAN_API_BASE}/tokens/${hexAddr}/holders`);
           if (hr.ok) {
-            const hd = await hr.json();
-            const arr = hd?.results || hd || [];
+            const hd = (await hr.json()) as OPScanHoldersResponse | unknown[];
+            const arr: unknown[] = (Array.isArray(hd) ? hd : (hd as OPScanHoldersResponse).results) ?? [];
             if (Array.isArray(arr)) holders = arr.length;
           }
         } catch (e) { logger.warn('[TokenTools] Holder count fetch failed:', e); }
@@ -189,7 +213,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
         </div>
         {/* Quick links to known tokens */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-          {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => (
+          {(Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).map(([sym, tok]) => (
             <button key={sym} onClick={() => lookupAddr(tok.address)}
               style={{ padding: '4px 12px', fontSize: '.62rem', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: addr === tok.address ? 'rgba(247,147,26,.1)' : 'rgba(255,255,255,.03)', color: addr === tok.address ? 'var(--o)' : 'var(--t3)', cursor: 'pointer', fontWeight: 600 }}>
               {tok.icon} {sym}

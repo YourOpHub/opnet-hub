@@ -40,15 +40,20 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         setupFiles: ['./src/__tests__/setup.ts'],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'lcov'],
+            include: ['src/**/*.{ts,tsx}'],
+            exclude: ['src/__tests__/**', 'src/vite-env.d.ts'],
+        },
     } satisfies UserConfig['test'],
     build: {
         rollupOptions: {
             output: {
-                manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        if (id.includes('@btc-vision') || id.includes('opnet')) return 'opnet';
-                        return 'vendor';
-                    }
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom'],
+                    'vendor-opnet-core': ['opnet'],
+                    'vendor-btc': ['@btc-vision/bitcoin', '@btc-vision/transaction'],
                 },
             },
         },

@@ -8,7 +8,7 @@ import { MyOrderRow, AvailableOrderRow, MY_COLS, AV_COLS } from './crosschain/Cr
 import { EscrowOrderCard } from './crosschain/CrossChainOrderActions';
 import { satsToBtc } from './crosschain/types';
 
-const fractalChain = SUPPORTED_CHAINS[0]!; // Fractal Bitcoin
+const fractalChain = SUPPORTED_CHAINS[0] ?? { id: 0, name: 'Unknown', shortName: 'Unknown', icon: '', color: '#888', type: 'utxo' as const, settlement: 'htlc' as const, addressRegex: /.*/, addressPlaceholder: '', explorerUrl: '', nativeAsset: '', testnetAvailable: false };
 
 // Token Bridge section hidden — functionality merged into Marketplace
 const SHOW_TOKEN_BRIDGE = false as boolean;
@@ -455,7 +455,7 @@ const CrossChainMarketplace: React.FC = () => {
           {/* Explorer link */}
           {escrowReady && (
             <div className="mt-12 text-center">
-              <a href={getContractOpscanUrl(escrowOrders.length > 0 ? escrowOrders[0]!.id : '')}
+              <a href={getContractOpscanUrl(escrowOrders.length > 0 && escrowOrders[0] ? escrowOrders[0].id : '')}
                 target="_blank" rel="noopener noreferrer"
                 className="fs-72 c-o no-decoration">
                 View Token Escrow on OPScan &#x2192;

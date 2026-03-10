@@ -352,7 +352,7 @@ const App: React.FC = () => {
                             } else {
                                 setOpenGroup(g.id);
                                 // navigate to first item if not already in group
-                                if (activeGroup !== g.id) navigate(g.items[0]!.id);
+                                if (activeGroup !== g.id && g.items[0]) navigate(g.items[0].id);
                             }
                         }}
                     >

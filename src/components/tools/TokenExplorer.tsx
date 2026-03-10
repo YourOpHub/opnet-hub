@@ -81,8 +81,10 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             setAllTokens(prev => {
               const next = [...prev];
               for (let j = 0; j < chunk.length; j++) {
-                const idx = next.findIndex(t => t.address === chunk[j]!.address);
-                if (idx >= 0) next[idx] = { ...next[idx]!, holders: counts[j] };
+                const chunkItem = chunk[j];
+                if (!chunkItem) continue;
+                const idx = next.findIndex(t => t.address === chunkItem.address);
+                if (idx >= 0 && next[idx]) next[idx] = { ...next[idx], holders: counts[j] };
               }
               return next;
             });

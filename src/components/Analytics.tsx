@@ -38,7 +38,8 @@ function loadSnapshots(): PoolSnapshot[] {
 function saveSnapshot(snap: PoolSnapshot) {
   const all = loadSnapshots();
   // Deduplicate: only add if >60s since last
-  if (all.length > 0 && snap.ts - all[all.length - 1]!.ts < 60000) return;
+  const lastSnap = all[all.length - 1];
+  if (all.length > 0 && lastSnap && snap.ts - lastSnap.ts < 60000) return;
   all.push(snap);
   if (all.length > MAX_SNAPSHOTS) all.splice(0, all.length - MAX_SNAPSHOTS);
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(all));
@@ -88,8 +89,8 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
     return `${x},${y}`;
   });
   const areaPoints = [...points, `${pad + (w - 2 * pad)},${height - pad}`, `${pad},${height - pad}`];
-  const latest = data[data.length - 1]!;
-  const prev = data[data.length - 2]!;
+  const latest = data[data.length - 1] ?? 0;
+  const prev = data[data.length - 2] ?? 0;
   const change = prev > 0 ? ((latest - prev) / prev * 100) : 0;
 
   return (
@@ -123,7 +124,9 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
         <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {/* Latest point dot */}
         {points.length > 0 && (() => {
-          const [lx, ly] = points[points.length - 1]!.split(',');
+          const lastPoint = points[points.length - 1];
+          if (!lastPoint) return null;
+          const [lx, ly] = lastPoint.split(',');
           return <circle cx={lx} cy={ly} r="3" fill={color} stroke="var(--bg)" strokeWidth="1.5" />;
         })()}
         {/* Min/Max labels */}
@@ -290,9 +293,9 @@ const Analytics: React.FC = () => {
         <div className="P p-16 mb-16">
           <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
           <div className="flex-between mt-6 fs-2xs c-t4">
-            <span>{new Date(snapshots[0]!.ts).toLocaleDateString()} {new Date(snapshots[0]!.ts).toLocaleTimeString()}</span>
+            <span>{snapshots[0] ? `${new Date(snapshots[0].ts).toLocaleDateString()} ${new Date(snapshots[0].ts).toLocaleTimeString()}` : ''}</span>
             <span>{snapshots.length} pts{serverLoaded && API_BASE ? ' (server+local)' : ' (local)'}</span>
-            <span>{new Date(snapshots[snapshots.length - 1]!.ts).toLocaleTimeString()}</span>
+            <span>{(() => { const last = snapshots[snapshots.length - 1]; return last ? new Date(last.ts).toLocaleTimeString() : ''; })()}</span>
           </div>
         </div>
       )}

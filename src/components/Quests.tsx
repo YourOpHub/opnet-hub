@@ -56,29 +56,29 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
             <div className={`qp ${open ? 'qp-open' : ''}`}>
                 <div className="qp-head">
                     <div>
-                        <div style={{ fontWeight: 800, fontSize: '1rem' }}>🎯 OP_NET Onboarding</div>
-                        <div style={{ fontSize: '.65rem', color: 'var(--t3)' }}>Master Bitcoin L1 — earn proof of knowledge</div>
+                        <div className="fw-800 fs-100">🎯 OP_NET Onboarding</div>
+                        <div className="fs-65 c-t3">Master Bitcoin L1 — earn proof of knowledge</div>
                     </div>
                     <button className="qp-close" onClick={onClose}>✕</button>
                 </div>
 
                 <div className="qp-stats">
-                    <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--y)' }}>Lv.{level}</div><div className="qp-stat-l">Level</div></div>
-                    <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--o)' }}>{done}/{quests.length}</div><div className="qp-stat-l">Done</div></div>
-                    <div className="qp-stat"><div className="qp-stat-v" style={{ color: 'var(--c)' }}>{totalXP}</div><div className="qp-stat-l">XP</div></div>
+                    <div className="qp-stat"><div className="qp-stat-v c-y">Lv.{level}</div><div className="qp-stat-l">Level</div></div>
+                    <div className="qp-stat"><div className="qp-stat-v c-o">{done}/{quests.length}</div><div className="qp-stat-l">Done</div></div>
+                    <div className="qp-stat"><div className="qp-stat-v c-c">{totalXP}</div><div className="qp-stat-l">XP</div></div>
                 </div>
-                <div style={{ padding: '0 18px 12px' }}>
+                <div className="py-0-px-18" style={{ paddingBottom: 12 }}>
                     <div className="hb"><div className="hf" style={{ width: `${pct}%` }} /></div>
                 </div>
 
                 {done === quests.length ? (
-                    <div style={{ textAlign: 'center', padding: '16px', margin: '0 12px 10px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', borderRadius: '14px', fontSize: '.78rem', color: 'var(--g)', fontWeight: 700 }}>
+                    <div className="qp-all-done">
                         <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>🏆</div>
                         <div>OP_NET Master — All quests complete!</div>
-                        <div style={{ fontSize: '.62rem', color: 'var(--t3)', fontWeight: 500, marginTop: 4 }}>You've proven deep knowledge of Bitcoin's consensus layer</div>
+                        <div className="fs-62 c-t3 fw-500 mt-4">You've proven deep knowledge of Bitcoin's consensus layer</div>
                     </div>
                 ) : (
-                    <div style={{ padding: '0 12px 8px', fontSize: '.62rem', color: 'var(--t4)', textAlign: 'center', lineHeight: 1.5 }}>
+                    <div className="qp-hint">
                         Complete quests to prove you understand OP_NET.<br />Each badge demonstrates a real skill on Bitcoin L1.
                     </div>
                 )}
@@ -90,8 +90,8 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
                         const t = TIERS[tier];
                         return (
                             <React.Fragment key={tier}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 4px 3px', fontSize: '.58rem', fontWeight: 700, color: t.color, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-                                    <span>{t.icon}</span> {t.label} <span style={{ color: 'var(--t4)', fontWeight: 500 }}>({tierDone}/{tierQuests.length})</span>
+                                <div className="qp-tier-hdr" style={{ color: t.color }}>
+                                    <span>{t.icon}</span> {t.label} <span className="c-t4 fw-500">({tierDone}/{tierQuests.length})</span>
                                 </div>
                                 {tierQuests.map(q => (
                                     <div key={q.id} className={`qp-item ${q.done ? 'qp-done' : ''}`} onClick={() => { if (!q.done && q.tab) { onNav(q.tab); onClose() } }}>
@@ -108,11 +108,9 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
                     })}
                 </div>
 
-                <div style={{ padding: '12px 18px', borderTop: '1px solid var(--bd)', marginTop: 8 }}>
-                    <a href="https://vibecode.finance/challenge" target="_blank" rel="noopener noreferrer" style={{
-                        display: 'block', textAlign: 'center', padding: '10px', background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)',
-                        borderRadius: '14px', textDecoration: 'none', color: 'var(--o)', fontSize: '.72rem', fontWeight: 700
-                    }}>
+                <div className="qp-footer">
+                    <a href="https://vibecode.finance/challenge" target="_blank" rel="noopener noreferrer"
+                        className="qp-cta">
                         🏆 Join the Vibecoding Challenge → win Motocats + $PILL
                     </a>
                 </div>

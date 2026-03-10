@@ -243,7 +243,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                   : 'Connect wallet'}
               </td>
               <td className="mono">{priceLoading ? '…' : '$' + btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-              <td className="mono" style={{ color: btcChange >= 0 ? 'var(--g)' : 'var(--r)' }}>{btcChange >= 0 ? '+' : ''}{btcChange.toFixed(1)}%</td>
+              <td className={`mono ${btcChange >= 0 ? 'c-g' : 'c-r'}`}>{btcChange >= 0 ? '+' : ''}{btcChange.toFixed(1)}%</td>
               <td className="mono c-o">
                 {walletAddress && !btcLoading ? '$' + btcUsd.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
               </td>
@@ -276,14 +276,14 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                   </td>
                   <td className="mono c-t3">—</td>
                   <td className="mono c-t3">—</td>
-                  <td className="mono" style={{ color: rawBal > 0n ? 'var(--o)' : 'var(--t3)' }}>—</td>
+                  <td className={`mono ${rawBal > 0n ? 'c-o' : 'c-t3'}`}>—</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
         {!walletAddress && (
-          <div className="empty-state-card" style={{ marginTop: 16 }}>
+          <div className="empty-state-card mt-16">
             <div className="empty-state-icon">🔐</div>
             <div className="empty-state-title">Connect Wallet to View Portfolio</div>
             <div className="empty-state-desc">
@@ -337,7 +337,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                       <span className="mono">{reserveB > 0 ? reserveB.toLocaleString() : '...'}</span>
                     </div>
                   </div>
-                  <button onClick={refreshLP} disabled={lpLoading} className="lp-refresh-btn" style={{ opacity: lpLoading ? 0.5 : 1 }}>
+                  <button onClick={refreshLP} disabled={lpLoading} className={`lp-refresh-btn ${lpLoading ? 'op-50' : ''}`}>
                     {lpLoading ? 'Refreshing...' : 'Refresh Position'}
                   </button>
                 </div>

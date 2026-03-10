@@ -257,9 +257,7 @@ function LiveFeed() {
     return (
         <div>
             {/* Live stats bar */}
-            <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16,
-            }}>
+            <div className="grid-4col gap-8 mb-16">
                 {[
                     { label: 'Block Height', value: stats.block > 0 ? `#${stats.block.toLocaleString()}` : '...', color: 'var(--g)' },
                     { label: 'BTC Price', value: stats.btcPrice > 0 ? `$${stats.btcPrice.toLocaleString()}` : '...', color: 'var(--o)' },
@@ -268,54 +266,50 @@ function LiveFeed() {
                 ].map(s => (
                     <div key={s.label} className="stat-card">
                         <div className="stat-label">{s.label}</div>
-                        <div className="stat-value" style={{ color: s.color, fontSize: '.88rem' }}>{s.value}</div>
+                        <div className="stat-value fs-88" style={{ color: s.color }}>{s.value}</div>
                     </div>
                 ))}
             </div>
 
             {/* Refresh button */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600 }}>
-                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', boxShadow: '0 0 6px var(--g)', marginRight: 6, animation: 'blink 2s infinite' }} />
+            <div className="flex-between mb-12">
+                <div className="fs-68 c-t3 fw-600">
+                    <span className="dot-live dot-green d-inline-block" style={{ marginRight: 6, animation: 'blink 2s infinite' }} />
                     Live on-chain activity
                 </div>
-                <button onClick={fetchLiveData} className="btn-s" style={{ padding: '5px 14px', fontSize: '.65rem' }}>
+                <button onClick={fetchLiveData} className="btn-s fs-65" style={{ padding: '5px 14px' }}>
                     {loading ? '\u23F3' : '\u{1F504}'} Refresh
                 </button>
             </div>
 
             {/* Activity list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="flex-col gap-6">
                 {loading && activities.length === 0 ? (
                     Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="skeleton-block" style={{ height: 72, borderRadius: 16 }} />
+                        <div key={i} className="skeleton-block br-16" style={{ height: 72 }} />
                     ))
                 ) : activities.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--t4)' }}>
+                    <div className="text-center c-t4" style={{ padding: 40 }}>
                         No activity found. Network may be paused.
                     </div>
                 ) : (
                     activities.map(item => (
                         <div key={item.id} className="P" style={{ padding: '14px 18px', cursor: item.link ? 'pointer' : 'default' }}
                             onClick={() => { if (item.link) window.open(item.link, '_blank'); }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{
-                                    width: 38, height: 38, borderRadius: 12, display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    background: `color-mix(in srgb, ${item.color} 10%, transparent)`,
-                                    fontSize: '1.1rem', flexShrink: 0,
-                                }}>
+                            <div className="flex-center gap-12">
+                                <div className="act-icon"
+                                    style={{ background: `color-mix(in srgb, ${item.color} 10%, transparent)` }}>
                                     {item.icon}
                                 </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: 600, fontSize: '.8rem', color: 'var(--w)', marginBottom: 2 }}>
+                                <div style={{ flex: 1 }} className="min-w-0">
+                                    <div className="act-title">
                                         {item.title}
                                     </div>
-                                    <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.4 }}>
+                                    <div className="act-detail">
                                         {item.detail}
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '.58rem', color: 'var(--t4)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                <div className="act-time">
                                     {timeAgo(item.time)}
                                 </div>
                             </div>
@@ -330,31 +324,28 @@ function LiveFeed() {
 /* ── Social Post Card ── */
 function PostCard({ item }: { item: SocialPost }) {
     return (
-        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-            <div className="Pg" style={{ padding: '16px 18px', transition: '.2s', cursor: 'pointer' }}>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className="d-block" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="Pg pointer" style={{ padding: '16px 18px', transition: '.2s' }}>
                 {item.pinned && (
-                    <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div className="fs-58 c-t4 mb-6 flex-center gap-4">
                         <span>{'\u{1F4CC}'}</span> Pinned post
                     </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <div style={{
-                        width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,.04)', fontSize: '1.1rem', flexShrink: 0,
-                    }}>{item.avatar}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 700, fontSize: '.78rem', color: '#fff' }}>{item.account}</span>
-                            <span style={{ fontSize: '.65rem', color: 'var(--t3)' }}>{item.handle}</span>
-                            <span style={{ fontSize: '.58rem', color: 'var(--t4)' }}>\u00B7 {item.time}</span>
+                <div className="flex-center gap-8 mb-8">
+                    <div className="post-avatar">{item.avatar}</div>
+                    <div style={{ flex: 1 }} className="min-w-0">
+                        <div className="flex-center gap-6">
+                            <span className="fw-700 fs-78 c-w">{item.account}</span>
+                            <span className="fs-65 c-t3">{item.handle}</span>
+                            <span className="fs-58 c-t4">\u00B7 {item.time}</span>
                         </div>
                     </div>
                     {item.tag && <span className="ntag">{item.tag}</span>}
                 </div>
-                <div style={{ fontSize: '.8rem', color: 'var(--t1)', lineHeight: 1.55, whiteSpace: 'pre-line', marginBottom: 8, wordBreak: 'break-word' }}>
+                <div className="post-text">
                     {item.text}
                 </div>
-                <div style={{ display: 'flex', gap: 20, fontSize: '.62rem', color: 'var(--t4)' }}>
+                <div className="post-meta">
                     <span>{'\u{1F4AC}'} {formatCount(item.retweets)}</span>
                     <span>{'\u2764\uFE0F'} {formatCount(item.likes)}</span>
                 </div>
@@ -371,23 +362,23 @@ const NewsFeed: React.FC = () => {
     useEffect(() => { localStorage.setItem('hub_news_visited', '1'); }, []);
 
     return (
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div className="max-w-800">
             {/* Header */}
-            <div style={{ textAlign: 'center', padding: '20px 0 16px' }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, background: 'linear-gradient(135deg, #F7931A, #ffab40)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <div className="text-center" style={{ padding: '20px 0 16px' }}>
+                <div className="fs-140 fw-800" style={{ background: 'linear-gradient(135deg, #F7931A, #ffab40)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     Network Feed
                 </div>
-                <div style={{ fontSize: '.75rem', color: 'var(--t3)', marginTop: 4 }}>
+                <div className="fs-75 c-t3 mt-4">
                     Live on-chain activity & ecosystem news
                 </div>
             </div>
 
             {/* Mode tabs */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+            <div className="flex-center gap-6 mb-16">
                 <button className={`fbn ${mode === 'live' ? 'on' : ''}`}
                     onClick={() => setMode('live')}
                     style={{ padding: '8px 20px', fontSize: '.75rem' }}>
-                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: mode === 'live' ? 'var(--g)' : 'var(--t4)', marginRight: 6, boxShadow: mode === 'live' ? '0 0 6px var(--g)' : 'none' }} />
+                    <span className={`dot-live d-inline-block ${mode === 'live' ? 'dot-green' : 'dot-t4'}`} style={{ marginRight: 6 }} />
                     Live Activity
                 </button>
                 <button className={`fbn ${mode === 'social' ? 'on' : ''}`}
@@ -403,23 +394,18 @@ const NewsFeed: React.FC = () => {
             ) : (
                 <div>
                     {/* Social links */}
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+                    <div className="flex-center flex-wrap gap-6 mb-14">
                         {SOCIAL_LINKS.map(s => (
                             <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer"
-                                style={{
-                                    padding: '6px 14px', borderRadius: 10, textDecoration: 'none',
-                                    background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)',
-                                    color: 'var(--t2)', fontSize: '.65rem', fontWeight: 600, transition: '.2s',
-                                    display: 'flex', alignItems: 'center', gap: 5,
-                                }}>
-                                <span style={{ fontSize: '.7rem' }}>{s.icon}</span>
+                                className="social-link">
+                                <span className="fs-70">{s.icon}</span>
                                 {s.handle} \u2197
                             </a>
                         ))}
                     </div>
 
                     {/* Posts */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="flex-col gap-8">
                         {SOCIAL_FEED.filter(p => p.pinned).map(item => <PostCard key={item.id} item={item} />)}
                         {SOCIAL_FEED.filter(p => !p.pinned).map(item => <PostCard key={item.id} item={item} />)}
                     </div>

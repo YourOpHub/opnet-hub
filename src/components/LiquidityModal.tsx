@@ -200,29 +200,16 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const fmtBal = (b: bigint | undefined) => b != null ? (Number(b) / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(6px)',
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{
-        width: '100%', maxWidth: 420, maxHeight: '90vh', overflow: 'auto',
-        background: 'rgba(10,10,18,.95)', border: '1px solid rgba(255,255,255,.08)',
-        borderRadius: 22, padding: '24px 22px',
-        boxShadow: '0 24px 64px rgba(0,0,0,.6)', backdropFilter: 'blur(24px)',
-      }}>
+    <div className="liq-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="liq-card">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-          <span style={{ fontWeight: 800, fontSize: '.95rem', color: '#fff', letterSpacing: '-.02em' }}>Liquidity</span>
-          <button onClick={onClose} style={{
-            background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
-            borderRadius: 8, color: '#5a6578', fontSize: '.9rem',
-            cursor: 'pointer', padding: '4px 10px', lineHeight: 1, transition: 'all .2s',
-          }}>&times;</button>
+        <div className="flex-between mb-18">
+          <span className="fw-800 fs-95 c-w ls-neg02">Liquidity</span>
+          <button onClick={onClose} className="liq-close-btn">&times;</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 18, background: 'rgba(255,255,255,.03)', borderRadius: 12, padding: 3 }}>
+        <div className="liq-tab-bar">
           {(['add', 'remove'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
@@ -236,9 +223,9 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         </div>
 
         {/* Pool Selector */}
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: '.52rem', color: '#5a6578', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>Pool</div>
-          <div style={{ display: 'flex', gap: 4 }}>
+        <div className="mb-14">
+          <div className="liq-label mb-6">Pool</div>
+          <div className="flex-center gap-4">
             <button onClick={() => setPoolType('simplepool')} style={{
               flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: poolType === 'simplepool' ? 'rgba(14,165,233,.12)' : 'rgba(255,255,255,.03)',
@@ -262,25 +249,22 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
         {/* NativeSwap info — uses existing deployed NativeSwap contract */}
         {poolType === 'nativeswap' && (
-          <div style={{
-            padding: '14px', background: 'rgba(247,147,26,.04)', borderRadius: 14,
-            border: '1px solid rgba(247,147,26,.1)', marginBottom: 16,
-          }}>
+          <div className="liq-ns-info">
             {NATIVESWAP_ADDRESS ? (<>
-              <div style={{ fontSize: '.72rem', fontWeight: 700, color: '#F7931A', marginBottom: 8 }}>NativeSwap BTC/Token Pool</div>
-              <div style={{ fontSize: '.62rem', color: '#8b95a9', lineHeight: 1.6, marginBottom: 10 }}>
+              <div className="fs-72 fw-700 mb-8" style={{ color: '#F7931A' }}>NativeSwap BTC/Token Pool</div>
+              <div className="fs-62 lh-16 mb-10" style={{ color: '#8b95a9' }}>
                 This pool uses the deployed NativeSwap v5 contract for BTC/Token swaps.
                 Use the <strong style={{ color: '#0ea5e9' }}>Swap</strong> tab to trade BTC for tokens.
               </div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '.5rem', color: '#5a6578', wordBreak: 'break-all', marginBottom: 10 }}>
+              <div className="text-mono fs-50 word-break mb-10" style={{ color: '#5a6578' }}>
                 {NATIVESWAP_ADDRESS}
               </div>
               <a href={getContractOpscanUrl(NATIVESWAP_ADDRESS)} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '.6rem', color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>
+                className="fs-60 fw-600" style={{ color: '#38bdf8', textDecoration: 'none' }}>
                 View on OPScan ↗
               </a>
             </>) : (
-              <div style={{ fontSize: '.65rem', color: '#f59e0b' }}>
+              <div className="fs-65" style={{ color: '#f59e0b' }}>
                 NativeSwap contract not yet deployed.
               </div>
             )}
@@ -288,25 +272,25 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         )}
 
         {/* Pool Info (SimplePool) */}
-        {poolType === 'simplepool' && <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,.025)', borderRadius: 14, border: '1px solid rgba(255,255,255,.05)', marginBottom: 16, fontSize: '.68rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: hasLP ? 8 : 0 }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>MINE</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 700, fontSize: '.72rem' }}>{reserveA.toLocaleString()}</div>
+        {poolType === 'simplepool' && <div className="liq-pool-info">
+          <div className="grid-3col gap-8" style={{ marginBottom: hasLP ? 8 : 0 }}>
+            <div className="text-center">
+              <div className="liq-label-sm">MINE</div>
+              <div className="liq-mono">{reserveA.toLocaleString()}</div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>VIBE</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 700, fontSize: '.72rem' }}>{reserveB.toLocaleString()}</div>
+            <div className="text-center">
+              <div className="liq-label-sm">VIBE</div>
+              <div className="liq-mono">{reserveB.toLocaleString()}</div>
             </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 3, fontWeight: 600 }}>RATE</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", color: '#F7931A', fontWeight: 700, fontSize: '.72rem' }}>1:{ratio.toFixed(1)}</div>
+            <div className="text-center">
+              <div className="liq-label-sm">RATE</div>
+              <div className="liq-mono" style={{ color: '#F7931A' }}>1:{ratio.toFixed(1)}</div>
             </div>
           </div>
           {hasLP && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 8 }}>
-              <span style={{ color: '#5a6578', fontSize: '.6rem' }}>Your Share</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#0ea5e9', fontWeight: 700, fontSize: '.72rem' }}>{poolShare.toFixed(2)}%</span>
+            <div className="flex-between pt-8" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
+              <span className="fs-60" style={{ color: '#5a6578' }}>Your Share</span>
+              <span className="liq-mono" style={{ color: '#0ea5e9' }}>{poolShare.toFixed(2)}%</span>
             </div>
           )}
         </div>}
@@ -314,48 +298,36 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {/* ADD TAB (SimplePool only for now) */}
         {poolType === 'simplepool' && tab === 'add' && (
           <div>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '.58rem', color: '#5a6578', fontWeight: 500 }}>MINE</span>
-                <span style={{ fontSize: '.55rem', color: '#3d4555' }}>Balance: {fmtBal(mineBal)}</span>
+            <div className="mb-8">
+              <div className="flex-between mb-6">
+                <span className="liq-field">MINE</span>
+                <span className="liq-bal">Balance: {fmtBal(mineBal)}</span>
               </div>
               <div style={{ position: 'relative' }}>
                 <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
-                  placeholder="0.0" style={{
-                    width: '100%', padding: '14px 70px 14px 14px', borderRadius: 14,
-                    border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
-                    fontSize: '.9rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none', boxSizing: 'border-box',
-                  }} />
+                  placeholder="0.0" className="liq-input" style={{ paddingRight: 70 }} />
                 {mineBal != null && mineBal > 0n && (
-                  <button onClick={() => setMineAmt((Number(mineBal) / 1e8).toString())} style={{
-                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                    padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(247,147,26,.2)',
-                    background: 'rgba(247,147,26,.08)', color: '#F7931A', cursor: 'pointer',
-                    fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)',
-                  }}>MAX</button>
+                  <button onClick={() => setMineAmt((Number(mineBal) / 1e8).toString())}
+                    className="liq-max-btn">MAX</button>
                 )}
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', color: '#3d4555', fontSize: '.85rem', margin: '4px 0', fontWeight: 700 }}>+</div>
+            <div className="text-center fw-700 fs-85" style={{ color: '#3d4555', margin: '4px 0' }}>+</div>
 
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: '.58rem', color: '#5a6578', fontWeight: 500 }}>VIBE (auto)</span>
-                <span style={{ fontSize: '.55rem', color: '#3d4555' }}>Balance: {fmtBal(vibeBal)}</span>
+            <div className="mb-14">
+              <div className="flex-between mb-6">
+                <span className="liq-field">VIBE (auto)</span>
+                <span className="liq-bal">Balance: {fmtBal(vibeBal)}</span>
               </div>
-              <input type="number" value={vibeAmt} readOnly style={{
-                width: '100%', padding: '14px', borderRadius: 14,
-                border: '1px solid rgba(255,255,255,.04)', background: 'rgba(255,255,255,.015)', color: '#8b95a9',
-                fontSize: '.9rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none', boxSizing: 'border-box',
-              }} />
+              <input type="number" value={vibeAmt} readOnly className="liq-input-ro" />
             </div>
 
             {parseFloat(mineAmt) > 0 && reserveA > 0 && (
-              <div style={{ padding: '8px 12px', background: 'var(--bg3)', borderRadius: 8, marginBottom: 12, fontSize: '.65rem', color: 'var(--t3)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="bg3-rounded mb-12 fs-65 c-t3" style={{ padding: '8px 12px' }}>
+                <div className="flex-between">
                   <span>New pool share</span>
-                  <span style={{ color: '#0ea5e9', fontWeight: 700, fontFamily: 'var(--fm)' }}>
+                  <span className="fw-700 text-mono" style={{ color: '#0ea5e9' }}>
                     {((parseFloat(mineAmt) + lpMine) / (reserveA + parseFloat(mineAmt)) * 100).toFixed(2)}%
                   </span>
                 </div>
@@ -388,58 +360,47 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           <div>
             {/* Position summary if tracked in localStorage */}
             {hasLP && (
-              <div style={{ padding: '12px 14px', background: 'rgba(14,165,233,.04)', borderRadius: 14, border: '1px solid rgba(14,165,233,.1)', marginBottom: 12 }}>
-                <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>Detected Position</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '.72rem', color: '#8b95a9' }}>MINE</span>
-                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpMine.toLocaleString()}</span>
+              <div className="liq-detected">
+                <div className="liq-label mb-8">Detected Position</div>
+                <div className="flex-between mb-4">
+                  <span className="fs-72" style={{ color: '#8b95a9' }}>MINE</span>
+                  <span className="fs-78 fw-700 c-w text-mono">{lpMine.toLocaleString()}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: '.72rem', color: '#8b95a9' }}>VIBE</span>
-                  <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#fff', fontFamily: "'JetBrains Mono', monospace" }}>{lpVibe.toLocaleString()}</span>
+                <div className="flex-between mb-4">
+                  <span className="fs-72" style={{ color: '#8b95a9' }}>VIBE</span>
+                  <span className="fs-78 fw-700 c-w text-mono">{lpVibe.toLocaleString()}</span>
                 </div>
                 {poolShare > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,.05)', paddingTop: 6, marginTop: 4 }}>
-                    <span style={{ fontSize: '.58rem', color: '#5a6578' }}>Pool Share</span>
-                    <span style={{ fontSize: '.75rem', fontWeight: 800, color: '#0ea5e9', fontFamily: "'JetBrains Mono', monospace" }}>{poolShare.toFixed(2)}%</span>
+                  <div className="flex-between pt-6 mt-4" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
+                    <span className="liq-field">Pool Share</span>
+                    <span className="fs-75 fw-800 text-mono" style={{ color: '#0ea5e9' }}>{poolShare.toFixed(2)}%</span>
                   </div>
                 )}
               </div>
             )}
 
             {/* Manual entry — always shown */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 8, fontWeight: 600 }}>
+            <div className="mb-12">
+              <div className="liq-field mb-8">
                 {hasLP ? 'Or enter amount manually:' : 'Enter your position to remove:'}
               </div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <div className="flex-center gap-8 mb-8">
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4 }}>MINE amount</div>
+                  <div className="liq-label-sm mb-4">MINE amount</div>
                   <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
                     placeholder={lpMine > 0 ? String(lpMine) : '0'}
-                    style={{
-                      width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
-                      border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
-                      fontSize: '.8rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none',
-                    }} />
+                    className="liq-input-sm" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 4 }}>VIBE (auto)</div>
+                  <div className="liq-label-sm mb-4">VIBE (auto)</div>
                   <input type="number" value={vibeAmt} readOnly
                     placeholder={lpVibe > 0 ? String(lpVibe) : '0'}
-                    style={{
-                      width: '100%', padding: '10px 12px', borderRadius: 10, boxSizing: 'border-box',
-                      border: '1px solid rgba(255,255,255,.04)', background: 'rgba(255,255,255,.015)', color: '#8b95a9',
-                      fontSize: '.8rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none',
-                    }} />
+                    className="liq-input-sm-ro" />
                 </div>
               </div>
               {hasLP && (
-                <button onClick={() => { setMineAmt(String(lpMine)); setVibeAmt(String(lpVibe)); }} style={{
-                  padding: '5px 12px', borderRadius: 8, border: '1px solid rgba(14,165,233,.2)',
-                  background: 'rgba(14,165,233,.06)', color: '#0ea5e9', cursor: 'pointer',
-                  fontSize: '.6rem', fontWeight: 700, fontFamily: 'var(--ff)',
-                }}>Use detected amounts</button>
+                <button onClick={() => { setMineAmt(String(lpMine)); setVibeAmt(String(lpVibe)); }}
+                  className="liq-use-btn">Use detected amounts</button>
               )}
             </div>
 
@@ -452,7 +413,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
               Remove Position
             </button>
 
-            <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(234,179,8,.04)', borderRadius: 10, border: '1px solid rgba(234,179,8,.08)', fontSize: '.58rem', color: '#f59e0b' }}>
+            <div className="liq-warn">
               Enter MINE amount — VIBE is auto-calculated from your LP position ratio.
             </div>
           </div>
@@ -460,20 +421,15 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
         {/* Result */}
         {result && (
-          <div style={{
-            marginTop: 12, padding: '10px 12px', borderRadius: 8, fontSize: '.72rem',
-            background: result.ok ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)',
-            border: `1px solid ${result.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`,
-            color: result.ok ? 'var(--g)' : '#ef4444', wordBreak: 'break-all',
-          }}>
+          <div className={`mt-12 fs-72 word-break ${result.ok ? 'cc-result-ok' : 'cc-result-err'}`}>
             {result.msg}
           </div>
         )}
 
         {/* Pool link */}
-        <div style={{ marginTop: 14, textAlign: 'center' }}>
+        <div className="mt-14 text-center">
           <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: '.56rem', color: '#38bdf8', textDecoration: 'none' }}>
+            className="fs-56" style={{ color: '#38bdf8', textDecoration: 'none' }}>
             View pool on OPScan ↗
           </a>
         </div>

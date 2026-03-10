@@ -59,9 +59,9 @@ const SwapUI: React.FC = () => {
 
   return (
     <div>
-      <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div className="max-w-560">
         {/* ── Main tabs ── */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+        <div className="flex-center gap-4 mb-12">
           {(['swap', 'pools'] as const).map(t => (
             <button key={t} onClick={() => setMainTab(t)}
               style={{ padding: '9px 22px', borderRadius: 12, border: '1px solid ' + (mainTab === t ? 'rgba(247,147,26,.4)' : 'var(--bd)'),
@@ -83,15 +83,15 @@ const SwapUI: React.FC = () => {
                 <div className="fw-800 fs-lg c-w">Liquidity Pools</div>
                 <div className="fs-66 c-t4 mt-2">Create a pool for any OP20 token pair. Earn 0.3% fees on every swap. For BTC pools, use NativeSwap in the Liquidity modal.</div>
               </div>
-              <button onClick={() => setCreatePoolOpen(v => !v)} className="lbtn" style={{ padding: '9px 16px', fontSize: '.74rem', flexShrink: 0 }}>
+              <button onClick={() => setCreatePoolOpen(v => !v)} className="lbtn fs-74 flex-shrink-0" style={{ padding: '9px 16px' }}>
                 + Create Pool
               </button>
             </div>
 
             {/* Create pool form */}
             {createPoolOpen && (
-              <div className="P" style={{ padding: 18, marginBottom: 14 }}>
-                <div className="Lb" style={{ marginBottom: 12 }}>New Liquidity Pool</div>
+              <div className="P p-18 mb-14">
+                <div className="Lb mb-12">New Liquidity Pool</div>
                 {/* Quick select tokens — only tokens user holds */}
                 {walletAddress && heldTokens.length > 0 ? (
                   <div className="mb-8">
@@ -114,46 +114,43 @@ const SwapUI: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ padding: '12px', marginBottom: 8, textAlign: 'center', fontSize: '.66rem', color: 'var(--t4)',
-                    background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
+                  <div className="p-12 mb-8 text-center fs-66 c-t4 br-10" style={{
+                    background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.04)' }}>
                     {!walletAddress ? 'Connect wallet to see your tokens' : 'Loading your tokens...'}
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div className="grid-2col gap-10 mb-10">
                   <div>
-                    <label className="lbl-xs" style={{ display: 'block' }}>Token A Address</label>
+                    <label className="lbl-xs d-block">Token A Address</label>
                     <input style={iStyle} value={poolTokenA} onChange={e => setPoolTokenA(e.target.value)} placeholder="opt1sq..." />
                   </div>
                   <div>
-                    <label className="lbl-xs" style={{ display: 'block' }}>Token B Address</label>
+                    <label className="lbl-xs d-block">Token B Address</label>
                     <input style={iStyle} value={poolTokenB} onChange={e => setPoolTokenB(e.target.value)} placeholder="opt1sq..." />
                   </div>
                   <div>
-                    <label className="lbl-xs" style={{ display: 'block' }}>Symbol A (optional)</label>
+                    <label className="lbl-xs d-block">Symbol A (optional)</label>
                     <input style={iStyle} value={poolSymA} onChange={e => setPoolSymA(e.target.value)} placeholder="e.g. MINE" />
                   </div>
                   <div>
-                    <label className="lbl-xs" style={{ display: 'block' }}>Symbol B (optional)</label>
+                    <label className="lbl-xs d-block">Symbol B (optional)</label>
                     <input style={iStyle} value={poolSymB} onChange={e => setPoolSymB(e.target.value)} placeholder="e.g. VIBE" />
                   </div>
                 </div>
 
                 {poolDeployResult && (
-                  <div style={{ padding: '9px 12px', borderRadius: 10, fontSize: '.68rem', marginBottom: 10,
-                    background: poolDeployResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
-                    color: poolDeployResult.ok ? 'var(--g)' : '#ef4444',
-                    border: '1px solid ' + (poolDeployResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)') }}>
+                  <div className={`fs-68 mb-10 ${poolDeployResult.ok ? 'cc-result-ok' : 'cc-result-err'}`}>
                     {poolDeployResult.msg}
                     {poolDeployResult.address && (
                       <a href={getContractOpscanUrl(poolDeployResult.address)} target="_blank" rel="noopener noreferrer"
-                        style={{ display: 'block', marginTop: 4, color: 'var(--c2)', fontSize: '.62rem' }}>View on Explorer →</a>
+                        className="d-block mt-4 c-c2 fs-62">View on Explorer →</a>
                     )}
                   </div>
                 )}
 
                 <button onClick={createPool} disabled={deployingPool || !poolTokenA || !poolTokenB}
-                  className="lbtn" style={{ width: '100%', opacity: deployingPool ? 0.6 : 1 }}>
+                  className="lbtn w-full" style={{ opacity: deployingPool ? 0.6 : 1 }}>
                   {deployingPool ? (poolDeployStep || 'Deploying...') : connected ? 'Deploy SimplePool' : 'Connect Wallet'}
                 </button>
                 <div className="mt-8 fs-2xs c-t4 text-center">
@@ -165,35 +162,35 @@ const SwapUI: React.FC = () => {
             {/* System pool — always shown */}
             <div className="mb-8">
               <div className="lbl-xs mb-6">System Pools</div>
-              <div style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 14 }}>
+              <div className="bg3-bd-r14 p-14">
                 <div className="flex-between mb-8">
                   <div className="flex-center gap-8">
-                    <span style={{ fontWeight: 700, fontSize: '.84rem' }}>⛏️ MINE / ⚡ VIBE</span>
-                    <span style={{ padding: '2px 7px', borderRadius: 6, fontSize: '.52rem', background: 'rgba(16,185,129,.1)', color: 'var(--g)', fontWeight: 700 }}>LIVE</span>
+                    <span className="fw-700 fs-84">⛏️ MINE / ⚡ VIBE</span>
+                    <span className="tag-live-sm">LIVE</span>
                   </div>
                   <span className="fs-62 c-t4 text-mono">Fee: 0.3%</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: '.66rem' }}>
-                  <div className="text-center" style={{ padding: '8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                <div className="grid-3col gap-8 fs-66">
+                  <div className="pool-cell">
                     <div className="c-t4 mb-4">MINE</div>
                     <div className="mono-t2">{reserveA.toLocaleString()}</div>
                   </div>
-                  <div className="text-center" style={{ padding: '8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                  <div className="pool-cell">
                     <div className="c-t4 mb-4">VIBE</div>
                     <div className="mono-t2">{reserveB.toLocaleString()}</div>
                   </div>
-                  <div className="text-center" style={{ padding: '8px', background: 'rgba(255,255,255,.03)', borderRadius: 8 }}>
+                  <div className="pool-cell">
                     <div className="c-t4 mb-4">Rate</div>
                     <div className="text-mono c-o fw-600">{reserveA > 0 ? (reserveB / reserveA).toFixed(1) : '—'}</div>
                   </div>
                 </div>
-                <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+                <div className="mt-8 flex-center gap-6">
                   <button onClick={() => { setMainTab('swap'); setShowLiquidity(true); }}
-                    style={{ flex: 1, padding: '7px', borderRadius: 9, border: '1px solid rgba(14,165,233,.2)', background: 'rgba(14,165,233,.05)', color: '#0ea5e9', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 600 }}>
+                    className="pool-add-btn">
                     💧 Add Liquidity
                   </button>
                   <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-                    style={{ flex: 1, padding: '7px', borderRadius: 9, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t4)', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    className="pool-view-btn">
                     OPScan ↗
                   </a>
                 </div>
@@ -208,7 +205,7 @@ const SwapUI: React.FC = () => {
               <div className="mt-12">
                 <div className="flex-center gap-6 mb-6">
                   <div className="lbl-xs">Motoswap Pools</div>
-                  <span style={{ padding: '1px 6px', borderRadius: 5, fontSize: '.48rem', background: 'rgba(139,92,246,.1)', color: '#a78bfa', fontWeight: 700 }}>{motoPools.length} found</span>
+                  <span className="tag-count tag-purple">{motoPools.length} found</span>
                 </div>
                 {active.length > 0 ? (
                   <div className="flex-col-gap6">
@@ -217,24 +214,24 @@ const SwapUI: React.FC = () => {
                       const r1 = Number(BigInt(pool.reserve1)) / Math.pow(10, pool.token1_decimals);
                       const poolRate = r0 > 0 ? (r1 / r0).toFixed(4) : '—';
                       return (
-                        <div key={pool.pool_pubkey} style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 12 }}>
+                        <div key={pool.pool_pubkey} className="bg3-bd-r14 p-12">
                           <div className="flex-between mb-6">
                             <div className="flex-center gap-6">
-                              <span style={{ fontWeight: 700, fontSize: '.8rem' }}>{pool.token0_symbol} / {pool.token1_symbol}</span>
-                              <span style={{ padding: '2px 6px', borderRadius: 5, fontSize: '.48rem', background: 'rgba(16,185,129,.08)', color: 'var(--g)', fontWeight: 700 }}>LIVE</span>
+                              <span className="fw-700 fs-80">{pool.token0_symbol} / {pool.token1_symbol}</span>
+                              <span className="tag-moto">LIVE</span>
                             </div>
-                            <span style={{ fontSize: '.56rem', color: '#a78bfa', fontFamily: 'var(--fm)' }}>Motoswap</span>
+                            <span className="fs-56 text-mono" style={{ color: '#a78bfa' }}>Motoswap</span>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: '.62rem', marginBottom: 6 }}>
-                            <div className="text-center" style={{ padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
+                          <div className="grid-3col mb-6" style={{ gap: 6, fontSize: '.62rem' }}>
+                            <div className="text-center pool-cell-sm">
                               <div className="c-t4 mb-4 fs-2xs">{pool.token0_symbol}</div>
                               <div className="mono-t2">{r0 > 1000 ? (r0 / 1000).toFixed(1) + 'K' : r0.toFixed(2)}</div>
                             </div>
-                            <div className="text-center" style={{ padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
+                            <div className="text-center pool-cell-sm">
                               <div className="c-t4 mb-4 fs-2xs">{pool.token1_symbol}</div>
                               <div className="mono-t2">{r1 > 1000 ? (r1 / 1000).toFixed(1) + 'K' : r1.toFixed(2)}</div>
                             </div>
-                            <div className="text-center" style={{ padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
+                            <div className="text-center pool-cell-sm">
                               <div className="c-t4 mb-4 fs-2xs">Rate</div>
                               <div className="text-mono c-o fw-600">{poolRate}</div>
                             </div>
@@ -244,12 +241,12 @@ const SwapUI: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '.66rem', color: 'var(--t4)', background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
+                  <div className="text-center fs-66 c-t4 p-12" style={{ background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
                     {empty.length} pools discovered but none have liquidity yet
                   </div>
                 )}
                 {empty.length > 0 && active.length > 0 && (
-                  <div style={{ marginTop: 6, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
+                  <div className="mt-6 fs-2xs c-t4 text-center">
                     + {empty.length} empty pools (no liquidity)
                   </div>
                 )}
@@ -263,7 +260,7 @@ const SwapUI: React.FC = () => {
                 <div className="lbl-xs mb-6">Your Pools</div>
                 <div className="flex-col-gap8">
                   {userPools.map((pool: UserPool) => (
-                    <div key={pool.address} style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 14 }}>
+                    <div key={pool.address} className="bg3-bd-r14 p-14">
                       <div className="flex-between mb-6">
                         <span className="fw-700 fs-82">{pool.symbolA} / {pool.symbolB}</span>
                         <span className="fs-xxs c-t4 text-mono">
@@ -275,11 +272,11 @@ const SwapUI: React.FC = () => {
                       </div>
                       <div className="flex-center gap-6">
                         <a href={getContractOpscanUrl(pool.address)} target="_blank" rel="noopener noreferrer"
-                          style={{ flex: 1, padding: '6px', borderRadius: 8, border: '1px solid var(--bd)', color: 'var(--t4)', fontSize: '.64rem', textAlign: 'center', textDecoration: 'none', fontFamily: 'var(--ff)' }}>
+                          className="pool-view-btn">
                           View on OPScan ↗
                         </a>
                         <button onClick={() => removeUserPool(pool.address)}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', color: '#ef4444', fontSize: '.64rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>
+                          className="pool-remove-btn">
                           Remove
                         </button>
                       </div>
@@ -290,7 +287,7 @@ const SwapUI: React.FC = () => {
             )}
 
             {userPools.length === 0 && !createPoolOpen && (
-              <div className="text-center c-t4 fs-78" style={{ padding: '30px 20px' }}>
+              <div className="text-center c-t4 fs-78" style={{ padding: '30px 20px', }}>
                 <div className="empty-icon">💧</div>
                 No user pools yet. Create the first one for your token!
               </div>
@@ -302,40 +299,32 @@ const SwapUI: React.FC = () => {
              SWAP TAB
            ══════════════════════════════════ */}
         {mainTab === 'swap' && (<>
-        <div style={{
-          padding: '24px 22px', position: 'relative', borderRadius: 22,
-          background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)',
-          backdropFilter: 'blur(20px)',
-        }}>
+        <div className="swap-panel">
           <div className="flex-between mb-16">
             <div className="flex-center gap-8">
-              <span style={{ fontSize: '.95rem', fontWeight: 800, color: 'var(--w)', letterSpacing: '-.02em' }}>Swap</span>
-              {connected && <span style={{ fontSize: '.5rem', background: 'rgba(16,185,129,.08)', color: '#10b981', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>LIVE</span>}
+              <span className="swap-title">Swap</span>
+              {connected && <span className="tag-live">LIVE</span>}
             </div>
             <div className="flex-center gap-6">
-              <button onClick={() => { setShowLiquidity(!showLiquidity); setShowSettings(false); }} style={{
-                background: showLiquidity ? 'rgba(14,165,233,.1)' : 'rgba(255,255,255,.03)', border: '1px solid ' + (showLiquidity ? 'rgba(14,165,233,.25)' : 'rgba(255,255,255,.06)'), borderRadius: 10,
-                color: showLiquidity ? '#0ea5e9' : 'var(--t4)', padding: '6px 10px', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .2s'
-              }}>💧</button>
-              <button onClick={() => { setShowSettings(!showSettings); setShowLiquidity(false); }} style={{
-                background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10,
-                color: 'var(--t4)', padding: '6px 10px', fontSize: '.68rem', cursor: 'pointer', fontFamily: 'var(--ff)', transition: 'all .2s'
-              }}>⚙ {slippage}%</button>
+              <button onClick={() => { setShowLiquidity(!showLiquidity); setShowSettings(false); }}
+                className={`swap-icon-btn ${showLiquidity ? 'active' : ''}`}>💧</button>
+              <button onClick={() => { setShowSettings(!showSettings); setShowLiquidity(false); }}
+                className="swap-icon-btn">⚙ {slippage}%</button>
             </div>
           </div>
 
           {showSettings && (
-            <div className="mb-12 bg3-rounded" style={{ border: '1px solid var(--bd)' }}>
-              <div style={{ fontSize: '.65rem', color: 'var(--t3)', marginBottom: 6, fontWeight: 600 }}>Slippage Tolerance</div>
+            <div className="mb-12 bg3-rounded bd">
+              <div className="fs-65 c-t3 mb-6 fw-600">Slippage Tolerance</div>
               <div className="flex-center gap-6">
                 {[0.1, 0.5, 1.0, 3.0].map(s => (
-                  <button key={s} onClick={() => { setSlippage(s); setShowSettings(false); }} style={{
-                    flex: 1, padding: '6px', borderRadius: '14px',
-                    background: slippage === s ? 'rgba(247,147,26,.08)' : 'rgba(255,255,255,.04)',
-                    border: `1px solid ${slippage === s ? 'rgba(247,147,26,.2)' : 'var(--bd)'}`,
-                    color: slippage === s ? 'var(--o)' : 'var(--t2)', fontSize: '.75rem', fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'var(--ff)'
-                  }}>{s}%</button>
+                  <button key={s} onClick={() => { setSlippage(s); setShowSettings(false); }}
+                    className="slip-btn"
+                    style={{
+                      background: slippage === s ? 'rgba(247,147,26,.08)' : 'rgba(255,255,255,.04)',
+                      border: `1px solid ${slippage === s ? 'rgba(247,147,26,.2)' : 'var(--bd)'}`,
+                      color: slippage === s ? 'var(--o)' : 'var(--t2)',
+                    }}>{s}%</button>
                 ))}
               </div>
             </div>
@@ -352,7 +341,7 @@ const SwapUI: React.FC = () => {
           />
 
           {/* From */}
-          <div style={{ padding: '16px', background: 'rgba(255,255,255,.025)', borderRadius: 16, border: '1px solid rgba(255,255,255,.05)', marginBottom: 4 }}>
+          <div className="cc-panel" style={{ marginBottom: 4 }}>
             <div className="flex-between mb-8">
               <span className="fs-62 c-t4 fw-600">From</span>
               <span className="fs-62 c-t4">Balance: {fmtBal(fromBal, from.decimals)}</span>
@@ -360,14 +349,11 @@ const SwapUI: React.FC = () => {
             <div className="flex-center gap-8">
               <input type="text" inputMode="decimal" value={fromAmt}
                 onChange={e => { setFromAmt(e.target.value); setSwapResult(null); }}
-                placeholder="0.0"
-                style={{ flex: 1, background: 'none', border: 'none', color: 'var(--w)', fontSize: '1.4rem', fontFamily: 'var(--fm)', fontWeight: 700, outline: 'none', minWidth: 0 }}
+                placeholder="0.0" className="swap-big-input"
               />
               {fromBal != null && fromBal > 0n && (
-                <button onClick={() => setFromAmt((Number(fromBal) / Math.pow(10, from.decimals)).toString())} style={{
-                  background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.2)', borderRadius: 6,
-                  color: 'var(--o)', fontSize: '.6rem', fontWeight: 700, padding: '2px 6px', cursor: 'pointer', fontFamily: 'var(--ff)'
-                }}>MAX</button>
+                <button onClick={() => setFromAmt((Number(fromBal) / Math.pow(10, from.decimals)).toString())}
+                  className="swap-max-btn">MAX</button>
               )}
               <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={selectStyle}>
                 {SWAP_TOKENS.map((t: Token, i: number) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
@@ -376,28 +362,21 @@ const SwapUI: React.FC = () => {
           </div>
 
           {/* Flip */}
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '-6px 0', position: 'relative', zIndex: 2 }}>
-            <button onClick={flip} style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--o), var(--o2))',
-              border: '3px solid rgba(10,10,18,.8)', color: '#000', fontSize: '.9rem',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'transform .25s cubic-bezier(.4,0,.2,1)', fontWeight: 700,
-              boxShadow: '0 2px 12px rgba(247,147,26,.2)',
-            }}
+          <div className="flex-jc-center z-2" style={{ margin: '-6px 0' }}>
+            <button onClick={flip} className="swap-flip-btn"
               onMouseEnter={e => (e.currentTarget.style.transform = 'rotate(180deg)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'rotate(0deg)')}
             >↕</button>
           </div>
 
           {/* To */}
-          <div style={{ padding: '16px', background: 'rgba(255,255,255,.025)', borderRadius: 16, border: '1px solid rgba(255,255,255,.05)', marginTop: 4 }}>
+          <div className="cc-panel" style={{ marginTop: 4 }}>
             <div className="flex-between mb-8">
               <span className="fs-62 c-t4 fw-600">To (estimated)</span>
               <span className="fs-62 c-t4">Balance: {fmtBal(toBal, to.decimals)}</span>
             </div>
             <div className="flex-center gap-8">
-              <div style={{ flex: 1, fontSize: '1.4rem', fontFamily: 'var(--fm)', fontWeight: 700, color: toVal > 0 ? 'var(--w)' : 'var(--t4)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="swap-out-val" style={{ color: toVal > 0 ? 'var(--w)' : 'var(--t4)' }}>
                 {toVal > 0 ? toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0.0'}
               </div>
               <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={selectStyle}>
@@ -408,7 +387,7 @@ const SwapUI: React.FC = () => {
 
           {/* Rate info */}
           {fromVal > 0 && hasPool && (
-            <div className="mt-12 bg3-rounded fs-72" style={{ border: '1px solid var(--bd)' }}>
+            <div className="mt-12 bg3-rounded fs-72 bd">
               <div className="flex-between mb-4">
                 <span className="c-t3">Rate</span>
                 <span className="c-t2 text-mono">1 {from.symbol} = {rate.toLocaleString(undefined, { maximumFractionDigits: 4 })} {to.symbol}</span>
@@ -419,7 +398,7 @@ const SwapUI: React.FC = () => {
               </div>
               <div className="flex-between mb-4">
                 <span className="c-t3">Price Impact</span>
-                <span style={{ color: priceImpact > 1 ? 'var(--r)' : 'var(--g)', fontFamily: 'var(--fm)' }}>{priceImpact.toFixed(2)}%</span>
+                <span className="text-mono" style={{ color: priceImpact > 1 ? 'var(--r)' : 'var(--g)' }}>{priceImpact.toFixed(2)}%</span>
               </div>
               <div className="flex-between">
                 <span className="c-t3">Min. Received</span>
@@ -431,7 +410,7 @@ const SwapUI: React.FC = () => {
           {/* Pool badge */}
           {hasPool && (
             <div className="mt-8 flex-center gap-6 fs-xs c-t4">
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--g)', display: 'inline-block' }} />
+              <span className="dot-live dot-green" style={{ width: 5, height: 5 }} />
               {isSimplePool
                 ? `Pool: ${reserveA.toLocaleString()} MINE / ${reserveB.toLocaleString()} VIBE (SimplePool)`
                 : motoPool
@@ -443,11 +422,11 @@ const SwapUI: React.FC = () => {
 
           {/* BTC Balance indicator */}
           {connected && balances.BTC != null && (
-            <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(255,255,255,.03)', borderRadius: 10, fontSize: '.6rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--t4)' }}>BTC Balance</span>
-              <span style={{ fontFamily: 'var(--fm)', color: Number(balances.BTC) < 5000 ? 'var(--r)' : 'var(--t2)' }}>
+            <div className="btc-bar">
+              <span className="c-t4">BTC Balance</span>
+              <span className="text-mono" style={{ color: Number(balances.BTC) < 5000 ? 'var(--r)' : 'var(--t2)' }}>
                 {(Number(balances.BTC) / 1e8).toFixed(6)} BTC ({Number(balances.BTC).toLocaleString()} sats)
-                {Number(balances.BTC) < 5000 && <span style={{ color: 'var(--r)', marginLeft: 4 }}>· Need ~5K sats min</span>}
+                {Number(balances.BTC) < 5000 && <span className="c-r" style={{ marginLeft: 4 }}>· Need ~5K sats min</span>}
               </span>
             </div>
           )}
@@ -469,32 +448,25 @@ const SwapUI: React.FC = () => {
               {swapping ? (swapStep || 'Processing...') : !hasPool ? 'No pool for this pair' : fromVal > 0 ? `Swap ${from.symbol} → ${to.symbol}${motoPool && !isSimplePool ? ' (Motoswap)' : ''}` : 'Enter an amount'}
             </button>
           ) : (
-            <button onClick={openConnectModal} style={{
-              width: '100%', padding: '14px', marginTop: 10,
-              background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none', borderRadius: '14px',
-              color: '#fff', fontWeight: 700, fontSize: '.92rem', cursor: 'pointer', fontFamily: 'var(--ff)'
-            }}>Connect Wallet to Swap</button>
+            <button onClick={openConnectModal} className="swap-connect-btn">Connect Wallet to Swap</button>
           )}
 
           {/* Result */}
           {swapResult && (
-            <div style={{ marginTop: 12, padding: '10px 12px',
-              background: swapResult.type === 'error' ? 'rgba(239,68,68,.06)' : 'rgba(16,185,129,.06)',
-              border: `1px solid ${swapResult.type === 'error' ? 'rgba(239,68,68,.2)' : 'rgba(16,185,129,.15)'}`,
-              borderRadius: '14px', fontSize: '.72rem' }}>
+            <div className={swapResult.type === 'error' ? 'result-err' : 'result-ok'}>
               {swapResult.type === 'success' && (
                 <>
-                  <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>✓ Swap Executed On-Chain</div>
-                  <div style={{ color: 'var(--t2)', fontSize: '.7rem' }}>Received: {swapResult.amtOut} {to.symbol}</div>
-                  <div style={{ fontFamily: 'var(--fm)', color: 'var(--t3)', wordBreak: 'break-all', fontSize: '.58rem', marginTop: 4 }}>tx: {swapResult.hash}</div>
+                  <div className="c-g fw-700 mb-4">✓ Swap Executed On-Chain</div>
+                  <div className="c-t2 fs-70">Received: {swapResult.amtOut} {to.symbol}</div>
+                  <div className="text-mono c-t3 word-break fs-58 mt-4">tx: {swapResult.hash}</div>
                   <a href={getTxUrl(swapResult.hash!)} target="_blank" rel="noopener noreferrer"
-                    style={{ color: 'var(--c2)', fontSize: '.65rem', marginTop: 4, display: 'block' }}>View on Explorer →</a>
+                    className="c-c2 fs-65 mt-4 d-block">View on Explorer →</a>
                 </>
               )}
               {swapResult.type === 'error' && (
                 <>
-                  <div style={{ color: '#ef4444', fontWeight: 700, marginBottom: 4 }}>Transaction Failed</div>
-                  <div style={{ color: 'var(--t2)', fontSize: '.7rem' }}>{swapResult.error}</div>
+                  <div className="c-r fw-700 mb-4">Transaction Failed</div>
+                  <div className="c-t2 fs-70">{swapResult.error}</div>
                 </>
               )}
             </div>
@@ -502,51 +474,45 @@ const SwapUI: React.FC = () => {
         </div>
 
         {/* Mint tokens */}
-        <div style={{ marginTop: 14, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,.015)', border: '1px solid rgba(255,255,255,.04)' }}>
+        <div className="cc-panel-sm" style={{ marginTop: 14 }}>
           <div className="flex-center gap-8 mb-10">
-            <span style={{ fontSize: '.52rem', color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>Mint {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} Tokens</span>
+            <span className="liq-label ls-06">Mint {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} Tokens</span>
           </div>
           <div className="flex-center gap-8">
             {Object.entries(DEPLOYED_CONTRACTS).map(([sym]) => (
               <button key={sym} onClick={() => mintTokens(sym)} disabled={minting === sym}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: minting === sym ? 'wait' : 'pointer',
-                  background: 'linear-gradient(135deg, #a855f7, #7c3aed)', color: '#fff',
-                  fontSize: '.68rem', fontWeight: 700, fontFamily: "'Inter', sans-serif", opacity: minting === sym ? .5 : 1,
-                }}>
+                className="mint-btn" style={{ cursor: minting === sym ? 'wait' : 'pointer', opacity: minting === sym ? .5 : 1 }}>
                 {minting === sym ? '...' : `1K ${sym}`}
               </button>
             ))}
           </div>
           {mintResult && (
-            <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, fontSize: '.65rem', wordBreak: 'break-all',
-              background: mintResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
-              color: mintResult.ok ? '#10b981' : '#ef4444' }}>
+            <div className={`mt-8 p-10 br-10 fs-65 word-break ${mintResult.ok ? 'cc-result-ok' : 'cc-result-err'}`}>
               {mintResult.msg}
             </div>
           )}
         </div>
 
         {/* Pool reserves + LP position compact */}
-        <div style={{ marginTop: 10, padding: '14px 18px', borderRadius: 14, background: 'rgba(255,255,255,.015)', border: '1px solid rgba(255,255,255,.04)' }}>
+        <div className="cc-panel-sm" style={{ marginTop: 10 }}>
           <div className="flex-between fs-sm">
-            <span style={{ color: '#4a5568' }}>Pool</span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#fff', fontWeight: 600 }}>
+            <span className="pool-stat-label">Pool</span>
+            <span className="text-mono c-w fw-600">
               {reserveA.toLocaleString()} / {reserveB.toLocaleString()}
             </span>
           </div>
           {lpUserMine > 0 && reserveA > 0 && (
-            <div className="flex-between fs-sm mt-6" style={{ paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.03)' }}>
-              <span style={{ color: '#4a5568' }}>Your LP</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#0ea5e9', fontWeight: 700 }}>
+            <div className="flex-between fs-sm mt-6 pt-6 bd-b">
+              <span className="pool-stat-label">Your LP</span>
+              <span className="text-mono fw-700" style={{ color: '#0ea5e9' }}>
                 {((lpUserMine / reserveA) * 100).toFixed(2)}%
               </span>
             </div>
           )}
-          <div className="flex-between fs-xxs mt-6" style={{ paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.03)' }}>
-            <span style={{ color: '#2d3548' }}>{poolReady ? 'Live' : 'Deploying...'}</span>
+          <div className="flex-between fs-xxs mt-6 pt-6 bd-b">
+            <span className="pool-stat-label">{poolReady ? 'Live' : 'Deploying...'}</span>
             <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-              style={{ color: '#4a5568', textDecoration: 'none' }}>OPScan ↗</a>
+              className="pool-stat-label" style={{ textDecoration: 'none' }}>OPScan ↗</a>
           </div>
         </div>
 
@@ -554,11 +520,11 @@ const SwapUI: React.FC = () => {
         {history.length > 0 && (
           <div style={{ marginTop: 10 }}>
             {history.slice(0, 5).map(tx => (
-              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.65rem' }}>
-                <span style={{ color: '#7a8494', fontWeight: 600 }}>
+              <div key={tx.id} className="flex-between bd-b fs-65" style={{ padding: '6px 0' }}>
+                <span className="fw-600" style={{ color: '#7a8494' }}>
                   {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : `+${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
                 </span>
-                <span style={{ color: '#2d3548', fontSize: '.55rem' }}>{formatTimeAgo(tx.ts)}</span>
+                <span className="fs-55" style={{ color: '#2d3548' }}>{formatTimeAgo(tx.ts)}</span>
               </div>
             ))}
           </div>

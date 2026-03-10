@@ -283,20 +283,19 @@ const MultiSender: React.FC = () => {
   return (
     <div>
       {/* Header */}
-      <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>
+      <div className="Pg ms-header">
+        <div className="ms-title">
           Multi-Sender
         </div>
-        <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 520, margin: '0 auto' }}>
+        <div className="ms-desc">
           Batch transfer OP-20 tokens to multiple recipients in one session.
           Select a token, paste your recipient list, review, and send.
         </div>
       </div>
 
       {/* Step indicator */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 0, marginBottom: 18,
-        padding: '0 12px', maxWidth: 480, margin: '0 auto 18px',
+      <div className="flex-center" style={{
+        gap: 0, padding: '0 12px', maxWidth: 480, margin: '0 auto 18px',
       }}>
         {[1, 2, 3, 4].map((s, i) => (
           <React.Fragment key={s}>
@@ -311,17 +310,17 @@ const MultiSender: React.FC = () => {
           </React.Fragment>
         ))}
       </div>
-      <div style={{ textAlign: 'center', fontSize: '.68rem', color: 'var(--t3)', marginBottom: 14 }}>
+      <div className="ms-step-label">
         {['Select Token', 'Add Recipients', 'Review & Confirm', 'Send Transfers'][step - 1]}
       </div>
 
       {/* ═══ STEP 1: Select Token ═══ */}
       {step === 1 && (
-        <div className="P" style={{ padding: 20 }}>
+        <div className="P p-20">
           <div className="Lb">Choose Token</div>
 
           {/* Known tokens */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <div className="flex-center gap-8 mb-16">
             {KNOWN_TOKENS.map(t => (
               <button
                 key={t.symbol}
@@ -336,10 +335,10 @@ const MultiSender: React.FC = () => {
                   fontFamily: 'var(--ff)', transition: '.2s',
                 }}
               >
-                <div style={{ fontSize: '1.2rem', marginBottom: 4 }}>{t.icon}</div>
-                <div style={{ fontWeight: 700, fontSize: '.82rem' }}>{t.symbol}</div>
-                <div style={{ fontSize: '.6rem', color: 'var(--t3)', marginTop: 2 }}>{t.name}</div>
-                <div style={{ fontSize: '.54rem', color: 'var(--t4)', marginTop: 2 }}>
+                <div className="fs-120 mb-4">{t.icon}</div>
+                <div className="fw-700 fs-82">{t.symbol}</div>
+                <div className="fs-60 c-t3 mt-2">{t.name}</div>
+                <div className="fs-2xs c-t4 mt-2">
                   {t.decimals} decimals
                 </div>
               </button>
@@ -347,11 +346,9 @@ const MultiSender: React.FC = () => {
           </div>
 
           {/* Divider */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14,
-          }}>
+          <div className="flex-center gap-10 mb-14">
             <div style={{ flex: 1, height: 1, background: 'var(--bd)' }} />
-            <span style={{ fontSize: '.66rem', color: 'var(--t4)' }}>or enter custom address</span>
+            <span className="fs-66 c-t4">or enter custom address</span>
             <div style={{ flex: 1, height: 1, background: 'var(--bd)' }} />
           </div>
 
@@ -365,10 +362,10 @@ const MultiSender: React.FC = () => {
               transition: '.2s', marginBottom: useCustom ? 10 : 0,
             }}
           >
-            <div style={{ fontSize: '.74rem', fontWeight: 600, color: useCustom ? 'var(--c2)' : 'var(--t2)' }}>
+            <div className="fs-74 fw-600" style={{ color: useCustom ? 'var(--c2)' : 'var(--t2)' }}>
               Custom Contract Address
             </div>
-            <div style={{ fontSize: '.6rem', color: 'var(--t4)', marginTop: 2 }}>
+            <div className="fs-60 c-t4 mt-2">
               Paste any OP-20 token contract address
             </div>
           </div>
@@ -381,9 +378,9 @@ const MultiSender: React.FC = () => {
                 onChange={e => setCustomAddress(e.target.value)}
                 placeholder="opt1sq... or 0x... contract address"
               />
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div className="flex-center gap-8 mt-8">
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '.62rem', color: 'var(--t3)', display: 'block', marginBottom: 4 }}>
+                  <label className="fs-62 c-t3 d-block mb-4">
                     Decimals
                   </label>
                   <select
@@ -395,7 +392,7 @@ const MultiSender: React.FC = () => {
                   </select>
                 </div>
                 <div style={{ flex: 2 }}>
-                  <label style={{ fontSize: '.62rem', color: 'var(--t3)', display: 'block', marginBottom: 4 }}>
+                  <label className="fs-62 c-t3 d-block mb-4">
                     Symbol (optional)
                   </label>
                   <input
@@ -413,9 +410,9 @@ const MultiSender: React.FC = () => {
 
       {/* ═══ STEP 2: Recipients ═══ */}
       {step === 2 && (
-        <div className="P" style={{ padding: 20 }}>
+        <div className="P p-20">
           <div className="Lb">Recipient List</div>
-          <div style={{ fontSize: '.7rem', color: 'var(--t3)', marginBottom: 10 }}>
+          <div className="fs-70 c-t3 mb-10">
             Enter one recipient per line: <code style={{
               fontFamily: 'var(--fm)', background: 'var(--bg3)', padding: '2px 6px',
               borderRadius: 6, fontSize: '.66rem',
@@ -433,7 +430,7 @@ const MultiSender: React.FC = () => {
           />
 
           {/* Action row */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <div className="flex-center flex-wrap gap-8 mt-10">
             <input
               ref={fileRef}
               type="file"
@@ -442,23 +439,23 @@ const MultiSender: React.FC = () => {
               style={{ display: 'none' }}
             />
             <button
-              className="btn-s"
+              className="btn-s fs-70"
               onClick={() => fileRef.current?.click()}
-              style={{ padding: '6px 14px', fontSize: '.7rem' }}
+              style={{ padding: '6px 14px' }}
             >
               Upload CSV
             </button>
             <button
-              className="btn-s"
+              className="btn-s fs-70"
               onClick={addSampleData}
-              style={{ padding: '6px 14px', fontSize: '.7rem' }}
+              style={{ padding: '6px 14px' }}
             >
               Sample Data
             </button>
             <button
-              className="btn-s"
+              className="btn-s fs-70 ml-auto"
               onClick={() => setRawInput('')}
-              style={{ padding: '6px 14px', fontSize: '.7rem', marginLeft: 'auto' }}
+              style={{ padding: '6px 14px' }}
             >
               Clear
             </button>
@@ -471,15 +468,15 @@ const MultiSender: React.FC = () => {
               background: invalidCount > 0 ? 'rgba(234,179,8,.06)' : 'rgba(34,197,94,.06)',
               border: `1px solid ${invalidCount > 0 ? 'rgba(234,179,8,.15)' : 'rgba(34,197,94,.15)'}`,
             }}>
-              <div style={{ fontSize: '.72rem', fontWeight: 600, color: invalidCount > 0 ? '#eab308' : 'var(--g)' }}>
+              <div className="fs-72 fw-600" style={{ color: invalidCount > 0 ? '#eab308' : 'var(--g)' }}>
                 {validRecipients.length} valid recipient{validRecipients.length !== 1 ? 's' : ''}
                 {invalidCount > 0 && (
-                  <span style={{ color: 'var(--r)', marginLeft: 8 }}>
+                  <span className="c-r" style={{ marginLeft: 8 }}>
                     {invalidCount} invalid (will be skipped)
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: '.64rem', color: 'var(--t3)', marginTop: 2 }}>
+              <div className="fs-64 c-t3 mt-2">
                 Total: {totalAmount.toLocaleString()} {tokenSymbol || 'tokens'}
               </div>
             </div>
@@ -489,66 +486,54 @@ const MultiSender: React.FC = () => {
 
       {/* ═══ STEP 3: Review ═══ */}
       {step === 3 && (
-        <div className="P" style={{ padding: 20 }}>
+        <div className="P p-20">
           <div className="Lb">Review Transfers</div>
 
           {/* Summary cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
-            <div style={{
-              padding: '10px', borderRadius: 12, textAlign: 'center',
-              background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)',
-            }}>
-              <div style={{ fontSize: '.64rem', color: 'var(--t3)' }}>Token</div>
-              <div style={{ fontSize: '.82rem', fontWeight: 700, color: 'var(--o)', marginTop: 2 }}>
+          <div className="grid-3col gap-8 mb-14">
+            <div className="ms-summary-card" style={{ background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)' }}>
+              <div className="ms-summary-label">Token</div>
+              <div className="ms-summary-val c-o">
                 {tokenSymbol || 'Custom'}
               </div>
             </div>
-            <div style={{
-              padding: '10px', borderRadius: 12, textAlign: 'center',
-              background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.12)',
-            }}>
-              <div style={{ fontSize: '.64rem', color: 'var(--t3)' }}>Recipients</div>
-              <div style={{ fontSize: '.82rem', fontWeight: 700, color: 'var(--c2)', marginTop: 2 }}>
+            <div className="ms-summary-card" style={{ background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.12)' }}>
+              <div className="ms-summary-label">Recipients</div>
+              <div className="ms-summary-val c-c2">
                 {validRecipients.length}
               </div>
             </div>
-            <div style={{
-              padding: '10px', borderRadius: 12, textAlign: 'center',
-              background: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.12)',
-            }}>
-              <div style={{ fontSize: '.64rem', color: 'var(--t3)' }}>Total Amount</div>
-              <div style={{ fontSize: '.82rem', fontWeight: 700, color: 'var(--g)', marginTop: 2 }}>
+            <div className="ms-summary-card" style={{ background: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.12)' }}>
+              <div className="ms-summary-label">Total Amount</div>
+              <div className="ms-summary-val c-g">
                 {totalAmount.toLocaleString()}
               </div>
             </div>
           </div>
 
           {/* Recipient table */}
-          <div style={{
-            maxHeight: 280, overflowY: 'auto', borderRadius: 12,
-            border: '1px solid var(--bd)', marginBottom: 14,
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.72rem' }}>
+          <div className="br-12 bd mb-14" style={{ maxHeight: 280, overflowY: 'auto' }}>
+            <table className="w-full fs-72" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--bg3)', position: 'sticky', top: 0 }}>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--t3)', fontWeight: 600, fontSize: '.66rem' }}>#</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--t3)', fontWeight: 600, fontSize: '.66rem' }}>Recipient</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--t3)', fontWeight: 600, fontSize: '.66rem' }}>Amount</th>
+                  <th className="text-left c-t3 fw-600 fs-66" style={{ padding: '8px 10px' }}>#</th>
+                  <th className="text-left c-t3 fw-600 fs-66" style={{ padding: '8px 10px' }}>Recipient</th>
+                  <th className="c-t3 fw-600 fs-66" style={{ padding: '8px 10px', textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {validRecipients.map((r, i) => (
                   <tr
                     key={i}
-                    style={{ borderBottom: '1px solid rgba(255,255,255,.04)' }}
+                    className="bd-b"
                   >
-                    <td style={{ padding: '7px 10px', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{i + 1}</td>
-                    <td style={{ padding: '7px 10px', color: 'var(--t2)', fontFamily: 'var(--fm)', fontSize: '.68rem' }}>
+                    <td className="c-t4 text-mono" style={{ padding: '7px 10px' }}>{i + 1}</td>
+                    <td className="c-t2 text-mono fs-68" style={{ padding: '7px 10px' }}>
                       {r.address.length > 30
                         ? r.address.slice(0, 14) + '...' + r.address.slice(-10)
                         : r.address}
                     </td>
-                    <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--w)', fontFamily: 'var(--fm)', fontWeight: 600 }}>
+                    <td className="c-w text-mono fw-600" style={{ padding: '7px 10px', textAlign: 'right' }}>
                       {parseFloat(r.amount).toLocaleString()} {tokenSymbol}
                     </td>
                   </tr>
@@ -558,30 +543,24 @@ const MultiSender: React.FC = () => {
           </div>
 
           {/* Gas estimate */}
-          <div style={{
-            padding: '10px 14px', borderRadius: 12,
+          <div className="flex-between br-12 fs-72" style={{
+            padding: '10px 14px',
             background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            fontSize: '.72rem',
           }}>
-            <span style={{ color: 'var(--t3)' }}>Estimated gas ({validRecipients.length} txns):</span>
-            <span style={{ fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>
+            <span className="c-t3">Estimated gas ({validRecipients.length} txns):</span>
+            <span className="fw-700 c-o text-mono">
               ~{estimatedGasSats.toLocaleString()} sats (~{estimatedGasBtc} BTC)
             </span>
           </div>
 
           {/* Wallet check */}
           {!connected && (
-            <div style={{
-              marginTop: 12, padding: '10px 14px', borderRadius: 12,
-              background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)',
-              fontSize: '.72rem', color: '#ef4444', textAlign: 'center',
-            }}>
+            <div className="mt-12 br-12 fs-72 text-center cc-result-err">
               Connect your wallet to proceed.
               <button
-                className="btn-p"
+                className="btn-p fs-68"
                 onClick={openConnectModal}
-                style={{ marginLeft: 10, padding: '4px 12px', fontSize: '.68rem' }}
+                style={{ marginLeft: 10, padding: '4px 12px' }}
               >
                 Connect
               </button>
@@ -589,11 +568,7 @@ const MultiSender: React.FC = () => {
           )}
 
           {connected && (
-            <div style={{
-              marginTop: 10, padding: '6px 10px', borderRadius: 8,
-              background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)',
-              fontSize: '.68rem', color: 'var(--g)',
-            }}>
+            <div className="mt-10 br-8 fs-68 c-g cc-result-ok">
               Wallet: {walletAddress.slice(0, 16)}...{walletAddress.slice(-8)}
             </div>
           )}
@@ -602,14 +577,11 @@ const MultiSender: React.FC = () => {
 
       {/* ═══ STEP 4: Send ═══ */}
       {step === 4 && (
-        <div className="P" style={{ padding: 20 }}>
+        <div className="P p-20">
           <div className="Lb">Sending Transfers</div>
 
           {/* Progress bar */}
-          <div style={{
-            width: '100%', height: 8, borderRadius: 4, background: 'var(--bg3)',
-            marginBottom: 14, overflow: 'hidden',
-          }}>
+          <div className="ms-progress">
             <div style={{
               height: '100%', borderRadius: 4,
               background: failedCount > 0 ? 'linear-gradient(90deg, var(--g), var(--r))' : 'var(--g)',
@@ -618,22 +590,16 @@ const MultiSender: React.FC = () => {
           </div>
 
           {/* Status summary */}
-          <div style={{
-            display: 'flex', gap: 12, marginBottom: 14, justifyContent: 'center',
-            fontSize: '.74rem', fontWeight: 600,
-          }}>
-            <span style={{ color: 'var(--g)' }}>{completedCount} sent</span>
-            <span style={{ color: 'var(--r)' }}>{failedCount} failed</span>
-            <span style={{ color: 'var(--t3)' }}>
+          <div className="flex-jc-center gap-12 mb-14 fs-74 fw-600">
+            <span className="c-g">{completedCount} sent</span>
+            <span className="c-r">{failedCount} failed</span>
+            <span className="c-t3">
               {results.length - completedCount - failedCount} remaining
             </span>
           </div>
 
           {/* Results list */}
-          <div style={{
-            maxHeight: 340, overflowY: 'auto', borderRadius: 12,
-            border: '1px solid var(--bd)',
-          }}>
+          <div className="br-12 bd" style={{ maxHeight: 340, overflowY: 'auto' }}>
             {results.map((r, i) => (
               <div
                 key={i}
@@ -665,25 +631,22 @@ const MultiSender: React.FC = () => {
                 </div>
 
                 {/* Details */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '.7rem', color: 'var(--t2)', fontFamily: 'var(--fm)' }}>
+                <div style={{ flex: 1 }} className="min-w-0">
+                  <div className="fs-70 c-t2 text-mono">
                     {r.address.length > 30
                       ? r.address.slice(0, 14) + '...' + r.address.slice(-10)
                       : r.address}
                   </div>
                   {r.error && (
-                    <div style={{ fontSize: '.6rem', color: 'var(--r)', marginTop: 2 }}>
+                    <div className="fs-60 c-r mt-2">
                       {r.error}
                     </div>
                   )}
                 </div>
 
                 {/* Amount */}
-                <div style={{
-                  fontSize: '.72rem', fontFamily: 'var(--fm)', fontWeight: 600,
-                  color: r.status === 'success' ? 'var(--g)' : 'var(--t2)',
-                  flexShrink: 0,
-                }}>
+                <div className="fs-72 text-mono fw-600 flex-shrink-0"
+                  style={{ color: r.status === 'success' ? 'var(--g)' : 'var(--t2)' }}>
                   {parseFloat(r.amount).toLocaleString()} {tokenSymbol}
                 </div>
               </div>
@@ -697,15 +660,13 @@ const MultiSender: React.FC = () => {
               background: failedCount === 0 ? 'rgba(34,197,94,.08)' : 'rgba(234,179,8,.08)',
               border: `1px solid ${failedCount === 0 ? 'rgba(34,197,94,.2)' : 'rgba(234,179,8,.2)'}`,
             }}>
-              <div style={{
-                fontWeight: 700, fontSize: '.88rem',
-                color: failedCount === 0 ? 'var(--g)' : '#eab308',
-              }}>
+              <div className="fw-700 fs-88"
+                style={{ color: failedCount === 0 ? 'var(--g)' : '#eab308' }}>
                 {failedCount === 0
                   ? 'All transfers completed!'
                   : `Completed with ${failedCount} error${failedCount > 1 ? 's' : ''}`}
               </div>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 4 }}>
+              <div className="fs-68 c-t3 mt-4">
                 {completedCount} of {results.length} transfers successful
               </div>
             </div>
@@ -714,18 +675,18 @@ const MultiSender: React.FC = () => {
           {/* Start / Reset buttons */}
           {!sending && !sendComplete && (
             <button
-              className="btn-p"
+              className="btn-p w-full mt-14 fw-700 fs-82"
               onClick={executeBatchSend}
-              style={{ width: '100%', marginTop: 14, padding: '12px', fontSize: '.82rem', fontWeight: 700 }}
+              style={{ padding: '12px' }}
             >
               Send {validRecipients.length} Transfer{validRecipients.length !== 1 ? 's' : ''}
             </button>
           )}
           {sendComplete && (
             <button
-              className="btn-s"
+              className="btn-s w-full mt-10 fs-78"
               onClick={resetWizard}
-              style={{ width: '100%', marginTop: 10, padding: '10px', fontSize: '.78rem' }}
+              style={{ padding: '10px' }}
             >
               New Batch
             </button>
@@ -735,7 +696,7 @@ const MultiSender: React.FC = () => {
 
       {/* ── Navigation Buttons ── */}
       {step < 4 && (
-        <div style={{ display: 'flex', gap: 10, marginTop: 14, justifyContent: 'space-between' }}>
+        <div className="flex-between mt-14 gap-10">
           <button
             className="btn-s"
             onClick={goBack}
@@ -763,11 +724,11 @@ const MultiSender: React.FC = () => {
         </div>
       )}
       {step === 4 && !sendComplete && !sending && (
-        <div style={{ marginTop: 10 }}>
+        <div className="mt-10">
           <button
-            className="btn-s"
+            className="btn-s fs-74"
             onClick={goBack}
-            style={{ padding: '8px 16px', fontSize: '.74rem' }}
+            style={{ padding: '8px 16px' }}
           >
             Back to Review
           </button>
@@ -775,11 +736,7 @@ const MultiSender: React.FC = () => {
       )}
 
       {/* ── Info footer ── */}
-      <div style={{
-        marginTop: 18, padding: '10px 14px', borderRadius: 12,
-        background: 'rgba(14,165,233,.04)', border: '1px solid rgba(14,165,233,.08)',
-        fontSize: '.62rem', color: 'var(--t4)', textAlign: 'center',
-      }}>
+      <div className="ms-info-footer">
         Transfers are executed sequentially. Each transfer requires a wallet signature.
         Ensure you have enough BTC for gas fees (~5K sats per transfer).
       </div>

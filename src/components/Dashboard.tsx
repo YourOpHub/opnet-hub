@@ -73,12 +73,12 @@ const Dashboard: React.FC = () => {
   return (
     <div>
       <div className="hero-d">
-        <div className="hd-s" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: pulse ? 'var(--g)' : 'var(--t4)', boxShadow: pulse ? '0 0 8px var(--g)' : 'none', transition: 'all .3s', display: 'inline-block' }} />
+        <div className="hd-s dash-pulse">
+          <span className={`dot-live ${pulse ? 'dot-green' : 'dot-t4'}`} />
           Bitcoin Price — OP_NET Consensus Layer
-          {lastUpdate && <span style={{ color: 'var(--t4)', fontSize: '.55rem' }}>· {lastUpdate.toLocaleTimeString()}</span>}
+          {lastUpdate && <span className="c-t4 fs-55">· {lastUpdate.toLocaleTimeString()}</span>}
         </div>
-        {ld ? <div className="hd-v" style={{ opacity: 0.3 }}>Loading…</div> : p && (
+        {ld ? <div className="hd-v" style={{ opacity: .3 }}>Loading…</div> : p && (
           <>
             <div className="hd-v">{f(p.usd)}</div>
             <div><span className={`pill ${p.usd_24h_change >= 0 ? 'pill-u' : 'pill-d'}`}>{p.usd_24h_change >= 0 ? '↑' : '↓'} {Math.abs(p.usd_24h_change).toFixed(2)}%</span></div>
@@ -90,34 +90,34 @@ const Dashboard: React.FC = () => {
         <div className="P met"><div className="met-i">⛏️</div><div className="met-v">{blk > 0 ? blk.toLocaleString() : '—'}</div><div className="met-l">OP_NET Block</div></div>
         <div className="P met">
           <div className="met-i">🔄</div>
-          <div className="met-v" style={{ color: 'var(--p)' }}>{epoch > 0 ? epoch.toLocaleString() : '—'}</div>
+          <div className="met-v c-p">{epoch > 0 ? epoch.toLocaleString() : '—'}</div>
           <div className="met-l">Epoch</div>
           {blk > 0 && (
-            <div style={{ width: '100%', marginTop: 6 }}>
-              <div style={{ background: 'var(--bg3)', borderRadius: 4, height: 3, overflow: 'hidden' }}>
+            <div className="w-full mt-6">
+              <div className="epoch-bar">
                 <div style={{ height: '100%', background: 'linear-gradient(90deg,var(--p),var(--c))', width: `${epochPct}%`, transition: 'width .5s', borderRadius: 4 }} />
               </div>
-              <div style={{ fontSize: '.5rem', color: 'var(--t4)', marginTop: 2 }}>{epochBlock}/5 blocks</div>
+              <div className="fs-50 c-t4 mt-2">{epochBlock}/5 blocks</div>
             </div>
           )}
         </div>
-        <div className="P met"><div className="met-i">💰</div><div className="met-v" style={{ color: 'var(--o)' }}>{p ? fb(p.usd_market_cap) : '—'}</div><div className="met-l">Market Cap</div></div>
+        <div className="P met"><div className="met-i">💰</div><div className="met-v c-o">{p ? fb(p.usd_market_cap) : '—'}</div><div className="met-l">Market Cap</div></div>
         <div className="P met">
           <div className="met-i">⛽</div>
-          <div className="met-v" style={{ color: 'var(--c)', fontSize: '1rem' }}>
+          <div className="met-v c-c fs-100">
             {gasParams?.conservative ? `${(gasParams.conservative / 1e8).toFixed(6)} BTC` : '—'}
           </div>
           <div className="met-l">Gas (conservative)</div>
         </div>
       </div>
 
-      <div className="mets" style={{ marginTop: 16 }}>
-        <div className="P met"><div className="met-i">🔐</div><div className="met-v" style={{ color: 'var(--g)', fontSize: '1rem' }}>ML-DSA</div><div className="met-l">PQ Security</div></div>
-        <div className="P met"><div className="met-i">📦</div><div className="met-v" style={{ color: 'var(--g)' }}>26+</div><div className="met-l">dApps Live</div></div>
-        <div className="P met"><div className="met-i">🌐</div><div className="met-v" style={{ color: 'var(--c)', fontSize: '1rem' }}>Mainnet</div><div className="met-l">Network</div></div>
+      <div className="mets mt-16">
+        <div className="P met"><div className="met-i">🔐</div><div className="met-v c-g fs-100">ML-DSA</div><div className="met-l">PQ Security</div></div>
+        <div className="P met"><div className="met-i">📦</div><div className="met-v c-g">26+</div><div className="met-l">dApps Live</div></div>
+        <div className="P met"><div className="met-i">🌐</div><div className="met-v c-c fs-100">Mainnet</div><div className="met-l">Network</div></div>
         <div className="P met"><div className="met-i">🔗</div>
-          <div className="met-v" style={{ fontSize: '1rem' }}>
-            <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)', textDecoration: 'none', fontWeight: 700 }}>OPScan ↗</a>
+          <div className="met-v fs-100">
+            <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" className="c-c2 fw-700" style={{ textDecoration: 'none' }}>OPScan ↗</a>
           </div>
           <div className="met-l">Block Explorer</div>
         </div>
@@ -125,9 +125,9 @@ const Dashboard: React.FC = () => {
 
       {/* Live Block Feed */}
       {blockLog.length > 0 && (
-        <div className="P" style={{ marginTop: 16 }}>
+        <div className="P mt-16">
           <div className="Lb">⚡ Live Block Feed</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="flex-col gap-4">
             {blockLog.map((b, i) => (
               <div key={b.height + '-' + i} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
@@ -136,12 +136,12 @@ const Dashboard: React.FC = () => {
                 border: `1px solid ${i === 0 ? 'rgba(247,147,26,.12)' : 'var(--bd)'}`,
                 animation: i === 0 ? 'pageIn .3s ease' : 'none'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: i === 0 ? 'var(--o)' : 'var(--t2)' }}>#{b.height.toLocaleString()}</span>
-                  <span style={{ fontSize: '.6rem', color: 'var(--t4)', background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4 }}>Epoch {b.epoch}</span>
-                  {b.height % 5 === 0 && <span style={{ fontSize: '.5rem', color: 'var(--y)', fontWeight: 700 }}>⚡ EPOCH</span>}
+                <div className="flex-center gap-8">
+                  <span className="text-mono fw-700" style={{ color: i === 0 ? 'var(--o)' : 'var(--t2)' }}>#{b.height.toLocaleString()}</span>
+                  <span className="fs-60 c-t4 br-4" style={{ background: 'var(--bg3)', padding: '1px 6px' }}>Epoch {b.epoch}</span>
+                  {b.height % 5 === 0 && <span className="fs-50 c-y fw-700">⚡ EPOCH</span>}
                 </div>
-                <span style={{ fontSize: '.6rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{b.time.toLocaleTimeString()}</span>
+                <span className="fs-60 c-t4 text-mono">{b.time.toLocaleTimeString()}</span>
               </div>
             ))}
           </div>

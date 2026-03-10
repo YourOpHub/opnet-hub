@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
@@ -93,27 +93,26 @@ const Launchpad: React.FC = () => {
   }, [senderAddr, provider]);
 
   // Sync when selected changes
+  const selectedAddr = selected?.address;
   useEffect(() => {
-    if (!selected) return;
-    void syncToken(selected.address);
-    void syncBalance(selected.address);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.address, walletAddress, syncToken, syncBalance]);
+    if (!selectedAddr) return;
+    void syncToken(selectedAddr);
+    void syncBalance(selectedAddr);
+  }, [selectedAddr, walletAddress, syncToken, syncBalance]);
 
   // Auto-select first token
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   useEffect(() => {
-    if (!selected && tokens.length > 0) setSelected(tokens[0] ?? null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!selectedRef.current && tokens.length > 0) setSelected(tokens[0] ?? null);
   }, [tokens]);
 
   // Fetch holder count from OPScan
   useEffect(() => {
     setOpscanHolders(null);
     setOpscanHolderList([]);
-    if (!selected) return;
-    const addr = selected.address;
-    if (!addr) return;
-    const hexAddr = addr.startsWith('0x') ? addr : (addr.length === 64 ? '0x' + addr : null);
+    if (!selectedAddr) return;
+    const hexAddr = selectedAddr.startsWith('0x') ? selectedAddr : (selectedAddr.length === 64 ? '0x' + selectedAddr : null);
     if (!hexAddr) return;
     void (async () => {
       try {
@@ -130,8 +129,7 @@ const Launchpad: React.FC = () => {
         }
       } catch (e) { logger.warn('[Launchpad] Holder data fetch failed:', e); }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.address]);
+  }, [selectedAddr]);
 
   const localHolderCount = selected ? new Set(selected.trades.map(t => t.wallet)).size : 0;
   const holderCount = opscanHolders !== null ? opscanHolders : localHolderCount;

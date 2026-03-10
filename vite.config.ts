@@ -45,6 +45,13 @@ export default defineConfig({
             reporter: ['text', 'lcov'],
             include: ['src/**/*.{ts,tsx}'],
             exclude: ['src/__tests__/**', 'src/vite-env.d.ts'],
+            thresholds: {
+                // Start with achievable thresholds, tighten over time
+                lines: 5,
+                branches: 5,
+                functions: 5,
+                statements: 5,
+            },
         },
     } satisfies UserConfig['test'],
     build: {

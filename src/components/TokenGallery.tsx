@@ -191,15 +191,16 @@ const TokenGallery: React.FC = () => {
   // Check on-chain status for user tokens
   useEffect(() => {
     if (tokens.length === 0) return;
+    const ac = new AbortController();
     const prevNet = opnet.getNetwork();
     opnet.setNetwork(CURRENT_ENV);
     tokens.forEach(t => {
       if (!t.address) return;
       opnet.getTokenTotalSupply(t.address).then(supply => {
-        setChainInfo(prev => ({ ...prev, [t.address]: { totalSupply: supply, confirmed: supply > 0n } }));
+        if (!ac.signal.aborted) setChainInfo(prev => ({ ...prev, [t.address]: { totalSupply: supply, confirmed: supply > 0n } }));
       }).catch(() => {});
     });
-    return () => { opnet.setNetwork(prevNet); };
+    return () => { ac.abort(); opnet.setNetwork(prevNet); };
   }, [tokens]);
 
   // Featured tokens (our pre-deployed MINE and VIBE)

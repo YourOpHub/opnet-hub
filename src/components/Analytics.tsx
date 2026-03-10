@@ -59,17 +59,18 @@ function mergeSnapshots(server: PoolSnapshot[], local: PoolSnapshot[]): PoolSnap
 }
 
 /** Fetch pool snapshot history from server */
-async function fetchServerSnapshots(pool: string, limit = 500): Promise<PoolSnapshot[]> {
+async function fetchServerSnapshots(pool: string, limit = 500, signal?: AbortSignal): Promise<PoolSnapshot[]> {
   if (!API_BASE) return [];
   try {
     const resp = await fetch(`${API_BASE}/api/pool/history?pool=${encodeURIComponent(pool)}&limit=${limit}`, {
-      signal: AbortSignal.timeout(8000),
+      signal: signal ?? AbortSignal.timeout(8000),
     });
     if (!resp.ok) return [];
     const data = await resp.json();
     if (!data.snapshots || !Array.isArray(data.snapshots)) return [];
     return data.snapshots.filter(validateSnapshot);
   } catch (e) {
+    if (signal?.aborted) return [];
     logger.warn('[Analytics] Failed to fetch server snapshots:', e);
     return [];
   }
@@ -153,20 +154,24 @@ const Analytics: React.FC = () => {
 
   // Load server snapshots on mount — one-time fetch
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const serverSnaps = await fetchServerSnapshots(POOL_ADDRESS, 500);
-      if (cancelled) return;
-      if (serverSnaps.length > 0) {
-        const local = loadSnapshots();
-        const merged = mergeSnapshots(serverSnaps, local);
-        // Update localStorage cache with merged data
-        localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(merged));
-        setSnapshots(merged);
+    const ac = new AbortController();
+    const go = async (): Promise<void> => {
+      try {
+        const serverSnaps = await fetchServerSnapshots(POOL_ADDRESS, 500, ac.signal);
+        if (ac.signal.aborted) return;
+        if (serverSnaps.length > 0) {
+          const local = loadSnapshots();
+          const merged = mergeSnapshots(serverSnaps, local);
+          localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(merged));
+          setSnapshots(merged);
+        }
+        setServerLoaded(true);
+      } catch (e) {
+        if (!ac.signal.aborted) logger.warn('[Analytics] Server snapshot load failed:', e);
       }
-      setServerLoaded(true);
-    })();
-    return () => { cancelled = true; };
+    };
+    void go();
+    return () => { ac.abort(); };
   }, []);
 
   useEffect(() => {

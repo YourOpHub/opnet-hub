@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../logger';
 import * as opnet from '../../opnet';
 import { cardS, inputS, btnS, rowS, labelS, valueS, monoSm, copyBtnS, parseHex } from './toolStyles';
 import CopyBtn from './CopyBtn';
@@ -13,28 +14,35 @@ const BlockExplorer = React.memo(function BlockExplorer() {
   const [mempool, setMempool] = useState<{ count?: number; opnetCount?: number } | null>(null);
 
   useEffect(() => {
+    const ac = new AbortController();
     const load = async (): Promise<void> => {
-      const h = await opnet.getBlockHeight().catch(() => 0);
-      if (h > 0) {
-        setLatestHeight(h);
-        setBlockNum(String(h));
-        // Load last 8 blocks for visual chain
-        const blocks: Array<{ num: number; txCount: number; hash: string }> = [];
-        for (let i = h; i > Math.max(0, h - 15); i--) {
-          const b = await opnet.getBlockByNumber(i, false).catch(() => null);
-          if (b) {
-            const txs = Array.isArray(b.transactions) ? (b.transactions as unknown[]).length : 0;
-            blocks.push({ num: i, txCount: txs, hash: String(b.hash || b.blockHash || '') });
+      try {
+        const h = await opnet.getBlockHeight().catch(() => 0);
+        if (ac.signal.aborted) return;
+        if (h > 0) {
+          setLatestHeight(h);
+          setBlockNum(String(h));
+          const blocks: Array<{ num: number; txCount: number; hash: string }> = [];
+          for (let i = h; i > Math.max(0, h - 15); i--) {
+            if (ac.signal.aborted) return;
+            const b = await opnet.getBlockByNumber(i, false).catch(() => null);
+            if (b) {
+              const txs = Array.isArray(b.transactions) ? (b.transactions as unknown[]).length : 0;
+              blocks.push({ num: i, txCount: txs, hash: String(b.hash || b.blockHash || '') });
+            }
           }
+          if (!ac.signal.aborted) setRecentBlocks(blocks);
         }
-        setRecentBlocks(blocks);
+        if (ac.signal.aborted) return;
+        const mp = await opnet.getMempoolInfo().catch(() => null);
+        if (!ac.signal.aborted && mp) setMempool(mp);
+      } catch (e) {
+        if (!ac.signal.aborted) logger.warn('[BlockExplorer] Load failed:', e);
       }
-      const mp = await opnet.getMempoolInfo().catch(() => null);
-      if (mp) setMempool(mp);
     };
     void load();
-    const iv = setInterval(() => void load(), 30000);
-    return () => clearInterval(iv);
+    const iv = setInterval(() => { if (!ac.signal.aborted) void load(); }, 30000);
+    return () => { ac.abort(); clearInterval(iv); };
   }, []);
 
   const lookup = useCallback(async () => {

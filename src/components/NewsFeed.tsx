@@ -249,9 +249,13 @@ function LiveFeed(): React.ReactElement {
     }, []);
 
     useEffect(() => {
-        void fetchLiveData();
-        const iv = setInterval(() => void fetchLiveData(), 30000);
-        return () => clearInterval(iv);
+        const ac = new AbortController();
+        const run = async (): Promise<void> => {
+            try { await fetchLiveData(); } catch (e) { if (!ac.signal.aborted) logger.warn('[NewsFeed] Live data fetch failed:', e); }
+        };
+        void run();
+        const iv = setInterval(() => { if (!ac.signal.aborted) void run(); }, 30000);
+        return () => { ac.abort(); clearInterval(iv); };
     }, [fetchLiveData]);
 
     return (

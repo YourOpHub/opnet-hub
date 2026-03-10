@@ -15,7 +15,7 @@ const Dashboard: React.FC = () => {
   const pulseRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    let cancelled = false;
+    const ac = new AbortController();
     const go = async (): Promise<void> => {
       // 1. Fetch OP_NET Data
       let block = 0;
@@ -27,11 +27,13 @@ const Dashboard: React.FC = () => {
       } catch (e) {
         logger.warn('OP_NET RPC failed, using fallback', e);
         try {
-          const b = await fetch('https://blockchain.info/q/getblockcount').then(r => r.text());
+          const b = await fetch('https://blockchain.info/q/getblockcount', { signal: ac.signal }).then(r => r.text());
           block = parseInt(b, 10) || 0;
           epochNum = Math.floor(block / 5);
-        } catch (e) { logger.warn('[Dashboard] Fallback block height fetch failed:', e); }
+        } catch (e) { if (!ac.signal.aborted) logger.warn('[Dashboard] Fallback block height fetch failed:', e); }
       }
+
+      if (ac.signal.aborted) return;
 
       // 2. Fetch Price (multi-source with cache)
       const priceInfo = await fetchBtcPrice();
@@ -39,10 +41,10 @@ const Dashboard: React.FC = () => {
       // 3. Fetch gas
       try {
         const gp = await opnet.getGasParameters();
-        if (!cancelled && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative), recommended: undefined });
-      } catch (e) { logger.warn('[Dashboard] Gas parameters fetch failed:', e); }
+        if (!ac.signal.aborted && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative), recommended: undefined });
+      } catch (e) { if (!ac.signal.aborted) logger.warn('[Dashboard] Gas parameters fetch failed:', e); }
 
-      if (!cancelled) {
+      if (!ac.signal.aborted) {
         setP(priceInfo);
         if (block > 0) {
           setBlk(prev => {
@@ -61,7 +63,7 @@ const Dashboard: React.FC = () => {
     };
     void go();
     const iv = setInterval(() => void go(), 30000);
-    return () => { cancelled = true; clearInterval(iv); clearTimeout(pulseRef.current); };
+    return () => { ac.abort(); clearInterval(iv); clearTimeout(pulseRef.current); };
   }, []);
 
   const f = (n: number): string => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });

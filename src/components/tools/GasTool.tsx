@@ -31,7 +31,15 @@ const GasTool = React.memo(function GasTool() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void refresh(); const iv = setInterval(() => void refresh(), 15000); return () => clearInterval(iv); }, [network, refresh]);
+  useEffect(() => {
+    const ac = new AbortController();
+    const run = async (): Promise<void> => {
+      try { await refresh(); } catch (e) { if (!ac.signal.aborted) logger.warn('[GasTool] Refresh failed:', e); }
+    };
+    void run();
+    const iv = setInterval(() => { if (!ac.signal.aborted) void run(); }, 15000);
+    return () => { ac.abort(); clearInterval(iv); };
+  }, [network, refresh]);
 
   return (
     <div style={cardS}>

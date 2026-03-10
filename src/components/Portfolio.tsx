@@ -66,11 +66,12 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
   // Fetch pool reserves
   useEffect(() => {
     if (!POOL_ADDRESS) return;
-    const cancelled = false;
+    const ac = new AbortController();
     const fetchRes = async (): Promise<void> => {
       try {
         const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');
-        if (res && !cancelled) {
+        if (ac.signal.aborted) return;
+        if (res) {
           const hex = res.startsWith('0x') ? res.slice(2) : res;
           if (hex.length >= 128) {
             const r0 = Number(BigInt('0x' + hex.slice(0, 64))) / 1e8;
@@ -79,9 +80,10 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             if (r1 > 0) setReserveB(r1);
           }
         }
-      } catch (e) { logger.warn('[Portfolio] Pool reserves fetch failed:', e); }
+      } catch (e) { if (!ac.signal.aborted) logger.warn('[Portfolio] Pool reserves fetch failed:', e); }
     };
     void fetchRes();
+    return () => { ac.abort(); };
   }, [refreshKey]);
 
   // Fetch LP position on-chain via liquidityOf(senderAddress)

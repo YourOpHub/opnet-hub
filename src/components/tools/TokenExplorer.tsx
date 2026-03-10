@@ -39,9 +39,10 @@ const TokenExplorer = React.memo(function TokenExplorer() {
 
   // Fetch all tokens from OPScan
   useEffect(() => {
-    void (async () => {
+    const ac = new AbortController();
+    const go = async (): Promise<void> => {
       try {
-        const resp = await fetch(`${OPSCAN_API_BASE}/tokens`);
+        const resp = await fetch(`${OPSCAN_API_BASE}/tokens`, { signal: ac.signal });
         if (!resp.ok) throw new Error('OPScan API error');
         const data = await resp.json();
         const results = data?.results || data || [];
@@ -63,21 +64,24 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             holders: undefined,
           });
         }
+        if (ac.signal.aborted) return;
         setAllTokens(tokens);
         // Fetch holder counts in parallel (batch of 5)
         const batch = async (items: OPScanToken[], batchSize: number): Promise<void> => {
           for (let i = 0; i < items.length; i += batchSize) {
+            if (ac.signal.aborted) return;
             const chunk = items.slice(i, i + batchSize);
             const counts = await Promise.all(chunk.map(async (tok) => {
               try {
                 const hex = tok.address.startsWith('0x') ? tok.address : '0x' + tok.address;
-                const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hex}/holders`);
+                const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hex}/holders`, { signal: ac.signal });
                 if (!r.ok) return 0;
                 const d = await r.json();
                 const arr = d?.results || d || [];
                 return Array.isArray(arr) ? arr.length : 0;
-              } catch (e) { logger.warn('[TokenTools] Failed to fetch holder count from OPScan:', e); return 0; }
+              } catch (e) { if (!ac.signal.aborted) logger.warn('[TokenTools] Failed to fetch holder count from OPScan:', e); return 0; }
             }));
+            if (ac.signal.aborted) return;
             setAllTokens(prev => {
               const next = [...prev];
               for (let j = 0; j < chunk.length; j++) {
@@ -91,9 +95,11 @@ const TokenExplorer = React.memo(function TokenExplorer() {
           }
         };
         void batch(tokens, 5);
-      } catch (e) { logger.warn('[TokenExplorer] OPScan fetch failed:', e); }
-      finally { setTokensLoading(false); }
-    })();
+      } catch (e) { if (!ac.signal.aborted) logger.warn('[TokenExplorer] OPScan fetch failed:', e); }
+      finally { if (!ac.signal.aborted) setTokensLoading(false); }
+    };
+    void go();
+    return () => { ac.abort(); };
   }, []);
 
   // Sort & filter

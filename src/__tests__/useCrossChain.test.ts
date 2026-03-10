@@ -580,32 +580,32 @@ describe('fmtRate', () => {
 describe('STATUS_COLORS', () => {
   it('has entry for OrderStatus.Open (1)', () => {
     expect(STATUS_COLORS[OrderStatus.Open]).toBeDefined();
-    expect(STATUS_COLORS[OrderStatus.Open].label).toBe('Open');
+    expect(STATUS_COLORS[OrderStatus.Open]!.label).toBe('Open');
   });
 
   it('has entry for OrderStatus.Taken (2)', () => {
     expect(STATUS_COLORS[OrderStatus.Taken]).toBeDefined();
-    expect(STATUS_COLORS[OrderStatus.Taken].label).toBe('Taken');
+    expect(STATUS_COLORS[OrderStatus.Taken]!.label).toBe('Taken');
   });
 
   it('has entry for OrderStatus.Completed (3)', () => {
     expect(STATUS_COLORS[OrderStatus.Completed]).toBeDefined();
-    expect(STATUS_COLORS[OrderStatus.Completed].label).toBe('Completed');
+    expect(STATUS_COLORS[OrderStatus.Completed]!.label).toBe('Completed');
   });
 
   it('has entry for OrderStatus.Cancelled (4)', () => {
     expect(STATUS_COLORS[OrderStatus.Cancelled]).toBeDefined();
-    expect(STATUS_COLORS[OrderStatus.Cancelled].label).toBe('Cancelled');
+    expect(STATUS_COLORS[OrderStatus.Cancelled]!.label).toBe('Cancelled');
   });
 
   it('has entry for OrderStatus.Refunded (5)', () => {
     expect(STATUS_COLORS[OrderStatus.Refunded]).toBeDefined();
-    expect(STATUS_COLORS[OrderStatus.Refunded].label).toBe('Refunded');
+    expect(STATUS_COLORS[OrderStatus.Refunded]!.label).toBe('Refunded');
   });
 
   it('each entry has bg, text, and label fields', () => {
     for (const key of [1, 2, 3, 4, 5]) {
-      const entry = STATUS_COLORS[key];
+      const entry = STATUS_COLORS[key]!;
       expect(typeof entry.bg).toBe('string');
       expect(typeof entry.text).toBe('string');
       expect(typeof entry.label).toBe('string');
@@ -614,7 +614,7 @@ describe('STATUS_COLORS', () => {
 
   it('colors are rgba/hex format', () => {
     for (const key of [1, 2, 3, 4, 5]) {
-      const entry = STATUS_COLORS[key];
+      const entry = STATUS_COLORS[key]!;
       expect(entry.bg).toMatch(/^rgba\(/);
       expect(entry.text).toMatch(/^#/);
     }
@@ -1710,14 +1710,14 @@ describe('Form rate and sats calculations', () => {
   });
 
   it('sendUnit = FB when direction = FB_TO_BTC', () => {
-    const direction = SwapDirection.FB_TO_BTC;
-    const sendUnit = direction === SwapDirection.BTC_TO_FB ? 'BTC' : 'FB';
+    const direction: SwapDirection = SwapDirection.FB_TO_BTC;
+    const sendUnit = (direction as SwapDirection) === SwapDirection.BTC_TO_FB ? 'BTC' : 'FB';
     expect(sendUnit).toBe('FB');
   });
 
   it('receiveUnit = BTC when direction = FB_TO_BTC', () => {
-    const direction = SwapDirection.FB_TO_BTC;
-    const receiveUnit = direction === SwapDirection.BTC_TO_FB ? 'FB' : 'BTC';
+    const direction: SwapDirection = SwapDirection.FB_TO_BTC;
+    const receiveUnit = (direction as SwapDirection) === SwapDirection.BTC_TO_FB ? 'FB' : 'BTC';
     expect(receiveUnit).toBe('BTC');
   });
 });

@@ -2,6 +2,30 @@
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+}
+.skip-link:focus {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  background: var(--bg2);
+  color: var(--t1);
+  border-radius: 8px;
+  border: 2px solid var(--primary);
+  font-size: .8rem;
+  text-decoration: none;
+}
+
 :root{
   --bg:#040407;
   --bg2:#07071a;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { logger } from '../logger';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface Quest {
     id: string; icon: string; title: string; desc: string; xp: number;
@@ -25,6 +26,7 @@ const makeQuests = (): Quest[] => [
 ];
 
 const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: string) => void }> = ({ open, onClose, onNav }) => {
+    const trapRef = useFocusTrap(open, onClose);
     const [quests, setQuests] = useState<Quest[]>(() => {
         const saved = localStorage.getItem('hub_quest_state');
         const init = makeQuests();
@@ -53,7 +55,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
     return (
         <>
             {open && <div className="qp-overlay" aria-hidden="true" onClick={onClose} />}
-            <div className={`qp ${open ? 'qp-open' : ''}`} role="dialog" aria-label="Quests panel" aria-hidden={!open}>
+            <div ref={trapRef} className={`qp ${open ? 'qp-open' : ''}`} role="dialog" aria-modal="true" aria-label="Quests panel" aria-hidden={!open}>
                 <div className="qp-head">
                     <div>
                         <div className="fw-800 fs-100">🎯 OP_NET Onboarding</div>

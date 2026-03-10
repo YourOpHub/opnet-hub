@@ -8,6 +8,7 @@ import { LAUNCHPAD_ABI } from '../../abis';
 import { getProvider } from '../../contractCache';
 import { NETWORK, CURRENT_ENV } from '../../config';
 import type { LaunchToken } from '../../launchpad/types';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export interface LaunchpadFormProps {
   open: boolean;
@@ -18,6 +19,7 @@ export interface LaunchpadFormProps {
 const LaunchpadForm: React.FC<LaunchpadFormProps> = ({ open, onClose, onCreated }) => {
   const { walletAddress, walletInstance, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
+  const trapRef = useFocusTrap(open, onClose);
 
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
@@ -143,8 +145,8 @@ const LaunchpadForm: React.FC<LaunchpadFormProps> = ({ open, onClose, onCreated 
   };
 
   return (
-    <div className="lp-modal-overlay" aria-hidden="true" onClick={onClose}>
-      <div className="lp-modal" role="dialog" aria-label="Deploy new token contract" onClick={e => e.stopPropagation()}>
+    <div ref={trapRef} className="lp-modal-overlay" onClick={onClose}>
+      <div className="lp-modal" role="dialog" aria-modal="true" aria-label="Deploy new token contract" onClick={e => e.stopPropagation()}>
         <div className="flex-between mb-16">
           <div className="fw-800 fs-lg c-w">Deploy Contract</div>
           <button onClick={onClose} aria-label="Close deploy dialog" className="c-t3 fs-120 pointer bd-none" style={{ background: 'none' }}>&#x2715;</button>

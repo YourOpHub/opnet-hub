@@ -227,6 +227,7 @@ const App: React.FC = () => {
     return (
         <ToastProvider>
         <OpsProvider>
+            <a href="#main-content" className="skip-link">Skip to content</a>
             <div className="site-bg" />
             <div className="particles"><span /><span /><span /><span /><span /><span /><span /><span /></div>
 
@@ -375,7 +376,7 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <main className="M" key={tab} role="main" aria-label="Page content">
+            <main id="main-content" className="M" key={tab} role="main" aria-label="Page content">
                 {P()}
             </main>
 

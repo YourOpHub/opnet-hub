@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useOps, type OpEntry } from '../contexts/OpsContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const MARKET_LABELS: Record<string, { label: string; color: string }> = {
   fractalswap: { label: 'FractalSwap', color: '#8b5cf6' },
@@ -71,6 +72,8 @@ const OpsPanel: React.FC = () => {
   const { activeOps, historyOps, activeCount, dismissOp } = useOps();
   const [open, setOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const closePanel = useCallback(() => setOpen(false), []);
+  const trapRef = useFocusTrap(open, closePanel);
 
   return (
     <>
@@ -84,7 +87,7 @@ const OpsPanel: React.FC = () => {
       {open && <div className="ops-overlay" aria-hidden="true" onClick={() => setOpen(false)} />}
 
       {/* Panel */}
-      <div className={`ops-panel ${open ? 'ops-open' : ''}`} role="dialog" aria-label="Operations panel" aria-hidden={!open}>
+      <div ref={trapRef} className={`ops-panel ${open ? 'ops-open' : ''}`} role="dialog" aria-modal="true" aria-label="Operations panel" aria-hidden={!open}>
         <div className="qp-head">
           <div className="fw-700 fs-88">Operations</div>
           <button className="qp-close" aria-label="Close operations panel" onClick={() => setOpen(false)}>{'\u2715'}</button>

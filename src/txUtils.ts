@@ -44,6 +44,12 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee };
 }
 
+/**
+ * Retry an async operation with delay between attempts.
+ * @param fn - Async function to retry
+ * @param retries - Number of retry attempts (default: 2)
+ * @param delayMs - Delay between retries in ms (default: 2000)
+ */
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
   for (let i = 0; i <= retries; i++) {
     try { return await fn(); }

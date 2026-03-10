@@ -13,6 +13,7 @@ import { addTxRecord } from '../txHistory';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import { useOps } from '../contexts/OpsContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 
 
@@ -40,6 +41,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const { trackOp, completeOp } = useOps();
+  const trapRef = useFocusTrap(open, onClose);
 
   const [poolType, setPoolType] = useState<PoolType>('simplepool');
   const [tab, setTab] = useState<'add' | 'remove'>('add');
@@ -200,7 +202,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const fmtBal = (b: bigint | undefined): string => b != null ? (Number(b) / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
 
   return (
-    <div className="liq-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-labelledby="liq-modal-title">
+    <div ref={trapRef} className="liq-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-labelledby="liq-modal-title">
       <div className="liq-card">
         {/* Header */}
         <div className="flex-between mb-18">

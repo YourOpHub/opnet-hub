@@ -1,0 +1,189 @@
+import React from 'react';
+import { OrderStatus } from '../../crosschain/types';
+import { formatBlockCountdown } from '../../crosschain/htlc';
+import { type TokenEscrowOrder, STATUS_COLORS, DIR_SELL_TOKEN, btnSmall, satsToBtc } from './types';
+import { TakeOrderButton, PreimageInput } from './CrossChainOrderRow';
+
+/** Format token amount with decimals */
+function formatTokenAmount(amount: bigint, decimals: number): string {
+  const div = 10 ** decimals;
+  const num = Number(amount) / div;
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(2) + 'M';
+  if (num >= 1_000) return (num / 1_000).toFixed(2) + 'K';
+  return num.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+
+interface EscrowOrderCardProps {
+  order: TokenEscrowOrder;
+  currentBlock: number;
+  actioning: string | null;
+  actionStep: string;
+  feeBps: number;
+  mldsaHex: string;
+  preimageStore: Record<string, string>;
+  expandedOrder: string | null;
+  setExpandedOrder: (id: string | null) => void;
+  tokenInfo: { symbol: string; icon: string; decimals: number; address: string } | null;
+  onTake: (id: string, takerAddr: string) => void;
+  onConfirm: (id: string, preimage: string) => void;
+  onRefund: (id: string) => void;
+  onCancel: (id: string) => void;
+}
+
+/** Status badge component */
+const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
+  const s = STATUS_COLORS[status] || STATUS_COLORS[OrderStatus.Open];
+  return (
+    <span style={{
+      background: s.bg, color: s.text,
+      padding: '3px 8px', borderRadius: 6, fontSize: '.68rem', fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '.04em',
+    }}>
+      {s.label}
+    </span>
+  );
+};
+
+/** Token Escrow Order Card (for Token Bridge mode) */
+export const EscrowOrderCard: React.FC<EscrowOrderCardProps> = ({
+  order,
+  currentBlock,
+  actioning,
+  actionStep,
+  feeBps,
+  mldsaHex,
+  preimageStore,
+  expandedOrder,
+  setExpandedOrder,
+  tokenInfo,
+  onTake,
+  onConfirm,
+  onRefund,
+  onCancel,
+}) => {
+  const isExpanded = expandedOrder === `tb_${order.id}`;
+  const blocksLeft = order.expiry > 0 ? order.expiry - currentBlock : 0;
+  const isExpired = order.expiry > 0 && blocksLeft <= 0;
+  const myPreimage = preimageStore[`tb_${order.id}`];
+  const isMyOrder = !!(mldsaHex && order.creator.toLowerCase() === mldsaHex);
+  const feeSats = (order.btcPrice * BigInt(feeBps)) / 10000n;
+  const tokenSymbol = tokenInfo?.symbol || 'TOKEN';
+  const tokenIcon = tokenInfo?.icon || '';
+  const tokenDecimals = tokenInfo?.decimals || 8;
+  const isSell = order.direction === DIR_SELL_TOKEN;
+  const isThisTbActioning = actioning === 'tb:' + order.id;
+  const ZERO_HEX = '0'.repeat(64);
+
+  return (
+    <div key={`tb_${order.id}`} className="Pg" style={{ marginBottom: 8, cursor: 'pointer' }}
+      onClick={() => setExpandedOrder(isExpanded ? null : `tb_${order.id}`)}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            background: isSell ? 'rgba(239,68,68,.12)' : 'rgba(34,197,94,.12)',
+            color: isSell ? '#ef4444' : '#22c55e',
+            padding: '4px 10px', borderRadius: 8, fontSize: '.7rem', fontWeight: 700,
+          }}>
+            {isSell ? 'Sell' : 'Buy'} {tokenIcon} {tokenSymbol}
+          </span>
+          <span style={{ fontWeight: 700, fontSize: '.82rem' }}>
+            {formatTokenAmount(order.tokenAmount, tokenDecimals)} {tokenSymbol}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StatusBadge status={order.status as OrderStatus} />
+          <span style={{ fontSize: '.72rem', color: 'var(--t3)' }}>#{order.id}</span>
+        </div>
+      </div>
+
+      {/* Info row */}
+      <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '.72rem', color: 'var(--t2)', flexWrap: 'wrap' }}>
+        <span>Price: <b style={{ color: 'var(--o)' }}>{satsToBtc(order.btcPrice)}</b></span>
+        <span>Fee: <b>+{Number(feeSats).toLocaleString()} sats</b></span>
+        {order.expiry > 0 && (
+          <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
+            {isExpired ? 'EXPIRED' : `Expires: ${formatBlockCountdown(blocksLeft)}`}
+          </span>
+        )}
+      </div>
+
+      {/* Expanded */}
+      {isExpanded && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--bd)' }}>
+          <div style={{ fontSize: '.7rem', color: 'var(--t2)', marginBottom: 8 }}>
+            <div><b>Direction:</b> {isSell ? 'Selling tokens for BTC' : 'Buying tokens with BTC'}</div>
+            <div style={{ marginTop: 4 }}><b>Token:</b> {tokenIcon} {tokenSymbol} ({tokenInfo?.address ? tokenInfo.address.slice(0, 20) + '...' : order.tokenHex.slice(0, 20) + '...'})</div>
+            <div style={{ marginTop: 4 }}><b>Amount:</b> {formatTokenAmount(order.tokenAmount, tokenDecimals)} {tokenSymbol}</div>
+            <div style={{ marginTop: 4 }}><b>BTC Price:</b> {satsToBtc(order.btcPrice)}</div>
+            <div style={{ marginTop: 4 }}><b>Hashlock:</b> <code style={{ fontSize: '.65rem', wordBreak: 'break-all' }}>{order.hashlock}</code></div>
+            {order.preimage !== ZERO_HEX && (
+              <div style={{ marginTop: 4 }}><b>Preimage:</b> <code style={{ fontSize: '.65rem', wordBreak: 'break-all' }}>{order.preimage}</code></div>
+            )}
+            {myPreimage && order.preimage === ZERO_HEX && (
+              <div style={{ marginTop: 4, background: 'rgba(245,158,11,.1)', padding: '6px 8px', borderRadius: 8 }}>
+                <b style={{ color: '#f59e0b' }}>Your Preimage (keep secret!):</b>
+                <code style={{ fontSize: '.65rem', wordBreak: 'break-all', display: 'block', marginTop: 2 }}>{myPreimage}</code>
+              </div>
+            )}
+            {order.expiry > 0 && (
+              <div style={{ marginTop: 4 }}><b>Expiry:</b> Block {order.expiry.toLocaleString()} ({formatBlockCountdown(blocksLeft)})</div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            {/* Take order */}
+            {order.status === 1 && !isExpired && !isMyOrder && (
+              <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
+                onTake={(id, addr) => onTake(id, addr)} disabled={isThisTbActioning} />
+            )}
+
+            {/* Confirm with preimage */}
+            {order.status === 2 && !isExpired && myPreimage && (
+              <button className="btn-p" style={{ fontSize: '.72rem', padding: '6px 14px' }}
+                disabled={isThisTbActioning}
+                onClick={(e) => { e.stopPropagation(); onConfirm(order.id, myPreimage); }}>
+                Reveal Preimage & Release Tokens
+              </button>
+            )}
+
+            {/* Confirm with manual preimage */}
+            {order.status === 2 && !isExpired && !myPreimage && (
+              <PreimageInput orderId={order.id}
+                onConfirm={(id, pre) => onConfirm(id, pre)} disabled={isThisTbActioning} />
+            )}
+
+            {/* Refund expired */}
+            {isExpired && order.status === 2 && (
+              <button style={{ ...btnSmall, background: 'rgba(239,68,68,.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,.3)' }}
+                disabled={isThisTbActioning}
+                onClick={(e) => { e.stopPropagation(); onRefund(order.id); }}>
+                Refund (Return Tokens)
+              </button>
+            )}
+
+            {/* Cancel */}
+            {order.status === 1 && isMyOrder && (
+              <button style={{ ...btnSmall, background: 'rgba(107,114,128,.15)', color: '#6b7280', border: '1px solid rgba(107,114,128,.3)' }}
+                disabled={isThisTbActioning}
+                onClick={(e) => { e.stopPropagation(); onCancel(order.id); }}>
+                Cancel
+              </button>
+            )}
+          </div>
+
+          {isThisTbActioning && actionStep && (
+            <div style={{ marginTop: 8, fontSize: '.72rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>
+              {actionStep}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default EscrowOrderCard;

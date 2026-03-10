@@ -11,9 +11,9 @@
  * for backward compatibility with existing consumers.
  */
 
-import { useCrossChainState } from './useCrossChainState';
-import { useFractalSwap } from './useFractalSwap';
-import { useTokenEscrow } from './useTokenEscrow';
+import { useCrossChainState, type CrossChainState } from './useCrossChainState';
+import { useFractalSwap, type FractalSwapActions } from './useFractalSwap';
+import { useTokenEscrow, type TokenEscrowActions } from './useTokenEscrow';
 
 // ── Re-exports for backward compatibility ──
 export {
@@ -30,7 +30,12 @@ export {
 export { getContractOpscanUrl } from '../contracts';
 export { isUnisatInstalled } from '../wallets/unisat';
 
-export function useCrossChain() {
+export type UseCrossChainReturn =
+  Omit<CrossChainState, 'setActionStep' | 'setActioning' | 'setCreating' | 'setCreateStep' | 'savePreimage' | 'saveRate' | 'setMsg' | 'fetchEscrowOrders' | 'setTbCreating' | 'setTbStep' | 'senderAddr' | 'provider' | 'mode' | 'trackOp' | 'updateOpStep' | 'completeOp' | 'failOp' | 'toast'>
+  & FractalSwapActions
+  & TokenEscrowActions;
+
+export function useCrossChain(): UseCrossChainReturn {
   const state = useCrossChainState();
   const fractal = useFractalSwap(state);
   const escrow = useTokenEscrow(state);

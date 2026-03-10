@@ -15,7 +15,7 @@
  *  - TX history
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address, BinaryWriter } from '@btc-vision/transaction';
@@ -96,7 +96,84 @@ export function getAmountOut(amountIn: number, reserveIn: number, reserveOut: nu
 // Re-export for components that need them
 export { getTxUrl, getContractOpscanUrl, formatTimeAgo };
 
-export function useSwap() {
+export interface UseSwapReturn {
+  walletAddress: string | null;
+  connected: boolean;
+  openConnectModal: () => void;
+  senderAddr: Address | null;
+  SWAP_TOKENS: Token[];
+  heldTokens: Token[];
+  motoPools: MotoswapPool[];
+  reserveA: number;
+  reserveB: number;
+  fetchReserves: () => Promise<void>;
+  poolReady: boolean;
+  fromIdx: number;
+  setFromIdx: React.Dispatch<React.SetStateAction<number>>;
+  toIdx: number;
+  setToIdx: React.Dispatch<React.SetStateAction<number>>;
+  fromAmt: string;
+  setFromAmt: React.Dispatch<React.SetStateAction<string>>;
+  slippage: number;
+  setSlippage: React.Dispatch<React.SetStateAction<number>>;
+  swapping: boolean;
+  swapStep: string;
+  swapResult: SwapResultType | null;
+  setSwapResult: React.Dispatch<React.SetStateAction<SwapResultType | null>>;
+  showSettings: boolean;
+  setShowSettings: React.Dispatch<React.SetStateAction<boolean>>;
+  balances: Record<string, bigint>;
+  balLoading: boolean;
+  setBalRefreshKey: React.Dispatch<React.SetStateAction<number>>;
+  from: Token;
+  to: Token;
+  fromVal: number;
+  toVal: number;
+  hasPool: boolean;
+  rIn: number;
+  rOut: number;
+  isSimplePool: boolean;
+  motoPool: MotoswapPool | null;
+  priceImpact: number;
+  rate: number;
+  fee: number;
+  fromBal: bigint | undefined;
+  toBal: bigint | undefined;
+  fmtBal: (b: bigint | undefined, dec: number) => string;
+  flip: () => void;
+  doSwap: () => Promise<void>;
+  minting: string | null;
+  mintResult: { sym: string; ok: boolean; msg: string } | null;
+  setMintResult: React.Dispatch<React.SetStateAction<{ sym: string; ok: boolean; msg: string } | null>>;
+  mintTokens: (sym: string) => Promise<void>;
+  history: TxRecord[];
+  mainTab: SwapMainTab;
+  setMainTab: React.Dispatch<React.SetStateAction<SwapMainTab>>;
+  userPools: UserPool[];
+  removeUserPool: (address: string) => void;
+  createPoolOpen: boolean;
+  setCreatePoolOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  poolTokenA: string;
+  setPoolTokenA: React.Dispatch<React.SetStateAction<string>>;
+  poolTokenB: string;
+  setPoolTokenB: React.Dispatch<React.SetStateAction<string>>;
+  poolSymA: string;
+  setPoolSymA: React.Dispatch<React.SetStateAction<string>>;
+  poolSymB: string;
+  setPoolSymB: React.Dispatch<React.SetStateAction<string>>;
+  deployingPool: boolean;
+  poolDeployStep: string;
+  poolDeployResult: { ok: boolean; msg: string; address?: string } | null;
+  createPool: () => Promise<void>;
+  showLiquidity: boolean;
+  setShowLiquidity: React.Dispatch<React.SetStateAction<boolean>>;
+  lpUserMine: number;
+  MINT_AMOUNT: number;
+  failOp: (id: string, error: string) => void;
+  provider: ReturnType<typeof getProvider>;
+}
+
+export function useSwap(): UseSwapReturn {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
   const { trackOp, completeOp, failOp } = useOps();
 
@@ -322,10 +399,10 @@ export function useSwap() {
 
   const fromBal = balances[from?.symbol ?? ''];
   const toBal = balances[to?.symbol ?? ''];
-  const fmtBal = (b: bigint | undefined, dec: number) =>
+  const fmtBal = (b: bigint | undefined, dec: number): string =>
     b != null ? (Number(b) / Math.pow(10, dec)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : (balLoading ? '...' : '--');
 
-  const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
+  const flip = (): void => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
 
   useEffect(() => {
     if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);

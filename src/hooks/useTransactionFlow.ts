@@ -42,7 +42,16 @@ function clearState(flowId: string): void {
   } catch (e) { logger.warn('[useTransactionFlow] clearState error:', e); }
 }
 
-export function useTransactionFlow(flowId: string) {
+interface UseTransactionFlowReturn extends TxFlowState {
+  startApproval: () => void;
+  startWaiting: () => Promise<void>;
+  startExecution: () => void;
+  setDone: (txHash: string) => void;
+  setError: (msg: string) => void;
+  reset: () => void;
+}
+
+export function useTransactionFlow(flowId: string): UseTransactionFlowReturn {
   const [state, setState] = useState<TxFlowState>(() => loadState(flowId));
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

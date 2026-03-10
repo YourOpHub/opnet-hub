@@ -65,7 +65,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
         }
         setAllTokens(tokens);
         // Fetch holder counts in parallel (batch of 5)
-        const batch = async (items: OPScanToken[], batchSize: number) => {
+        const batch = async (items: OPScanToken[], batchSize: number): Promise<void> => {
           for (let i = 0; i < items.length; i += batchSize) {
             const chunk = items.slice(i, i + batchSize);
             const counts = await Promise.all(chunk.map(async (tok) => {
@@ -117,7 +117,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
     });
   }, [allTokens, sortKey, sortAsc, filterText]);
 
-  const toggleSort = (key: TokenSortKey) => {
+  const toggleSort = (key: TokenSortKey): void => {
     if (sortKey === key) setSortAsc(!sortAsc);
     else { setSortKey(key); setSortAsc(false); }
   };
@@ -171,7 +171,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
     finally { setLoading(false); }
   }, []);
 
-  const sortArrow = (key: TokenSortKey) => sortKey === key ? (sortAsc ? ' \u25B2' : ' \u25BC') : '';
+  const sortArrow = (key: TokenSortKey): string => sortKey === key ? (sortAsc ? ' \u25B2' : ' \u25BC') : '';
 
   return (
     <div>

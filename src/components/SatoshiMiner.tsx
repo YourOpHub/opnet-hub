@@ -65,7 +65,7 @@ const getMineEmission = (daysSinceStart: number): number => {
 /** MINE earned per game sat mined (conversion rate) */
 const MINE_PER_SAT = 0.001;
 const fs = (n: number): string => { if (n >= 1e8) return (n / 1e8).toFixed(4) + ' BTC'; if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return Math.floor(n).toString() };
-const co = (u: Up) => Math.floor(u.base * Math.pow(u.g, u.lv));
+const co = (u: Up): number => Math.floor(u.base * Math.pow(u.g, u.lv));
 const ld = <T,>(k: string, d: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d } catch (e) { logger.warn(`[SatoshiMiner] Failed to load '${k}' from localStorage:`, e); return d } };
 
 /* ─── 6 evolution stages with pixel art sprites ─── */
@@ -127,7 +127,7 @@ const SatoshiMiner: React.FC = () => {
     // Derived
     const totalUpgrades = ups.reduce((s, u) => s + u.lv, 0);
     const stageIdx = Math.min(STAGES.length - 1, Math.floor(totalUpgrades / 3));
-    const stage = STAGES[stageIdx]!;
+    const stage = STAGES[stageIdx] ?? STAGES[0] ?? { name: 'Genesis Node', color: '#F7931A', ring: 'rgba(247,147,26,.15)', bg: 'radial-gradient(circle, #1a1200 0%, #0a0a1a 70%)' };
     const lkLv = ups.find(u => u.id === 'luck')?.lv || 0;
     const tbLv = ups.find(u => u.id === 'turbo')?.lv || 0;
     const tm = Math.pow(2, tbLv);
@@ -144,7 +144,7 @@ const SatoshiMiner: React.FC = () => {
     // ─── Real OP_NET chain sync ───
     useEffect(() => {
         let cancelled = false;
-        const sync = async () => {
+        const sync = async (): Promise<void> => {
             try {
                 const [height, ep] = await Promise.all([
                     opnet.getBlockHeight().catch(() => 0),
@@ -185,11 +185,11 @@ const SatoshiMiner: React.FC = () => {
                 x: Math.random() * w, y: Math.random() * h,
                 vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4 - .15,
                 r: Math.random() * 2.5 + .5, a: Math.random() * .5,
-                color: ([stage.color, '#F7931A', '#0ea5e9', '#a78bfa', '#eab308'][Math.floor(Math.random() * 5)])!
+                color: [stage.color, '#F7931A', '#0ea5e9', '#a78bfa', '#eab308'][Math.floor(Math.random() * 5)] ?? stage.color
             });
         }
         let run = true;
-        const loop = () => {
+        const loop = (): void => {
             if (!run) return;
             ctx.clearRect(0, 0, w, h);
             for (const p of ambient) {
@@ -200,7 +200,8 @@ const SatoshiMiner: React.FC = () => {
             }
             const sp = sparksRef.current;
             for (let i = sp.length - 1; i >= 0; i--) {
-                const s = sp[i]!; s.x += s.vx; s.y += s.vy; s.vy += .06; s.life -= .018;
+                const s = sp[i]; if (!s) continue;
+                s.x += s.vx; s.y += s.vy; s.vy += .06; s.life -= .018;
                 if (s.life <= 0) { sp.splice(i, 1); continue }
                 ctx.beginPath(); ctx.arc(s.x, s.y, 2.5 * s.life, 0, Math.PI * 2);
                 ctx.fillStyle = s.color; ctx.globalAlpha = s.life; ctx.fill();
@@ -234,7 +235,7 @@ const SatoshiMiner: React.FC = () => {
 
     // Server sync: push game state every 30s + fetch leaderboard
     useEffect(() => {
-        const doSync = async () => {
+        const doSync = async (): Promise<void> => {
             try {
                 const walletAddr = localStorage.getItem('hub_wallet') || `anon_${Math.random().toString(36).slice(2, 10)}`;
                 if (!localStorage.getItem('hub_wallet_anon')) localStorage.setItem('hub_wallet_anon', walletAddr);
@@ -250,7 +251,7 @@ const SatoshiMiner: React.FC = () => {
     }, [mineBalance, tot, sps]);
 
     // Save
-    useEffect(() => { const sv = () => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)); localStorage.setItem('sm_mine', JSON.stringify(mineBalance)); localStorage.setItem('sm_mine_start', JSON.stringify(mineStartDay)); localStorage.setItem('sm_prestige', JSON.stringify(prestige)); }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv, mineBalance, mineStartDay, prestige]);
+    useEffect(() => { const sv = (): void => { localStorage.setItem('sm_s', JSON.stringify(Math.floor(sats))); localStorage.setItem('sm_t', JSON.stringify(Math.floor(tot))); localStorage.setItem('sm_u', JSON.stringify(ups)); localStorage.setItem('sm_b', JSON.stringify(blk)); localStorage.setItem('sm_h', JSON.stringify(hlv)); localStorage.setItem('sm_mine', JSON.stringify(mineBalance)); localStorage.setItem('sm_mine_start', JSON.stringify(mineStartDay)); localStorage.setItem('sm_prestige', JSON.stringify(prestige)); }; const iv = setInterval(sv, 2000); return () => { clearInterval(iv); sv() } }, [sats, tot, ups, blk, hlv, mineBalance, mineStartDay, prestige]);
 
     // $MINE accumulation (tied to game activity)
     useEffect(() => {
@@ -320,7 +321,7 @@ const SatoshiMiner: React.FC = () => {
         }
     }, [ups, sats]);
 
-    const ren = (cat: string, title: string) => (
+    const ren = (cat: string, title: string): React.ReactElement => (
         <React.Fragment key={cat}>
             <div className="ut">{title}</div>
             {ups.filter(u => u.cat === cat).map(u => {
@@ -508,7 +509,8 @@ const SatoshiMiner: React.FC = () => {
                                 const contract = getContract<MintableContract>(MINE_CONTRACT, MINTABLE_ABI, gameProvider, GAME_NETWORK, senderAddr);
                                 const sim = await withRetry(() => contract.publicMint(rawAmount));
                                 if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
-                                const txParams = await buildTxParams(gameProvider, walletAddress!);
+                                if (!walletAddress) throw new Error('Wallet not connected');
+                                const txParams = await buildTxParams(gameProvider, walletAddress);
                                 const mOpId = `mint_MINE_${Date.now()}`;
                                 trackOp({ id: mOpId, market: 'mint', orderId: 'MINE', direction: '', role: '', step: `Claiming ${claimAmount.toLocaleString()} MINE...` });
                                 await (sim as CallResult).sendTransaction(txParams);

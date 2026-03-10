@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const go = async () => {
+    const go = async (): Promise<void> => {
       // 1. Fetch OP_NET Data
       let block = 0;
       let epochNum = 0;
@@ -64,8 +64,8 @@ const Dashboard: React.FC = () => {
     return () => { cancelled = true; clearInterval(iv); clearTimeout(pulseRef.current); };
   }, []);
 
-  const f = (n: number) => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  const fb = (n: number) => n >= 1e12 ? '$' + (n / 1e12).toFixed(2) + 'T' : '$' + (n / 1e9).toFixed(1) + 'B';
+  const f = (n: number): string => '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const fb = (n: number): string => n >= 1e12 ? '$' + (n / 1e12).toFixed(2) + 'T' : '$' + (n / 1e9).toFixed(1) + 'B';
   const epoch = epochNum ?? (blk > 0 ? Math.floor(blk / 5) : 0);
   const epochBlock = blk % 5;
   const epochPct = (epochBlock / 5) * 100;

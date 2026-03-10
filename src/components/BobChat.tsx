@@ -65,7 +65,7 @@ function trimMcp(raw: string): string {
     return out.trim() || raw.slice(0, 600);
 }
 
-const bold = (t: string) => t.split('**').map((p, i) => i % 2 === 1 ? <strong key={i} style={{ color: 'var(--c2)' }}>{p}</strong> : <span key={i}>{p}</span>);
+const bold = (t: string): React.ReactNode[] => t.split('**').map((p, i) => i % 2 === 1 ? <strong key={i} style={{ color: 'var(--c2)' }}>{p}</strong> : <span key={i}>{p}</span>);
 
 const BobChat: React.FC = () => {
     const [msgs, setMsgs] = useState<Msg[]>([{ id: 0, role: 'bot', text: '🧠 I\'m **Bob**, the OP_NET AI Instructor. I know everything about building on Bitcoin L1 — smart contracts, epochs, post-quantum security, DeFi, and the Vibecoding Challenge.\n\nI\'m connected to the **live Bob MCP server** at ai.opnet.org with **28+ dev tools**. Ask me anything!' }]);

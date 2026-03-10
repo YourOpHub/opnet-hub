@@ -87,14 +87,14 @@ export interface SyncResponse {
 }
 
 /** Get $MINE token info */
-export const getTokenInfo = () => api<TokenInfo>('/api/token');
+export const getTokenInfo = (): Promise<TokenInfo | null> => api<TokenInfo>('/api/token');
 
 /** Get leaderboard */
-export const getLeaderboard = (limit = 50) =>
+export const getLeaderboard = (limit = 50): Promise<LeaderboardResponse | null> =>
   api<LeaderboardResponse>(`/api/leaderboard?limit=${limit}`);
 
 /** Get player data */
-export const getPlayer = (address: string) =>
+export const getPlayer = (address: string): Promise<PlayerData | null> =>
   api<PlayerData>(`/api/player/${address}`);
 
 /** Sync player game state to server */
@@ -104,17 +104,17 @@ export const syncPlayer = (data: {
   total_sats_mined: number;
   total_clicks: number;
   hash_rate: number;
-}) => api<SyncResponse>('/api/player/sync', {
+}): Promise<SyncResponse | null> => api<SyncResponse>('/api/player/sync', {
   method: 'POST',
   body: JSON.stringify(data),
 });
 
 /** Claim $MINE tokens */
-export const claimTokens = (address: string, amount: number) =>
+export const claimTokens = (address: string, amount: number): Promise<ClaimResponse | null> =>
   api<ClaimResponse>('/api/claim', {
     method: 'POST',
     body: JSON.stringify({ address, amount }),
   });
 
 /** Health check */
-export const getHealth = () => api<{ status: string; uptime: number }>('/health');
+export const getHealth = (): Promise<{ status: string; uptime: number } | null> => api<{ status: string; uptime: number }>('/health');

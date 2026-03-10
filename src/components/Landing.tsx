@@ -6,7 +6,7 @@ import { POOL_ADDRESS, OPSCAN_EXPLORER_URL } from '../contracts';
 import { CURRENT_ENV } from '../config';
 
 /** Scroll-triggered fade-in hook with blur */
-function useReveal(delay = 0) {
+function useReveal(delay = 0): { ref: React.RefObject<HTMLDivElement | null>; style: React.CSSProperties } {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -28,7 +28,7 @@ function useReveal(delay = 0) {
 }
 
 /** Animated counter */
-function useCounter(target: number, duration = 1200) {
+function useCounter(target: number, duration = 1200): number {
   const [val, setVal] = useState(0);
   const prev = useRef(0);
   useEffect(() => {
@@ -36,7 +36,7 @@ function useCounter(target: number, duration = 1200) {
     const start = prev.current;
     const diff = target - start;
     const t0 = performance.now();
-    const tick = (now: number) => {
+    const tick = (now: number): void => {
       const p = Math.min((now - t0) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
       setVal(Math.round(start + diff * eased));
@@ -82,7 +82,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
 
   useEffect(() => {
     let c = false;
-    const load = async () => {
+    const load = async (): Promise<void> => {
       try { const p = await fetchBtcPrice(); if (!c && p) { setBtc(p.usd); setBtcChange(p.usd_24h_change); } } catch (e) { logger.warn('[Landing] BTC price fetch failed:', e); }
       try { const b = await opnet.getBlockHeight(); if (!c && b) setBlock(b); } catch (e) { logger.warn('[Landing] Block height fetch failed:', e); }
       try {

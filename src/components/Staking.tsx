@@ -57,7 +57,7 @@ const Staking: React.FC = () => {
   const [userRewards, setUserRewards] = useState<bigint>(0n);
   const [totalStakedOnChain, setTotalStakedOnChain] = useState<bigint>(0n);
 
-  const fmtToken = (raw: bigint, decimals = 8) => {
+  const fmtToken = (raw: bigint, decimals = 8): string => {
     const num = Number(raw) / Math.pow(10, decimals);
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(2) + 'M';
     if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
@@ -84,7 +84,7 @@ const Staking: React.FC = () => {
   useEffect(() => {
     if (!STAKING_DEPLOYED || !senderAddr) return;
     let cancelled = false;
-    const fetchStats = async () => {
+    const fetchStats = async (): Promise<void> => {
       try {
         const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
         const [stakedRes, rewardRes, totalRes, rateRes] = await Promise.allSettled([

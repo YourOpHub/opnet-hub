@@ -14,7 +14,7 @@
  *  - senderHex computation
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
@@ -114,7 +114,53 @@ export function getP2OPAddress(mldsaHex: string): string {
 // Re-export for components that need them
 export { KNOWN_TOKENS, resolveTokenHex, getContractOpscanUrl, getTxUrl, MARKET_ADDRESS };
 
-export function useMarketplace() {
+export interface UseMarketplaceReturn {
+  walletAddress: string | null;
+  connected: boolean;
+  senderAddr: Address | null;
+  senderHex: string;
+  openConnectModal: () => void;
+  provider: ReturnType<typeof getProvider>;
+  tokenList: MarketToken[];
+  loading: boolean;
+  filteredTokens: MarketToken[];
+  search: string;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
+  handleSearchSelect: () => void;
+  selectedToken: string | null;
+  setSelectedToken: React.Dispatch<React.SetStateAction<string | null>>;
+  selInfo: MarketToken | undefined;
+  orders: Order[];
+  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  sellOrders: Order[];
+  buyOrders: Order[];
+  myOrders: Order[];
+  fetchOrders: (tokenAddr?: string) => Promise<void>;
+  fetchOrdersOnChain: (tokenFilter?: string) => Promise<Order[]>;
+  orderType: 'sell' | 'buy';
+  setOrderType: React.Dispatch<React.SetStateAction<'sell' | 'buy'>>;
+  orderAmount: string;
+  setOrderAmount: React.Dispatch<React.SetStateAction<string>>;
+  orderPrice: string;
+  setOrderPrice: React.Dispatch<React.SetStateAction<string>>;
+  creating: boolean;
+  createStep: string;
+  handleCreate: () => Promise<void>;
+  fillId: string | null;
+  setFillId: React.Dispatch<React.SetStateAction<string | null>>;
+  fillAmount: string;
+  setFillAmount: React.Dispatch<React.SetStateAction<string>>;
+  filling: boolean;
+  fillStep: string;
+  handleFill: (orderId: string, amount?: number) => Promise<void>;
+  handleExecuteBuyOrder: (orderId: string) => Promise<void>;
+  handleCancel: (orderId: string) => Promise<void>;
+  msg: string;
+  setMsg: React.Dispatch<React.SetStateAction<string>>;
+  lastTxId: string | null;
+}
+
+export function useMarketplace(): UseMarketplaceReturn {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const { toast } = useToast();

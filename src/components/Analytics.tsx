@@ -35,7 +35,7 @@ function loadSnapshots(): PoolSnapshot[] {
   } catch (e) { logger.warn('[Analytics] Failed to load snapshots from localStorage:', e); return []; }
 }
 
-function saveSnapshot(snap: PoolSnapshot) {
+function saveSnapshot(snap: PoolSnapshot): void {
   const all = loadSnapshots();
   // Deduplicate: only add if >60s since last
   const lastSnap = all[all.length - 1];
@@ -171,7 +171,7 @@ const Analytics: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const fetchAll = async () => {
+    const fetchAll = async (): Promise<void> => {
       // Pool reserves
       try {
         const res = await opnetRpc.callContract(POOL_ADDRESS, '06374bfc');

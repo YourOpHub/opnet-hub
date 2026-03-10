@@ -5,8 +5,8 @@ if (typeof IntersectionObserver === 'undefined') {
   // @ts-expect-error polyfill for jsdom
   globalThis.IntersectionObserver = class IntersectionObserver {
     constructor(public callback: IntersectionObserverCallback) {}
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
   };
 }

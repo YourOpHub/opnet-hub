@@ -27,7 +27,15 @@ function savePreferences(prefs: NotificationPreferences): void {
     }
 }
 
-export function useNotifications() {
+interface UseNotificationsReturn {
+    notify: (title: string, body?: string, options?: NotificationOptions) => Notification | null;
+    setEnabled: (value: boolean) => Promise<void>;
+    isEnabled: boolean;
+    isSupported: boolean;
+    permission: NotificationPermission;
+}
+
+export function useNotifications(): UseNotificationsReturn {
     const isSupported = typeof window !== 'undefined' && 'Notification' in window;
 
     const [enabled, setEnabledState] = useState<boolean>(() => loadPreferences().enabled);

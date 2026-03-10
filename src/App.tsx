@@ -38,7 +38,7 @@ const MultiSender = lazy(() => import('./components/MultiSender'));
 const CrossChainMarketplace = lazy(() => import('./components/CrossChainMarketplace'));
 const TokenGallery = lazy(() => import('./components/TokenGallery'));
 
-const LazyFallback = () => (
+const LazyFallback = (): React.ReactElement => (
     <div style={{ padding: '40px 0' }}>
         <div className="skeleton-block" style={{ height: 180, borderRadius: 20, marginBottom: 16 }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
@@ -187,7 +187,7 @@ const App: React.FC = () => {
     // close group dropdown on outside click
     useEffect(() => {
         if (!openGroup) return;
-        const h = (e: MouseEvent) => {
+        const h = (e: MouseEvent): void => {
             const nav = document.querySelector('.N');
             if (nav && !nav.contains(e.target as Node)) setOpenGroup(null);
         };
@@ -197,13 +197,13 @@ const App: React.FC = () => {
 
     const activeGroup = findGroup(tab);
 
-    const wrap = (child: React.ReactNode) => (
+    const wrap = (child: React.ReactNode): React.ReactElement => (
         <ErrorBoundary onReset={() => setTab('home')}>
             <Suspense fallback={<LazyFallback />}>{child}</Suspense>
         </ErrorBoundary>
     );
 
-    const P = () => {
+    const P = (): React.ReactElement => {
         switch (tab) {
             case 'home': return wrap(<Landing onNav={navigate} />);
             case 'portfolio': return wrap(<Portfolio walletAddress={wAddr} senderAddress={senderAddr} />);

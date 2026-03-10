@@ -197,7 +197,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const connected = !!walletAddress;
   const mineBal = balances['MINE'];
   const vibeBal = balances['VIBE'];
-  const fmtBal = (b: bigint | undefined) => b != null ? (Number(b) / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
+  const fmtBal = (b: bigint | undefined): string => b != null ? (Number(b) / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
 
   return (
     <div className="liq-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-labelledby="liq-modal-title">

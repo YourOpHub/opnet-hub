@@ -37,7 +37,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
 
   useEffect(() => { void fetchUTXOs(); }, [fetchUTXOs]);
 
-  const getUtxoValue = (u: { value: string | number }) => {
+  const getUtxoValue = (u: { value: string | number }): number => {
     const v = typeof u.value === 'string' ? (u.value.startsWith('0x') ? Number(BigInt(u.value)) : Number(u.value)) : u.value;
     return v;
   };
@@ -165,9 +165,9 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
                   );
                 })}
               </div>
-              {selectedUtxo !== null && (
+              {selectedUtxo !== null && utxos[selectedUtxo] && (
                 <div className="fs-58 c-t4 mt-4">
-                  Splitting UTXO #{selectedUtxo + 1}: {getUtxoValue(utxos[selectedUtxo]!).toLocaleString()} sats
+                  Splitting UTXO #{selectedUtxo + 1}: {getUtxoValue(utxos[selectedUtxo]).toLocaleString()} sats
                 </div>
               )}
               {selectedUtxo === null && utxos.length > 1 && (

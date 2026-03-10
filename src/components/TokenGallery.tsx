@@ -61,7 +61,8 @@ interface DeployedToken {
 const genLogo = (sym: string): string => {
   const s = (sym || '?').toUpperCase().slice(0, 3);
   const cs = [['#F7931A', '#e8850f'], ['#0ea5e9', '#0284c7'], ['#a78bfa', '#7c3aed'], ['#22c55e', '#16a34a'], ['#ec4899', '#db2777'], ['#eab308', '#ca8a04']];
-  const [c1, c2] = cs[s.charCodeAt(0) % cs.length]!;
+  const pair = cs[s.charCodeAt(0) % cs.length] ?? ['#F7931A', '#e8850f'];
+  const [c1, c2] = pair;
   return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="30" fill="url(#g${s})"/><circle cx="32" cy="32" r="21" fill="rgba(0,0,0,.2)"/><text x="32" y="38" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" font-size="${s.length > 2 ? 12 : 16}" fill="white">${s}</text><defs><linearGradient id="g${s}" x1="0" y1="0" x2="64" y2="64"><stop stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs></svg>`;
 };
 
@@ -148,7 +149,7 @@ const TokenGallery: React.FC = () => {
     }
   }, [sortField]);
 
-  const sortIcon = (field: typeof sortField) => sortField === field ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+  const sortIcon = (field: typeof sortField): string => sortField === field ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
 
   const sortedFiltered = useMemo(() => {
     let list = allTokens;
@@ -230,14 +231,15 @@ const TokenGallery: React.FC = () => {
       const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await contract.publicMint(rawAmount);
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
-      const txParams = await buildTxParams(provider, walletAddress!);
+      if (!walletAddress) throw new Error('Wallet not connected');
+      const txParams = await buildTxParams(provider, walletAddress);
       const fmOpId = `mint_${tok.symbol}_${Date.now()}`;
       trackOp({ id: fmOpId, market: 'mint', orderId: tok.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${tok.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       completeOp(fmOpId);
       const txHash = receipt.transactionId || '';
       setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}! TX: ${txHash}` });
-      addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress! });
+      addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setHistRefresh(k => k + 1);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
@@ -246,7 +248,7 @@ const TokenGallery: React.FC = () => {
     } finally { setFeatMinting(false); }
   }, [walletAddress, walletInstance, featMintAmt, openConnectModal, provider, senderAddr, trackOp, completeOp]);
 
-  const removeToken = (addr: string) => {
+  const removeToken = (addr: string): void => {
     const updated = tokens.filter(t => t.address !== addr);
     setTokens(updated);
     localStorage.setItem('hub_deployed_tokens', JSON.stringify(updated));
@@ -284,7 +286,8 @@ const TokenGallery: React.FC = () => {
         throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
       }
 
-      const txParams = await buildTxParams(provider, walletAddress!);
+      if (!walletAddress) throw new Error('Wallet not connected');
+      const txParams = await buildTxParams(provider, walletAddress);
       const umOpId = `mint_${token.symbol}_${Date.now()}`;
       trackOp({ id: umOpId, market: 'mint', orderId: token.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${token.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
@@ -292,7 +295,7 @@ const TokenGallery: React.FC = () => {
 
       const txHash = receipt.transactionId || '';
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });
-      addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress! });
+      addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setHistRefresh(k => k + 1);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';

@@ -105,7 +105,7 @@ function formatCount(n: number): string {
 }
 
 /* ── Live Activity Feed ── */
-function LiveFeed() {
+function LiveFeed(): React.ReactElement {
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastUpdate, setLastUpdate] = useState(0);
@@ -322,7 +322,7 @@ function LiveFeed() {
 }
 
 /* ── Social Post Card ── */
-function PostCard({ item }: { item: SocialPost }) {
+function PostCard({ item }: { item: SocialPost }): React.ReactElement {
     return (
         <a href={item.url} target="_blank" rel="noopener noreferrer" className="d-block" style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="Pg pointer" style={{ padding: '16px 18px', transition: '.2s' }}>

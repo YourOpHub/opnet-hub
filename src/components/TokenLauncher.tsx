@@ -23,7 +23,8 @@ const PRESETS = [
 const genLogo = (sym: string): string => {
   const s = (sym || '?').toUpperCase().slice(0, 3);
   const cs = [['#F7931A', '#e8850f'], ['#0ea5e9', '#0284c7'], ['#a78bfa', '#7c3aed'], ['#22c55e', '#16a34a'], ['#ec4899', '#db2777'], ['#eab308', '#ca8a04']];
-  const [c1, c2] = cs[s.charCodeAt(0) % cs.length]!;
+  const pair = cs[s.charCodeAt(0) % cs.length] ?? ['#F7931A', '#e8850f'];
+  const [c1, c2] = pair;
   return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="30" fill="url(#g)"/><circle cx="32" cy="32" r="21" fill="rgba(0,0,0,.2)"/><text x="32" y="38" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" font-size="${s.length > 2 ? 12 : 16}" fill="white">${s}</text><defs><linearGradient id="g" x1="0" y1="0" x2="64" y2="64"><stop stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs></svg>`;
 };
 
@@ -58,24 +59,24 @@ const TokenLauncher: React.FC = () => {
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<{ ok: boolean; info?: string } | null>(null);
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = (ev) => setImg(ev.target?.result as string);
+    r.onload = (ev: ProgressEvent<FileReader>): void => { setImg(ev.target?.result as string); };
     r.readAsDataURL(f);
   };
 
-  const handleWasmUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleWasmUpload = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const f = e.target.files?.[0]; if (!f) return;
     setCustomWasmName(f.name);
     const r = new FileReader();
-    r.onload = (ev) => {
+    r.onload = (ev: ProgressEvent<FileReader>): void => {
       if (ev.target?.result) setCustomWasm(new Uint8Array(ev.target.result as ArrayBuffer));
     };
     r.readAsArrayBuffer(f);
   };
 
-  const applyPreset = (p: typeof PRESETS[0]) => {
+  const applyPreset = (p: typeof PRESETS[0]): void => {
     setTokenName(p.name);
     setTokenSymbol(p.symbol);
     setTokenSupply(p.supply);
@@ -107,7 +108,7 @@ const TokenLauncher: React.FC = () => {
   const provider = useMemo(() => getProvider(), []);
 
   /** Deploy token: fetch GenericToken.wasm + encode calldata → Web3Provider.deployContract() */
-  const deployToken = async () => {
+  const deployToken = async (): Promise<void> => {
     if (!walletAddress || !walletInstance) {
       openConnectModal();
       return;
@@ -241,7 +242,7 @@ const TokenLauncher: React.FC = () => {
   };
 
   /** Verify a deployed contract on-chain */
-  const verifyDeployment = async () => {
+  const verifyDeployment = async (): Promise<void> => {
     if (!verifyAddr.trim()) return;
     setVerifying(true);
     setVerifyResult(null);

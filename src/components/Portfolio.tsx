@@ -67,7 +67,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
   useEffect(() => {
     if (!POOL_ADDRESS) return;
     const cancelled = false;
-    const fetchRes = async () => {
+    const fetchRes = async (): Promise<void> => {
       try {
         const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');
         if (res && !cancelled) {

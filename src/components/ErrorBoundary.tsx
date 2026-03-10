@@ -22,16 +22,16 @@ class ErrorBoundary extends React.Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
     logger.error('[ErrorBoundary]', error.message, info.componentStack);
   }
 
-  handleReset = () => {
+  handleReset = (): void => {
     this.setState({ hasError: false, error: null });
     this.props.onReset?.();
   };
 
-  render() {
+  render(): React.ReactNode {
     if (this.state.hasError) {
       return (
         <div role="alert" aria-live="assertive" style={{

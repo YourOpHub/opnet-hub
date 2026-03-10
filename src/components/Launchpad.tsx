@@ -100,14 +100,14 @@ const DeployModal: React.FC<{
   const [publicMintEnabled, setPublicMintEnabled] = useState(true);
   const [maxMintPerTx, setMaxMintPerTx] = useState('');
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const f = e.target.files?.[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = (ev) => setImg(ev.target?.result as string);
+    r.onload = (ev: ProgressEvent<FileReader>): void => { setImg(ev.target?.result as string); };
     r.readAsDataURL(f);
   };
 
-  const deploy = async () => {
+  const deploy = async (): Promise<void> => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
     if (!name.trim() || !symbol.trim()) { setError('Name and symbol required'); return; }
 
@@ -176,7 +176,7 @@ const DeployModal: React.FC<{
       setStep('Waiting for on-chain confirmation (~5 min)...');
 
       // Poll for contract to appear on-chain
-      const pollConfirm = async () => {
+      const pollConfirm = async (): Promise<void> => {
         for (let i = 0; i < 30; i++) {
           await new Promise(r => setTimeout(r, 15000));
           try {
@@ -488,7 +488,7 @@ const Launchpad: React.FC = () => {
       setMintAmt('');
       // Poll for balance change to confirm
       const startBal = userBal;
-      const pollMint = async () => {
+      const pollMint = async (): Promise<void> => {
         for (let i = 0; i < 20; i++) {
           await new Promise(r => setTimeout(r, 15000));
           await syncToken(selected.address);

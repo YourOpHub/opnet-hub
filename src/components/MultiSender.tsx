@@ -250,16 +250,16 @@ const MultiSender: React.FC = () => {
     return false;
   };
 
-  const goNext = () => {
+  const goNext = (): void => {
     if (!canGoNext()) return;
     if (step < 4) setStep((step + 1) as WizardStep);
   };
 
-  const goBack = () => {
+  const goBack = (): void => {
     if (step > 1) setStep((step - 1) as WizardStep);
   };
 
-  const resetWizard = () => {
+  const resetWizard = (): void => {
     setStep(1);
     setSelectedToken('');
     setCustomAddress('');

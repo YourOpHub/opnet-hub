@@ -42,7 +42,7 @@ const OpsContext = createContext<OpsContextValue>({
   completeOp: () => {}, failOp: () => {}, dismissOp: () => {},
 });
 
-export const useOps = () => useContext(OpsContext);
+export const useOps = (): OpsContextValue => useContext(OpsContext);
 
 function swapOpToEntry(op: SwapOp): OpEntry {
   return {

@@ -13,7 +13,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
   const [mempool, setMempool] = useState<{ count?: number; opnetCount?: number } | null>(null);
 
   useEffect(() => {
-    const load = async () => {
+    const load = async (): Promise<void> => {
       const h = await opnet.getBlockHeight().catch(() => 0);
       if (h > 0) {
         setLatestHeight(h);

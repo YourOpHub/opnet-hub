@@ -37,7 +37,7 @@ const TXLookup = React.memo(function TXLookup() {
     finally { setLoading(false); }
   }, [txHash]);
 
-  const renderObj = (obj: Record<string, unknown>, depth = 0) => {
+  const renderObj = (obj: Record<string, unknown>, depth = 0): React.ReactNode => {
     if (depth > 3) return <span style={{ ...monoSm, color: 'var(--t4)' }}>[nested]</span>;
     return Object.entries(obj).filter(([, v]) => v !== null && v !== undefined).map(([k, v]) => (
       <div key={k} style={{ ...rowS, paddingLeft: depth * 12 }}>

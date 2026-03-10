@@ -297,7 +297,7 @@ export function useCrossChainState(): CrossChainState {
   // ── Block height polling ──
   useEffect(() => {
     let cancelled = false;
-    const poll = async () => {
+    const poll = async (): Promise<void> => {
       try {
         const b = await provider.getBlockNumber();
         if (!cancelled) setCurrentBlock(Number(b));

@@ -276,9 +276,9 @@ const TokenLauncher: React.FC = () => {
 
   return (
     <div>
-      <div className="Pg mb-14 text-center" style={{ padding: '24px 18px' }}>
+      <div className="Pg mb-14 text-center p-24-18">
         <div className="fs-110 fw-800 c-w mb-3">Token Launcher</div>
-        <div className="c-t3 fs-80 m-auto" style={{ maxWidth: 480 }}>
+        <div className="c-t3 fs-80 m-auto max-w-480">
           Create your own OP-20 token on Bitcoin L1. Fill in the details, connect your wallet, and deploy. You only sign the transaction — we handle everything else.
         </div>
       </div>
@@ -339,7 +339,7 @@ const TokenLauncher: React.FC = () => {
 
           {/* Mintable mode settings */}
           {tokenMode === 'mintable' && (
-            <div className="mb-12 p-12 br-14" style={{ background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)' }}>
+            <div className="mb-12 p-12 br-14 bg-purple-06">
               <div className="fs-70 fw-700 c-purple mb-8">Mint Allocation</div>
 
               {/* Initial mint % slider */}
@@ -414,14 +414,14 @@ const TokenLauncher: React.FC = () => {
           )}
 
           {connected && (
-            <div className="mt-8 br-8 fs-68 c-g" style={{ padding: '6px 10px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)' }}>
+            <div className="mt-8 br-8 fs-68 c-g p-6-10 bg-ok">
               Wallet: {walletAddress.slice(0, 16)}...
             </div>
           )}
 
           {/* Deploy Result */}
           {deployResult && (
-            <div className="mt-10 p-12 br-8" style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)' }}>
+            <div className="mt-10 p-12 br-8 bg-success-08">
               <div className="c-g fw-700 mb-4">Token Deployed On-Chain!</div>
               <div className="fs-72 c-t2 word-break">
                 <strong>Contract:</strong> {deployResult.contractAddress}
@@ -433,7 +433,7 @@ const TokenLauncher: React.FC = () => {
             </div>
           )}
           {deployError && (
-            <div className="mt-10 p-12 br-8" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)' }}>
+            <div className="mt-10 p-12 br-8 bg-err-08">
               <div className="c-red fs-78">{deployError}</div>
             </div>
           )}
@@ -451,12 +451,12 @@ const TokenLauncher: React.FC = () => {
           <div className="fs-58 c-t4 mt-2">Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)}</div>
 
           {/* Deploy cost — compact */}
-          <div className="mt-12 br-14 fs-66 d-flex jc-between ai-center" style={{ padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)' }}>
+          <div className="mt-12 br-14 fs-66 d-flex jc-between ai-center p-8-12 bg-info-o">
             <span className="c-t3">Deploy cost:</span>
             <span className="fw-700 c-o text-mono">~50K sats (~0.0005 BTC)</span>
           </div>
 
-          <div className="mt-14 text-left br-14 fs-68 c-t3" style={{ padding: '10px', background: 'var(--bg3)' }}>
+          <div className="mt-14 text-left br-14 fs-68 c-t3 p-10 bg-bg3">
             <div className="fw-700 c-t2 mb-4">How it works:</div>
             <div>1. Fill in your token name, symbol & supply</div>
             <div>2. Connect your OP_WALLET</div>
@@ -467,7 +467,7 @@ const TokenLauncher: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-10 text-left br-14 fs-62 c-t3" style={{ padding: '8px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)' }}>
+          <div className="mt-10 text-left br-14 fs-62 c-t3 p-8 bg-info-b">
             {CURRENT_ENV !== 'mainnet' && <>Need {CURRENT_ENV} BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" className="c-c2">Get from faucet →</a></>}
           </div>
         </div>

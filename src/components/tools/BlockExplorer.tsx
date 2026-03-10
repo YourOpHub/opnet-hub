@@ -68,9 +68,9 @@ const BlockExplorer = React.memo(function BlockExplorer() {
     <div style={cardS}>
       {/* Visual block chain */}
       {recentBlocks.length > 0 && (
-        <div style={{ marginBottom: 16, padding: '12px 0' }}>
-          <div style={{ fontSize: '.62rem', color: 'var(--t4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Block Chain</div>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end', overflowX: 'auto', paddingBottom: 4 }}>
+        <div className="be-chain-area">
+          <div className="be-chain-label">Block Chain</div>
+          <div className="be-chain-row">
             {/* Mempool (next block) */}
             {mempool && (
               <>
@@ -116,14 +116,14 @@ const BlockExplorer = React.memo(function BlockExplorer() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div className="be-nav-row">
         <button onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); setBlock(null); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&lt;</button>
         <input style={{ ...inputS, flex: 1, textAlign: 'center' }} type="number" value={blockNum} onChange={e => setBlockNum(e.target.value)} placeholder="Block number" onKeyDown={e => e.key === 'Enter' && lookup()} />
         <button onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) { setBlockNum(String(n)); setBlock(null); } }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&gt;</button>
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Fetch'}</button>
       </div>
       {latestHeight > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+        <div className="be-quick-btns">
           <button onClick={() => { setBlockNum(String(latestHeight)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>Latest (#{latestHeight.toLocaleString()})</button>
           <button onClick={() => { setBlockNum(String(latestHeight - 10)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-10</button>
           <button onClick={() => { setBlockNum(String(latestHeight - 100)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-100</button>

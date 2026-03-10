@@ -213,21 +213,21 @@ const DeployModal: React.FC<{
       <div className="lp-modal" onClick={e => e.stopPropagation()}>
         <div className="flex-between mb-16">
           <div className="fw-800 fs-lg c-w">Deploy Contract</div>
-          <button onClick={onClose} className="c-t3 fs-120 pointer" style={{ background: 'none', border: 'none' }}>&#x2715;</button>
+          <button onClick={onClose} className="c-t3 fs-120 pointer bd-none" style={{ background: 'none' }}>&#x2715;</button>
         </div>
 
         {/* Image upload */}
         <div className="flex-center-full mb-14">
           <div onClick={() => fileRef.current?.click()}
-            className="br-50 d-flex ai-center jc-center pointer ov-hidden" style={{ width: 72, height: 72, border: '2px dashed var(--bd)', background: 'var(--bg3)' }}>
+            className="br-50 d-flex ai-center jc-center pointer ov-hidden w-72 h-72 bg-bg3" style={{ border: '2px dashed var(--bd)' }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} className="d-none" />
-            {img ? <img src={img} alt="" className="w-full" style={{ height: '100%', objectFit: 'cover' }} />
-              : <span className="c-t4" style={{ fontSize: '1.5rem' }}>+</span>}
+            {img ? <img src={img} alt="" className="w-full h-full obj-cover" />
+              : <span className="c-t4 fs-160">+</span>}
           </div>
         </div>
 
         <div className="flex-gap8-mb10">
-          <div style={{ flex: 2 }}>
+          <div className="flex-2">
             <label className="fs-82 c-t3 mb-4 d-block">Name *</label>
             <input style={iStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Bitcoin Pepe" />
           </div>
@@ -251,14 +251,14 @@ const DeployModal: React.FC<{
         </div>
 
         {/* Token Settings — always visible, compact */}
-        <div className="mb-10 br-10" style={{ padding: '8px 10px', background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.12)' }}>
+        <div className="mb-10 br-10 p-8-10 bg-purple">
           {/* Row 1: Initial mint slider */}
           <div className="flex-center gap-8 mb-6">
-            <span className="fs-72 c-t3 ws-nowrap" style={{ minWidth: 60 }}>Your mint</span>
+            <span className="fs-72 c-t3 ws-nowrap min-w-60">Your mint</span>
             <input type="range" min={0} max={100} step={5} value={initialMintPct}
               onChange={e => setInitialMintPct(Number(e.target.value))}
-              className="flex-1" style={{ accentColor: '#a855f7', height: 4 }} />
-            <span className="fs-76 fw-700 c-w text-right" style={{ minWidth: 30 }}>{initialMintPct}%</span>
+              className="flex-1 accent-purple h-4" />
+            <span className="fs-76 fw-700 c-w text-right min-w-30">{initialMintPct}%</span>
           </div>
           {/* Row 2: Public mint toggle + Max per TX */}
           <div className="flex-center gap-8">
@@ -293,11 +293,11 @@ const DeployModal: React.FC<{
           </div>
         </div>
 
-        <div className="br-10 fs-78 c-t2 mb-12" style={{ padding: '10px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)' }}>
+        <div className="br-10 fs-78 c-t2 mb-12 p-10-12 bg-info-o">
           Deploy cost: <strong className="c-o">~50K sats (~0.0005 BTC)</strong> &middot; Contract goes live on Bitcoin L1
         </div>
 
-        {error && <div className="br-8 c-red fs-80 mb-10" style={{ padding: '10px 12px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)' }}>{error}</div>}
+        {error && <div className="br-8 c-red fs-80 mb-10 p-10-12 bg-err-08">{error}</div>}
 
         <button onClick={deploy} disabled={deploying} className="lbtn w-full" style={{ opacity: deploying ? 0.6 : 1 }}>
           {deploying ? step || 'Deploying...' : walletAddress ? `Deploy $${symbol || 'TOKEN'}` : 'Connect Wallet'}
@@ -601,13 +601,13 @@ const Launchpad: React.FC = () => {
     <div className="lp-split">
       {/* ═══ LEFT SIDEBAR ═══ */}
       <div className="lp-sidebar">
-        <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--bd)' }}>
+        <div className="p-14-14-10 bd-b-bd">
           <div className="d-flex jc-between ai-center mb-10">
             <span className="fw-800 fs-100 c-w">Contracts</span>
-            <span className="fs-66 c-t4 text-mono br-6" style={{ background: 'rgba(255,255,255,.05)', padding: '2px 8px' }}>{tokens.length}</span>
+            <span className="fs-66 c-t4 text-mono br-6 p-2-8" style={{ background: 'rgba(255,255,255,.05)' }}>{tokens.length}</span>
           </div>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or address..."
-            className="w-full br-12 c-w fs-82 ff-ui outline-none mb-8" style={{ padding: '10px 14px', background: 'var(--bg3)', border: '1px solid var(--bd)', boxSizing: 'border-box' }} />
+            className="w-full br-12 c-w fs-82 ff-ui outline-none mb-8 p-10-14 bg-bg3 bd-bd box-border" />
           <div className="d-flex gap-4">
             {([['hot1h', '1H Hot'], ['hot8h', '8H Hot'], ['hot24h', '24H Hot'], ['newest', 'Newest'], ['holders', 'Holders']] as [SortMode, string][]).map(([m, label]) => (
               <button key={m} onClick={() => setSortMode(m)}
@@ -629,17 +629,17 @@ const Launchpad: React.FC = () => {
         </div>
 
         {/* Add contract */}
-        <div style={{ padding: '8px 10px', borderTop: '1px solid var(--bd)' }}>
+        <div className="p-8-10 bd-t-bd">
           <div className="d-flex gap-4 mb-6">
             <input value={addAddr} onChange={e => setAddAddr(e.target.value)} placeholder="opt1sq... address"
               onKeyDown={e => e.key === 'Enter' && handleAddContract()}
-              className="flex-1 br-8 c-w fs-60 text-mono outline-none" style={{ padding: '6px 8px', background: 'var(--bg3)', border: '1px solid var(--bd)' }} />
+              className="flex-1 br-8 c-w fs-60 text-mono outline-none p-6-8 bg-bg3 bd-bd" />
             <button onClick={handleAddContract} disabled={adding}
-              className="br-8 c-o fs-60 pointer ff-ui fw-700" style={{ padding: '6px 10px', background: 'rgba(247,147,26,.15)', border: '1px solid rgba(247,147,26,.3)' }}>
+              className="br-8 c-o fs-60 pointer ff-ui fw-700 p-6-10" style={{ background: 'rgba(247,147,26,.15)', border: '1px solid rgba(247,147,26,.3)' }}>
               {adding ? '...' : '+'}
             </button>
           </div>
-          <button onClick={() => setDeployOpen(true)} className="lbtn w-full fs-70" style={{ padding: '8px' }}>
+          <button onClick={() => setDeployOpen(true)} className="lbtn w-full fs-70 p-8">
             Deploy New Contract
           </button>
         </div>
@@ -648,20 +648,20 @@ const Launchpad: React.FC = () => {
       {/* ═══ RIGHT MAIN PANEL ═══ */}
       <div className="lp-main">
         {!selected ? (
-          <div className="flex-center-full c-t4 fs-82" style={{ height: '100%' }}>
+          <div className="flex-center-full c-t4 fs-82 h-full">
             Select a contract from the sidebar
           </div>
         ) : (
-          <div className="m-auto" style={{ padding: '16px 20px', maxWidth: 720 }}>
+          <div className="m-auto p-16-20 max-w-720">
             {/* ── Header ── */}
             <div className="flex-center gap-14 mb-16">
-              <img src={selected.image || genLogo(selected.symbol)} alt="" className="br-50" style={{ width: 52, height: 52, border: `2px solid ${selColor}44` }} />
+              <img src={selected.image || genLogo(selected.symbol)} alt="" className="br-50 w-52 h-52" style={{ border: `2px solid ${selColor}44` }} />
               <div className="flex-1">
                 <div className="flex-center gap-8 flex-wrap">
                   <span className="fw-800 c-w fs-110">{selected.name}</span>
                   <span className="text-mono fw-700 fs-90" style={{ color: selColor }}>${selected.symbol}</span>
-                  {grad && <span className="c-g fw-700 fs-xs br-6" style={{ padding: '2px 8px', background: 'rgba(16,185,129,.12)' }}>GRADUATED</span>}
-                  {isReal && <span className="c-o fw-600 br-6 fs-56" style={{ padding: '2px 8px', background: 'rgba(247,147,26,.1)' }}>ON-CHAIN</span>}
+                  {grad && <span className="c-g fw-700 fs-xs br-6 p-2-8 tag-grad">GRADUATED</span>}
+                  {isReal && <span className="c-o fw-600 br-6 fs-56 p-2-8" style={{ background: 'rgba(247,147,26,.1)' }}>ON-CHAIN</span>}
                 </div>
                 <div className="fs-xs c-t4 text-mono mt-2 word-break">
                   {selected.address}
@@ -689,11 +689,11 @@ const Launchpad: React.FC = () => {
                   <span>Minted: {fmtNum(selected.mintedSupply)} / {fmtNum(selected.publicMintSupply)}</span>
                   <span className="fw-700" style={{ color: grad ? 'var(--g)' : selColor }}>{(progress * 100).toFixed(1)}%</span>
                 </div>
-                <div className="br-4 ov-hidden" style={{ height: 8, background: 'rgba(255,255,255,.06)' }}>
+                <div className="br-4 ov-hidden progress-bar-md">
                   <div className="br-4" style={{ height: '100%', background: grad ? 'var(--g)' : `linear-gradient(90deg, ${selColor}, var(--o))`, width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .5s' }} />
                 </div>
               </div>
-              <div className="d-grid fs-66" style={{ gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+              <div className="d-grid fs-66 grid-1-1" style={{ gap: '6px 16px' }}>
                 {[
                   ['Total Supply', fmtNum(selected.totalSupply)],
                   ['Public Mint', fmtNum(selected.publicMintSupply)],
@@ -710,7 +710,7 @@ const Launchpad: React.FC = () => {
                 ))}
               </div>
               {walletAddress && userBal > 0 && (
-                <div className="mt-8 br-8 fs-66" style={{ padding: '6px 10px', background: 'rgba(16,185,129,.06)' }}>
+                <div className="mt-8 br-8 fs-66 p-6-10 tag-onchain">
                   Your balance: <strong className="c-g text-mono">{fmtNum(userBal)} {selected.symbol}</strong>
                 </div>
               )}
@@ -721,13 +721,13 @@ const Launchpad: React.FC = () => {
               <div className="P p-14 mb-12">
                 <div className="Lb mb-8">
                   Top Holders ({opscanHolders ?? opscanHolderList.length})
-                  <span className="fs-50 c-t4 fw-400" style={{ marginLeft: 6 }}>via OPScan</span>
+                  <span className="fs-50 c-t4 fw-400 ml-6">via OPScan</span>
                 </div>
                 <div className="max-h-200-overflow">
                   {opscanHolderList.map((h, i) => (
                     <div key={i} className="flex-between fs-66" style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
                       <div className="flex-center gap-8">
-                        <span className="c-t4 text-mono" style={{ minWidth: 20 }}>#{i + 1}</span>
+                        <span className="c-t4 text-mono min-w-20">#{i + 1}</span>
                         <span className="c-t2 text-mono">{h.address}</span>
                       </div>
                       <span className="text-mono fw-600 c-w fs-xs">
@@ -751,7 +751,7 @@ const Launchpad: React.FC = () => {
                     {sorted.map(([wallet, amount], i) => (
                       <div key={wallet} className="flex-between fs-66" style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
                         <div className="flex-center gap-8">
-                          <span className="c-t4 text-mono" style={{ minWidth: 20 }}>#{i + 1}</span>
+                          <span className="c-t4 text-mono min-w-20">#{i + 1}</span>
                           <span className="c-t2 text-mono">{wallet.length > 20 ? wallet.slice(0, 12) + '...' + wallet.slice(-6) : wallet}</span>
                         </div>
                         <div className="flex-center gap-6">
@@ -768,7 +768,7 @@ const Launchpad: React.FC = () => {
             {/* ── Mint Panel ── */}
             {selected.status === 'pending_confirm' ? (
               <div className="P p-14 mb-12 text-center">
-                <div className="fs-120 mb-6" style={{ animation: 'spin 2s linear infinite' }}>&#x23F3;</div>
+                <div className="fs-120 mb-6" style={{ animation: 'spin 2s linear infinite' }}>&#x23F3;</div> {/* dynamic animation */}
                 <div className="fw-700 c-y fs-82 mb-4">Awaiting Confirmation</div>
                 <div className="fs-72 c-t3">
                   Contract is being deployed. Wait ~5 blocks for on-chain confirmation before minting.
@@ -812,7 +812,7 @@ const Launchpad: React.FC = () => {
               </div>
             ) : (
               <div className="P p-14 mb-12 text-center">
-                <div className="mb-6" style={{ fontSize: '1.5rem' }}>&#x1F393;</div>
+                <div className="mb-6 fs-160">&#x1F393;</div>
                 <div className="fw-700 c-g fs-82 mb-4">Graduated!</div>
                 <div className="fs-72 c-t3">
                   Public mint complete. Trade on <strong>Swap</strong> page via MotoSwap AMM.
@@ -826,13 +826,13 @@ const Launchpad: React.FC = () => {
               <div className="flex-center gap-6 flex-wrap mb-8">
                 {isReal && (
                   <a href={getContractOpscanUrl(selected.address)} target="_blank" rel="noopener noreferrer"
-                    className="br-8 c-c fs-62 no-decoration fw-600" style={{ padding: '4px 10px', background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.15)' }}>
+                    className="br-8 c-c fs-62 no-decoration fw-600 p-4-10 bg-info-b">
                     OPScan
                   </a>
                 )}
                 {isReal && selected.txHash && (
                   <a href={getTxUrl(selected.txHash)} target="_blank" rel="noopener noreferrer"
-                    className="br-8 c-o fs-62 no-decoration fw-600" style={{ padding: '4px 10px', background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)' }}>
+                    className="br-8 c-o fs-62 no-decoration fw-600 p-4-10 bg-info-o-08">
                     Deploy TX
                   </a>
                 )}

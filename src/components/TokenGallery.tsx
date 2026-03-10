@@ -314,9 +314,9 @@ const TokenGallery: React.FC = () => {
 
   return (
     <div>
-      <div className="Pg mb-14 text-center" style={{ padding: '24px 18px' }}>
+      <div className="Pg mb-14 text-center p-24-18">
         <div className="fs-110 fw-800 c-w mb-3">🪙 Tokens</div>
-        <div className="c-t3 fs-80 m-auto" style={{ maxWidth: 480 }}>
+        <div className="c-t3 fs-80 m-auto max-w-480">
           OPNet {CURRENT_ENV} tokens. Mint directly from your wallet — max 1,000 per transaction.
         </div>
       </div>
@@ -335,16 +335,16 @@ const TokenGallery: React.FC = () => {
           <div className="d-flex gap-6 mb-8 flex-wrap">
             <input className="flex-1 min-w-140" style={{ ...inputStyle }} type="text" value={allSearch}
               onChange={e => setAllSearch(e.target.value)} placeholder="Search name, symbol, address..." />
-            <button onClick={loadAllTokens} disabled={allLoading} className="br-14 fs-70 fw-700 c-t2 ff-ui" style={{ padding: '8px 12px', background: 'var(--bg3)', border: '1px solid var(--bd)', cursor: allLoading ? 'not-allowed' : 'pointer' }}>{allLoading ? '...' : '↻'}</button>
+            <button onClick={loadAllTokens} disabled={allLoading} className="br-14 fs-70 fw-700 c-t2 ff-ui p-8-12 bg-bg3 bd-bd" style={{ cursor: allLoading ? 'not-allowed' : 'pointer' }}>{allLoading ? '...' : '↻'}</button>
           </div>
 
           {/* Sort chips + filter */}
           <div className="d-flex gap-4 mb-10 flex-wrap ai-center">
-            <span className="fs-58 c-t4 fw-600" style={{ marginRight: 2 }}>Sort:</span>
+            <span className="fs-58 c-t4 fw-600 mr-2">Sort:</span>
             {([['block', 'Block'], ['symbol', 'A\u2194Z'], ['supply', 'Supply'], ['holders', 'Holders']] as const).map(([id, label]) => (
               <button key={id} onClick={() => toggleSort(id)} className="br-20 fs-60 fw-700 pointer ff-ui" style={{ padding: '4px 10px', background: sortField === id ? 'rgba(247,147,26,.12)' : 'transparent', border: `1px solid ${sortField === id ? 'rgba(247,147,26,.3)' : 'rgba(255,255,255,.06)'}`, color: sortField === id ? 'var(--o)' : 'var(--t3)', transition: 'all .15s' }}>{label}{sortIcon(id)}</button>
             ))}
-            <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,.08)', margin: '0 2px' }} />
+            <span className="sep-v" />
             <button onClick={() => setFilterMintable(v => !v)} className="br-20 fs-60 fw-700 pointer ff-ui" style={{ padding: '4px 10px', background: filterMintable ? 'rgba(168,85,247,.15)' : 'transparent', border: `1px solid ${filterMintable ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.06)'}`, color: filterMintable ? '#a855f7' : 'var(--t3)', transition: 'all .15s' }}>Mintable{filterMintable ? ' \u2713' : ''}</button>
             <span className="ml-auto fs-58 c-t4 text-mono">
               {sortedFiltered.length.toLocaleString()} tokens
@@ -353,17 +353,17 @@ const TokenGallery: React.FC = () => {
 
           {/* Manual import (collapsible) */}
           <details className="mb-10">
-            <summary className="fs-68 fw-700 c-t3 pointer" style={{ padding: '6px 0' }}>
+            <summary className="fs-68 fw-700 c-t3 pointer p-6-0">
               + Import token by address
             </summary>
             <div className="P p-12 mt-4">
               <div className="d-flex gap-6">
                 <input className="flex-1 fs-72" style={{ ...inputStyle }} type="text" value={importAddr}
                   onChange={e => setImportAddr(e.target.value)} placeholder="0x... or opt1sq..." />
-                <button onClick={doImportToken} disabled={importing} className="br-14 fs-68 fw-700 c-white ff-ui ws-nowrap" style={{ padding: '8px 14px', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none', cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1 }}>{importing ? '...' : 'Import'}</button>
+                <button onClick={doImportToken} disabled={importing} className="br-14 fs-68 fw-700 c-white ff-ui ws-nowrap p-8-14 btn-blue" style={{ cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1 }}>{importing ? '...' : 'Import'}</button>
               </div>
               {importResult && (
-                <div className="mt-6 br-6 fs-62" style={{ padding: '6px 8px', background: importResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${importResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`, color: importResult.ok ? 'var(--g)' : '#ef4444' }}>{importResult.msg}</div>
+                <div className={`mt-6 br-6 fs-62 p-6-8 ${importResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`}>{importResult.msg}</div>
               )}
             </div>
           </details>
@@ -424,7 +424,7 @@ const TokenGallery: React.FC = () => {
                     <div className="text-right d-flex ai-center jc-end gap-4">
                       <span className="fw-700 fs-68 c-o text-mono">{tok.symbol}</span>
                       {tok.mintable === 1 && (
-                        <span className="fs-40 c-purple br-3 fw-700 lh-14 ws-nowrap" style={{ background: 'rgba(168,85,247,.12)', padding: '1px 4px' }}>MINT</span>
+                        <span className="fs-40 c-purple br-3 fw-700 lh-14 ws-nowrap tag-mint">MINT</span>
                       )}
                     </div>
                     <div className="text-right fs-62 c-t2 text-mono">
@@ -444,7 +444,7 @@ const TokenGallery: React.FC = () => {
                 <div className="d-flex ai-center jc-center gap-6" style={{ padding: '10px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.3)' }}>
                   <button onClick={() => setPage(0)} disabled={page === 0} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<<'}</button>
                   <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<'}</button>
-                  <span className="fs-62 c-t2 text-mono text-center" style={{ minWidth: 80 }}>
+                  <span className="fs-62 c-t2 text-mono text-center min-w-80">
                     {page + 1} / {totalPages}
                   </span>
                   <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>'}</button>
@@ -467,7 +467,7 @@ const TokenGallery: React.FC = () => {
                   <div className="d-flex ai-center gap-6">
                     <span className="fw-800 fs-95 c-w">{tok.name}</span>
                     <span className="text-mono c-o fw-600 fs-78">${tok.symbol}</span>
-                    <span className="fs-48 c-g br-3 fw-700" style={{ background: 'rgba(16,185,129,.06)', padding: '2px 6px' }}>ON-CHAIN</span>
+                    <span className="fs-48 c-g br-3 fw-700 tag-onchain">ON-CHAIN</span>
                   </div>
                   <div className="fs-68 c-t3 mt-2">{tok.description}</div>
                   <div className="fs-62 c-t4 mt-4">
@@ -477,7 +477,7 @@ const TokenGallery: React.FC = () => {
                 </div>
                 <div className="d-flex flex-col-dir gap-4 flex-shrink-0">
                   <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                    className="btn-s no-decoration fs-62 text-center" style={{ padding: '6px 10px' }}>OPScan</a>
+                    className="btn-s no-decoration fs-62 text-center p-6-10">OPScan</a>
                   <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
                     className="fs-56 c-c2 text-center">Deploy TX</a>
                   {tok.publicMint && (
@@ -487,7 +487,7 @@ const TokenGallery: React.FC = () => {
               </div>
               {/* Featured mint panel */}
               {featMintSym === tok.symbol && tok.publicMint && (
-                <div className="mt-12 p-12 br-14" style={{ background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)' }}>
+                <div className="mt-12 p-12 br-14 bg-purple">
                   <div className="fs-70 fw-700 c-purple mb-6">Public Mint — ${tok.symbol}</div>
                   <div className="fs-58 c-t3 mb-6">Max per tx: {tok.maxMintPerTx ? (tok.maxMintPerTx / Math.pow(10, tok.decimals)).toLocaleString() : '1,000'} {tok.symbol}</div>
                   <div className="d-flex gap-6 mb-8">
@@ -498,13 +498,13 @@ const TokenGallery: React.FC = () => {
                       <button onClick={() => setFeatMintAmt(String(tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1000))} className="pos-absolute fs-52 fw-700 br-4 c-purple pointer ff-ui" style={{ right: 4, top: '50%', transform: 'translateY(-50%)', padding: '3px 6px', background: 'rgba(168,85,247,.15)', border: 'none' }}>MAX</button>
                     </div>
                     {connected ? (
-                      <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap" style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', border: 'none', cursor: featMinting ? 'not-allowed' : 'pointer', opacity: featMinting ? 0.6 : 1 }}>{featMinting ? 'Minting...' : 'Mint'}</button>
+                      <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap p-8-14 btn-purple" style={{ cursor: featMinting ? 'not-allowed' : 'pointer', opacity: featMinting ? 0.6 : 1 }}>{featMinting ? 'Minting...' : 'Mint'}</button>
                     ) : (
-                      <button onClick={openConnectModal} className="br-14 fw-700 fs-72 c-white pointer ff-ui ws-nowrap" style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none' }}>Connect</button>
+                      <button onClick={openConnectModal} className="br-14 fw-700 fs-72 c-white pointer ff-ui ws-nowrap p-8-14 btn-blue">Connect</button>
                     )}
                   </div>
                   {featMintResult && (
-                    <div className="br-6 fs-68 word-break" style={{ padding: '8px 10px', background: featMintResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${featMintResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`, color: featMintResult.ok ? 'var(--g)' : '#ef4444' }}>{featMintResult.msg}</div>
+                    <div className={`br-6 fs-68 word-break p-8-10 ${featMintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`}>{featMintResult.msg}</div>
                   )}
                 </div>
               )}
@@ -553,9 +553,9 @@ const TokenGallery: React.FC = () => {
                         <div className="d-flex ai-center gap-6 flex-wrap">
                           <span className="fw-800 fs-90 c-w">{tok.name}</span>
                           <span className="text-mono c-o fw-600 fs-78">${tok.symbol}</span>
-                          {isConfirmed && <span className="fs-48 c-g br-3 fw-700" style={{ background: 'rgba(16,185,129,.06)', padding: '2px 6px' }}>ON-CHAIN</span>}
-                          {!isConfirmed && tok.address && <span className="fs-48 c-y br-3 fw-700" style={{ background: 'rgba(234,179,8,.1)', padding: '2px 6px' }}>PENDING</span>}
-                          {tok.mode === 'mintable' && <span className="fs-48 c-purple br-3 fw-700" style={{ background: 'rgba(168,85,247,.1)', padding: '2px 6px' }}>MINTABLE</span>}
+                          {isConfirmed && <span className="fs-48 c-g br-3 fw-700 tag-onchain">ON-CHAIN</span>}
+                          {!isConfirmed && tok.address && <span className="fs-48 c-y br-3 fw-700 tag-pending">PENDING</span>}
+                          {tok.mode === 'mintable' && <span className="fs-48 c-purple br-3 fw-700 tag-mintable">MINTABLE</span>}
                         </div>
                         <div className="fs-64 c-t3 mt-3">
                           Supply: {Number(tok.supply).toLocaleString()} · Decimals: {tok.decimals}
@@ -576,7 +576,7 @@ const TokenGallery: React.FC = () => {
                       <div className="d-flex flex-col-dir gap-4 flex-shrink-0">
                         {tok.address && (
                           <a href={getContractOpscanUrl(tok.address)} target="_blank" rel="noopener noreferrer"
-                            className="btn-s no-decoration fs-58 text-center" style={{ padding: '5px 8px' }}>OPScan</a>
+                            className="btn-s no-decoration fs-58 text-center p-5-8">OPScan</a>
                         )}
                         {tok.txid && (
                           <a href={getTxUrl(tok.txid)} target="_blank" rel="noopener noreferrer"
@@ -585,13 +585,13 @@ const TokenGallery: React.FC = () => {
                         {tok.publicMint && (
                           <button onClick={() => setMintAddr(isMintOpen ? null : tok.address)} className="br-14 fs-58 fw-700 c-purple pointer ff-ui" style={{ padding: '5px 8px', background: isMintOpen ? 'rgba(168,85,247,.15)' : 'rgba(168,85,247,.08)', border: '1px solid rgba(168,85,247,.2)' }}>{isMintOpen ? 'Close' : 'Mint'}</button>
                         )}
-                        <button onClick={() => removeToken(tok.address)} className="br-4 fs-48 fw-600 c-red pointer ff-ui" style={{ padding: '3px 6px', background: 'none', border: '1px solid rgba(239,68,68,.2)' }}>Remove</button>
+                        <button onClick={() => removeToken(tok.address)} className="br-4 fs-48 fw-600 c-red pointer ff-ui p-3-6 btn-ghost-red">Remove</button>
                       </div>
                     </div>
 
                     {/* Mint panel */}
                     {isMintOpen && tok.publicMint && (
-                      <div className="mt-12 p-12 br-14" style={{ background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.15)' }}>
+                      <div className="mt-12 p-12 br-14 bg-purple">
                         <div className="fs-70 fw-700 c-purple mb-8">Public Mint — ${tok.symbol}</div>
                         {tok.maxMintPerTx && tok.maxMintPerTx !== '0' && (
                           <div className="fs-60 c-t3 mb-6">Max per tx: {Number(tok.maxMintPerTx).toLocaleString()}</div>
@@ -601,13 +601,13 @@ const TokenGallery: React.FC = () => {
                             value={mintAmount} onChange={e => setMintAmount(e.target.value)}
                             placeholder={`Amount of ${tok.symbol} to mint`} />
                           {connected ? (
-                            <button onClick={() => doMint(tok)} disabled={minting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap" style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', border: 'none', cursor: minting ? 'not-allowed' : 'pointer', opacity: minting ? 0.6 : 1 }}>{minting ? 'Minting...' : 'Mint'}</button>
+                            <button onClick={() => doMint(tok)} disabled={minting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap p-8-14 btn-purple" style={{ cursor: minting ? 'not-allowed' : 'pointer', opacity: minting ? 0.6 : 1 }}>{minting ? 'Minting...' : 'Mint'}</button>
                           ) : (
-                            <button onClick={openConnectModal} className="br-14 fw-700 fs-72 c-white pointer ff-ui ws-nowrap" style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', border: 'none' }}>Connect</button>
+                            <button onClick={openConnectModal} className="br-14 fw-700 fs-72 c-white pointer ff-ui ws-nowrap p-8-14 btn-blue">Connect</button>
                           )}
                         </div>
                         {mintResult && (
-                          <div className="br-6 fs-68 word-break" style={{ padding: '8px 10px', background: mintResult.ok ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${mintResult.ok ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.2)'}`, color: mintResult.ok ? 'var(--g)' : '#ef4444' }}>{mintResult.msg}</div>
+                          <div className={`br-6 fs-68 word-break p-8-10 ${mintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`}>{mintResult.msg}</div>
                         )}
                       </div>
                     )}
@@ -625,8 +625,8 @@ const TokenGallery: React.FC = () => {
           <div className="Lb">Mint History</div>
           <div className="d-flex flex-col-dir gap-6">
             {mintHistory.slice(0, 10).map(tx => (
-              <div key={tx.id} className="d-flex ai-center gap-8 br-8 fs-72" style={{ padding: '8px 10px', background: 'var(--bg3)' }}>
-                <span className="fs-90 text-center" style={{ width: 22 }}>🪙</span>
+              <div key={tx.id} className="d-flex ai-center gap-8 br-8 fs-72 p-8-10 bg-bg3">
+                <span className="fs-90 text-center w-22">🪙</span>
                 <div className="flex-1 min-w-0">
                   <div className="fw-700 c-w">
                     Minted {Number(tx.amountA || 0).toLocaleString()} {tx.tokenA}
@@ -649,7 +649,7 @@ const TokenGallery: React.FC = () => {
         <p className="mt-6">
           <strong>Mintable tokens</strong> with public mint enabled allow anyone to mint directly from this page using their OP_WALLET.
         </p>
-        <div className="mt-8 br-14 fs-62 c-t3" style={{ padding: '8px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)' }}>
+        <div className="mt-8 br-14 fs-62 c-t3 p-8 bg-info-b">
           {CURRENT_ENV !== 'mainnet' && <>Need {CURRENT_ENV} BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" className="c-c2">Get from faucet →</a></>}
         </div>
       </div>

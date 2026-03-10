@@ -56,10 +56,10 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
 
   return (
     <div className="Pg" style={{ marginBottom: 16 }}>
-      <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: 12 }}>Create Swap Order</div>
+      <div className="fw-700 fs-82 mb-12">Create Swap Order</div>
 
       {/* Direction toggle */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="d-flex gap-8 mb-12">
         <button
           className={formDirection === SwapDirection.BTC_TO_FB ? 'btn-p' : 'btn-s'}
           style={{ flex: 1, fontSize: '.76rem', padding: '10px 0' }}
@@ -76,7 +76,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="grid-1-1 gap-10">
         {/* You Pay */}
         <div>
           <label style={labelStyle}>You Pay ({sendUnit})</label>
@@ -126,26 +126,23 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
 
       {/* Summary box */}
       {formAmountSats > 0n && (
-        <div style={{
-          marginTop: 12, padding: '10px 14px', borderRadius: 10,
-          background: 'rgba(139,92,246,.06)', border: '1px solid rgba(139,92,246,.15)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.76rem', marginBottom: 4 }}>
+        <div className="mt-12 p-10-14 br-10 bg-purple-06">
+          <div className="flex-between fs-76 mb-4">
             <span style={{ color: 'var(--t2)' }}>You pay:</span>
             <b>{satsToBtc(formAmountSats, sendUnit as 'BTC' | 'FB')}</b>
           </div>
           {formReceiveSats > 0n && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.76rem', marginBottom: 4 }}>
+            <div className="flex-between fs-76 mb-4">
               <span style={{ color: 'var(--t2)' }}>You get:</span>
               <b style={{ color: 'var(--g)' }}>{satsToBtc(formReceiveSats, receiveUnit as 'BTC' | 'FB')}</b>
             </div>
           )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem' }}>
+          <div className="flex-between fs-72">
             <span style={{ color: 'var(--t3)' }}>Taker fee ({feeBps / 100}%):</span>
             <span style={{ color: 'var(--o)' }}>+{Number(formFeeSats).toLocaleString()} sats</span>
           </div>
           {formRate && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--bd)' }}>
+            <div className="flex-between fs-68 mt-4 pt-4 bd-t-bd">
               <span style={{ color: 'var(--t3)' }}>Exchange rate:</span>
               <span style={{ color: 'var(--t2)' }}>1 {sendUnit} = {formRate} {receiveUnit}</span>
             </div>
@@ -154,7 +151,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
       )}
 
       {createStep && (
-        <div style={{ marginTop: 8, fontSize: '.72rem', color: 'var(--o)', fontFamily: 'var(--fm)' }}>
+        <div className="cc-step-status">
           {createStep}
         </div>
       )}

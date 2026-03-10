@@ -362,7 +362,7 @@ const SwapUI: React.FC = () => {
           </div>
 
           {/* Flip */}
-          <div className="flex-jc-center z-2" style={{ margin: '-6px 0' }}>
+          <div className="flex-jc-center z-2 m-n6-0">
             <button onClick={flip} className="swap-flip-btn"
               onMouseEnter={e => (e.currentTarget.style.transform = 'rotate(180deg)')}
               onMouseLeave={e => (e.currentTarget.style.transform = 'rotate(0deg)')}
@@ -410,7 +410,7 @@ const SwapUI: React.FC = () => {
           {/* Pool badge */}
           {hasPool && (
             <div className="mt-8 flex-center gap-6 fs-xs c-t4">
-              <span className="dot-live dot-green" style={{ width: 5, height: 5 }} />
+              <span className="dot-live dot-green w-5 h-5" />
               {isSimplePool
                 ? `Pool: ${reserveA.toLocaleString()} MINE / ${reserveB.toLocaleString()} VIBE (SimplePool)`
                 : motoPool

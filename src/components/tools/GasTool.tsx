@@ -35,7 +35,7 @@ const GasTool = React.memo(function GasTool() {
 
   return (
     <div style={cardS}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div className="gas-header">
         <div style={{ display: 'flex', gap: 6 }}>
           {(['regtest', 'testnet', 'mainnet'] as const).map(n => (
             <button key={n} className={`fbn ${network === n ? 'on' : ''}`} style={{ padding: '4px 12px', fontSize: '.65rem' }} onClick={() => setNetwork(n)}>{n}</button>
@@ -54,13 +54,13 @@ const GasTool = React.memo(function GasTool() {
             <div key={k} style={rowS}><span style={labelS}>{k}</span><span style={{ ...valueS, color: c as string }}>{v}</span></div>
           ))}
           {gas.bitcoin?.recommended && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+            <div className="gas-grid-3">
               {[
                 ['Low', gas.bitcoin.recommended.low, 'var(--g)'],
                 ['Medium', gas.bitcoin.recommended.medium, 'var(--o)'],
                 ['High', gas.bitcoin.recommended.high, 'var(--r)'],
               ].map(([l, v, c]) => (
-                <div key={l} style={{ textAlign: 'center', padding: 8, background: 'rgba(255,255,255,.03)', borderRadius: 10 }}>
+                <div key={l} className="gas-cell">
                   <div style={{ ...monoSm, fontWeight: 700, color: c as string }}>{v}</div>
                   <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>{l} sat/vB</div>
                 </div>
@@ -68,9 +68,9 @@ const GasTool = React.memo(function GasTool() {
             </div>
           )}
           {mempool && (
-            <div style={{ marginTop: 10, padding: 10, background: 'rgba(14,165,233,.04)', borderRadius: 10 }}>
+            <div className="gas-mempool">
               <div style={{ fontSize: '.65rem', color: 'var(--c)', fontWeight: 700, marginBottom: 4 }}>Mempool</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              <div className="grid-1-1-1 gap-8">
                 {mempool.count != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700 }}>{mempool.count}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Pending TXs</div></div>}
                 {mempool.opnetCount != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{mempool.opnetCount}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>OPNet TXs</div></div>}
                 {mempool.sizeBytes != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700 }}>{(mempool.sizeBytes / 1024 / 1024).toFixed(1)} MB</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Size</div></div>}
@@ -78,7 +78,7 @@ const GasTool = React.memo(function GasTool() {
             </div>
           )}
           {pendingTxs.length > 0 && (
-            <div style={{ marginTop: 10, padding: 10, background: 'rgba(245,158,11,.04)', borderRadius: 10 }}>
+            <div className="gas-pending">
               <div style={{ fontSize: '.65rem', color: 'var(--y)', fontWeight: 700, marginBottom: 6 }}>Pending Transactions ({pendingTxs.length})</div>
               {pendingTxs.map((tx, i) => {
                 const hash = String(tx.hash || tx.id || tx.transactionId || `tx-${i}`);

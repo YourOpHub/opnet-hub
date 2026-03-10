@@ -251,17 +251,17 @@ const Staking: React.FC = () => {
 
   return (
     <div>
-      <div className="flex-between mb-16" style={{ marginBottom: 20 }}>
+      <div className="flex-between mb-20">
         <div>
-          <h2 className="fs-110 fw-800 mb-4" style={{ letterSpacing: '-.02em' }}>Staking</h2>
-          <p className="fs-75" style={{ color: '#5a6578' }}>
-            Stake <strong style={{ color: '#fff' }}>MINE</strong> to earn block rewards
+          <h2 className="fs-110 fw-800 mb-4 ls-neg02">Staking</h2>
+          <p className="fs-75 c-muted">
+            Stake <strong className="c-white">MINE</strong> to earn block rewards
           </p>
         </div>
         {STAKING_DEPLOYED && (
           <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
-            className="d-flex ai-center gap-6 br-10 no-decoration fs-58 fw-600" style={{ padding: '6px 12px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.12)', color: '#10b981' }}>
-            <span className="br-50 d-inline-block" style={{ width: 5, height: 5, background: '#10b981' }} />
+            className="d-flex ai-center gap-6 br-10 no-decoration fs-58 fw-600 p-6-12 bg-ok c-g">
+            <span className="br-50 d-inline-block w-5 h-5" style={{ background: '#10b981' }} />
             Live on {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} ↗
           </a>
         )}
@@ -269,19 +269,19 @@ const Staking: React.FC = () => {
 
       {/* Wallet Balances */}
       {!connected ? (
-        <div className="mb-16 br-20 text-center" style={{ padding: '28px', background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)' }}>
-          <div className="fs-75 mb-12" style={{ color: '#5a6578' }}>Connect your wallet to start staking</div>
-          <button onClick={openConnectModal} className="br-12 pointer fw-700 fs-82 ff-ui" style={{ padding: '12px 28px', border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff', boxShadow: '0 4px 16px rgba(14,165,233,.2)' }}>Connect Wallet</button>
+        <div className="mb-16 br-20 text-center p-28 bg-card">
+          <div className="fs-75 mb-12 c-muted">Connect your wallet to start staking</div>
+          <button onClick={openConnectModal} className="br-12 pointer fw-700 fs-82 ff-ui btn-blue" style={{ padding: '12px 28px', boxShadow: '0 4px 16px rgba(14,165,233,.2)' }}>Connect Wallet</button>
         </div>
       ) : (
-        <div className="d-grid gap-10 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
+        <div className="d-grid gap-10 mb-16 grid-auto-fit-100">
           {[
             { label: 'MINE', value: balLoading ? '...' : fmtToken(mineBalance), color: '#F7931A' },
             { label: 'VIBE', value: balLoading ? '...' : fmtToken(vibeBalance), color: '#0ea5e9' },
             { label: 'BTC', value: balLoading ? '...' : (Number(btcBalance) / 1e8).toFixed(4), color: '#F7931A' },
           ].map(b => (
-            <div key={b.label} className="text-center" style={{ padding: '14px 12px', borderRadius: 16, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)' }}>
-              <div className="fs-52 mb-6 fw-600 text-upper ls-06" style={{ color: '#5a6578' }}>{b.label}</div>
+            <div key={b.label} className="text-center stat-card-inner">
+              <div className="fs-52 mb-6 fw-600 text-upper ls-06 c-muted">{b.label}</div>
               <div className="fw-700 fs-95" style={{ color: b.color, fontFamily: "'JetBrains Mono', monospace" }}>{b.value}</div>
             </div>
           ))}
@@ -289,27 +289,27 @@ const Staking: React.FC = () => {
       )}
 
       {/* APR & Stats */}
-      <div className="d-grid gap-10 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
+      <div className="d-grid gap-10 mb-16 grid-auto-fit-110">
         {[
           { label: 'APR', value: projectedAPR > 0 ? (projectedAPR > 10000 ? `${(projectedAPR / 1000).toFixed(0)}K` : projectedAPR.toFixed(0)) + '%' : '—', color: '#10b981', big: true },
           { label: 'Total Staked', value: totalStakedNum > 0 ? fmtToken(totalStakedOnChain) : '—', color: '#a78bfa' },
           { label: 'Your Staked', value: userStakedNum > 0 ? fmtToken(userStaked) : '—', color: '#F7931A' },
           { label: 'Rewards', value: userRewardsNum > 0 ? fmtToken(userRewards) : '—', color: '#10b981' },
         ].map(s => (
-          <div key={s.label} className="text-center" style={{ padding: '16px 12px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-            <div className="fs-52 text-upper ls-06 mb-6 fw-600" style={{ color: '#5a6578' }}>{s.label}</div>
+          <div key={s.label} className="text-center stat-card-inner-lg">
+            <div className="fs-52 text-upper ls-06 mb-6 fw-600 c-muted">{s.label}</div>
             <div className="fw-800" style={{ fontSize: s.big ? '1.5rem' : '1.05rem', color: s.color, fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Staking Interface */}
-      <div className="mb-16" style={{ padding: '24px 22px', borderRadius: 22, background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(20px)' }}>
+      <div className="mb-16 staking-panel">
         <div className="flex-between mb-16">
-          <span className="fs-95 fw-800" style={{ color: '#fff', letterSpacing: '-.02em' }}>Stake MINE</span>
+          <span className="fs-95 fw-800 c-white ls-neg02">Stake MINE</span>
           {connected && (
             <div className="text-right">
-              <div className="fs-48 mb-2" style={{ color: '#5a6578' }}>AVAILABLE</div>
+              <div className="fs-48 mb-2 c-muted">AVAILABLE</div>
               <div className="fw-700 fs-82" style={{ color: '#F7931A', fontFamily: "'JetBrains Mono', monospace" }}>{fmtToken(mineBalance)}</div>
             </div>
           )}
@@ -317,7 +317,7 @@ const Staking: React.FC = () => {
 
         {/* Stake input */}
         <div className="mb-10">
-          <div className="fs-58 mb-6 fw-500" style={{ color: '#5a6578' }}>Amount to Stake</div>
+          <div className="fs-58 mb-6 fw-500 c-muted">Amount to Stake</div>
           <div className="pos-relative">
             <input type="number" value={stakeAmount} onChange={e => setStakeAmount(e.target.value)}
               placeholder="0" className="w-full fs-95 fw-700 outline-none" style={{ padding: '16px 80px 16px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box', transition: 'border-color .2s' }} />
@@ -337,7 +337,7 @@ const Staking: React.FC = () => {
         {/* Unstake section */}
         {STAKING_DEPLOYED && userStakedNum > 0 && (
           <>
-            <div className="fs-58 mb-6 fw-500" style={{ color: '#5a6578' }}>Amount to Unstake</div>
+            <div className="fs-58 mb-6 fw-500 c-muted">Amount to Unstake</div>
             <div className="flex-center gap-8 mb-10">
               <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
                 placeholder="0" className="flex-1 fs-85 fw-700 outline-none" style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
@@ -359,7 +359,7 @@ const Staking: React.FC = () => {
                 : `Claim ${fmtToken(userRewards)} MINE Rewards`}
             </button>
             {cooldownLeft > 0 && (
-              <div className="mt-6 text-center fs-58" style={{ color: '#5a6578' }}>
+              <div className="mt-6 text-center fs-58 c-muted">
                 Next claim available in {Math.floor(cooldownLeft / 60000)}:{String(Math.floor((cooldownLeft % 60000) / 1000)).padStart(2, '0')}
               </div>
             )}
@@ -375,7 +375,7 @@ const Staking: React.FC = () => {
       </div>
 
       {/* Contract link */}
-      <div className="text-center" style={{ padding: '12px 0' }}>
+      <div className="text-center p-12-0">
         <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
           className="fs-xs no-decoration" style={{ color: '#4a5568' }}>
           View staking contract on OPScan ↗

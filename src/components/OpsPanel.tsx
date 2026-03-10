@@ -86,29 +86,27 @@ const OpsPanel: React.FC = () => {
       {/* Panel */}
       <div className={`ops-panel ${open ? 'ops-open' : ''}`}>
         <div className="qp-head">
-          <div style={{ fontWeight: 700, fontSize: '.88rem' }}>Operations</div>
+          <div className="fw-700 fs-88">Operations</div>
           <button className="qp-close" onClick={() => setOpen(false)}>{'\u2715'}</button>
         </div>
 
-        <div style={{ padding: '8px 14px', display: 'flex', gap: 6 }}>
+        <div className="ops-filter-bar">
           <button
-            className={!showHistory ? 'btn-p' : 'btn-s'}
-            style={{ fontSize: '.68rem', padding: '5px 12px' }}
+            className={`${!showHistory ? 'btn-p' : 'btn-s'} fs-68 p-5-12`}
             onClick={() => setShowHistory(false)}>
             Active ({activeOps.length})
           </button>
           <button
-            className={showHistory ? 'btn-p' : 'btn-s'}
-            style={{ fontSize: '.68rem', padding: '5px 12px' }}
+            className={`${showHistory ? 'btn-p' : 'btn-s'} fs-68 p-5-12`}
             onClick={() => setShowHistory(true)}>
             History ({historyOps.length})
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 12px' }}>
+        <div className="ops-list">
           {!showHistory ? (
             activeOps.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--t4)', fontSize: '.76rem' }}>
+              <div className="ops-empty">
                 No active operations
               </div>
             ) : (
@@ -116,7 +114,7 @@ const OpsPanel: React.FC = () => {
             )
           ) : (
             historyOps.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--t4)', fontSize: '.76rem' }}>
+              <div className="ops-empty">
                 No history yet
               </div>
             ) : (

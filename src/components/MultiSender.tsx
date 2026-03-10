@@ -347,9 +347,9 @@ const MultiSender: React.FC = () => {
 
           {/* Divider */}
           <div className="flex-center gap-10 mb-14">
-            <div style={{ flex: 1, height: 1, background: 'var(--bd)' }} />
+            <div className="sep-line" />
             <span className="fs-66 c-t4">or enter custom address</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--bd)' }} />
+            <div className="sep-line" />
           </div>
 
           {/* Custom token */}
@@ -439,23 +439,20 @@ const MultiSender: React.FC = () => {
               style={{ display: 'none' }}
             />
             <button
-              className="btn-s fs-70"
+              className="btn-s fs-70 p-6-14"
               onClick={() => fileRef.current?.click()}
-              style={{ padding: '6px 14px' }}
             >
               Upload CSV
             </button>
             <button
-              className="btn-s fs-70"
+              className="btn-s fs-70 p-6-14"
               onClick={addSampleData}
-              style={{ padding: '6px 14px' }}
             >
               Sample Data
             </button>
             <button
-              className="btn-s fs-70 ml-auto"
+              className="btn-s fs-70 ml-auto p-6-14"
               onClick={() => setRawInput('')}
-              style={{ padding: '6px 14px' }}
             >
               Clear
             </button>
@@ -491,19 +488,19 @@ const MultiSender: React.FC = () => {
 
           {/* Summary cards */}
           <div className="grid-3col gap-8 mb-14">
-            <div className="ms-summary-card" style={{ background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)' }}>
+            <div className="ms-summary-card ms-sum-o">
               <div className="ms-summary-label">Token</div>
               <div className="ms-summary-val c-o">
                 {tokenSymbol || 'Custom'}
               </div>
             </div>
-            <div className="ms-summary-card" style={{ background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.12)' }}>
+            <div className="ms-summary-card ms-sum-b">
               <div className="ms-summary-label">Recipients</div>
               <div className="ms-summary-val c-c2">
                 {validRecipients.length}
               </div>
             </div>
-            <div className="ms-summary-card" style={{ background: 'rgba(34,197,94,.06)', border: '1px solid rgba(34,197,94,.12)' }}>
+            <div className="ms-summary-card ms-sum-g">
               <div className="ms-summary-label">Total Amount</div>
               <div className="ms-summary-val c-g">
                 {totalAmount.toLocaleString()}
@@ -543,10 +540,7 @@ const MultiSender: React.FC = () => {
           </div>
 
           {/* Gas estimate */}
-          <div className="flex-between br-12 fs-72" style={{
-            padding: '10px 14px',
-            background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)',
-          }}>
+          <div className="flex-between br-12 fs-72 p-10-14 ms-sum-o">
             <span className="c-t3">Estimated gas ({validRecipients.length} txns):</span>
             <span className="fw-700 c-o text-mono">
               ~{estimatedGasSats.toLocaleString()} sats (~{estimatedGasBtc} BTC)
@@ -558,9 +552,8 @@ const MultiSender: React.FC = () => {
             <div className="mt-12 br-12 fs-72 text-center cc-result-err">
               Connect your wallet to proceed.
               <button
-                className="btn-p fs-68"
+                className="btn-p fs-68 ml-10 p-4-12"
                 onClick={openConnectModal}
-                style={{ marginLeft: 10, padding: '4px 12px' }}
               >
                 Connect
               </button>

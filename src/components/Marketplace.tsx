@@ -39,11 +39,11 @@ const Marketplace: React.FC = () => {
   // ════════════════════════════════
   if (selectedToken) {
     return (
-      <div className="m-auto" style={{ maxWidth: 900 }}>
+      <div className="m-auto max-w-900">
         {/* Back button + header */}
         <div className="flex-center gap-12 mb-16">
           <button onClick={() => { setSelectedToken(null); setOrders([]); }}
-            className="br-10 c-t3 fs-74 pointer ff-ui" style={{ padding: '6px 14px', border: '1px solid var(--bd)', background: 'var(--bg3)' }}>
+            className="br-10 c-t3 fs-74 pointer ff-ui p-6-14 bd-bd bg-bg3">
             &larr; Back
           </button>
           <img src={genLogo(selInfo?.symbol || '??')} alt="" className="w-36 h-36 br-50" />
@@ -54,20 +54,20 @@ const Marketplace: React.FC = () => {
         </div>
 
         {msg && (
-          <div className="br-10 fs-74 mb-12" style={{ padding: '10px 14px', background: msg.startsWith('Error') || msg.startsWith('Revert') ? 'rgba(239,68,68,.06)' : 'rgba(16,185,129,.06)', border: `1px solid ${msg.startsWith('Error') || msg.startsWith('Revert') ? 'rgba(239,68,68,.15)' : 'rgba(16,185,129,.15)'}`, color: msg.startsWith('Error') || msg.startsWith('Revert') ? '#ef4444' : 'var(--g)' }}>
+          <div className={`br-10 fs-74 mb-12 p-10-14 ${msg.startsWith('Error') || msg.startsWith('Revert') ? 'bg-err c-red' : 'bg-ok c-g'}`}>
             {msg}
             {lastTxId && <a href={getTxUrl(lastTxId)} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, color: 'var(--ac)', textDecoration: 'underline' }}>View on OPScan</a>}
           </div>
         )}
 
         {/* Two-column: Sell orders | Buy orders — exchange-style tables */}
-        <div className="d-grid gap-12 mb-16" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div className="d-grid gap-12 mb-16 grid-1-1">
           {/* SELL ORDERS (asks) */}
           <div className="P p-0-overflow-hidden">
-            <div className="fw-700 fs-86 c-red d-flex ai-baseline gap-6" style={{ padding: '12px 12px 6px' }}>
+            <div className="fw-700 fs-86 c-red d-flex ai-baseline gap-6 p-12-12-6">
               Sell Orders
               <span className="fs-62 fw-600 c-t2">Asks</span>
-              <span className="ob-badge c-red ml-auto" style={{ background: 'rgba(239,68,68,.1)' }}>{sellOrders.length}</span>
+              <span className="ob-badge c-red ml-auto ob-badge-red">{sellOrders.length}</span>
             </div>
             {sellOrders.length === 0 ? (
               <div className="ob-empty">
@@ -126,10 +126,10 @@ const Marketplace: React.FC = () => {
 
           {/* BUY ORDERS (bids) */}
           <div className="P p-0-overflow-hidden">
-            <div className="fw-700 fs-86 c-g d-flex ai-baseline gap-6" style={{ padding: '12px 12px 6px' }}>
+            <div className="fw-700 fs-86 c-g d-flex ai-baseline gap-6 p-12-12-6">
               Buy Orders
               <span className="fs-62 fw-600 c-t2">Bids</span>
-              <span className="ob-badge c-g ml-auto" style={{ background: 'rgba(16,185,129,.1)' }}>{buyOrders.length}</span>
+              <span className="ob-badge c-g ml-auto ob-badge-green">{buyOrders.length}</span>
             </div>
             {buyOrders.length === 0 ? (
               <div className="ob-empty">
@@ -156,8 +156,8 @@ const Marketplace: React.FC = () => {
                       <span className="ob-mono ob-r c-o">{fmtNum(totalCostSats)}</span>
                       <span>
                         {isAccepted
-                          ? <span className="ob-badge c-o" style={{ background: 'rgba(247,147,26,.15)' }}>ACCEPTED</span>
-                          : <span className="ob-badge c-g" style={{ background: 'rgba(16,185,129,.12)' }}>OPEN</span>}
+                          ? <span className="ob-badge c-o ob-badge-o">ACCEPTED</span>
+                          : <span className="ob-badge c-g ob-badge-green-12">OPEN</span>}
                       </span>
                       <div className="ob-act">
                         {isAccepted && isMyBuyOrder ? (
@@ -186,7 +186,7 @@ const Marketplace: React.FC = () => {
         </div>
 
         {fillStep && (
-          <div className="br-10 fs-72 c-o mb-12" style={{ padding: '10px 14px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)' }}>
+          <div className="br-10 fs-72 c-o mb-12 p-10-14 bg-info-o">
             {fillStep}
           </div>
         )}
@@ -217,7 +217,7 @@ const Marketplace: React.FC = () => {
             </div>
           </div>
           {orderAmount && orderPrice && (
-            <div className="br-10 fs-68 c-t3 mb-12" style={{ padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)' }}>
+            <div className="br-10 fs-68 c-t3 mb-12 p-8-12 bg-info-o">
               Total: <strong className="c-o text-mono">
                 {fmtNum(Math.floor(parseFloat(orderAmount || '0') * parseFloat(orderPrice || '0')))} sats
               </strong>
@@ -239,9 +239,9 @@ const Marketplace: React.FC = () => {
         {/* My orders — table */}
         {myOrders.length > 0 && (
           <div className="P p-0-overflow-hidden">
-            <div className="fw-700 fs-82 d-flex ai-baseline gap-6" style={{ padding: '12px 12px 6px' }}>
+            <div className="fw-700 fs-82 d-flex ai-baseline gap-6 p-12-12-6">
               My Orders
-              <span className="ob-badge c-y ml-auto" style={{ background: 'rgba(245,158,11,.1)' }}>{myOrders.length}</span>
+              <span className="ob-badge c-y ml-auto ob-badge-y">{myOrders.length}</span>
             </div>
             <div className="ob-scroll">
               <div className="ob-hdr" style={{ gridTemplateColumns: '55px 1fr 80px 65px auto' }}>
@@ -285,7 +285,7 @@ const Marketplace: React.FC = () => {
     <div className="m-auto" style={{ maxWidth: 900 }}>
       <div className="mb-16">
         <h2 className="fw-800 fs-120 c-w mb-4">Marketplace <span className="fs-60 c-g fw-500">ON-CHAIN</span></h2>
-        <p className="fs-74 c-t3" style={{ margin: 0 }}>
+        <p className="fs-74 c-t3 mt-0 mb-0">
           P2P orderbook for OP20 tokens. Orders are executed on-chain via{' '}
           <a href={getContractOpscanUrl(MARKET_ADDRESS)} target="_blank" rel="noopener" className="c-o no-decoration">P2PMarket contract</a>.
         </p>
@@ -311,7 +311,7 @@ const Marketplace: React.FC = () => {
           <div className="c-t4 fs-66">Paste a contract address above to open its orderbook</div>
         </div>
       ) : (
-        <div className="d-grid gap-10" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+        <div className="d-grid gap-10 grid-auto-260">
           {filteredTokens.map((t: MarketToken) => {
             const [c1] = hashColor(t.symbol);
             return (

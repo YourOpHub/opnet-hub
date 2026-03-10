@@ -25,7 +25,7 @@ export const TakeOrderButton: React.FC<{
 
   if (!show) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+      <div className="d-flex flex-col-dir ai-end" style={{ gap: 1 }}>
         <button className="ob-btn green"
           disabled={disabled}
           onClick={(e) => { e.stopPropagation(); setShow(true); }}>
@@ -36,7 +36,7 @@ export const TakeOrderButton: React.FC<{
     );
   }
   return (
-    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }} onClick={e => e.stopPropagation()}>
+    <div className="d-flex gap-4 ai-center flex-wrap" onClick={e => e.stopPropagation()}>
       <input style={{ ...iStyle, width: 200, fontSize: '.66rem', padding: '4px 8px' }}
         placeholder="Receiving address (bc1p...)"
         value={addr} onChange={e => setAddr(e.target.value)} />
@@ -69,7 +69,7 @@ export const PreimageInput: React.FC<{
     );
   }
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+    <div className="d-flex gap-6 ai-center" onClick={e => e.stopPropagation()}>
       <input style={{ ...iStyle, width: 200, fontSize: '.68rem' }} placeholder="Enter preimage hex..."
         value={val} onChange={e => setVal(e.target.value)} />
       <button className="btn-p" style={{ fontSize: '.68rem', padding: '6px 10px' }}
@@ -179,7 +179,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
         </div>
       </div>
       {isThisActioning && actionStep && (
-        <div style={{ padding: '5px 12px', background: 'rgba(245,158,11,.06)', fontSize: '.66rem', color: '#f59e0b', fontFamily: 'var(--fm)' }}>
+        <div className="cc-pending-info">
           {actionStep}
         </div>
       )}
@@ -255,7 +255,7 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
         </div>
       </div>
       {isThisActioning && actionStep && (
-        <div style={{ padding: '5px 12px', background: 'rgba(245,158,11,.06)', fontSize: '.66rem', color: '#f59e0b', fontFamily: 'var(--fm)' }}>
+        <div className="cc-pending-info">
           {actionStep}
         </div>
       )}

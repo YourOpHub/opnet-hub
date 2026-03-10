@@ -13,7 +13,8 @@
     "deploy": "tsc && vite build --base /opnet-hub/ && npx gh-pages -d dist",
     "lint": "eslint src/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@btc-vision/bitcoin": "^7.0.0-rc.6",
@@ -34,10 +35,17 @@
     "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^10.0.3",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
+    "lint-staged": "^16.3.3",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
     "vite-plugin-node-polyfills": "^0.22.0",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --quiet --max-warnings=0"
+    ]
   }
 }

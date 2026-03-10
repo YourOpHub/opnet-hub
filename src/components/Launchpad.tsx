@@ -44,21 +44,21 @@ const TokenListItem: React.FC<{
     <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
       style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}`, opacity: isPending ? 0.5 : 1 }}>
       <img src={imgSrc} alt="" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--w)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div className="flex-1" style={{ minWidth: 0 }}>
+        <div className="flex-between">
+          <span className="fw-700 fs-88 c-w truncate">
             {token.symbol}
           </span>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {isPending && <span style={{ fontSize: '.5rem', color: 'var(--y)', fontWeight: 700 }}>PENDING</span>}
+          <div className="flex-center gap-4">
+            {isPending && <span className="c-y fw-700" style={{ fontSize: '.5rem' }}>PENDING</span>}
             {!isPending && isReal && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', flexShrink: 0 }} />}
-            {grad && <span style={{ fontSize: '.5rem', color: 'var(--g)', fontWeight: 700 }}>GRAD</span>}
+            {grad && <span className="c-g fw-700" style={{ fontSize: '.5rem' }}>GRAD</span>}
           </div>
         </div>
-        <div style={{ fontSize: '.68rem', color: 'var(--t4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div className="fs-sm c-t4 truncate">
           {token.name}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+        <div className="flex-center gap-6 mt-4">
           <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 2,
@@ -66,7 +66,7 @@ const TokenListItem: React.FC<{
               width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .3s',
             }} />
           </div>
-          <span style={{ fontSize: '.58rem', fontFamily: 'var(--fm)', color: 'var(--t4)', minWidth: 28, textAlign: 'right' }}>
+          <span className="text-mono c-t4 text-right" style={{ fontSize: '.58rem', minWidth: 28 }}>
             {(progress * 100).toFixed(0)}%
           </span>
         </div>
@@ -215,13 +215,13 @@ const DeployModal: React.FC<{
   return (
     <div className="lp-modal-overlay" onClick={onClose}>
       <div className="lp-modal" onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Deploy Contract</div>
+        <div className="flex-between mb-16">
+          <div className="fw-800 fs-lg c-w">Deploy Contract</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: '1.2rem', cursor: 'pointer' }}>&#x2715;</button>
         </div>
 
         {/* Image upload */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <div className="flex-center-full mb-14">
           <div onClick={() => fileRef.current?.click()}
             style={{ width: 72, height: 72, borderRadius: '50%', border: '2px dashed var(--bd)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg3)' }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
@@ -230,26 +230,26 @@ const DeployModal: React.FC<{
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <div className="flex-gap8-mb10">
           <div style={{ flex: 2 }}>
-            <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Name *</label>
+            <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Name *</label>
             <input style={iStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Bitcoin Pepe" />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Ticker *</label>
+            <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Ticker *</label>
             <input style={{ ...iStyle, textTransform: 'uppercase' }} value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="BPEPE" maxLength={6} />
           </div>
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Description</label>
+        <div className="mb-10">
+          <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Description</label>
           <textarea style={{ ...iStyle, minHeight: 60, resize: 'vertical' }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Tell the world about your token..." />
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: '.76rem', color: 'var(--t3)', marginBottom: 4, display: 'block' }}>Total Supply (Max Supply)</label>
+        <div className="mb-10">
+          <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Total Supply (Max Supply)</label>
           <input style={iStyle} type="text" inputMode="numeric" value={supply} onChange={e => setSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000000" />
-          <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginTop: 3 }}>
+          <div className="fs-72 c-t3 mt-4">
             {initialMintPct}% to you ({((parseFloat(supply) || 0) * initialMintPct / 100).toLocaleString()}) &middot; {100 - initialMintPct}% public mint &middot; Max/tx: {maxMintPerTx || ((parseFloat(supply) || 0) * 0.01).toLocaleString()}
           </div>
         </div>
@@ -257,15 +257,15 @@ const DeployModal: React.FC<{
         {/* Token Settings — always visible, compact */}
         <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.12)', borderRadius: 10 }}>
           {/* Row 1: Initial mint slider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: '.72rem', color: 'var(--t3)', whiteSpace: 'nowrap', minWidth: 60 }}>Your mint</span>
+          <div className="flex-center gap-8 mb-6">
+            <span className="fs-72 c-t3" style={{ whiteSpace: 'nowrap', minWidth: 60 }}>Your mint</span>
             <input type="range" min={0} max={100} step={5} value={initialMintPct}
               onChange={e => setInitialMintPct(Number(e.target.value))}
               style={{ flex: 1, accentColor: '#a855f7', height: 4 }} />
             <span style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--w)', minWidth: 30, textAlign: 'right' }}>{initialMintPct}%</span>
           </div>
           {/* Row 2: Public mint toggle + Max per TX */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="flex-center gap-8">
             <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
               width: 32, height: 18, borderRadius: 9, border: 'none', cursor: 'pointer', flexShrink: 0,
               background: publicMintEnabled ? '#a855f7' : 'var(--bg3)', position: 'relative', transition: 'background .2s',
@@ -275,11 +275,11 @@ const DeployModal: React.FC<{
                 position: 'absolute', top: 2, left: publicMintEnabled ? 16 : 2, transition: 'left .2s',
               }} />
             </button>
-            <span style={{ fontSize: '.72rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Public mint</span>
+            <span className="fs-72 c-t3" style={{ whiteSpace: 'nowrap' }}>Public mint</span>
             {publicMintEnabled && (
               <>
-                <span style={{ fontSize: '.72rem', color: 'var(--t4)' }}>|</span>
-                <span style={{ fontSize: '.72rem', color: 'var(--t3)', whiteSpace: 'nowrap' }}>Max/tx:</span>
+                <span className="fs-72 c-t4">|</span>
+                <span className="fs-72 c-t3" style={{ whiteSpace: 'nowrap' }}>Max/tx:</span>
                 <input style={{ ...iStyle, fontSize: '.78rem', padding: '5px 8px', width: 100 }} type="text" inputMode="numeric"
                   value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder={String(Math.floor((parseFloat(supply) || 0) * 0.01))} />
@@ -288,17 +288,17 @@ const DeployModal: React.FC<{
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.72rem', color: 'var(--t3)' }}>Website</label>
+        <div className="flex-gap6-mb14">
+          <div className="flex-1">
+            <label className="fs-72 c-t3">Website</label>
             <input style={{ ...iStyle, fontSize: '.8rem' }} value={website} onChange={e => setWebsite(e.target.value)} placeholder="example.com" />
           </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.72rem', color: 'var(--t3)' }}>Twitter</label>
+          <div className="flex-1">
+            <label className="fs-72 c-t3">Twitter</label>
             <input style={{ ...iStyle, fontSize: '.8rem' }} value={twitter} onChange={e => setTwitter(e.target.value)} placeholder="@handle" />
           </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: '.72rem', color: 'var(--t3)' }}>Telegram</label>
+          <div className="flex-1">
+            <label className="fs-72 c-t3">Telegram</label>
             <input style={{ ...iStyle, fontSize: '.8rem' }} value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="t.me/group" />
           </div>
         </div>
@@ -634,7 +634,7 @@ const Launchpad: React.FC = () => {
             <TokenListItem key={t.address} token={t} active={selected?.address === t.address} onClick={() => setSelected(t)} />
           ))}
           {filtered.length === 0 && (
-            <div style={{ padding: 20, textAlign: 'center', fontSize: '.7rem', color: 'var(--t4)' }}>No contracts found</div>
+            <div className="text-center c-t4" style={{ padding: 20, fontSize: '.7rem' }}>No contracts found</div>
           )}
         </div>
 
@@ -658,34 +658,34 @@ const Launchpad: React.FC = () => {
       {/* ═══ RIGHT MAIN PANEL ═══ */}
       <div className="lp-main">
         {!selected ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--t4)', fontSize: '.82rem' }}>
+          <div className="flex-center-full c-t4 fs-82" style={{ height: '100%' }}>
             Select a contract from the sidebar
           </div>
         ) : (
           <div style={{ padding: '16px 20px', maxWidth: 720, margin: '0 auto' }}>
             {/* ── Header ── */}
-            <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16 }}>
+            <div className="flex-center gap-14 mb-16">
               <img src={selected.image || genLogo(selected.symbol)} alt="" style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${selColor}44` }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--w)' }}>{selected.name}</span>
-                  <span style={{ fontFamily: 'var(--fm)', color: selColor, fontWeight: 700, fontSize: '.9rem' }}>${selected.symbol}</span>
-                  {grad && <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,.12)', color: 'var(--g)', fontSize: '.6rem', fontWeight: 700 }}>GRADUATED</span>}
-                  {isReal && <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(247,147,26,.1)', color: 'var(--o)', fontSize: '.56rem', fontWeight: 600 }}>ON-CHAIN</span>}
+              <div className="flex-1">
+                <div className="flex-center gap-8 flex-wrap">
+                  <span className="fw-800 c-w" style={{ fontSize: '1.1rem' }}>{selected.name}</span>
+                  <span className="text-mono fw-700" style={{ color: selColor, fontSize: '.9rem' }}>${selected.symbol}</span>
+                  {grad && <span className="c-g fw-700 fs-xs" style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,.12)' }}>GRADUATED</span>}
+                  {isReal && <span className="c-o fw-600" style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(247,147,26,.1)', fontSize: '.56rem' }}>ON-CHAIN</span>}
                 </div>
-                <div style={{ fontSize: '.6rem', color: 'var(--t4)', fontFamily: 'var(--fm)', marginTop: 2, wordBreak: 'break-all' }}>
+                <div className="fs-xs c-t4 text-mono mt-2 word-break">
                   {selected.address}
                 </div>
-                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                  {selected.twitter && <a href={`https://x.com/${selected.twitter}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>&#x1D54F; Twitter</a>}
-                  {selected.website && <a href={`https://${selected.website}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>&#x1F310; Website</a>}
-                  {selected.telegram && <a href={`https://t.me/${selected.telegram}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.6rem', color: 'var(--c2)', textDecoration: 'none' }}>&#x2708; Telegram</a>}
+                <div className="flex-center gap-10 mt-4">
+                  {selected.twitter && <a href={`https://x.com/${selected.twitter}`} target="_blank" rel="noopener noreferrer" className="fs-xs c-c2 no-decoration">&#x1D54F; Twitter</a>}
+                  {selected.website && <a href={`https://${selected.website}`} target="_blank" rel="noopener noreferrer" className="fs-xs c-c2 no-decoration">&#x1F310; Website</a>}
+                  {selected.telegram && <a href={`https://t.me/${selected.telegram}`} target="_blank" rel="noopener noreferrer" className="fs-xs c-c2 no-decoration">&#x2708; Telegram</a>}
                 </div>
               </div>
             </div>
 
             {selected.description && (
-              <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginBottom: 14, lineHeight: 1.5 }}>
+              <div className="fs-72 c-t3 mb-14" style={{ lineHeight: 1.5 }}>
                 {selected.description}
               </div>
             )}
@@ -694,8 +694,8 @@ const Launchpad: React.FC = () => {
             <div className="P" style={{ padding: 14, marginBottom: 12 }}>
               <div className="Lb" style={{ marginBottom: 8 }}>Supply</div>
               {/* Progress bar */}
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.58rem', color: 'var(--t4)', marginBottom: 3 }}>
+              <div className="mb-10">
+                <div className="flex-between mb-4" style={{ fontSize: '.58rem', color: 'var(--t4)' }}>
                   <span>Minted: {fmtNum(selected.mintedSupply)} / {fmtNum(selected.publicMintSupply)}</span>
                   <span style={{ color: grad ? 'var(--g)' : selColor, fontWeight: 700 }}>{(progress * 100).toFixed(1)}%</span>
                 </div>
@@ -717,9 +717,9 @@ const Launchpad: React.FC = () => {
                   ['Creator', selected.creator.slice(0, 16) + '...'],
                   ['Created', timeAgo(selected.createdAt)],
                 ].map(([k, v]) => (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t4)' }}>{k}</span>
-                    <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)', fontSize: '.6rem' }}>{v}</span>
+                  <div key={k} className="flex-between">
+                    <span className="c-t4">{k}</span>
+                    <span className="c-t2 text-mono fs-xs">{v}</span>
                   </div>
                 ))}
               </div>
@@ -737,14 +737,14 @@ const Launchpad: React.FC = () => {
                   Top Holders ({opscanHolders ?? opscanHolderList.length})
                   <span style={{ fontSize: '.5rem', color: 'var(--t4)', marginLeft: 6, fontWeight: 400 }}>via OPScan</span>
                 </div>
-                <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                <div className="max-h-200-overflow">
                   {opscanHolderList.map((h, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.66rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: 'var(--t4)', fontFamily: 'var(--fm)', minWidth: 20 }}>#{i + 1}</span>
-                        <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{h.address}</span>
+                    <div key={i} className="flex-between fs-66" style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
+                      <div className="flex-center gap-8">
+                        <span className="c-t4 text-mono" style={{ minWidth: 20 }}>#{i + 1}</span>
+                        <span className="c-t2 text-mono">{h.address}</span>
                       </div>
-                      <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600, fontSize: '.6rem' }}>
+                      <span className="text-mono fw-600 c-w fs-xs">
                         {(() => { try { const n = Number(BigInt(h.balance)) / Math.pow(10, selected.decimals); return fmtNum(n); } catch (e) { logger.warn('[Launchpad] Failed to format holder balance:', e); return h.balance; } })()}
                       </span>
                     </div>
@@ -761,16 +761,16 @@ const Launchpad: React.FC = () => {
               return (
                 <div className="P" style={{ padding: 14, marginBottom: 12 }}>
                   <div className="Lb" style={{ marginBottom: 8 }}>Top Holders ({sorted.length})</div>
-                  <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                  <div className="max-h-200-overflow">
                     {sorted.map(([wallet, amount], i) => (
-                      <div key={wallet} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.66rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ color: 'var(--t4)', fontFamily: 'var(--fm)', minWidth: 20 }}>#{i + 1}</span>
-                          <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{wallet.length > 20 ? wallet.slice(0, 12) + '...' + wallet.slice(-6) : wallet}</span>
+                      <div key={wallet} className="flex-between fs-66" style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
+                        <div className="flex-center gap-8">
+                          <span className="c-t4 text-mono" style={{ minWidth: 20 }}>#{i + 1}</span>
+                          <span className="c-t2 text-mono">{wallet.length > 20 ? wallet.slice(0, 12) + '...' + wallet.slice(-6) : wallet}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600 }}>{fmtNum(amount)}</span>
-                          <span style={{ color: 'var(--t4)', fontSize: '.56rem' }}>{selected.symbol}</span>
+                        <div className="flex-center gap-6">
+                          <span className="text-mono fw-600 c-w">{fmtNum(amount)}</span>
+                          <span className="c-t4" style={{ fontSize: '.56rem' }}>{selected.symbol}</span>
                         </div>
                       </div>
                     ))}
@@ -791,10 +791,10 @@ const Launchpad: React.FC = () => {
             ) : !grad ? (
               <div className="P" style={{ padding: 14, marginBottom: 12 }}>
                 <div className="Lb" style={{ marginBottom: 8 }}>Public Mint</div>
-                <div style={{ marginBottom: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.62rem', color: 'var(--t3)', marginBottom: 3 }}>
+                <div className="mb-6">
+                  <div className="flex-between mb-4 fs-62 c-t3">
                     <span>Amount</span>
-                    <span style={{ fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>
+                    <span className="fw-700 c-w text-mono">
                       {mintAmt ? fmtNum(Number(mintAmt)) : '0'} / {fmtNum(selected.maxMintPerTx)}
                     </span>
                   </div>
@@ -816,11 +816,11 @@ const Launchpad: React.FC = () => {
                   {minting ? mintStep || 'Minting...' : walletAddress ? `Mint ${selected.symbol}` : 'Connect Wallet'}
                 </button>
                 {!minting && mintStep && (
-                  <div style={{ marginTop: 6, fontSize: '.62rem', color: mintStep.includes('Minted') ? 'var(--g)' : '#ef4444', textAlign: 'center' }}>
+                  <div className="mt-6 fs-62 text-center" style={{ color: mintStep.includes('Minted') ? 'var(--g)' : '#ef4444' }}>
                     {mintStep}
                   </div>
                 )}
-                <div style={{ marginTop: 8, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
+                <div className="mt-8 c-t4 text-center" style={{ fontSize: '.54rem' }}>
                   On-chain publicMint &middot; Costs ~1K sats BTC gas
                 </div>
               </div>
@@ -837,7 +837,7 @@ const Launchpad: React.FC = () => {
             {/* ── Links & Trade ── */}
             <div className="P" style={{ padding: 14, marginBottom: 12 }}>
               <div className="Lb" style={{ marginBottom: 8 }}>Links & Trade</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              <div className="flex-center gap-6 flex-wrap mb-8">
                 {isReal && (
                   <a href={getContractOpscanUrl(selected.address)} target="_blank" rel="noopener noreferrer"
                     style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.15)', color: 'var(--c)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
@@ -851,7 +851,7 @@ const Launchpad: React.FC = () => {
                   </a>
                 )}
               </div>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', lineHeight: 1.5 }}>
+              <div className="fs-sm c-t3" style={{ lineHeight: 1.5 }}>
                 Trade on <strong>Swap</strong> page via MotoSwap AMM pools.
               </div>
             </div>
@@ -859,21 +859,21 @@ const Launchpad: React.FC = () => {
             {/* ── Recent Activity ── */}
             <div className="P" style={{ padding: 14 }}>
               <div className="Lb" style={{ marginBottom: 8 }}>Recent Activity</div>
-              <div style={{ maxHeight: 200, overflow: 'auto' }}>
+              <div className="max-h-200-overflow">
                 {selected.trades.slice().reverse().slice(0, 15).map(tr => (
-                  <div key={tr.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)', fontSize: '.62rem' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <span style={{ color: 'var(--g)', fontWeight: 700 }}>MINT</span>
-                      <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{fmtNum(tr.amount)} {selected.symbol}</span>
+                  <div key={tr.id} className="flex-between fs-62" style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
+                    <div className="flex-center gap-6">
+                      <span className="c-g fw-700">MINT</span>
+                      <span className="c-t2 text-mono">{fmtNum(tr.amount)} {selected.symbol}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, color: 'var(--t4)' }}>
+                    <div className="flex-center gap-8 c-t4">
                       <span>{tr.wallet.slice(0, 8)}...</span>
                       <span>{timeAgo(tr.timestamp)}</span>
                     </div>
                   </div>
                 ))}
                 {selected.trades.length === 0 && (
-                  <div style={{ color: 'var(--t4)', fontSize: '.68rem', textAlign: 'center', padding: 16 }}>
+                  <div className="c-t4 fs-sm text-center" style={{ padding: 16 }}>
                     No mints yet. Be the first!
                   </div>
                 )}

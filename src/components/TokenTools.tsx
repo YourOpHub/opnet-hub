@@ -56,38 +56,38 @@ const ConverterTool = React.memo(function ConverterTool() {
 
   return (
     <div style={cardS}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+      <div className="flex-center gap-6 mb-12">
         <button className={`fbn ${mode === 'btc' ? 'on' : ''}`} style={{ padding: '4px 12px', fontSize: '.65rem' }} onClick={() => setMode('btc')}>BTC input</button>
         <button className={`fbn ${mode === 'sats' ? 'on' : ''}`} style={{ padding: '4px 12px', fontSize: '.65rem' }} onClick={() => setMode('sats')}>Sats input</button>
-        <span style={{ marginLeft: 'auto', fontSize: '.6rem', color: 'var(--t4)' }}>BTC/USD: ${bp.toLocaleString()}</span>
+        <span className="fs-xs c-t4" style={{ marginLeft: 'auto' }}>BTC/USD: ${bp.toLocaleString()}</span>
       </div>
       {mode === 'btc' ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+        <div className="flex-center gap-8 mb-12">
           <input style={inputS} type="number" step="any" value={ba} onChange={e => setBa(e.target.value)} placeholder="BTC amount" />
-          <span style={{ color: 'var(--o)', fontWeight: 700, fontSize: '.8rem', whiteSpace: 'nowrap' }}>BTC</span>
+          <span className="c-o fw-700" style={{ fontSize: '.8rem', whiteSpace: 'nowrap' }}>BTC</span>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+        <div className="flex-center gap-8 mb-12">
           <input style={inputS} type="number" step="1" value={satsInput} onChange={e => setSatsInput(e.target.value)} placeholder="Satoshis" />
-          <span style={{ color: 'var(--o)', fontWeight: 700, fontSize: '.8rem', whiteSpace: 'nowrap' }}>sats</span>
+          <span className="c-o fw-700" style={{ fontSize: '.8rem', whiteSpace: 'nowrap' }}>sats</span>
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-        <div style={{ textAlign: 'center', padding: 10, background: 'rgba(247,147,26,.06)', borderRadius: 12 }}>
-          <div style={{ ...monoSm, color: 'var(--o)', fontWeight: 700, fontSize: '.85rem' }}>{bn >= 1 ? bn.toFixed(4) : bn.toFixed(8)}</div>
-          <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginTop: 2 }}>BTC</div>
+        <div className="text-center" style={{ padding: 10, background: 'rgba(247,147,26,.06)', borderRadius: 12 }}>
+          <div className="text-mono fw-700 c-o" style={{ fontSize: '.85rem' }}>{bn >= 1 ? bn.toFixed(4) : bn.toFixed(8)}</div>
+          <div className="mt-2 c-t4" style={{ fontSize: '.55rem' }}>BTC</div>
         </div>
-        <div style={{ textAlign: 'center', padding: 10, background: 'rgba(14,165,233,.06)', borderRadius: 12 }}>
-          <div style={{ ...monoSm, color: 'var(--c)', fontWeight: 700, fontSize: '.85rem' }}>{sv >= 1e6 ? (sv / 1e6).toFixed(2) + 'M' : sv.toLocaleString()}</div>
-          <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginTop: 2 }}>Satoshis</div>
+        <div className="text-center" style={{ padding: 10, background: 'rgba(14,165,233,.06)', borderRadius: 12 }}>
+          <div className="text-mono fw-700" style={{ color: 'var(--c)', fontSize: '.85rem' }}>{sv >= 1e6 ? (sv / 1e6).toFixed(2) + 'M' : sv.toLocaleString()}</div>
+          <div className="mt-2 c-t4" style={{ fontSize: '.55rem' }}>Satoshis</div>
         </div>
-        <div style={{ textAlign: 'center', padding: 10, background: 'rgba(34,197,94,.06)', borderRadius: 12 }}>
-          <div style={{ ...monoSm, color: 'var(--g)', fontWeight: 700, fontSize: '.85rem' }}>${uv >= 1e6 ? (uv / 1e6).toFixed(2) + 'M' : uv.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-          <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginTop: 2 }}>USD</div>
+        <div className="text-center" style={{ padding: 10, background: 'rgba(34,197,94,.06)', borderRadius: 12 }}>
+          <div className="text-mono fw-700 c-g" style={{ fontSize: '.85rem' }}>${uv >= 1e6 ? (uv / 1e6).toFixed(2) + 'M' : uv.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+          <div className="mt-2 c-t4" style={{ fontSize: '.55rem' }}>USD</div>
         </div>
       </div>
       {/* Quick presets */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+      <div className="flex-center gap-6 mt-10 flex-wrap">
         {[0.001, 0.01, 0.1, 1, 10].map(v => (
           <button key={v} onClick={() => { setMode('btc'); setBa(String(v)); }}
             style={{ padding: '3px 10px', fontSize: '.58rem', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.03)', color: 'var(--t3)', cursor: 'pointer' }}>
@@ -125,30 +125,30 @@ const UTXOViewer = React.memo(function UTXOViewer() {
 
   return (
     <div style={cardS}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div className="flex-center gap-8 mb-10">
         <input style={{ ...inputS, flex: 1 }} value={addr} onChange={e => setAddr(e.target.value)} placeholder="Bitcoin / OPNet address" onKeyDown={e => e.key === 'Enter' && lookup()} />
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '⏳' : 'Check'}</button>
       </div>
-      {err && <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
+      {err && <div className="fs-72 c-r mb-8">{err}</div>}
       {balance !== null && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
-          <div style={{ textAlign: 'center', padding: 10, background: 'rgba(247,147,26,.06)', borderRadius: 12 }}>
-            <div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{(Number(balance) / 1e8).toFixed(6)}</div>
-            <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>BTC Balance</div>
+          <div className="text-center" style={{ padding: 10, background: 'rgba(247,147,26,.06)', borderRadius: 12 }}>
+            <div className="text-mono fw-700 c-o">{(Number(balance) / 1e8).toFixed(6)}</div>
+            <div className="c-t4" style={{ fontSize: '.5rem' }}>BTC Balance</div>
           </div>
-          <div style={{ textAlign: 'center', padding: 10, background: 'rgba(14,165,233,.06)', borderRadius: 12 }}>
-            <div style={{ ...monoSm, fontWeight: 700, color: 'var(--c)' }}>{Number(balance).toLocaleString()}</div>
-            <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Satoshis</div>
+          <div className="text-center" style={{ padding: 10, background: 'rgba(14,165,233,.06)', borderRadius: 12 }}>
+            <div className="text-mono fw-700" style={{ color: 'var(--c)' }}>{Number(balance).toLocaleString()}</div>
+            <div className="c-t4" style={{ fontSize: '.5rem' }}>Satoshis</div>
           </div>
-          <div style={{ textAlign: 'center', padding: 10, background: 'rgba(167,139,250,.06)', borderRadius: 12 }}>
-            <div style={{ ...monoSm, fontWeight: 700, color: 'var(--p)' }}>{utxos.length}</div>
-            <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>UTXOs</div>
+          <div className="text-center" style={{ padding: 10, background: 'rgba(167,139,250,.06)', borderRadius: 12 }}>
+            <div className="text-mono fw-700" style={{ color: 'var(--p)' }}>{utxos.length}</div>
+            <div className="c-t4" style={{ fontSize: '.5rem' }}>UTXOs</div>
           </div>
         </div>
       )}
       {utxos.length > 0 && (
         <div>
-          <div style={{ fontSize: '.65rem', color: 'var(--t3)', marginBottom: 6, fontWeight: 600 }}>UTXOs ({utxos.length}) · Total: {totalSats.toLocaleString()} sats</div>
+          <div className="fs-66 c-t3 mb-6 fw-600">UTXOs ({utxos.length}) · Total: {totalSats.toLocaleString()} sats</div>
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
             {utxos.map((u, i) => {
               const val = typeof u.value === 'string' ? (u.value.startsWith('0x') ? Number(BigInt(u.value)) : Number(u.value)) : u.value;
@@ -204,8 +204,8 @@ const FaucetTool = React.memo(function FaucetTool() {
 
   return (
     <div style={cardS}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: '.78rem', color: 'var(--t2)' }}>Mint {CURRENT_ENV} tokens (publicMint):</span>
+      <div className="flex-center gap-8 mb-12">
+        <span className="fs-82 c-t2">Mint {CURRENT_ENV} tokens (publicMint):</span>
         {(['MINE', 'VIBE'] as const).map(t => (
           <button key={t} className={`fbn ${token === t ? 'on' : ''}`} style={{ padding: '5px 14px', fontSize: '.72rem' }} onClick={() => setToken(t)}>
             {t === 'MINE' ? '⛏️' : '⚡'} {t}
@@ -213,7 +213,7 @@ const FaucetTool = React.memo(function FaucetTool() {
         ))}
       </div>
       {!walletAddress && (
-        <div style={{ fontSize: '.75rem', color: 'var(--t3)', marginBottom: 10, textAlign: 'center' }}>
+        <div className="c-t3 mb-10 text-center" style={{ fontSize: '.75rem' }}>
           Connect wallet to mint tokens
         </div>
       )}
@@ -226,18 +226,18 @@ const FaucetTool = React.memo(function FaucetTool() {
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-        <div style={{ padding: 10, background: 'rgba(234,179,8,.05)', borderRadius: 10, textAlign: 'center' }}>
+        <div className="text-center" style={{ padding: 10, background: 'rgba(234,179,8,.05)', borderRadius: 10 }}>
           <div style={{ fontSize: '.85rem' }}>⛏️</div>
-          <div style={{ ...monoSm, fontWeight: 700, color: 'var(--y)' }}>1M MINE</div>
-          <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>per mint tx</div>
+          <div className="text-mono fw-700 c-y">1M MINE</div>
+          <div className="fs-xs c-t3">per mint tx</div>
         </div>
-        <div style={{ padding: 10, background: 'rgba(168,85,247,.05)', borderRadius: 10, textAlign: 'center' }}>
+        <div className="text-center" style={{ padding: 10, background: 'rgba(168,85,247,.05)', borderRadius: 10 }}>
           <div style={{ fontSize: '.85rem' }}>⚡</div>
-          <div style={{ ...monoSm, fontWeight: 700, color: 'var(--p)' }}>5M VIBE</div>
-          <div style={{ fontSize: '.6rem', color: 'var(--t3)' }}>per mint tx</div>
+          <div className="text-mono fw-700" style={{ color: 'var(--p)' }}>5M VIBE</div>
+          <div className="fs-xs c-t3">per mint tx</div>
         </div>
       </div>
-      <div style={{ marginTop: 10, fontSize: '.65rem', color: 'var(--t3)', textAlign: 'center' }}>
+      <div className="mt-10 c-t3 text-center" style={{ fontSize: '.65rem' }}>
         Calls publicMint on OP-20 contract · Requires ~330 sats gas
       </div>
     </div>
@@ -255,17 +255,17 @@ const TokenTools: React.FC = () => {
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 12px' }}>
       {/* Header */}
-      <div style={{ textAlign: 'center', padding: '20px 0 14px' }}>
+      <div className="text-center" style={{ padding: '20px 0 14px' }}>
         <div style={{ fontSize: '1.4rem', fontWeight: 800, background: 'linear-gradient(135deg, #F7931A, #ffab40)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           🛠️ OPNet Developer Tools
         </div>
-        <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginTop: 4 }}>
+        <div className="fs-72 c-t3 mt-4">
           Swiss army knife for Bitcoin L1 smart contracts
         </div>
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, overflowX: 'auto', padding: '0 0 12px', borderBottom: '1px solid rgba(255,255,255,.06)', marginBottom: 14 }}>
+      <div className="flex-center gap-4 mb-14" style={{ overflowX: 'auto', padding: '0 0 12px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         {TOOL_TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
             style={{

@@ -437,7 +437,7 @@ export function useCrossChainState(): CrossChainState {
         body: JSON.stringify({ orderId, sendSats: sendSats.toString(), receiveSats: receiveSats.toString(), sendUnit: sUnit, receiveUnit: rUnit, rate: rateNum }),
       }).then(r => {
         if (r.ok) setServerRates(prev => ({ ...prev, [orderId]: { send_sats: sendSats.toString(), receive_sats: receiveSats.toString(), send_unit: sUnit, receive_unit: rUnit, rate: rateNum } }));
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useCrossChainState] Rate sync error:', e); });
     }
   }, [API_URL]);
 

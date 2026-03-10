@@ -198,7 +198,7 @@ const TokenGallery: React.FC = () => {
       if (!t.address) return;
       opnet.getTokenTotalSupply(t.address).then(supply => {
         if (!ac.signal.aborted) setChainInfo(prev => ({ ...prev, [t.address]: { totalSupply: supply, confirmed: supply > 0n } }));
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[TokenGallery] Token supply fetch error:', e); });
     });
     return () => { ac.abort(); opnet.setNetwork(prevNet); };
   }, [tokens]);

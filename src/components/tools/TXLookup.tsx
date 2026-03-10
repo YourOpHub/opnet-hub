@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../../logger';
 import * as opnet from '../../opnet';
 import { cardS, inputS, btnS, rowS, labelS, valueS, monoSm } from './toolStyles';
 import CopyBtn from './CopyBtn';
@@ -13,7 +14,7 @@ const TXLookup = React.memo(function TXLookup() {
 
   // Load recent pending txs on mount
   useEffect(() => {
-    opnet.getLatestPendingTxs(5).then(r => setPending(r)).catch(() => {});
+    opnet.getLatestPendingTxs(5).then(r => setPending(r)).catch((e) => { logger.warn('[TXLookup] Pending txs fetch error:', e); });
   }, []);
 
   const lookup = useCallback(async () => {

@@ -501,7 +501,7 @@ const SatoshiMiner: React.FC = () => {
                             try {
                                 // Sync game state to server first
                                 const addr = walletAddress || localStorage.getItem('hub_wallet') || '';
-                                await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps }).catch(() => {});
+                                await api.syncPlayer({ address: addr, mine_balance: mineBalance, total_sats_mined: Math.floor(tot), total_clicks: clickCount.current, hash_rate: sps }).catch((e) => { logger.warn('[SatoshiMiner] syncPlayer error:', e); });
 
                                 // On-chain publicMint via wallet
                                 setClaimStatus('claiming');

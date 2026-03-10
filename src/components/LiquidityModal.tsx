@@ -58,7 +58,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     if (!open) return;
     fetchAllTokens().then(tokens => {
       if (tokens.length > 0) setAllTokens(tokens);
-    }).catch(() => {});
+    }).catch((e) => { logger.warn('[LiquidityModal] Token list fetch error:', e); });
   }, [open]);
 
   const hasLP = lpMine > 0 || lpVibe > 0;

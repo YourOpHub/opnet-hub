@@ -153,7 +153,7 @@ const App: React.FC = () => {
                     const human = (Number(BigInt(r.balance)) / Math.pow(10, r.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
                     setBalances(prev => ({ ...prev, [r.symbol]: human }));
                 }
-            }).catch(() => {});
+            }).catch((e) => { logger.warn('[App] Indexer balance fetch error:', e); });
         }
 
         // Fallback: hardcoded tokens via SDK (always runs as backup)

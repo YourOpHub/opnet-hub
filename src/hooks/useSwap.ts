@@ -191,11 +191,11 @@ export function useSwap(): UseSwapReturn {
   useEffect(() => {
     fetchMotoswapPools().then(pools => {
       if (pools.length > 0) setMotoPools(pools);
-    }).catch(() => {});
+    }).catch((e) => { logger.warn('[useSwap] Motoswap pools fetch error:', e); });
     const iv = setInterval(() => {
       fetchMotoswapPools().then(pools => {
         if (pools.length > 0) setMotoPools(pools);
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useSwap] Motoswap pools poll error:', e); });
     }, 60_000);
     return () => clearInterval(iv);
   }, []);
@@ -214,7 +214,7 @@ export function useSwap(): UseSwapReturn {
           pubkey: t.pubkey,
         }));
       if (extra.length > 0) setExtraTokens(extra);
-    }).catch(() => {});
+    }).catch((e) => { logger.warn('[useSwap] Indexer token fetch error:', e); });
   }, []);
 
   // Load tokens user holds (for pool creation picker)
@@ -231,7 +231,7 @@ export function useSwap(): UseSwapReturn {
       const base = BASE_TOKENS.filter(bt => heldAddrs.has(bt.pubkey));
       const extra = held.filter(t => !BASE_TOKENS.some(bt => bt.pubkey === t.pubkey));
       setHeldTokens([...base, ...extra]);
-    }).catch(() => {});
+    }).catch((e) => { logger.warn('[useSwap] Held tokens fetch error:', e); });
   }, [walletAddress, hashedMLDSAKey, publicKey]);
 
   // Swap state
@@ -312,7 +312,7 @@ export function useSwap(): UseSwapReturn {
     Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
       opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
         if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useSwap] Token supply fetch error:', e); });
     });
     return () => { opnetRpc.setNetwork(prevNet); };
   }, []);
@@ -330,13 +330,13 @@ export function useSwap(): UseSwapReturn {
       jobs.push(
         opnetRpc.getTokenBalance(tok.address, mldsa, tweaked)
           .then(b => setBalances(prev => ({ ...prev, [sym]: b })))
-          .catch(() => {})
+          .catch((e) => { logger.warn('[useSwap] Token balance fetch error:', e); })
       );
     }
     jobs.push(
       opnetRpc.getBalance(walletAddress)
         .then(b => setBalances(prev => ({ ...prev, BTC: b })))
-        .catch(() => {})
+        .catch((e) => { logger.warn('[useSwap] BTC balance fetch error:', e); })
     );
     void Promise.allSettled(jobs).finally(() => setBalLoading(false));
     return () => { opnetRpc.setNetwork(prevNet); };

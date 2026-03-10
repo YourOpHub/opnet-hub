@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+import { logger } from '../logger';
 import { getContract, TransactionOutputFlags, type CallResult, type BaseContractProperties } from 'opnet';
 import { FRACTALSWAP_ABI } from '../abis';
 import { NETWORK, CURRENT_ENV } from '../config';
@@ -316,7 +317,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       void waitForNextBlock(provider).then(() => {
         toast('Cancellation confirmed!', 'success');
         void fetchOrders();
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useFractalSwap] Cancel confirmation error:', e); });
       void fetchOrders();
       return;
     } catch (e) {
@@ -534,7 +535,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       void waitForNextBlock(provider).then(() => {
         toast('Refund confirmed!', 'success');
         void fetchOrders();
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useFractalSwap] Refund confirmation error:', e); });
       void fetchOrders();
       return;
     } catch (e) {

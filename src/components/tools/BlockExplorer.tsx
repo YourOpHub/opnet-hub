@@ -99,7 +99,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
               const selected = blockNum === String(b.num);
               const barH = Math.max(20, Math.min(60, b.txCount * 8 + 20));
               return (
-                <div key={b.num} onClick={() => { setBlockNum(String(b.num)); setBlock(null); setTimeout(() => { setLoading(true); opnet.getBlockByNumber(b.num, true).then(bl => { if (bl) setBlock(bl); }).catch(() => {}).finally(() => setLoading(false)); }, 0); }}
+                <div key={b.num} onClick={() => { setBlockNum(String(b.num)); setBlock(null); setTimeout(() => { setLoading(true); opnet.getBlockByNumber(b.num, true).then(bl => { if (bl) setBlock(bl); }).catch((e) => { logger.warn('[BlockExplorer] Block fetch error:', e); }).finally(() => setLoading(false)); }, 0); }}
                   style={{
                     minWidth: 72, padding: '8px 6px', borderRadius: 10, textAlign: 'center', cursor: 'pointer',
                     background: selected ? 'rgba(247,147,26,.12)' : isLatest ? 'rgba(16,185,129,.06)' : 'rgba(255,255,255,.03)',

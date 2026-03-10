@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, type CallResult, type TransactionParameters } from 'opnet';
 import { MINTABLE_ABI } from '../abis';
@@ -47,7 +48,7 @@ const ConverterTool = React.memo(function ConverterTool() {
   const [mode, setMode] = useState<'btc' | 'sats'>('btc');
 
   useEffect(() => {
-    fetchBtcPrice().then(p => { if (p.usd > 0) setBp(p.usd); }).catch(() => {});
+    fetchBtcPrice().then(p => { if (p.usd > 0) setBp(p.usd); }).catch((e) => { logger.warn('[TokenTools] BTC price fetch error:', e); });
   }, []);
 
   const bn = mode === 'btc' ? (parseFloat(ba) || 0) : (parseFloat(satsInput) || 0) / 1e8;

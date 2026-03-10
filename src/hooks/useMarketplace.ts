@@ -356,14 +356,14 @@ export function useMarketplace(): UseMarketplaceReturn {
             amount: amt, pricePerToken: ppt,
           }),
           signal: AbortSignal.timeout(5000),
-        }).catch(() => {});
+        }).catch((e) => { logger.warn('[useMarketplace] Create indexer notify error:', e); });
       } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
       void waitForNextBlock(provider).then(() => {
         toast('Order confirmed on-chain!', 'success');
         completeOp(createOpId);
         void fetchOrders(); void fetchTokens();
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useMarketplace] Create confirmation error:', e); });
       void fetchOrders();
       return;
     } catch (e) {
@@ -451,7 +451,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, filler: walletAddress, amount: fillAmt }),
         signal: AbortSignal.timeout(5000),
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
       void waitForNextBlock(provider).then(() => {
         toast('Fill confirmed on-chain!', 'success');
@@ -588,12 +588,12 @@ export function useMarketplace(): UseMarketplaceReturn {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, creator: walletAddress }),
         signal: AbortSignal.timeout(5000),
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useMarketplace] Cancel indexer notify error:', e); });
 
       void waitForNextBlock(provider).then(() => {
         toast('Cancel confirmed!', 'success');
         void fetchOrders();
-      }).catch(() => {});
+      }).catch((e) => { logger.warn('[useMarketplace] Cancel confirmation error:', e); });
       void fetchOrders();
     } catch (e) {
       setMsg(formatTxError(e));

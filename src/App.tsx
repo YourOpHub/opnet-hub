@@ -8,7 +8,7 @@ import { getProvider } from './contractCache';
 import Landing from './components/Landing';
 import QuestPanel from './components/Quests';
 import OpsPanel from './components/OpsPanel';
-import ErrorBoundary from './components/ErrorBoundary';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { OpsProvider } from './contexts/OpsContext';
 import { DEPLOYED_CONTRACTS, OPSCAN_EXPLORER_URL } from './contracts';
@@ -197,30 +197,30 @@ const App: React.FC = () => {
 
     const activeGroup = findGroup(tab);
 
-    const wrap = (child: React.ReactNode): React.ReactElement => (
-        <ErrorBoundary onReset={() => setTab('home')}>
+    const wrap = (child: React.ReactNode, routeName: string): React.ReactElement => (
+        <RouteErrorBoundary routeName={routeName} onReset={() => setTab('home')}>
             <Suspense fallback={<LazyFallback />}>{child}</Suspense>
-        </ErrorBoundary>
+        </RouteErrorBoundary>
     );
 
     const P = (): React.ReactElement => {
         switch (tab) {
-            case 'home': return wrap(<Landing onNav={navigate} />);
-            case 'portfolio': return wrap(<Portfolio walletAddress={wAddr} senderAddress={senderAddr} />);
-            case 'bob': return wrap(<BobChat />);
-            case 'tools': return wrap(<TokenTools />);
-            case 'swap': return wrap(<SwapUI />);
-            case 'staking': return wrap(<Staking />);
-            case 'analytics': return wrap(<Analytics />);
-            case 'launch': return wrap(<Launchpad />);
-            case 'market': return wrap(<Marketplace />);
-            case 'xchain': return wrap(<CrossChainMarketplace />);
-            case 'game': return wrap(<SatoshiMiner />);
-            case 'news': return wrap(<NewsFeed />);
-            case 'eco': return wrap(<EcosystemDir />);
-            case 'multisend': return wrap(<MultiSender />);
-            case 'explorer': return wrap(<TokenGallery />);
-            default: return wrap(<Landing onNav={navigate} />);
+            case 'home': return wrap(<Landing onNav={navigate} />, 'Home');
+            case 'portfolio': return wrap(<Portfolio walletAddress={wAddr} senderAddress={senderAddr} />, 'Portfolio');
+            case 'bob': return wrap(<BobChat />, 'Bob AI');
+            case 'tools': return wrap(<TokenTools />, 'Token Tools');
+            case 'swap': return wrap(<SwapUI />, 'Swap');
+            case 'staking': return wrap(<Staking />, 'Staking');
+            case 'analytics': return wrap(<Analytics />, 'Analytics');
+            case 'launch': return wrap(<Launchpad />, 'Launchpad');
+            case 'market': return wrap(<Marketplace />, 'Marketplace');
+            case 'xchain': return wrap(<CrossChainMarketplace />, 'Cross-Chain');
+            case 'game': return wrap(<SatoshiMiner />, 'Satoshi Miner');
+            case 'news': return wrap(<NewsFeed />, 'News');
+            case 'eco': return wrap(<EcosystemDir />, 'Ecosystem');
+            case 'multisend': return wrap(<MultiSender />, 'MultiSend');
+            case 'explorer': return wrap(<TokenGallery />, 'Token Explorer');
+            default: return wrap(<Landing onNav={navigate} />, 'Home');
         }
     };
 

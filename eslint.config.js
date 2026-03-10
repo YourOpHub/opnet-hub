@@ -12,6 +12,7 @@ export default [
       'deploy/**',
       'server/**',
       'faucet/**',
+      'scripts/**',
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',

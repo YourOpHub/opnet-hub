@@ -19,7 +19,8 @@ import { networks } from '@btc-vision/bitcoin';
 import { JSONRpcProvider, getContract, TransactionOutputFlags } from 'opnet';
 
 // ─── Config ─────────────────────────────────────────────────────────────────
-const MNEMONIC = 'veteran sunset borrow ecology artist magnet endorse tube tobacco soda odor okay';
+const MNEMONIC = process.env.OPNET_MNEMONIC;
+if (!MNEMONIC) { console.error('Set OPNET_MNEMONIC env var'); process.exit(1); }
 const RPC_URL = 'https://testnet.opnet.org';
 const RPC_JSONRPC = RPC_URL + '/api/v1/json-rpc';
 

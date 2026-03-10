@@ -13,6 +13,7 @@ export default [
       'server/**',
       'faucet/**',
       'scripts/**',
+      'e2e/**',
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',

@@ -35,3 +35,7 @@ faucet/package-lock.json
 .claude/
 .mcp.json
 nul
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

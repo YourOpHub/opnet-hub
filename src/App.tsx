@@ -14,6 +14,15 @@ import { OpsProvider } from './contexts/OpsContext';
 import { DEPLOYED_CONTRACTS, OPSCAN_EXPLORER_URL } from './contracts';
 import { fetchHolderBalances, type HolderBalance } from './tokenApi';
 
+// Global error handlers — executed once at module load
+window.addEventListener('unhandledrejection', (event) => {
+    logger.error('[Unhandled Rejection]', event.reason);
+});
+
+window.addEventListener('error', (event) => {
+    logger.error('[Uncaught Error]', event.error || event.message);
+});
+
 const BobChat = lazy(() => import('./components/BobChat'));
 const NewsFeed = lazy(() => import('./components/NewsFeed'));
 const TokenTools = lazy(() => import('./components/TokenTools'));

@@ -15,7 +15,13 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
+      - name: Security audit (non-blocking)
+        run: npm audit --audit-level=high || true
+
       - run: npx tsc --noEmit
       - run: npx eslint src/ --quiet --max-warnings=0
-      - run: npx vitest run --coverage
+      - name: Tests with coverage (thresholds enforced via vitest config)
+        run: npx vitest run --coverage
+
       - run: npm run build

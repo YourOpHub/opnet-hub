@@ -37,7 +37,7 @@ function loadSnapshots(): PoolSnapshot[] {
 function saveSnapshot(snap: PoolSnapshot) {
   const all = loadSnapshots();
   // Deduplicate: only add if >60s since last
-  if (all.length > 0 && snap.ts - all[all.length - 1].ts < 60000) return;
+  if (all.length > 0 && snap.ts - all[all.length - 1]!.ts < 60000) return;
   all.push(snap);
   if (all.length > MAX_SNAPSHOTS) all.splice(0, all.length - MAX_SNAPSHOTS);
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(all));
@@ -87,8 +87,8 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
     return `${x},${y}`;
   });
   const areaPoints = [...points, `${pad + (w - 2 * pad)},${height - pad}`, `${pad},${height - pad}`];
-  const latest = data[data.length - 1];
-  const prev = data[data.length - 2];
+  const latest = data[data.length - 1]!;
+  const prev = data[data.length - 2]!;
   const change = prev > 0 ? ((latest - prev) / prev * 100) : 0;
 
   return (
@@ -122,7 +122,7 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
         <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         {/* Latest point dot */}
         {points.length > 0 && (() => {
-          const [lx, ly] = points[points.length - 1].split(',');
+          const [lx, ly] = points[points.length - 1]!.split(',');
           return <circle cx={lx} cy={ly} r="3" fill={color} stroke="var(--bg)" strokeWidth="1.5" />;
         })()}
         {/* Min/Max labels */}
@@ -242,7 +242,7 @@ const Analytics: React.FC = () => {
         <p style={{ color: 'var(--t3)', fontSize: '.78rem' }}>Real-time pool metrics, token stats, and on-chain activity</p>
       </div>
 
-      {loading && <div style={{ textAlign: 'center', padding: 30, color: 'var(--t4)' }}>Loading analytics...</div>}
+      {loading && <div className="text-center c-t4" style={{ padding: 30 }}>Loading analytics...</div>}
 
       {/* Error banners */}
       {poolError && !loading && (
@@ -258,28 +258,28 @@ const Analytics: React.FC = () => {
 
       {/* Key Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>MINE/VIBE Rate</div>
+        <div className="P p-14-center text-center">
+          <div className="lbl-xs mb-4">MINE/VIBE Rate</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--p)', fontFamily: 'var(--fm)' }}>{rate > 0 ? rate.toFixed(2) : '—'}</div>
         </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Pool TVL</div>
+        <div className="P p-14-center text-center">
+          <div className="lbl-xs mb-4">Pool TVL</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--g)', fontFamily: 'var(--fm)' }}>{tvl > 0 ? `${(tvl / 1e6).toFixed(2)}M` : '—'}</div>
         </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Block Height</div>
+        <div className="P p-14-center text-center">
+          <div className="lbl-xs mb-4">Block Height</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>{blockHeight > 0 ? blockHeight.toLocaleString() : '—'}</div>
         </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Gas (sat/vB)</div>
+        <div className="P p-14-center text-center">
+          <div className="lbl-xs mb-4">Gas (sat/vB)</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--c)', fontFamily: 'var(--fm)' }}>{gasParams?.conservative ?? '—'}</div>
         </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Mempool TXs</div>
+        <div className="P p-14-center text-center">
+          <div className="lbl-xs mb-4">Mempool TXs</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--c2)', fontFamily: 'var(--fm)' }}>{mempoolInfo?.count ?? '—'}</div>
         </div>
-        <div className="P" style={{ padding: 14, textAlign: 'center' }}>
-          <div style={{ fontSize: '.6rem', color: 'var(--t4)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>Your Swaps/Mints</div>
+        <div className="P p-14-center text-center">
+          <div className="lbl-xs mb-4">Your Swaps/Mints</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>{swapCount}/{mintCount}</div>
         </div>
       </div>
@@ -288,10 +288,10 @@ const Analytics: React.FC = () => {
       {rateHistory.length >= 2 && (
         <div className="P" style={{ padding: 16, marginBottom: 16 }}>
           <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '.55rem', color: 'var(--t4)' }}>
-            <span>{new Date(snapshots[0].ts).toLocaleDateString()} {new Date(snapshots[0].ts).toLocaleTimeString()}</span>
+          <div className="flex-between mt-6 fs-2xs c-t4">
+            <span>{new Date(snapshots[0]!.ts).toLocaleDateString()} {new Date(snapshots[0]!.ts).toLocaleTimeString()}</span>
             <span>{snapshots.length} pts{serverLoaded && API_BASE ? ' (server+local)' : ' (local)'}</span>
-            <span>{new Date(snapshots[snapshots.length - 1].ts).toLocaleTimeString()}</span>
+            <span>{new Date(snapshots[snapshots.length - 1]!.ts).toLocaleTimeString()}</span>
           </div>
         </div>
       )}
@@ -312,23 +312,23 @@ const Analytics: React.FC = () => {
       <div className="P" style={{ padding: 16, marginBottom: 16 }}>
         <div className="Lb" style={{ marginBottom: 10 }}>💱 Pool Details — MINE/VIBE SimplePool</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
-          <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
-            <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>MINE Reserve</div>
-            <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: 'var(--fm)' }}>
+          <div className="bg3-rounded">
+            <div className="fs-62 c-t4 mb-4">MINE Reserve</div>
+            <div className="fw-700 text-mono" style={{ color: '#F7931A' }}>
               {reserves ? reserves.mine.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
             </div>
           </div>
-          <div style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
-            <div style={{ fontSize: '.62rem', color: 'var(--t4)', marginBottom: 4 }}>VIBE Reserve</div>
-            <div style={{ fontWeight: 700, color: '#0ea5e9', fontFamily: 'var(--fm)' }}>
+          <div className="bg3-rounded">
+            <div className="fs-62 c-t4 mb-4">VIBE Reserve</div>
+            <div className="fw-700 text-mono" style={{ color: '#0ea5e9' }}>
               {reserves ? reserves.vibe.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
             </div>
           </div>
         </div>
-        <div style={{ marginTop: 10, fontSize: '.62rem', color: 'var(--t4)', fontFamily: 'var(--fm)', wordBreak: 'break-all' }}>
-          Pool: <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>{POOL_ADDRESS}</a>
+        <div className="mt-10 fs-62 c-t4 text-mono word-break">
+          Pool: <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer" className="c-c2">{POOL_ADDRESS}</a>
         </div>
-        <div style={{ marginTop: 4, fontSize: '.6rem', color: 'var(--t4)' }}>
+        <div className="mt-4 fs-xs c-t4">
           Fee: 0.3% · Constant product AMM (x × y = k)
         </div>
       </div>
@@ -343,19 +343,19 @@ const Analytics: React.FC = () => {
             const maxSupply = tok.supply;
             const pct = maxSupply > 0 ? (totalMinted / maxSupply) * 100 : 0;
             return (
-              <div key={sym} style={{ padding: 12, background: 'var(--bg3)', borderRadius: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div key={sym} className="bg3-rounded">
+                <div className="flex-center gap-6 mb-8">
                   <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>
                   <span style={{ fontWeight: 700 }}>${sym}</span>
                   {tok.publicMint && <span style={{ fontSize: '.5rem', background: 'rgba(168,85,247,.12)', color: '#a855f7', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>MINTABLE</span>}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--t3)' }}>Minted</span>
-                  <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)' }}>{totalMinted.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                <div className="flex-between fs-sm mb-4">
+                  <span className="c-t3">Minted</span>
+                  <span className="text-mono c-w">{totalMinted.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', marginBottom: 6 }}>
-                  <span style={{ color: 'var(--t3)' }}>Max Supply</span>
-                  <span style={{ fontFamily: 'var(--fm)', color: 'var(--t2)' }}>{maxSupply.toLocaleString()}</span>
+                <div className="flex-between fs-sm mb-6">
+                  <span className="c-t3">Max Supply</span>
+                  <span className="text-mono c-t2">{maxSupply.toLocaleString()}</span>
                 </div>
                 {/* Progress bar */}
                 <div style={{ background: 'var(--bg2)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
@@ -367,7 +367,7 @@ const Analytics: React.FC = () => {
                     transition: 'width .5s',
                   }} />
                 </div>
-                <div style={{ fontSize: '.55rem', color: 'var(--t4)', marginTop: 3, textAlign: 'right' }}>
+                <div className="fs-2xs c-t4 mt-4 text-right">
                   {pct.toFixed(1)}% minted
                 </div>
               </div>
@@ -380,27 +380,26 @@ const Analytics: React.FC = () => {
       <div className="P" style={{ padding: 16 }}>
         <div className="Lb" style={{ marginBottom: 10 }}>⚡ Recent On-Chain Activity</div>
         {txHistory.length === 0 ? (
-          <div style={{ color: 'var(--t4)', fontSize: '.72rem', textAlign: 'center', padding: 20 }}>No activity recorded yet. Try minting or swapping!</div>
+          <div className="c-t4 fs-72 text-center" style={{ padding: 20 }}>No activity recorded yet. Try minting or swapping!</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="flex-col-gap4">
             {txHistory.slice(0, 15).map((tx: TxRecord) => (
-              <div key={tx.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', borderRadius: '14px', fontSize: '.72rem',
+              <div key={tx.id} className="flex-between fs-72" style={{
+                padding: '8px 12px', borderRadius: '14px',
                 background: 'rgba(255,255,255,.02)', border: '1px solid var(--bd)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="flex-center gap-8">
                   <span>{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'}</span>
-                  <span style={{ fontWeight: 600, color: 'var(--w)', textTransform: 'capitalize' }}>{tx.type}</span>
-                  <span style={{ color: 'var(--t3)' }}>
+                  <span className="fw-600 c-w" style={{ textTransform: 'capitalize' }}>{tx.type}</span>
+                  <span className="c-t3">
                     {tx.type === 'swap'
                       ? `${tx.amountA} ${tx.tokenA} → ${tx.tokenB}`
                       : `${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: '.55rem', color: tx.status === 'confirmed' ? 'var(--g)' : 'var(--y)', fontWeight: 600 }}>{tx.status}</span>
-                  <span style={{ fontSize: '.55rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
+                <div className="flex-center gap-8">
+                  <span className="fs-2xs fw-600" style={{ color: tx.status === 'confirmed' ? 'var(--g)' : 'var(--y)' }}>{tx.status}</span>
+                  <span className="fs-2xs c-t4 text-mono">
                     {new Date(tx.ts).toLocaleTimeString()}
                   </span>
                 </div>

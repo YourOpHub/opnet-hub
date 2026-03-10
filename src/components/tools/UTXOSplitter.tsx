@@ -173,7 +173,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
               </div>
               {selectedUtxo !== null && (
                 <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
-                  Splitting UTXO #{selectedUtxo + 1}: {getUtxoValue(utxos[selectedUtxo]).toLocaleString()} sats
+                  Splitting UTXO #{selectedUtxo + 1}: {getUtxoValue(utxos[selectedUtxo]!).toLocaleString()} sats
                 </div>
               )}
               {selectedUtxo === null && utxos.length > 1 && (

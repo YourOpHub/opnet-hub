@@ -50,7 +50,7 @@ export function createParticle(
         type === 'bitcoin' ? BITCOIN_COLOR :
             type === 'lightning' ? LIGHTNING_COLOR :
                 type === 'mega' ? MEGA_COLOR :
-                    PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+                    PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)]!;
 
     const speed = randomBetween(0.3, 1.2) + level * 0.05;
     const angle = randomBetween(0, Math.PI * 2);
@@ -201,7 +201,7 @@ export function activateParticleAt(
     let closestIdx = -1;
 
     for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
+        const p = particles[i]!;
         if (p.activated) continue;
         const dist = distance(x, y, p.x, p.y);
         if (dist < p.radius + 20 && dist < closestDist) {
@@ -212,7 +212,7 @@ export function activateParticleAt(
 
     if (closestIdx >= 0) {
         hit = true;
-        hitParticle = particles[closestIdx];
+        hitParticle = particles[closestIdx] ?? null;
     }
 
     const updated = particles.map((p, i) => {
@@ -392,12 +392,12 @@ export function calculateBestMove(particles: Particle[]): Particle | null {
     // Build adjacency list for fast lookup
     const adj = new Map<number, number[]>();
     for (let i = 0; i < particles.length; i++) {
-        const p1 = particles[i];
+        const p1 = particles[i]!;
         if (p1.activated) continue;
         const neighbors = [];
         for (let j = 0; j < particles.length; j++) {
             if (i === j) continue;
-            const p2 = particles[j];
+            const p2 = particles[j]!;
             if (p2.activated) continue;
             // If p1 explodes, does it hit p2?
             if (distance(p1.x, p1.y, p2.x, p2.y) <= p1.explosionRadius + p2.radius) {

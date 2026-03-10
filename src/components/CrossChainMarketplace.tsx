@@ -8,7 +8,7 @@ import { MyOrderRow, AvailableOrderRow, MY_COLS, AV_COLS } from './crosschain/Cr
 import { EscrowOrderCard } from './crosschain/CrossChainOrderActions';
 import { satsToBtc } from './crosschain/types';
 
-const fractalChain = SUPPORTED_CHAINS[0]; // Fractal Bitcoin
+const fractalChain = SUPPORTED_CHAINS[0]!; // Fractal Bitcoin
 
 const btnSmall: React.CSSProperties = {
   background: 'rgba(255,255,255,.08)', color: 'var(--t2)', border: '1px solid var(--bd)',
@@ -141,7 +141,7 @@ const CrossChainMarketplace: React.FC = () => {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+      <div className="flex-between-wrap gap-12 mb-16">
         <div>
           <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, letterSpacing: '-.02em' }}>
             FractalSwap
@@ -150,7 +150,7 @@ const CrossChainMarketplace: React.FC = () => {
             Native BTC &#x2194; Fractal BTC exchange &#x2014; trustless atomic swaps, {feeBps / 100}% fee
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="flex-center gap-8">
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             background: `${fractalChain.color}22`, color: fractalChain.color,
@@ -160,7 +160,7 @@ const CrossChainMarketplace: React.FC = () => {
             {fractalChain.icon} {fractalChain.name}
           </span>
           {currentBlock > 0 && (
-            <span style={{ fontSize: '.68rem', color: 'var(--t3)' }}>Block #{currentBlock.toLocaleString()}</span>
+            <span className="fs-sm c-t3">Block #{currentBlock.toLocaleString()}</span>
           )}
         </div>
       </div>
@@ -174,10 +174,10 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
           {walletAddress ? (
             <div>
-              <div style={{ fontSize: '.72rem', fontFamily: 'var(--fm)', color: 'var(--w)', wordBreak: 'break-all' }}>
+              <div className="fs-72 text-mono c-w word-break">
                 {walletAddress.slice(0, 12)}...{walletAddress.slice(-8)}
               </div>
-              <div style={{ fontSize: '.66rem', color: 'var(--g)', marginTop: 2 }}>Connected</div>
+              <div className="fs-66 mt-2" style={{ color: 'var(--g)' }}>Connected</div>
             </div>
           ) : (
             <button className="btn-p" style={{ fontSize: '.7rem', padding: '6px 12px', width: '100%' }}
@@ -194,11 +194,11 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
           {unisat.connected ? (
             <div>
-              <div style={{ fontSize: '.72rem', fontFamily: 'var(--fm)', color: 'var(--w)', wordBreak: 'break-all' }}>
+              <div className="fs-72 text-mono c-w word-break">
                 {unisat.address.slice(0, 12)}...{unisat.address.slice(-8)}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                <span style={{ fontSize: '.66rem', color: 'var(--g)' }}>
+              <div className="flex-between mt-2">
+                <span className="fs-66" style={{ color: 'var(--g)' }}>
                   {(unisat.balance.total / 1e8).toFixed(6)} FB
                 </span>
                 <button style={{ ...btnSmall, fontSize: '.6rem', padding: '2px 6px' }} onClick={handleDisconnectUnisat}>
@@ -206,7 +206,7 @@ const CrossChainMarketplace: React.FC = () => {
                 </button>
               </div>
               {unisat.chain.enum && (
-                <div style={{ fontSize: '.6rem', color: 'var(--t3)', marginTop: 2 }}>
+                <div className="fs-xs c-t3 mt-2">
                   {unisat.chain.name}
                 </div>
               )}
@@ -229,14 +229,14 @@ const CrossChainMarketplace: React.FC = () => {
         <>
           {/* Contract not deployed notice */}
           {!escrowReady && (
-            <div className="Pg" style={{ textAlign: 'center', padding: '32px 20px', marginBottom: 16 }}>
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>{'\u{1F6A7}'}</div>
+            <div className="Pg text-center mb-16" style={{ padding: '32px 20px' }}>
+              <div className="empty-icon">{'\u{1F6A7}'}</div>
               <h3 style={{ margin: '0 0 8px', fontWeight: 800 }}>Token Escrow Contract Pending</h3>
               <p style={{ color: 'var(--t2)', fontSize: '.82rem', maxWidth: 500, margin: '0 auto' }}>
                 The TokenEscrowBridge contract is ready for deployment. Once deployed,
                 you can trade OP-20 tokens for BTC with trustless escrow.
               </p>
-              <div style={{ marginTop: 12, fontSize: '.72rem', color: 'var(--t3)' }}>
+              <div className="mt-12 fs-72 c-t3">
                 <code>cd deploy/OP_20 && npx asc --target tokenescrow</code>
               </div>
             </div>
@@ -244,26 +244,26 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
-            <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700 }}>Active Orders</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--w)' }}>{activeEscrowOrders.length}</div>
+            <div className="Pg p-14-center text-center">
+              <div className="stat-label">Active Orders</div>
+              <div className="stat-val">{activeEscrowOrders.length}</div>
             </div>
-            <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700 }}>Sell Orders</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ef4444' }}>{sellTokenOrders.length}</div>
+            <div className="Pg p-14-center text-center">
+              <div className="stat-label">Sell Orders</div>
+              <div className="stat-val" style={{ color: '#ef4444' }}>{sellTokenOrders.length}</div>
             </div>
-            <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700 }}>Buy Orders</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#22c55e' }}>{buyTokenOrders.length}</div>
+            <div className="Pg p-14-center text-center">
+              <div className="stat-label">Buy Orders</div>
+              <div className="stat-val" style={{ color: '#22c55e' }}>{buyTokenOrders.length}</div>
             </div>
           </div>
 
           {/* Create Token Escrow Order */}
-          <div className="Pg" style={{ marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: 12 }}>Create Token Escrow Order</div>
+          <div className="Pg mb-16">
+            <div className="fw-700-fs82-mb10" style={{ marginBottom: 12 }}>Create Token Escrow Order</div>
 
             {/* Direction toggle */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div className="flex-gap8-mb12">
               <button
                 className={tbDirection === DIR_SELL_TOKEN ? 'btn-p' : 'btn-s'}
                 style={{ flex: 1, fontSize: '.76rem', padding: '10px 0' }}
@@ -281,9 +281,9 @@ const CrossChainMarketplace: React.FC = () => {
             </div>
 
             {/* Token selector */}
-            <div style={{ marginBottom: 12 }}>
+            <div className="mb-12">
               <label style={labelStyle}>Token</label>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div className="flex-center gap-6">
                 {TOKEN_OPTIONS.map(tok => (
                   <button key={tok.address}
                     className={tbToken === tok.address ? 'btn-p' : 'btn-s'}
@@ -303,7 +303,7 @@ const CrossChainMarketplace: React.FC = () => {
                 <input style={iStyle} type="number" placeholder="1000" value={tbTokenAmount}
                   onChange={e => setTbTokenAmount(e.target.value)} min="0" step="any" />
                 {tbTokenAmountRaw > 0n && (
-                  <div style={{ fontSize: '.66rem', color: 'var(--t3)', marginTop: 2 }}>
+                  <div className="fs-66 c-t3 mt-2">
                     = {tbTokenAmountRaw.toLocaleString()} raw units
                   </div>
                 )}
@@ -315,7 +315,7 @@ const CrossChainMarketplace: React.FC = () => {
                 <input style={iStyle} type="number" placeholder="0.001" value={tbBtcPrice}
                   onChange={e => setTbBtcPrice(e.target.value)} min="0" step="any" />
                 {tbBtcPriceSats > 0n && (
-                  <div style={{ fontSize: '.66rem', color: 'var(--o)', marginTop: 2, fontWeight: 600 }}>
+                  <div className="fs-66 c-o mt-2 fw-600">
                     = {Number(tbBtcPriceSats).toLocaleString()} sats
                   </div>
                 )}
@@ -387,11 +387,11 @@ const CrossChainMarketplace: React.FC = () => {
                 Selling Tokens ({sellTokenOrders.length})
               </div>
               {escrowLoading ? (
-                <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
+                <div className="Pg p-28-center-t3">Loading...</div>
               ) : sellTokenOrders.length === 0 ? (
-                <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-                  <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
-                  <div style={{ fontSize: '.72rem' }}>No sell orders yet</div>
+                <div className="Pg p-28-center-t3">
+                  <div className="empty-icon">📭</div>
+                  <div className="fs-72">No sell orders yet</div>
                 </div>
               ) : (
                 sellTokenOrders.map(order => (
@@ -406,15 +406,15 @@ const CrossChainMarketplace: React.FC = () => {
               )}
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '.78rem', marginBottom: 8, color: '#22c55e' }}>
+              <div className="fs-78 fw-700 mb-8" style={{ color: '#22c55e' }}>
                 Buying Tokens ({buyTokenOrders.length})
               </div>
               {escrowLoading ? (
-                <div className="Pg" style={{ padding: 20, textAlign: 'center', color: 'var(--t3)' }}>Loading...</div>
+                <div className="Pg p-28-center-t3">Loading...</div>
               ) : buyTokenOrders.length === 0 ? (
-                <div className="Pg" style={{ padding: 28, textAlign: 'center', color: 'var(--t3)' }}>
-                  <div style={{ fontSize: '2rem', opacity: .3, marginBottom: 8 }}>📭</div>
-                  <div style={{ fontSize: '.72rem' }}>No buy orders yet</div>
+                <div className="Pg p-28-center-t3">
+                  <div className="empty-icon">📭</div>
+                  <div className="fs-72">No buy orders yet</div>
                 </div>
               ) : (
                 buyTokenOrders.map(order => (
@@ -431,8 +431,8 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
 
           {/* How it works */}
-          <div className="Pg" style={{ marginTop: 20, padding: '16px 20px' }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: 10 }}>How Token Bridge Works</div>
+          <div className="Pg mt-20" style={{ padding: '16px 20px' }}>
+            <div className="fw-700-fs82-mb10">How Token Bridge Works</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {[
                 { num: '1', title: 'Create Order', desc: 'Sell: tokens locked in contract. Buy: intent posted (no lock).' },
@@ -440,14 +440,14 @@ const CrossChainMarketplace: React.FC = () => {
                 { num: '3', title: 'BTC Payment', desc: 'BTC buyer sends payment to counterparty\'s address.' },
                 { num: '4', title: 'Reveal & Settle', desc: 'Reveal preimage to confirm swap. Tokens released to buyer.' },
               ].map(s => (
-                <div key={s.num} style={{ textAlign: 'center' }}>
+                <div key={s.num} className="text-center">
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', background: 'rgba(245,158,11,.2)',
                     color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 8px', fontWeight: 800, fontSize: '.82rem',
                   }}>{s.num}</div>
-                  <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 4 }}>{s.title}</div>
-                  <div style={{ fontSize: '.66rem', color: 'var(--t3)', lineHeight: 1.4 }}>{s.desc}</div>
+                  <div className="fs-72 fw-700 mb-4">{s.title}</div>
+                  <div className="fs-66 c-t3" style={{ lineHeight: 1.4 }}>{s.desc}</div>
                 </div>
               ))}
             </div>
@@ -455,10 +455,10 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Explorer link */}
           {escrowReady && (
-            <div style={{ marginTop: 12, textAlign: 'center' }}>
-              <a href={getContractOpscanUrl(escrowOrders.length > 0 ? escrowOrders[0].id : '')}
+            <div className="mt-12 text-center">
+              <a href={getContractOpscanUrl(escrowOrders.length > 0 ? escrowOrders[0]!.id : '')}
                 target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '.72rem', color: 'var(--o)', textDecoration: 'none' }}>
+                className="fs-72 c-o no-decoration">
                 View Token Escrow on OPScan &#x2192;
               </a>
             </div>
@@ -471,14 +471,14 @@ const CrossChainMarketplace: React.FC = () => {
         <>
           {/* Contract not deployed notice */}
           {!contractReady && (
-            <div className="Pg" style={{ textAlign: 'center', padding: '32px 20px', marginBottom: 16 }}>
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>{'\u{1F6A7}'}</div>
+            <div className="Pg text-center mb-16" style={{ padding: '32px 20px' }}>
+              <div className="empty-icon">{'\u{1F6A7}'}</div>
               <h3 style={{ margin: '0 0 8px', fontWeight: 800 }}>Contract Pending Deployment</h3>
               <p style={{ color: 'var(--t2)', fontSize: '.82rem', maxWidth: 500, margin: '0 auto' }}>
                 The FractalSwap contract is ready. Once deployed to OPNet,
                 you can swap native BTC with Fractal Bitcoin via trustless atomic swaps.
               </p>
-              <div style={{ marginTop: 12, fontSize: '.72rem', color: 'var(--t3)' }}>
+              <div className="mt-12 fs-72 c-t3">
                 <code>cd deploy/OP_20 && npx asc src/crosschain/index.ts --target crosschain</code>
               </div>
             </div>
@@ -486,17 +486,17 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Stats bar */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
-            <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px', cursor: 'pointer' }} onClick={() => { fetchOrders(); }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.05em' }}>Active Orders ↻</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--w)' }}>{activeOrders.length}</div>
+            <div className="Pg p-14-center text-center" style={{ cursor: 'pointer' }} onClick={() => { fetchOrders(); }}>
+              <div className="stat-label-ls">Active Orders ↻</div>
+              <div className="stat-val">{activeOrders.length}</div>
             </div>
-            <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.05em' }}>Total Volume</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--o)' }}>{satsToBtc(totalVolumeSats)}</div>
+            <div className="Pg p-14-center text-center">
+              <div className="stat-label-ls">Total Volume</div>
+              <div className="stat-val c-o">{satsToBtc(totalVolumeSats)}</div>
             </div>
-            <div className="Pg" style={{ textAlign: 'center', padding: '12px 8px' }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--t3)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.05em' }}>Fee</div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#8b5cf6' }}>{feeBps / 100}%</div>
+            <div className="Pg p-14-center text-center">
+              <div className="stat-label-ls">Fee</div>
+              <div className="stat-val" style={{ color: '#8b5cf6' }}>{feeBps / 100}%</div>
             </div>
           </div>
 
@@ -587,10 +587,10 @@ const CrossChainMarketplace: React.FC = () => {
                 <span className="ob-badge" style={{ background: 'rgba(34,197,94,.1)', color: '#22c55e', marginLeft: 'auto' }}>{availBuyFb.length}</span>
               </div>
               {loading ? (
-                <div style={{ padding: 28, textAlign: 'center', color: 'var(--t2)' }}>Loading...</div>
+                <div className="p-28-center-t2">Loading...</div>
               ) : availBuyFb.length === 0 ? (
                 <div className="ob-empty">
-                  <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>&#x1F517;</div>
+                  <div className="empty-icon-med">&#x1F517;</div>
                   No cross-chain swaps yet — create one above!
                 </div>
               ) : (
@@ -608,7 +608,7 @@ const CrossChainMarketplace: React.FC = () => {
                       actioning={actioning}
                       actionStep={actionStep}
                       feeBps={feeBps}
-                      isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`].locked_by !== walletAddress}
+                      isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
                       walletAddress={walletAddress}
                       unisatAddress={unisat.address || ''}
                       onTakeAndSwap={handleTakeAndSwap}
@@ -627,10 +627,10 @@ const CrossChainMarketplace: React.FC = () => {
                 <span className="ob-badge" style={{ background: 'rgba(245,158,11,.1)', color: '#f59e0b', marginLeft: 'auto' }}>{availGetBtc.length}</span>
               </div>
               {loading ? (
-                <div style={{ padding: 28, textAlign: 'center', color: 'var(--t2)' }}>Loading...</div>
+                <div className="p-28-center-t2">Loading...</div>
               ) : availGetBtc.length === 0 ? (
                 <div className="ob-empty">
-                  <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>&#x1F517;</div>
+                  <div className="empty-icon-med">&#x1F517;</div>
                   No cross-chain swaps yet — create one above!
                 </div>
               ) : (
@@ -648,7 +648,7 @@ const CrossChainMarketplace: React.FC = () => {
                       actioning={actioning}
                       actionStep={actionStep}
                       feeBps={feeBps}
-                      isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`].locked_by !== walletAddress}
+                      isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
                       walletAddress={walletAddress}
                       unisatAddress={unisat.address || ''}
                       onTakeAndSwap={handleTakeAndSwap}
@@ -661,22 +661,22 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
 
           {/* How it works */}
-          <div className="Pg" style={{ marginTop: 20, padding: '16px 20px' }}>
-            <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: 10 }}>How It Works</div>
+          <div className="Pg mt-20" style={{ padding: '16px 20px' }}>
+            <div className="fw-700-fs82-mb10">How It Works</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               {[
                 { num: '1', title: 'Create Order', desc: 'Post what you want to swap. BTC is locked in the smart contract for safety.' },
                 { num: '2', title: 'Take & Auto-Swap', desc: 'One click: pay fee \u2192 send Fractal BTC \u2192 claim locked BTC. Fully automatic.' },
                 { num: '3', title: 'Done', desc: 'Both sides receive their funds. Track progress in the Operations panel.' },
               ].map(s => (
-                <div key={s.num} style={{ textAlign: 'center' }}>
+                <div key={s.num} className="text-center">
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', background: 'rgba(139,92,246,.2)',
                     color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     margin: '0 auto 8px', fontWeight: 800, fontSize: '.82rem',
                   }}>{s.num}</div>
-                  <div style={{ fontSize: '.72rem', fontWeight: 700, marginBottom: 4 }}>{s.title}</div>
-                  <div style={{ fontSize: '.66rem', color: 'var(--t3)', lineHeight: 1.4 }}>{s.desc}</div>
+                  <div className="fs-72 fw-700 mb-4">{s.title}</div>
+                  <div className="fs-66 c-t3" style={{ lineHeight: 1.4 }}>{s.desc}</div>
                 </div>
               ))}
             </div>
@@ -684,10 +684,10 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Explorer link */}
           {contractReady && (
-            <div style={{ marginTop: 12, textAlign: 'center' }}>
+            <div className="mt-12 text-center">
               <a href={getContractOpscanUrl(CROSSCHAIN_ADDRESS)}
                 target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '.72rem', color: 'var(--o)', textDecoration: 'none' }}>
+                className="fs-72 c-o no-decoration">
                 View contract on OPScan &#x2192;
               </a>
             </div>

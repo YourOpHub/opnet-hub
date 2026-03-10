@@ -69,7 +69,7 @@ describe('App', () => {
 
   it('navigates on Home click', () => {
     render(<App />);
-    const homeBtn = screen.getAllByText('Home')[0];
+    const homeBtn = screen.getAllByText('Home')[0]!;
     fireEvent.click(homeBtn);
     expect(document.querySelector('.M')).toBeTruthy();
   });

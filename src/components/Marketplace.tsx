@@ -41,15 +41,15 @@ const Marketplace: React.FC = () => {
     return (
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         {/* Back button + header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div className="flex-center gap-12 mb-16">
           <button onClick={() => { setSelectedToken(null); setOrders([]); }}
             style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid var(--bd)', background: 'var(--bg3)', color: 'var(--t3)', fontSize: '.74rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>
             &larr; Back
           </button>
           <img src={genLogo(selInfo?.symbol || '??')} alt="" style={{ width: 36, height: 36, borderRadius: '50%' }} />
           <div>
-            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--w)' }}>{selInfo?.symbol || selectedToken.slice(-8)}</div>
-            <div style={{ fontSize: '.64rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>{selectedToken}</div>
+            <div className="fw-800 fs-88 c-w" style={{ fontSize: '1.1rem' }}>{selInfo?.symbol || selectedToken.slice(-8)}</div>
+            <div className="fs-62 c-t4 text-mono">{selectedToken}</div>
           </div>
         </div>
 
@@ -63,15 +63,15 @@ const Marketplace: React.FC = () => {
         {/* Two-column: Sell orders | Buy orders — exchange-style tables */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           {/* SELL ORDERS (asks) */}
-          <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="P p-0-overflow-hidden">
             <div style={{ padding: '12px 12px 6px', fontWeight: 700, fontSize: '.86rem', color: '#ef4444', display: 'flex', alignItems: 'baseline', gap: 6 }}>
               Sell Orders
-              <span style={{ fontSize: '.62rem', fontWeight: 400, color: 'var(--t2)' }}>Asks</span>
+              <span className="fs-62 fw-600 c-t2">Asks</span>
               <span className="ob-badge" style={{ background: 'rgba(239,68,68,.1)', color: '#ef4444', marginLeft: 'auto' }}>{sellOrders.length}</span>
             </div>
             {sellOrders.length === 0 ? (
               <div className="ob-empty">
-                <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>📋</div>
+                <div className="empty-icon-med">📋</div>
                 No sell orders yet — be the first to create one!
               </div>
             ) : (
@@ -86,13 +86,13 @@ const Marketplace: React.FC = () => {
                   const pct = o.amount > 0 ? Math.round((o.amountFilled / o.amount) * 100) : 0;
                   return (
                     <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
-                      <span className="ob-mono" style={{ color: 'var(--t1)' }}>
-                        {fmtNum(remaining)} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>/ {fmtNum(o.amount)}</span>
+                      <span className="ob-mono c-w">
+                        {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
-                      <span className="ob-mono ob-r" style={{ color: '#ef4444', fontWeight: 700 }}>{o.pricePerToken}</span>
-                      <span className="ob-mono ob-r" style={{ color: 'var(--o)' }}>{fmtNum(totalCostSats)}</span>
-                      <span className="ob-r" style={{ position: 'relative' }}>
-                        <span style={{ color: 'var(--t2)' }}>{pct}%</span>
+                      <span className="ob-mono ob-r fw-700" style={{ color: '#ef4444' }}>{o.pricePerToken}</span>
+                      <span className="ob-mono ob-r c-o">{fmtNum(totalCostSats)}</span>
+                      <span className="ob-r pos-relative">
+                        <span className="c-t2">{pct}%</span>
                         {pct > 0 && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, borderRadius: 1, background: 'rgba(255,255,255,.08)' }}>
                           <div style={{ height: '100%', borderRadius: 1, background: 'rgba(239,68,68,.5)', width: `${pct}%` }} />
                         </div>}
@@ -101,7 +101,7 @@ const Marketplace: React.FC = () => {
                         {o.creator === senderHex ? (
                           <button className="ob-btn danger" onClick={() => handleCancel(o.id)}>Cancel</button>
                         ) : fillId === o.id ? (
-                          <div style={{ display: 'flex', gap: 4 }}>
+                          <div className="flex-center gap-4">
                             <input value={fillAmount} onChange={e => setFillAmount(e.target.value.replace(/[^0-9.]/g, ''))}
                               placeholder={`${fmtNum(remaining)}`}
                               style={{ ...iStyle, width: 80, padding: '3px 6px', fontSize: '.64rem' }} />
@@ -111,7 +111,7 @@ const Marketplace: React.FC = () => {
                             <button className="ob-btn" onClick={() => { setFillId(null); setFillAmount(''); }}>X</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 4 }}>
+                          <div className="flex-center gap-4">
                             <button className="ob-btn green" onClick={() => handleFill(o.id)} disabled={filling}>Buy</button>
                             <button className="ob-btn" onClick={() => setFillId(o.id)}>Partial</button>
                           </div>
@@ -125,15 +125,15 @@ const Marketplace: React.FC = () => {
           </div>
 
           {/* BUY ORDERS (bids) */}
-          <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="P p-0-overflow-hidden">
             <div style={{ padding: '12px 12px 6px', fontWeight: 700, fontSize: '.86rem', color: 'var(--g)', display: 'flex', alignItems: 'baseline', gap: 6 }}>
               Buy Orders
-              <span style={{ fontSize: '.62rem', fontWeight: 400, color: 'var(--t2)' }}>Bids</span>
+              <span className="fs-62 fw-600 c-t2">Bids</span>
               <span className="ob-badge" style={{ background: 'rgba(16,185,129,.1)', color: 'var(--g)', marginLeft: 'auto' }}>{buyOrders.length}</span>
             </div>
             {buyOrders.length === 0 ? (
               <div className="ob-empty">
-                <div style={{ fontSize: '1.4rem', marginBottom: 6, opacity: .4 }}>📋</div>
+                <div className="empty-icon-med">📋</div>
                 No buy orders yet — be the first to create one!
               </div>
             ) : (
@@ -149,11 +149,11 @@ const Marketplace: React.FC = () => {
                   const isAccepted = o.status === 'accepted';
                   return (
                     <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 60px auto' }}>
-                      <span className="ob-mono" style={{ color: 'var(--t1)' }}>
-                        {fmtNum(remaining)} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>/ {fmtNum(o.amount)}</span>
+                      <span className="ob-mono c-w">
+                        {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
-                      <span className="ob-mono ob-r" style={{ color: 'var(--g)', fontWeight: 700 }}>{o.pricePerToken}</span>
-                      <span className="ob-mono ob-r" style={{ color: 'var(--o)' }}>{fmtNum(totalCostSats)}</span>
+                      <span className="ob-mono ob-r fw-700 c-g">{o.pricePerToken}</span>
+                      <span className="ob-mono ob-r c-o">{fmtNum(totalCostSats)}</span>
                       <span>
                         {isAccepted
                           ? <span className="ob-badge" style={{ background: 'rgba(247,147,26,.15)', color: 'var(--o)' }}>ACCEPTED</span>
@@ -174,7 +174,7 @@ const Marketplace: React.FC = () => {
                             {filling ? '..' : 'Accept'}
                           </button>
                         ) : (
-                          <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>Awaiting pay</span>
+                          <span className="fs-62 c-t3">Awaiting pay</span>
                         )}
                       </div>
                     </div>
@@ -194,7 +194,7 @@ const Marketplace: React.FC = () => {
         {/* Create order form */}
         <div className="P" style={{ padding: 18, marginBottom: 16 }}>
           <div className="Lb" style={{ marginBottom: 10 }}>Place Order</div>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          <div className="flex-center gap-6 mb-12">
             {(['sell', 'buy'] as const).map(t => (
               <button key={t} onClick={() => setOrderType(t)}
                 style={{
@@ -207,16 +207,16 @@ const Marketplace: React.FC = () => {
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>
+          <div className="flex-center gap-8 mb-10">
+            <div className="flex-1">
+              <label className="lbl-xs" style={{ display: 'block' }}>
                 {orderType === 'sell' ? 'Amount to sell' : 'Amount you want'}
               </label>
               <input style={iStyle} type="text" inputMode="numeric" value={orderAmount}
                 onChange={e => setOrderAmount(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="100000" />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '.64rem', color: 'var(--t4)', marginBottom: 3, display: 'block' }}>Price (sats/token)</label>
+            <div className="flex-1">
+              <label className="lbl-xs" style={{ display: 'block' }}>Price (sats/token)</label>
               <input style={iStyle} type="text" inputMode="decimal" value={orderPrice}
                 onChange={e => setOrderPrice(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="0.5" />
             </div>
@@ -234,7 +234,7 @@ const Marketplace: React.FC = () => {
             className="lbtn" style={{ width: '100%', opacity: creating ? 0.6 : 1 }}>
             {creating ? 'Creating...' : walletAddress ? `Place ${orderType === 'sell' ? 'Sell' : 'Buy'} Order` : 'Connect Wallet'}
           </button>
-          <div style={{ marginTop: 8, fontSize: '.54rem', color: 'var(--t4)', textAlign: 'center' }}>
+          <div className="mt-8 fs-2xs c-t4 text-center">
             {orderType === 'sell'
               ? 'Tokens are locked in the P2PMarket contract on-chain. Buyers pay BTC directly to you.'
               : 'Trustless 3-step: 1) You post buy intent → 2) Seller locks tokens in contract → 3) You pay BTC and receive tokens automatically.'}
@@ -243,7 +243,7 @@ const Marketplace: React.FC = () => {
 
         {/* My orders — table */}
         {myOrders.length > 0 && (
-          <div className="P" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="P p-0-overflow-hidden">
             <div style={{ padding: '12px 12px 6px', fontWeight: 700, fontSize: '.82rem', display: 'flex', alignItems: 'baseline', gap: 6 }}>
               My Orders
               <span className="ob-badge" style={{ background: 'rgba(245,158,11,.1)', color: '#f59e0b', marginLeft: 'auto' }}>{myOrders.length}</span>
@@ -261,8 +261,8 @@ const Marketplace: React.FC = () => {
                       color: o.type === 'sell' ? '#ef4444' : 'var(--g)',
                     }}>{o.type.toUpperCase()}</span>
                   </span>
-                  <span className="ob-mono" style={{ color: 'var(--t1)' }}>{fmtNum(o.amountFilled)}/{fmtNum(o.amount)}</span>
-                  <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{o.pricePerToken} <span style={{ fontSize: '.6rem', color: 'var(--t3)' }}>sat</span></span>
+                  <span className="ob-mono c-w">{fmtNum(o.amountFilled)}/{fmtNum(o.amount)}</span>
+                  <span className="ob-mono ob-r c-t2">{o.pricePerToken} <span className="fs-xs c-t3">sat</span></span>
                   <span>
                     <span className="ob-badge" style={{
                       background: o.status === 'active' ? 'rgba(16,185,129,.12)' : 'rgba(255,255,255,.06)',
@@ -296,7 +296,7 @@ const Marketplace: React.FC = () => {
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div className="flex-center gap-8 mb-14">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, symbol or paste contract address..."
           onKeyDown={e => e.key === 'Enter' && handleSearchSelect()}
           style={{ ...iStyle, flex: 1 }} />
@@ -308,12 +308,12 @@ const Marketplace: React.FC = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 50, color: 'var(--t4)', fontSize: '.82rem' }}>Loading tokens...</div>
+        <div className="text-center c-t4 fs-82" style={{ padding: 50 }}>Loading tokens...</div>
       ) : filteredTokens.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 50 }}>
+        <div className="text-center" style={{ padding: 50 }}>
           <div style={{ fontSize: '2.2rem', marginBottom: 10 }}>&#x1F50D;</div>
-          <div style={{ color: 'var(--t4)', fontSize: '.82rem', marginBottom: 6 }}>No tokens found</div>
-          <div style={{ color: 'var(--t4)', fontSize: '.66rem' }}>Paste a contract address above to open its orderbook</div>
+          <div className="c-t4 fs-82 mb-6">No tokens found</div>
+          <div className="c-t4 fs-66">Paste a contract address above to open its orderbook</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
@@ -327,19 +327,19 @@ const Marketplace: React.FC = () => {
                 }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = c1)}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--bd)')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div className="flex-center gap-10 mb-8">
                   <img src={genLogo(t.symbol)} alt="" style={{ width: 36, height: 36, borderRadius: '50%' }} />
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '.9rem', color: 'var(--w)' }}>{t.symbol}</div>
-                    <div style={{ fontSize: '.62rem', color: 'var(--t4)' }}>{t.name}</div>
+                    <div className="fw-700 c-w" style={{ fontSize: '.9rem' }}>{t.symbol}</div>
+                    <div className="fs-62 c-t4">{t.name}</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.64rem', color: 'var(--t3)' }}>
+                <div className="flex-between fs-62 c-t3">
                   <span>Sells: <strong style={{ color: '#ef4444' }}>{t.sellCount}</strong></span>
-                  <span>Bids: <strong style={{ color: 'var(--g)' }}>{t.buyCount}</strong></span>
-                  <span>Vol: <strong style={{ color: 'var(--o)', fontFamily: 'var(--fm)' }}>{fmtNum(t.totalVolume)}</strong></span>
+                  <span>Bids: <strong className="c-g">{t.buyCount}</strong></span>
+                  <span>Vol: <strong className="c-o text-mono">{fmtNum(t.totalVolume)}</strong></span>
                 </div>
-                <div style={{ fontSize: '.52rem', color: 'var(--t4)', fontFamily: 'var(--fm)', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="fs-2xs c-t4 text-mono mt-6 truncate">
                   {t.address}
                 </div>
               </div>

@@ -3324,3 +3324,39 @@ input:focus-visible, textarea:focus-visible {
 
 /* ── Deploy info footer ── */
 .deploy-info { margin-top: 10px; padding: 8px 12px; background: rgba(247,147,26,.05); border-radius: 14px; font-size: .72rem; color: var(--t3); }
+
+/* ── Extended utility classes ── */
+.flex-between-wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.flex-center-full { display: flex; align-items: center; justify-content: center; }
+.flex-col-gap4 { display: flex; flex-direction: column; gap: 4px; }
+.flex-col-gap6 { display: flex; flex-direction: column; gap: 6px; }
+.flex-col-gap8 { display: flex; flex-direction: column; gap: 8px; }
+.gap-14 { gap: 14px; } .gap-16 { gap: 16px; }
+.mb-6 { margin-bottom: 6px; } .mb-10 { margin-bottom: 10px; } .mb-14 { margin-bottom: 14px; } .mb-16 { margin-bottom: 16px; }
+.mt-2 { margin-top: 2px; } .mt-6 { margin-top: 6px; } .mt-10 { margin-top: 10px; } .mt-20 { margin-top: 20px; }
+.fw-800 { font-weight: 800; }
+.fs-2xs { font-size: .54rem; } .fs-xxs { font-size: .58rem; } .fs-62 { font-size: .62rem; } .fs-66 { font-size: .66rem; } .fs-72 { font-size: .72rem; } .fs-74 { font-size: .74rem; } .fs-78 { font-size: .78rem; } .fs-82 { font-size: .82rem; } .fs-88 { font-size: .88rem; }
+.text-mono { font-family: var(--fm); }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.w-full { width: 100%; }
+.flex-1 { flex: 1; }
+.pos-relative { position: relative; }
+.p-0-overflow-hidden { padding: 0; overflow: hidden; }
+.stat-label { font-size: .68rem; color: var(--t3); text-transform: uppercase; font-weight: 700; }
+.stat-label-ls { font-size: .68rem; color: var(--t3); text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
+.stat-val { font-size: 1.2rem; font-weight: 800; color: var(--w); }
+.empty-icon { font-size: 2rem; margin-bottom: 8px; opacity: .4; }
+.empty-icon-med { font-size: 1.4rem; margin-bottom: 6px; opacity: .4; }
+.card-subtext { font-size: .72rem; color: var(--t3); }
+.card-subtext-t2 { font-size: .72rem; color: var(--t2); }
+.mono-t2 { font-family: var(--fm); color: var(--t2); font-weight: 600; }
+.lbl-xs { font-size: .6rem; color: var(--t4); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.p-14-center { padding: 14px; text-align: center; }
+.p-28-center-t3 { padding: 28px; text-align: center; color: var(--t3); }
+.p-28-center-t2 { padding: 28px; text-align: center; color: var(--t2); }
+.fw-700-fs82-mb10 { font-weight: 700; font-size: .82rem; margin-bottom: 10px; }
+.flex-gap6-mb14 { display: flex; gap: 6px; margin-bottom: 14px; }
+.flex-gap8-mb10 { display: flex; gap: 8px; margin-bottom: 10px; }
+.flex-gap8-mb12 { display: flex; gap: 8px; margin-bottom: 12px; }
+.max-h-200-overflow { max-height: 200px; overflow: auto; }
+.bg3-rounded { padding: 12px; background: var(--bg3); border-radius: 14px; }

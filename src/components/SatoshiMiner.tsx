@@ -126,7 +126,7 @@ const SatoshiMiner: React.FC = () => {
     // Derived
     const totalUpgrades = ups.reduce((s, u) => s + u.lv, 0);
     const stageIdx = Math.min(STAGES.length - 1, Math.floor(totalUpgrades / 3));
-    const stage = STAGES[stageIdx];
+    const stage = STAGES[stageIdx]!;
     const lkLv = ups.find(u => u.id === 'luck')?.lv || 0;
     const tbLv = ups.find(u => u.id === 'turbo')?.lv || 0;
     const tm = Math.pow(2, tbLv);
@@ -184,7 +184,7 @@ const SatoshiMiner: React.FC = () => {
                 x: Math.random() * w, y: Math.random() * h,
                 vx: (Math.random() - .5) * .4, vy: (Math.random() - .5) * .4 - .15,
                 r: Math.random() * 2.5 + .5, a: Math.random() * .5,
-                color: [stage.color, '#F7931A', '#0ea5e9', '#a78bfa', '#eab308'][Math.floor(Math.random() * 5)]
+                color: ([stage.color, '#F7931A', '#0ea5e9', '#a78bfa', '#eab308'][Math.floor(Math.random() * 5)])!
             });
         }
         let run = true;
@@ -199,7 +199,7 @@ const SatoshiMiner: React.FC = () => {
             }
             const sp = sparksRef.current;
             for (let i = sp.length - 1; i >= 0; i--) {
-                const s = sp[i]; s.x += s.vx; s.y += s.vy; s.vy += .06; s.life -= .018;
+                const s = sp[i]!; s.x += s.vx; s.y += s.vy; s.vy += .06; s.life -= .018;
                 if (s.life <= 0) { sp.splice(i, 1); continue }
                 ctx.beginPath(); ctx.arc(s.x, s.y, 2.5 * s.life, 0, Math.PI * 2);
                 ctx.fillStyle = s.color; ctx.globalAlpha = s.life; ctx.fill();

@@ -21,7 +21,7 @@ const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
 
 const OpCard: React.FC<{ op: OpEntry; onDismiss?: () => void }> = ({ op, onDismiss }) => {
   const m = MARKET_LABELS[op.market] || { label: op.market, color: 'var(--t2)' };
-  const s = STATUS_STYLES[op.status] || STATUS_STYLES.active;
+  const s = STATUS_STYLES[op.status] ?? STATUS_STYLES['active']!;
   const isActive = op.status === 'active';
 
   return (

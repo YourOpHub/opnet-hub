@@ -250,7 +250,7 @@ const Staking: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="flex-between mb-16" style={{ marginBottom: 20 }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 4, letterSpacing: '-.02em' }}>Staking</h2>
           <p style={{ color: '#5a6578', fontSize: '.75rem' }}>
@@ -309,7 +309,7 @@ const Staking: React.FC = () => {
 
       {/* Staking Interface */}
       <div style={{ padding: '24px 22px', marginBottom: 16, borderRadius: 22, background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(20px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="flex-between mb-16">
           <span style={{ fontSize: '.95rem', fontWeight: 800, color: '#fff', letterSpacing: '-.02em' }}>Stake MINE</span>
           {connected && (
             <div style={{ textAlign: 'right' }}>
@@ -358,7 +358,7 @@ const Staking: React.FC = () => {
         {STAKING_DEPLOYED && userStakedNum > 0 && (
           <>
             <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 6, fontWeight: 500 }}>Amount to Unstake</div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+            <div className="flex-center gap-8 mb-10">
               <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
                 placeholder="0" style={{
                   flex: 1, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)',
@@ -394,7 +394,7 @@ const Staking: React.FC = () => {
                 : `Claim ${fmtToken(userRewards)} MINE Rewards`}
             </button>
             {cooldownLeft > 0 && (
-              <div style={{ marginTop: 6, fontSize: '.58rem', color: '#5a6578', textAlign: 'center' }}>
+              <div className="mt-6 text-center" style={{ fontSize: '.58rem', color: '#5a6578' }}>
                 Next claim available in {Math.floor(cooldownLeft / 60000)}:{String(Math.floor((cooldownLeft % 60000) / 1000)).padStart(2, '0')}
               </div>
             )}
@@ -416,9 +416,9 @@ const Staking: React.FC = () => {
       </div>
 
       {/* Contract link */}
-      <div style={{ textAlign: 'center', padding: '12px 0' }}>
+      <div className="text-center" style={{ padding: '12px 0' }}>
         <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: '.6rem', color: '#4a5568', textDecoration: 'none' }}>
+          className="fs-xs no-decoration" style={{ color: '#4a5568' }}>
           View staking contract on OPScan ↗
         </a>
       </div>

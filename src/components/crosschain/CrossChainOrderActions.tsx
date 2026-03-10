@@ -32,7 +32,7 @@ interface EscrowOrderCardProps {
 
 /** Status badge component */
 const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
-  const s = STATUS_COLORS[status] || STATUS_COLORS[OrderStatus.Open];
+  const s = STATUS_COLORS[status] ?? STATUS_COLORS[OrderStatus.Open]!;
   return (
     <span style={{
       background: s.bg, color: s.text,

@@ -246,13 +246,13 @@ describe('Token filtering and search', () => {
   it('filters by symbol (case-insensitive)', () => {
     const result = filterTokens(tokenList, 'mine');
     expect(result).toHaveLength(1);
-    expect(result[0].symbol).toBe('MINE');
+    expect(result[0]!.symbol).toBe('MINE');
   });
 
   it('filters by symbol uppercase', () => {
     const result = filterTokens(tokenList, 'VIBE');
     expect(result).toHaveLength(1);
-    expect(result[0].symbol).toBe('VIBE');
+    expect(result[0]!.symbol).toBe('VIBE');
   });
 
   it('filters by name (partial match)', () => {
@@ -263,13 +263,13 @@ describe('Token filtering and search', () => {
   it('filters by address', () => {
     const result = filterTokens(tokenList, 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa');
     expect(result).toHaveLength(1);
-    expect(result[0].symbol).toBe('MINE');
+    expect(result[0]!.symbol).toBe('MINE');
   });
 
   it('filters by partial address', () => {
     const result = filterTokens(tokenList, 'opt1sqzc940');
     expect(result).toHaveLength(1);
-    expect(result[0].symbol).toBe('VIBE');
+    expect(result[0]!.symbol).toBe('VIBE');
   });
 
   it('returns empty array for no match', () => {
@@ -280,7 +280,7 @@ describe('Token filtering and search', () => {
   it('case-insensitive name filter', () => {
     const result = filterTokens(tokenList, 'vibe token');
     expect(result).toHaveLength(1);
-    expect(result[0].symbol).toBe('VIBE');
+    expect(result[0]!.symbol).toBe('VIBE');
   });
 });
 
@@ -347,7 +347,7 @@ describe('Order categorization', () => {
   it('sellOrders are sorted by pricePerToken ascending', () => {
     const prices = sellOrders.map(o => o.pricePerToken);
     for (let i = 1; i < prices.length; i++) {
-      expect(prices[i]).toBeGreaterThanOrEqual(prices[i - 1]);
+      expect(prices[i]!).toBeGreaterThanOrEqual(prices[i - 1]!);
     }
   });
 
@@ -365,7 +365,7 @@ describe('Order categorization', () => {
   it('buyOrders are sorted by pricePerToken descending', () => {
     const prices = buyOrders.map(o => o.pricePerToken);
     for (let i = 1; i < prices.length; i++) {
-      expect(prices[i]).toBeLessThanOrEqual(prices[i - 1]);
+      expect(prices[i]!).toBeLessThanOrEqual(prices[i - 1]!);
     }
   });
 

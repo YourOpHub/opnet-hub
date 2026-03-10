@@ -295,7 +295,7 @@ describe('BASE_TOKENS', () => {
 
   it('MINE and VIBE have different pubkeys', () => {
     const [a, b] = BASE_TOKENS;
-    expect(a.pubkey).not.toBe(b.pubkey);
+    expect(a!.pubkey).not.toBe(b!.pubkey);
   });
 });
 
@@ -373,8 +373,8 @@ describe('Swap token list building from Motoswap pools', () => {
   it('BASE_TOKENS always appear first', () => {
     const pool = makeMotoPool('PILL', '0xpill111', 8, 'MOTO', '0xmoto222', 8);
     const tokens = buildSwapTokens([pool]);
-    expect(tokens[0].symbol).toBe('MINE');
-    expect(tokens[1].symbol).toBe('VIBE');
+    expect(tokens[0]!.symbol).toBe('MINE');
+    expect(tokens[1]!.symbol).toBe('VIBE');
   });
 
   it('token decimals are preserved from pool data', () => {

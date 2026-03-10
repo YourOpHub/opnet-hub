@@ -409,7 +409,7 @@ const Launchpad: React.FC = () => {
 
   // Auto-select first token
   useEffect(() => {
-    if (!selected && tokens.length > 0) setSelected(tokens[0]);
+    if (!selected && tokens.length > 0) setSelected(tokens[0] ?? null);
   }, [tokens, selected]);
 
   // Filter + sort tokens

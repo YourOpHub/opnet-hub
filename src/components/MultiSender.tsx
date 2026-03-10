@@ -210,8 +210,8 @@ const MultiSender: React.FC = () => {
         const contract = getContract<IOP20Contract>(
           tokenAddr, OP_20_ABI, provider, NETWORK, senderAddress as Address,
         );
-        const recipientAddr = Address.fromString(validRecipients[i].address);
-        const amount = formatAmount(validRecipients[i].amount, tokenDecimals);
+        const recipientAddr = Address.fromString(validRecipients[i]!.address);
+        const amount = formatAmount(validRecipients[i]!.amount, tokenDecimals);
 
         const sim = await withRetry(async () => {
           const s = await contract.transfer(recipientAddr, amount);
@@ -221,7 +221,7 @@ const MultiSender: React.FC = () => {
 
         const txParams = await buildTxParams(provider, walletAddress);
         const tOpId = `transfer_${i}_${Date.now()}`;
-        trackOp({ id: tOpId, market: 'transfer', orderId: `#${i + 1}/${validRecipients.length}`, direction: '', role: '', step: `Sending ${validRecipients[i].amount} to ${validRecipients[i].address.slice(0, 12)}...` });
+        trackOp({ id: tOpId, market: 'transfer', orderId: `#${i + 1}/${validRecipients.length}`, direction: '', role: '', step: `Sending ${validRecipients[i]!.amount} to ${validRecipients[i]!.address.slice(0, 12)}...` });
         await (sim as CallResult).sendTransaction(txParams);
         completeOp(tOpId);
 

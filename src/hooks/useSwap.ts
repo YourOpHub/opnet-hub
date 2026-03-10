@@ -280,8 +280,8 @@ export function useSwap() {
     return [...BASE_TOKENS, ...extra];
   }, [motoPools]);
 
-  const from = SWAP_TOKENS[fromIdx] || SWAP_TOKENS[0];
-  const to = SWAP_TOKENS[toIdx] || SWAP_TOKENS[1];
+  const from = SWAP_TOKENS[fromIdx] ?? SWAP_TOKENS[0]!;
+  const to = SWAP_TOKENS[toIdx] ?? SWAP_TOKENS[1]!;
   const fromVal = parseFloat(fromAmt) || 0;
 
   // Find which pool handles this pair: SimplePool (MINE/VIBE) or Motoswap
@@ -305,7 +305,7 @@ export function useSwap() {
     rIn = isAToB ? reserveA : reserveB;
     rOut = isAToB ? reserveB : reserveA;
   } else if (motoPool) {
-    const isForward = from.pubkey === motoPool.token0_pubkey;
+    const isForward = from!.pubkey === motoPool.token0_pubkey;
     const mr0 = Number(BigInt(motoPool.reserve0)) / Math.pow(10, motoPool.token0_decimals);
     const mr1 = Number(BigInt(motoPool.reserve1)) / Math.pow(10, motoPool.token1_decimals);
     rIn = isForward ? mr0 : mr1;

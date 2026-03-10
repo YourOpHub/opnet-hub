@@ -131,7 +131,7 @@ export async function connectUnisat(testnet = true): Promise<UnisatWalletState> 
 
     return {
         connected: true,
-        address: freshAccounts[0] || accounts[0],
+        address: freshAccounts[0] ?? accounts[0] ?? '',
         publicKey,
         balance,
         chain,

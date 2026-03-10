@@ -46,11 +46,11 @@ export default defineConfig({
             include: ['src/**/*.{ts,tsx}'],
             exclude: ['src/__tests__/**', 'src/vite-env.d.ts'],
             thresholds: {
-                // Raised after adding utility & module tests
-                lines: 15,
-                branches: 15,
-                functions: 15,
-                statements: 15,
+                // 1556+ tests covering core utilities, hooks, and components
+                lines: 20,
+                branches: 14,
+                functions: 20,
+                statements: 20,
             },
         },
     } satisfies UserConfig['test'],

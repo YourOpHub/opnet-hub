@@ -55,7 +55,8 @@ const mintableCache = new Map<string, OPNetContract>();
 const genericCache = new Map<string, OPNetContract>();
 
 export function getCachedContract(address: string, abi: BitcoinInterfaceAbi, sender?: string): OPNetContract {
-  const key = `${address}:${abi.length}`;
+  const abiFingerprint = abi.map(e => e.name).join(',');
+  const key = `${address}:${abiFingerprint}`;
   let contract = genericCache.get(key);
   if (!contract) {
     contract = getContract<OPNetContract>(address, abi, getProvider(), NETWORK, sender ? Address.fromString(sender) : undefined);

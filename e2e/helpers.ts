@@ -35,3 +35,49 @@ export async function mockAPIs(page: Page): Promise<void> {
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }),
   );
 }
+
+/** Mock marketplace token list API for P2P Market tests. */
+export async function mockMarketplaceTokens(page: Page): Promise<void> {
+  // Market tokens endpoint — return MINE and VIBE as available tokens
+  await page.route('**/market/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+}
+
+/** Mock token indexer API for TokenGallery tests. */
+export async function mockTokenAPI(page: Page): Promise<void> {
+  await page.route('**/api/tokens**', (route) => {
+    const url = route.request().url();
+    if (url.includes('/status')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ total: 2, indexed: 2 }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          address: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa',
+          symbol: 'MINE',
+          name: 'Mine Token',
+          decimals: 8,
+          holders: 150,
+          mintable: true,
+          blockHeight: 1000,
+        },
+        {
+          address: 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl',
+          symbol: 'VIBE',
+          name: 'Vibe Token',
+          decimals: 8,
+          holders: 120,
+          mintable: true,
+          blockHeight: 1001,
+        },
+      ]),
+    });
+  });
+}

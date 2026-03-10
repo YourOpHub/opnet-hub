@@ -249,8 +249,8 @@ function LiveFeed() {
     }, []);
 
     useEffect(() => {
-        fetchLiveData();
-        const iv = setInterval(fetchLiveData, 30000);
+        void fetchLiveData();
+        const iv = setInterval(() => void fetchLiveData(), 30000);
         return () => clearInterval(iv);
     }, [fetchLiveData]);
 

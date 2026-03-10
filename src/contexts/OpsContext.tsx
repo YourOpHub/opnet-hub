@@ -79,12 +79,12 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [wallet]);
 
-  useEffect(() => { loadOps(); }, [loadOps]);
+  useEffect(() => { void loadOps(); }, [loadOps]);
 
   // Auto-refresh every 15s
   useEffect(() => {
     if (!wallet) return;
-    timerRef.current = setInterval(loadOps, 15_000);
+    timerRef.current = setInterval(() => void loadOps(), 15_000);
     return () => clearInterval(timerRef.current);
   }, [wallet, loadOps]);
 
@@ -110,7 +110,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         direction: data.direction, role: data.role, step: data.step,
         status: 'active', amounts: data.amounts, tx_ids: data.txIds,
       };
-      updateSwapOp(update);
+      void updateSwapOp(update);
     }
   }, [wallet]);
 
@@ -118,7 +118,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, step, txIds: txIds || o.txIds, updatedAt: Date.now() } : o));
     if (wallet) {
       const op = ops.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', tx_ids: txIds });
+      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', tx_ids: txIds });
     }
   }, [wallet, ops]);
 
@@ -126,7 +126,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, status: 'completed', step: 'Done', updatedAt: Date.now() } : o));
     if (wallet) {
       const op = ops.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Done', status: 'completed' });
+      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Done', status: 'completed' });
     }
   }, [wallet, ops]);
 
@@ -134,7 +134,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, status: 'failed', step: 'Failed', error, updatedAt: Date.now() } : o));
     if (wallet) {
       const op = ops.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Failed', status: 'failed', error });
+      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Failed', status: 'failed', error });
     }
   }, [wallet, ops]);
 

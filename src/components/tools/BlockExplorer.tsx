@@ -32,8 +32,8 @@ const BlockExplorer = React.memo(function BlockExplorer() {
       const mp = await opnet.getMempoolInfo().catch(() => null);
       if (mp) setMempool(mp);
     };
-    load();
-    const iv = setInterval(load, 30000);
+    void load();
+    const iv = setInterval(() => void load(), 30000);
     return () => clearInterval(iv);
   }, []);
 

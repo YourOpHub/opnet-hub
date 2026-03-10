@@ -154,7 +154,7 @@ const Analytics: React.FC = () => {
   // Load server snapshots on mount — one-time fetch
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const serverSnaps = await fetchServerSnapshots(POOL_ADDRESS, 500);
       if (cancelled) return;
       if (serverSnaps.length > 0) {
@@ -224,8 +224,8 @@ const Analytics: React.FC = () => {
 
       if (!cancelled) setLoading(false);
     };
-    fetchAll();
-    const iv = setInterval(fetchAll, 30000);
+    void fetchAll();
+    const iv = setInterval(() => void fetchAll(), 30000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [provider]);
 

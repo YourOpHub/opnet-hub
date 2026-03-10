@@ -59,8 +59,8 @@ const Dashboard: React.FC = () => {
         pulseRef.current = setTimeout(() => setPulse(false), 800);
       }
     };
-    go();
-    const iv = setInterval(go, 30000);
+    void go();
+    const iv = setInterval(() => void go(), 30000);
     return () => { cancelled = true; clearInterval(iv); clearTimeout(pulseRef.current); };
   }, []);
 

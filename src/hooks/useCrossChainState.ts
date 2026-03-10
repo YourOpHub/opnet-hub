@@ -239,8 +239,8 @@ export function useCrossChainState(): CrossChainState {
   // ── Order locks ──
   const [locks, setLocks] = useState<Record<string, OrderLock>>({});
   useEffect(() => {
-    getActiveLocks().then(setLocks);
-    const iv = setInterval(() => getActiveLocks().then(setLocks), 15_000);
+    void getActiveLocks().then(setLocks);
+    const iv = setInterval(() => void getActiveLocks().then(setLocks), 15_000);
     return () => clearInterval(iv);
   }, []);
 
@@ -303,15 +303,15 @@ export function useCrossChainState(): CrossChainState {
         if (!cancelled) setCurrentBlock(Number(b));
       } catch (e) { logger.warn('[CrossChain] Block height poll failed:', e); }
     };
-    poll();
-    const iv = setInterval(poll, 15000);
+    void poll();
+    const iv = setInterval(() => void poll(), 15000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [provider]);
 
   // ── Fee info ──
   useEffect(() => {
     if (!contractReady) return;
-    (async () => {
+    void (async () => {
       try {
         const c = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK);
         const r = await c.getFeeInfo();
@@ -358,8 +358,8 @@ export function useCrossChainState(): CrossChainState {
   }, [provider, contractReady]);
 
   useEffect(() => {
-    fetchOrders();
-    const iv = setInterval(fetchOrders, 15000);
+    void fetchOrders();
+    const iv = setInterval(() => void fetchOrders(), 15000);
     return () => clearInterval(iv);
   }, [fetchOrders]);
 
@@ -405,8 +405,8 @@ export function useCrossChainState(): CrossChainState {
 
   useEffect(() => {
     if (mode !== 'tokenbridge') return;
-    fetchEscrowOrders();
-    const iv = setInterval(fetchEscrowOrders, 15000);
+    void fetchEscrowOrders();
+    const iv = setInterval(() => void fetchEscrowOrders(), 15000);
     return () => clearInterval(iv);
   }, [mode, fetchEscrowOrders]);
 
@@ -416,7 +416,7 @@ export function useCrossChainState(): CrossChainState {
 
   useEffect(() => {
     if (!API_URL) return;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${API_URL}/api/orders/rates`, { signal: AbortSignal.timeout(5000) });
         if (r.ok) setServerRates(await r.json());

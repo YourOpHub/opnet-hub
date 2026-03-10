@@ -337,7 +337,7 @@ const SwapUI: React.FC = () => {
             reserveA={reserveA}
             reserveB={reserveB}
             balances={balances}
-            onRefresh={() => { fetchReserves(); setBalRefreshKey(k => k + 1); }}
+            onRefresh={() => { void fetchReserves(); setBalRefreshKey(k => k + 1); }}
           />
 
           {/* From */}

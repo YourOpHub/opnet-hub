@@ -31,7 +31,7 @@ const GasTool = React.memo(function GasTool() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { refresh(); const iv = setInterval(refresh, 15000); return () => clearInterval(iv); }, [network, refresh]);
+  useEffect(() => { void refresh(); const iv = setInterval(() => void refresh(), 15000); return () => clearInterval(iv); }, [network, refresh]);
 
   return (
     <div style={cardS}>

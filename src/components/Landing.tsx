@@ -97,8 +97,8 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
         }
       } catch (e) { logger.warn('[Landing] Pool rate fetch failed:', e); }
     };
-    load();
-    const iv = setInterval(load, 45000);
+    void load();
+    const iv = setInterval(() => void load(), 45000);
     return () => { c = true; clearInterval(iv); };
   }, []);
 

@@ -232,8 +232,8 @@ export function useMarketplace() {
     setOrders(chainOrders);
   }, [selectedToken, fetchOrdersOnChain]);
 
-  useEffect(() => { fetchTokens(); }, [fetchTokens]);
-  useEffect(() => { if (selectedToken) fetchOrders(); }, [selectedToken, fetchOrders]);
+  useEffect(() => { void fetchTokens(); }, [fetchTokens]);
+  useEffect(() => { if (selectedToken) void fetchOrders(); }, [selectedToken, fetchOrders]);
 
   // Derived state
   const filteredTokens = useMemo(() => {
@@ -312,12 +312,12 @@ export function useMarketplace() {
         }).catch(() => {});
       } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         toast('Order confirmed on-chain!', 'success');
         completeOp(createOpId);
-        fetchOrders(); fetchTokens();
+        void fetchOrders(); void fetchTokens();
       }).catch(() => {});
-      fetchOrders();
+      void fetchOrders();
       return;
     } catch (e) {
       setCreateStep(formatTxError(e));
@@ -400,23 +400,23 @@ export function useMarketplace() {
         amounts: { amount: String(fillAmt), price: String(order.pricePerToken), token: order.tokenSymbol },
       });
 
-      fetch(`${MARKET_API}/market/fill`, {
+      void fetch(`${MARKET_API}/market/fill`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, filler: walletAddress, amount: fillAmt }),
         signal: AbortSignal.timeout(5000),
       }).catch(() => {});
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         toast('Fill confirmed on-chain!', 'success');
         completeOp(opId);
-        unlockOrder(lockKey, walletAddress);
-        fetchOrders();
-      }).catch(() => { unlockOrder(lockKey, walletAddress); });
-      fetchOrders();
+        void unlockOrder(lockKey, walletAddress);
+        void fetchOrders();
+      }).catch(() => { void unlockOrder(lockKey, walletAddress); });
+      void fetchOrders();
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
-      unlockOrder(lockKey, walletAddress);
+      void unlockOrder(lockKey, walletAddress);
       setFillStep(formatTxError(e));
       setTimeout(() => setFillStep(''), 5000);
     } finally { setFilling(false); }
@@ -479,17 +479,17 @@ export function useMarketplace() {
         amounts: { amount: String(remaining), price: String(order.pricePerToken), token: order.tokenSymbol },
       });
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         toast('Execution confirmed on-chain!', 'success');
         completeOp(opId);
-        unlockOrder(lockKey, walletAddress);
-        fetchOrders();
-      }).catch(() => { unlockOrder(lockKey, walletAddress); });
-      fetchOrders();
+        void unlockOrder(lockKey, walletAddress);
+        void fetchOrders();
+      }).catch(() => { void unlockOrder(lockKey, walletAddress); });
+      void fetchOrders();
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
-      unlockOrder(lockKey, walletAddress);
+      void unlockOrder(lockKey, walletAddress);
       setFillStep(formatTxError(e));
       setTimeout(() => setFillStep(''), 5000);
     } finally { setFilling(false); }
@@ -522,7 +522,7 @@ export function useMarketplace() {
   // Request notification permission on mount
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+      void Notification.requestPermission();
     }
   }, []);
 
@@ -537,17 +537,17 @@ export function useMarketplace() {
       await (sim as CallResult).sendTransaction(tp as TransactionParameters);
 
       toast('Order cancel submitted! Confirming...', 'success');
-      fetch(`${MARKET_API}/market/cancel`, {
+      void fetch(`${MARKET_API}/market/cancel`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, creator: walletAddress }),
         signal: AbortSignal.timeout(5000),
       }).catch(() => {});
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         toast('Cancel confirmed!', 'success');
-        fetchOrders();
+        void fetchOrders();
       }).catch(() => {});
-      fetchOrders();
+      void fetchOrders();
     } catch (e) {
       setMsg(formatTxError(e));
       setTimeout(() => setMsg(''), 5000);

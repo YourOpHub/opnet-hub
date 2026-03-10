@@ -225,8 +225,8 @@ export function useSwap() {
     } catch (e) { logger.warn('[useSwap] Pool reserves fetch failed:', e); }
   }, []);
 
-  useEffect(() => { fetchReserves(); }, [fetchReserves]);
-  useEffect(() => { fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); }); }, []);
+  useEffect(() => { void fetchReserves(); }, [fetchReserves]);
+  useEffect(() => { void fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); }); }, []);
 
   useEffect(() => {
     const prevNet = opnetRpc.getNetwork();
@@ -260,7 +260,7 @@ export function useSwap() {
         .then(b => setBalances(prev => ({ ...prev, BTC: b })))
         .catch(() => {})
     );
-    Promise.allSettled(jobs).finally(() => setBalLoading(false));
+    void Promise.allSettled(jobs).finally(() => setBalLoading(false));
     return () => { opnetRpc.setNetwork(prevNet); };
   }, [walletAddress, hashedMLDSAKey, publicKey, balRefreshKey]);
 

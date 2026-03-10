@@ -485,7 +485,7 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Stats bar */}
           <div className="grid-3col gap-10 mb-16" role="region" aria-label="FractalSwap statistics">
-            <div className="Pg p-14-center text-center pointer" onClick={() => { fetchOrders(); }} role="button" tabIndex={0} aria-label="Refresh active orders" onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fetchOrders(); } }}>
+            <div className="Pg p-14-center text-center pointer" onClick={() => { void fetchOrders(); }} role="button" tabIndex={0} aria-label="Refresh active orders" onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void fetchOrders(); } }}>
               <div className="stat-label-ls">Active Orders ↻</div>
               <div className="stat-val">{activeOrders.length}</div>
             </div>

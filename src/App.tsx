@@ -158,7 +158,7 @@ const App: React.FC = () => {
 
         // Fallback: hardcoded tokens via SDK (always runs as backup)
         Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
-            (async () => {
+            void (async () => {
                 try {
                     const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, NETWORK, senderAddr);
                     const sim = await op20.balanceOf(senderAddr);

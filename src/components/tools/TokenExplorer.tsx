@@ -39,7 +39,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
 
   // Fetch all tokens from OPScan
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const resp = await fetch(`${OPSCAN_API_BASE}/tokens`);
         if (!resp.ok) throw new Error('OPScan API error');
@@ -90,7 +90,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             });
           }
         };
-        batch(tokens, 5);
+        void batch(tokens, 5);
       } catch (e) { logger.warn('[TokenExplorer] OPScan fetch failed:', e); }
       finally { setTokensLoading(false); }
     })();

@@ -109,8 +109,8 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       state.setTbBtcPrice('');
       state.setTbMakerAddr('');
 
-      waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
-      fetchEscrowOrders();
+      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
+      void fetchEscrowOrders();
     } catch (e) {
       setTbStep(formatTxError(e));
       setTimeout(() => setTbStep(''), 5000);
@@ -172,8 +172,8 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast(`Order taken! Fee: ${Number(feeSats)} sats.`, 'success');
       setActioning(null);
 
-      waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
-      fetchEscrowOrders();
+      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
+      void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
@@ -205,8 +205,8 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast('Swap confirmed! Tokens released.', 'success');
       setActioning(null);
 
-      waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
-      fetchEscrowOrders();
+      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
+      void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
@@ -229,8 +229,8 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast('Token escrow order cancelled! Tokens returned.', 'success');
       setActioning(null);
 
-      waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
-      fetchEscrowOrders();
+      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
+      void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
@@ -253,8 +253,8 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast('Refund sent! Tokens returned.', 'success');
       setActioning(null);
 
-      waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
-      fetchEscrowOrders();
+      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch(() => {});
+      void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);

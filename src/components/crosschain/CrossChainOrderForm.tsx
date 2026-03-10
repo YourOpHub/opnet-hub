@@ -169,4 +169,4 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
   );
 };
 
-export default CrossChainOrderForm;
+export default React.memo(CrossChainOrderForm);

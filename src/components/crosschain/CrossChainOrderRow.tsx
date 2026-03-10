@@ -101,7 +101,7 @@ interface MyOrderRowProps {
   onConnectUnisat: () => void;
 }
 
-export const MyOrderRow: React.FC<MyOrderRowProps> = ({
+const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
   order,
   currentBlock,
   actioning,
@@ -187,6 +187,8 @@ export const MyOrderRow: React.FC<MyOrderRowProps> = ({
   );
 };
 
+export const MyOrderRow = React.memo(MyOrderRowBase);
+
 /* ─────────────────────────────────────────────────────────
    AvailableOrderRow — a row in the available swaps tables
    ───────────────────────────────────────────────────────── */
@@ -203,7 +205,7 @@ interface AvailableOrderRowProps {
   onTake: (id: string, takerAddr: string) => void;
 }
 
-export const AvailableOrderRow: React.FC<AvailableOrderRowProps> = ({
+const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
   order,
   currentBlock,
   actioning,
@@ -260,3 +262,5 @@ export const AvailableOrderRow: React.FC<AvailableOrderRowProps> = ({
     </React.Fragment>
   );
 };
+
+export const AvailableOrderRow = React.memo(AvailableOrderRowBase);

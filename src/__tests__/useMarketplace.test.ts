@@ -27,7 +27,7 @@ vi.mock('opnet', () => ({
 vi.mock('@btc-vision/transaction', () => {
   class MockAddress {
     static fromString = vi.fn();
-    static wrap = vi.fn((bytes: Uint8Array) => ({
+    static wrap = vi.fn((_bytes: Uint8Array) => ({
       p2op: vi.fn(() => 'opt1mock_p2op_address'),
     }));
     p2op = vi.fn(() => 'opt1mock_p2op_address');

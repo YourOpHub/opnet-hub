@@ -45,7 +45,7 @@ const StatusBadge: React.FC<{ status: OrderStatus }> = ({ status }) => {
 };
 
 /** Token Escrow Order Card (for Token Bridge mode) */
-export const EscrowOrderCard: React.FC<EscrowOrderCardProps> = ({
+const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
   order,
   currentBlock,
   actioning,
@@ -186,4 +186,5 @@ export const EscrowOrderCard: React.FC<EscrowOrderCardProps> = ({
   );
 };
 
+export const EscrowOrderCard = React.memo(EscrowOrderCardBase);
 export default EscrowOrderCard;

@@ -465,7 +465,7 @@ describe('Pool detection logic (SimplePool vs Motoswap)', () => {
   });
 
   it('picks correct pool from multiple pools', () => {
-    const rare: Token = { symbol: 'RARE', name: 'RARE', icon: '', decimals: 8, address: '0xrare', pubkey: '0xrare_pk' };
+    const _rare: Token = { symbol: 'RARE', name: 'RARE', icon: '', decimals: 8, address: '0xrare', pubkey: '0xrare_pk' }; void _rare;
     const pool1 = makeMotoPool('PILL', '0xpill_pk', 8, 'MOTO', '0xmoto_pk', 8);
     const pool2 = makeMotoPool('MOTO', '0xmoto_pk', 8, 'RARE', '0xrare_pk', 8);
     const found = findMotoPool(pill, moto, [pool1, pool2]);

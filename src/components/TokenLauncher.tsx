@@ -71,7 +71,7 @@ const TokenLauncher: React.FC = () => {
     setCustomWasmName(f.name);
     const r = new FileReader();
     r.onload = (ev: ProgressEvent<FileReader>): void => {
-      if (ev.target?.result) setCustomWasm(new Uint8Array(ev.target.result as ArrayBuffer));
+      if (ev.target?.result != null) setCustomWasm(new Uint8Array(ev.target.result as ArrayBuffer));
     };
     r.readAsArrayBuffer(f);
   };
@@ -155,7 +155,7 @@ const TokenLauncher: React.FC = () => {
       const utxos = await provider.utxoManager.getUTXOs({
         address: walletAddress,
       });
-      if (!utxos || utxos.length === 0) {
+      if (utxos == null || utxos.length === 0) {
         throw new Error(`No UTXOs found for your address.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`);
       }
 
@@ -212,7 +212,7 @@ const TokenLauncher: React.FC = () => {
       localStorage.setItem('hub_token_launched', '1');
 
       // Save deployed token to gallery
-      const deployed = JSON.parse(localStorage.getItem('hub_deployed_tokens') || '[]');
+      const deployed = JSON.parse(localStorage.getItem('hub_deployed_tokens') ?? '[]') as Record<string, unknown>[];
       deployed.push({
         address: result.contractAddress || '',
         txid,

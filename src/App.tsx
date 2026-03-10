@@ -11,7 +11,7 @@ import OpsPanel from './components/OpsPanel';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { OpsProvider } from './contexts/OpsContext';
-import { DEPLOYED_CONTRACTS, OPSCAN_EXPLORER_URL } from './contracts';
+import { DEPLOYED_CONTRACTS, OPSCAN_EXPLORER_URL, type ContractTokenInfo } from './contracts';
 import { fetchHolderBalances, type HolderBalance } from './tokenApi';
 
 // Global error handlers — executed once at module load
@@ -20,7 +20,7 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 window.addEventListener('error', (event) => {
-    logger.error('[Uncaught Error]', event.error || event.message);
+    logger.error('[Uncaught Error]', (event.error as unknown) != null ? event.error : event.message);
 });
 
 const BobChat = lazy(() => import('./components/BobChat'));
@@ -157,7 +157,7 @@ const App: React.FC = () => {
         }
 
         // Fallback: hardcoded tokens via SDK (always runs as backup)
-        Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
+        (Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).forEach(([sym, tok]) => {
             void (async () => {
                 try {
                     const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, sdkProvider, NETWORK, senderAddr);
@@ -307,7 +307,7 @@ const App: React.FC = () => {
                                 <div className="wallet-dropdown" role="menu" aria-label="Wallet details">
                                     <div className="wd-addr">{wAddr}</div>
                                     {/* Hardcoded tokens first */}
-                                    {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => (
+                                    {(Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).map(([sym, tok]) => (
                                         <div key={sym} className="wd-row">
                                             <span className="wd-token">{tok.icon} {sym}</span>
                                             <span className="wd-bal">{balances[sym] ?? '...'}</span>

@@ -91,11 +91,11 @@ const TXLookup = React.memo(function TXLookup() {
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: '.68rem', color: 'var(--c)', fontWeight: 700, marginBottom: 6 }}>Recent Pending TXs (Mempool)</div>
           {pending.map((p, i) => {
-            const hash = String(p.hash || p.id || p.transactionId || '');
+            const hash = String(p.hash ?? p.id ?? p.transactionId ?? '');
             return (
               <div key={i} style={{ ...rowS, cursor: 'pointer' }} onClick={() => { setTxHash(hash); }}>
                 <span style={{ ...monoSm, color: 'var(--c)', flex: 1 }}>{hash.slice(0, 20)}...{hash.slice(-8)}</span>
-                <span style={{ ...monoSm, color: 'var(--t4)', fontSize: '.55rem' }}>{p.from ? String(p.from).slice(0, 10) + '...' : ''}</span>
+                <span style={{ ...monoSm, color: 'var(--t4)', fontSize: '.55rem' }}>{p.from != null ? String(p.from).slice(0, 10) + '...' : ''}</span>
               </div>
             );
           })}

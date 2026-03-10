@@ -23,7 +23,7 @@ export function getTxHistory(wallet?: string): TxRecord[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const all: TxRecord[] = JSON.parse(raw);
+    const all = JSON.parse(raw) as TxRecord[];
     if (wallet) return all.filter(r => r.wallet === wallet);
     return all;
   } catch (e) { logger.warn('[txHistory] Failed to parse transaction history from localStorage:', e); return []; }

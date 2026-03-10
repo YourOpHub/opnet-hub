@@ -53,7 +53,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
       const sim = await withRetry(() => contract.publicMint(rawAmount));
       const callRes = sim as CallResult;
       if (callRes.revert) throw new Error(`Reverted: ${callRes.revert}`);
-      if (!callRes.sendTransaction) throw new Error('Simulation failed — contract may not support publicMint');
+      if (callRes.sendTransaction == null) throw new Error('Simulation failed — contract may not support publicMint');
       setMintStep('Sign in your wallet...');
       const txParams = await buildTxParams(provider, walletAddress);
       const lpOpId = `mint_${selected.symbol}_${Date.now()}`;

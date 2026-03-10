@@ -50,8 +50,8 @@ const LaunchpadForm: React.FC<LaunchpadFormProps> = ({ open, onClose, onCreated 
     if (!name.trim() || !symbol.trim()) { setError('Name and symbol required'); return; }
 
     const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
-    const web3 = inst.web3 || inst;
-    if (!(web3 as Record<string, unknown>)?.deployContract) { setError('Wallet does not support deployment. Use OP_WALLET.'); return; }
+    const web3 = (inst.web3 ?? inst) as Record<string, unknown>;
+    if (web3.deployContract == null) { setError('Wallet does not support deployment. Use OP_WALLET.'); return; }
 
     setDeploying(true); setError('');
     try {

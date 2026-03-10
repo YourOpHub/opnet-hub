@@ -22,11 +22,9 @@ import {
   SPLITTER_DUMMY_ABI,
 } from '../abis';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AbiEntry = { name: string; type?: string; inputs?: any[]; outputs?: any[]; constant?: boolean; [k: string]: unknown };
+type AbiEntry = { name: string; type?: string; inputs?: unknown[]; outputs?: unknown[]; constant?: boolean; [k: string]: unknown };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function asEntries(abi: any): AbiEntry[] { return abi as AbiEntry[]; }
+function asEntries(abi: unknown): AbiEntry[] { return abi as AbiEntry[]; }
 
 // ---- Helper to check ABI structure ----
 function expectValidAbi(abi: unknown, expectedNames: string[]) {

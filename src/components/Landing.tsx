@@ -83,7 +83,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   useEffect(() => {
     let c = false;
     const load = async (): Promise<void> => {
-      try { const p = await fetchBtcPrice(); if (!c && p) { setBtc(p.usd); setBtcChange(p.usd_24h_change); } } catch (e) { logger.warn('[Landing] BTC price fetch failed:', e); }
+      try { const p = await fetchBtcPrice(); if (!c && p != null) { setBtc(p.usd); setBtcChange(p.usd_24h_change); } } catch (e) { logger.warn('[Landing] BTC price fetch failed:', e); }
       try { const b = await opnet.getBlockHeight(); if (!c && b) setBlock(b); } catch (e) { logger.warn('[Landing] Block height fetch failed:', e); }
       try {
         const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');

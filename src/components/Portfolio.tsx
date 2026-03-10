@@ -106,7 +106,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
         const poolContract = getContract<IPoolLPContract>(POOL_ADDRESS, POOL_LP_ABI, provider, NETWORK, senderAddress);
         const res = await poolContract.liquidityOf(senderAddress) as CallResult;
         if (cancelled) return;
-        if (!res.revert && res.properties) {
+        if (!res.revert && res.properties != null) {
           const props = res.properties as Record<string, unknown>;
           const a = Number(props.amountA ?? 0n) / 1e8;
           const b = Number(props.amountB ?? 0n) / 1e8;
@@ -165,7 +165,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
 
     // Fetch OP-20 token balances via opnet SDK (getContract + balanceOf)
     if (senderAddress) {
-      Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
+      (Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).forEach(([sym, tok]) => {
         setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
         void (async () => {
           try {

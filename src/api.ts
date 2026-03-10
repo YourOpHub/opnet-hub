@@ -5,14 +5,14 @@
 
 import { logger } from './logger';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 let apiFailed = false;
 let apiFailCount = 0;
 const MAX_FAIL = 2;
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T | null> {
-  if (!API_BASE || apiFailed) return null;
+  if (API_BASE === '' || apiFailed) return null;
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...opts,

@@ -120,8 +120,8 @@ const LaunchpadTokenList: React.FC<LaunchpadTokenListProps> = ({
       if ((tsR as CallResult).revert || (msR as CallResult).revert) throw new Error('Not a valid OP20 token');
       const tsP = (tsR as CallResult).properties as Record<string, unknown>;
       const msP = (msR as CallResult).properties as Record<string, unknown>;
-      const total = Number(BigInt(String(tsP?.supply || 0))) / 1e8;
-      const max = Number(BigInt(String(msP?.supply || 0))) / 1e8;
+      const total = Number(BigInt(String(tsP?.supply ?? 0))) / 1e8;
+      const max = Number(BigInt(String(msP?.supply ?? 0))) / 1e8;
       const half = max / 2;
       const minted = total > half ? total - half : 0;
 

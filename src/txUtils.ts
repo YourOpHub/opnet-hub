@@ -128,7 +128,7 @@ export async function ensureAllowance(
     const callRes = allowanceRes as CallResult;
     if (!callRes.revert) {
       const props = callRes.properties as Record<string, unknown>;
-      const cur = props?.remaining ? BigInt(String(props.remaining)) : 0n;
+      const cur = props?.remaining != null ? BigInt(String(props.remaining)) : 0n;
       if (cur >= amount) {
         approvedThisSession.add(cacheKey);
         setStep('');

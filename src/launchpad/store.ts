@@ -41,8 +41,8 @@ export function loadTokens(): LaunchToken[] {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
-      const data = JSON.parse(raw);
-      if (data.version === STORE_VERSION) return data.tokens as LaunchToken[];
+      const data = JSON.parse(raw) as { version?: number; tokens?: LaunchToken[] };
+      if (data.version === STORE_VERSION) return (data.tokens ?? []) as LaunchToken[];
     }
   } catch (e) { logger.warn('[launchpad/store] Failed to parse tokens from localStorage:', e); }
   // First load or version mismatch — seed

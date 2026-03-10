@@ -597,7 +597,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
     const myTakenFbToBtc = orders.find(o =>
       o.direction === SwapDirection.FB_TO_BTC &&
       o.status === OrderStatus.Taken &&
-      mldsaHex && o.creator.toLowerCase() === mldsaHex,
+      mldsaHex !== '' && o.creator.toLowerCase() === mldsaHex,
     );
     if (myTakenFbToBtc) {
       toast(`Auto-sending FB for order #${myTakenFbToBtc.id}...`, 'info');

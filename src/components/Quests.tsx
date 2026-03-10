@@ -30,7 +30,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
     const [quests, setQuests] = useState<Quest[]>(() => {
         const saved = localStorage.getItem('hub_quest_state');
         const init = makeQuests();
-        if (saved) { try { const ids: string[] = JSON.parse(saved); return init.map(q => ({ ...q, done: ids.includes(q.id) })) } catch (e) { logger.warn('[Quests] Failed to parse quest state from localStorage:', e); return init } }
+        if (saved) { try { const ids = JSON.parse(saved) as string[]; return init.map(q => ({ ...q, done: ids.includes(q.id) })) } catch (e) { logger.warn('[Quests] Failed to parse quest state from localStorage:', e); return init } }
         return init;
     });
 

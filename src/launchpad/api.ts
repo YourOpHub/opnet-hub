@@ -7,14 +7,14 @@ import type { LaunchToken } from './types';
 import { logger } from '../logger';
 
 // Server URL — configurable via env or fallback to VPS
-const LP_API = import.meta.env.VITE_LP_API || '';
+const LP_API: string = (import.meta.env.VITE_LP_API as string | undefined) ?? '';
 
 let serverAvailable: boolean | null = null;
 let lastCheck = 0;
 const CHECK_INTERVAL = 30_000;
 
 async function checkServer(): Promise<boolean> {
-  if (!LP_API) return false;
+  if (LP_API === '') return false;
   if (serverAvailable !== null && Date.now() - lastCheck < CHECK_INTERVAL) return serverAvailable;
   try {
     const res = await fetch(`${LP_API}/health`, { signal: AbortSignal.timeout(3000) });
@@ -34,8 +34,8 @@ async function lpApi<T>(path: string, opts?: RequestInit): Promise<T | null> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) {
-    const err = await res.json().catch((e) => { logger.warn('[LaunchpadAPI] Error response parse failed:', e); return {}; });
-    throw new Error((err as {error?: string}).error || `HTTP ${res.status}`);
+    const err = await res.json().catch((e: unknown) => { logger.warn('[LaunchpadAPI] Error response parse failed:', e); return {}; }) as {error?: string};
+    throw new Error(err.error ?? `HTTP ${res.status}`);
   }
   return await res.json() as T;
 }

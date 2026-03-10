@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { logger } from '../logger';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getBlockUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getBlockUrl, type ContractTokenInfo } from '../contracts';
 
 /* ═══════════════════════════════════════════════════════════════
    News Feed — Live on-chain activity + curated social posts
@@ -144,7 +144,7 @@ function LiveFeed(): React.ReactElement {
                                 items.push({
                                     id: `block-txs-${i}`, type: 'block',
                                     title: `Block #${i.toLocaleString()} \u2014 ${txCount} transaction${txCount > 1 ? 's' : ''}`,
-                                    detail: block.hash ? `Hash: ${String(block.hash).slice(0, 16)}...` : '',
+                                    detail: (block.hash as string | undefined) != null ? `Hash: ${String(block.hash).slice(0, 16)}...` : '',
                                     time: now - (height - i) * 30000, // ~30s per block
                                     color: 'var(--c)', icon: '\u{1F4E6}',
                                     link: getBlockUrl(i),
@@ -177,7 +177,7 @@ function LiveFeed(): React.ReactElement {
             } catch (e) { logger.warn('[NewsFeed] Pool reserves fetch failed:', e); }
 
             // Token supply data
-            for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
+            for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]) {
                 try {
                     const supply = await opnet.getTokenTotalSupply(tok.address);
                     if (supply > 0n) {
@@ -224,7 +224,7 @@ function LiveFeed(): React.ReactElement {
                 const epoch = await opnet.getLatestEpoch();
                 if (epoch && typeof epoch === 'object') {
                     const epochNum = (epoch as Record<string, unknown>).epochNumber ?? (epoch as Record<string, unknown>).number;
-                    if (epochNum) {
+                    if (epochNum != null) {
                         items.push({
                             id: `epoch-${now}`, type: 'epoch',
                             title: `Epoch #${epochNum} active`,

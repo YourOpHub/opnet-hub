@@ -79,7 +79,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       try {
         const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
         const res = await withRetry(() => poolContract.liquidityOf(senderAddr)) as CallResult;
-        if (!res.revert && res.properties) {
+        if (!res.revert && res.properties != null) {
           const props = res.properties as Record<string, unknown>;
           const a = Number(props.amountA ?? 0n) / 1e8;
           const b = Number(props.amountB ?? 0n) / 1e8;

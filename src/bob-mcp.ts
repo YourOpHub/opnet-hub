@@ -8,7 +8,7 @@
 import { logger } from './logger';
 
 const MCP_URL = '/api/bob';
-const VPS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/bob` : '';
+const VPS_URL = (import.meta.env.VITE_API_URL as string | undefined) != null ? `${import.meta.env.VITE_API_URL as string}/api/bob` : '';
 const DIRECT_URL = 'https://ai.opnet.org/mcp';
 
 let sessionId: string | null = null;
@@ -54,7 +54,7 @@ async function mcpCall(method: string, params?: Record<string, unknown>, id?: nu
 
   const text = await res.text();
   const parsed = parseSSE(text);
-  if (!parsed) throw new Error('Failed to parse MCP response');
+  if (parsed == null) throw new Error('Failed to parse MCP response');
   return parsed;
 }
 

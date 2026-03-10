@@ -28,7 +28,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
             const b = await opnet.getBlockByNumber(i, false).catch((e) => { logger.warn('[BlockExplorer] Block fetch error:', e); return null; });
             if (b) {
               const txs = Array.isArray(b.transactions) ? (b.transactions as unknown[]).length : 0;
-              blocks.push({ num: i, txCount: txs, hash: String(b.hash || b.blockHash || '') });
+              blocks.push({ num: i, txCount: txs, hash: String((b.hash as string | undefined) ?? (b.blockHash as string | undefined) ?? '') });
             }
           }
           if (!ac.signal.aborted) setRecentBlocks(blocks);

@@ -89,9 +89,9 @@ const GasTool = React.memo(function GasTool() {
             <div className="gas-pending">
               <div style={{ fontSize: '.65rem', color: 'var(--y)', fontWeight: 700, marginBottom: 6 }}>Pending Transactions ({pendingTxs.length})</div>
               {pendingTxs.map((tx, i) => {
-                const hash = String(tx.hash || tx.id || tx.transactionId || `tx-${i}`);
-                const from = String(tx.from || tx.sender || '').slice(0, 16);
-                const to = String(tx.to || tx.recipient || '').slice(0, 16);
+                const hash = String(tx.hash ?? tx.id ?? tx.transactionId ?? `tx-${i}`);
+                const from = String(tx.from ?? tx.sender ?? '').slice(0, 16);
+                const to = String(tx.to ?? tx.recipient ?? '').slice(0, 16);
                 return (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.58rem' }}>
                     <span style={{ ...monoSm, color: 'var(--c)', fontSize: '.55rem' }}>{hash.slice(0, 14)}...</span>

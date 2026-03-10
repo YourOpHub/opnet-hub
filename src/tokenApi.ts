@@ -5,7 +5,7 @@
 
 import { logger } from './logger';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 export interface IndexedToken {
     address: string;
@@ -35,7 +35,7 @@ export async function fetchAllTokens(): Promise<IndexedToken[]> {
             signal: AbortSignal.timeout(8000),
         });
         if (!res.ok) return [];
-        return await res.json();
+        return await res.json() as IndexedToken[];
     } catch (e) {
         logger.warn('[tokenApi] Failed to fetch all tokens:', e);
         return [];
@@ -51,7 +51,7 @@ export async function fetchHolderBalances(pubkey: string, tweakedPubkey?: string
             signal: AbortSignal.timeout(15000),
         });
         if (!res.ok) return [];
-        return await res.json();
+        return await res.json() as HolderBalance[];
     } catch (e) {
         logger.warn('[tokenApi] Failed to fetch holder balances:', e);
         return [];
@@ -78,7 +78,7 @@ export async function fetchMotoswapPools(): Promise<MotoswapPool[]> {
             signal: AbortSignal.timeout(8000),
         });
         if (!res.ok) return [];
-        return await res.json();
+        return await res.json() as MotoswapPool[];
     } catch (e) {
         logger.warn('[tokenApi] Failed to fetch Motoswap pools:', e);
         return [];

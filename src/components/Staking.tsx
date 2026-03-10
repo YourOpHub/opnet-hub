@@ -96,19 +96,19 @@ const Staking: React.FC = () => {
         if (cancelled) return;
         if (stakedRes.status === 'fulfilled' && !(stakedRes.value as CallResult).revert) {
           const decoded = (stakedRes.value as CallResult).properties as Record<string, unknown>;
-          if (decoded?.amount) setUserStaked(BigInt(String(decoded.amount)));
+          if (decoded?.amount != null) setUserStaked(BigInt(String(decoded.amount)));
         }
         if (rewardRes.status === 'fulfilled' && !(rewardRes.value as CallResult).revert) {
           const decoded = (rewardRes.value as CallResult).properties as Record<string, unknown>;
-          if (decoded?.amount) setUserRewards(BigInt(String(decoded.amount)));
+          if (decoded?.amount != null) setUserRewards(BigInt(String(decoded.amount)));
         }
         if (totalRes.status === 'fulfilled' && !(totalRes.value as CallResult).revert) {
           const decoded = (totalRes.value as CallResult).properties as Record<string, unknown>;
-          if (decoded?.amount) setTotalStakedOnChain(BigInt(String(decoded.amount)));
+          if (decoded?.amount != null) setTotalStakedOnChain(BigInt(String(decoded.amount)));
         }
         if (rateRes.status === 'fulfilled' && !(rateRes.value as CallResult).revert) {
           const decoded = (rateRes.value as CallResult).properties as Record<string, unknown>;
-          if (decoded?.rate) setRewardRate(BigInt(String(decoded.rate)));
+          if (decoded?.rate != null) setRewardRate(BigInt(String(decoded.rate)));
         }
       } catch (e) { logger.warn('[Staking] Failed to fetch staking stats:', e); }
     };

@@ -10,7 +10,7 @@ import { networks } from '@btc-vision/bitcoin';
 
 export type OPNetEnv = 'testnet' | 'mainnet' | 'regtest';
 
-const ENV_NETWORK = (import.meta.env.VITE_NETWORK || 'testnet') as OPNetEnv;
+const ENV_NETWORK = ((import.meta.env.VITE_NETWORK as string | undefined) ?? 'testnet') as OPNetEnv;
 
 const NETWORK_MAP = {
   testnet: networks.opnetTestnet,
@@ -32,5 +32,5 @@ const OPSCAN_NETWORK_MAP: Record<OPNetEnv, string> = {
 
 export const CURRENT_ENV: OPNetEnv = ENV_NETWORK;
 export const NETWORK = NETWORK_MAP[ENV_NETWORK];
-export const RPC_URL = import.meta.env.VITE_RPC_URL || RPC_MAP[ENV_NETWORK];
+export const RPC_URL: string = (import.meta.env.VITE_RPC_URL as string | undefined) ?? RPC_MAP[ENV_NETWORK];
 export const OPSCAN_NETWORK = OPSCAN_NETWORK_MAP[ENV_NETWORK];

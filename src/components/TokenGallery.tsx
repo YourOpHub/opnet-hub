@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import type { Address } from '@btc-vision/transaction';
 import {
   JSONRpcProvider, getContract, BitcoinUtils,
   type CallResult, type BaseContractProperties,
-  type TransactionParameters,
 } from 'opnet';
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
@@ -30,7 +28,7 @@ async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promi
   const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
   const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
   const priorityFeeSats = gas.baseGas / gasPerSat;
-  const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
+  const priorityFee: bigint = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
   // Frontend: signer/mldsaSigner null — wallet extension injects real signers
   return {
     signer: null,
@@ -68,7 +66,7 @@ const genLogo = (sym: string): string => {
 
 const TokenGallery: React.FC = () => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
-  const { trackOp, completeOp, failOp } = useOps();
+  const { trackOp, completeOp } = useOps();
   const [tokens, setTokens] = useState<DeployedToken[]>([]);
   const [chainInfo, setChainInfo] = useState<Record<string, { totalSupply: bigint; confirmed: boolean }>>({});
   const [mintAddr, setMintAddr] = useState<string | null>(null);
@@ -203,7 +201,7 @@ const TokenGallery: React.FC = () => {
   }, [tokens]);
 
   // Featured tokens (our pre-deployed MINE and VIBE)
-  const featured = Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]) => ({
+  const featured = Object.entries(DEPLOYED_CONTRACTS).map(([_sym, tok]) => ({
     address: tok.address,
     symbol: tok.symbol,
     name: tok.name,

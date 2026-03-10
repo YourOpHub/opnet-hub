@@ -4,7 +4,7 @@ import { getContract, type CallResult, type BaseContractProperties, type Transac
 import { MINTABLE_ABI, SPLITTER_DUMMY_ABI } from '../abis';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
-import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, OPSCAN_API_BASE, OPSCAN_EXPLORER_URL, getContractOpscanUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, OPSCAN_API_BASE, getContractOpscanUrl } from '../contracts';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import { buildTxParams, formatTxError, waitForNextBlock } from '../txUtils';
@@ -732,7 +732,7 @@ function UTXOSplitter() {
   const { trackOp, completeOp, failOp } = useOps();
 
   const [utxos, setUtxos] = useState<Array<{ transactionId: string; outputIndex: number; value: string | number }>>([]);
-  const [balance, setBalance] = useState<bigint>(0n);
+  const [, setBalance] = useState<bigint>(0n);
   const [loading, setLoading] = useState(false);
   const [splitCount, setSplitCount] = useState(5);
   const [splitting, setSplitting] = useState(false);

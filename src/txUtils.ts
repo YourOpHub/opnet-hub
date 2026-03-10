@@ -9,7 +9,6 @@
  */
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult, type TransactionParameters } from 'opnet';
 import { Address } from '@btc-vision/transaction';
-import type { Network } from '@btc-vision/bitcoin';
 import { NETWORK, CURRENT_ENV } from './config';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 

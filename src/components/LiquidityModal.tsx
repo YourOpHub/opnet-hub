@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { Address } from '@btc-vision/transaction';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
-  type IOP20Contract, type CallResult, type BaseContractProperties,
+  getContract, BitcoinUtils,
+  type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { POOL_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
-import * as opnetRpc from '../opnet';
 import { addTxRecord } from '../txHistory';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
@@ -40,7 +38,7 @@ type PoolType = 'simplepool' | 'nativeswap' | 'custom';
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, completeOp, failOp } = useOps();
+  const { trackOp, completeOp } = useOps();
 
   const [poolType, setPoolType] = useState<PoolType>('simplepool');
   const [tab, setTab] = useState<'add' | 'remove'>('add');
@@ -49,7 +47,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState('');
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
+  const [, setAllTokens] = useState<IndexedToken[]>([]);
 
   const [lpMine, setLpMine] = useState(0);
   const [lpVibe, setLpVibe] = useState(0);

@@ -21,20 +21,17 @@ import {
 } from '../contracts';
 import { SUPPORTED_CHAINS, suggestedExpiryBlocks } from '../crosschain/chains';
 import {
-  generateHTLCPair, verifyPreimage, truncateHex, formatBlockCountdown,
+  generateHTLCPair, verifyPreimage,
   hexToBigInt,
 } from '../crosschain/htlc';
 import {
   type FractalSwapOrder, OrderStatus, SwapDirection,
-  MAKER_STEPS_BTC_TO_FB, TAKER_STEPS_BTC_TO_FB,
-  MAKER_STEPS_FB_TO_BTC, TAKER_STEPS_FB_TO_BTC,
 } from '../crosschain/types';
-import TxStepIndicator from './TxStepIndicator';
 import { useToast } from './Toast';
 import {
   type UnisatWalletState,
   isUnisatInstalled, connectUnisat, disconnectUnisat,
-  sendFractalBTC, getFractalTxUrl, getFractalAddressUrl,
+  sendFractalBTC,
 } from '../wallets/unisat';
 import CrossChainOrderForm from './crosschain/CrossChainOrderForm';
 import { MyOrderRow, AvailableOrderRow, MY_COLS, AV_COLS } from './crosschain/CrossChainOrderRow';
@@ -110,16 +107,6 @@ function resolveToken(tokenHex: string): { symbol: string; icon: string; decimal
   return null;
 }
 
-/** Format token amount with decimals */
-function formatTokenAmount(amount: bigint, decimals: number): string {
-  const div = 10 ** decimals;
-  const num = Number(amount) / div;
-  if (num >= 1_000_000) return (num / 1_000_000).toFixed(2) + 'M';
-  if (num >= 1_000) return (num / 1_000).toFixed(2) + 'K';
-  return num.toLocaleString(undefined, { maximumFractionDigits: 4 });
-}
-
-const ZERO_HEX = '0'.repeat(64);
 const fractalChain = SUPPORTED_CHAINS[0]; // Fractal Bitcoin
 
 
@@ -155,15 +142,6 @@ function getP2OPAddress(mldsaHex: string): string {
   return Address.wrap(bytes).p2op(NETWORK);
 }
 
-/** Format sats as clean number (no unit) — for table cells */
-function fmtBtc(sats: bigint): string {
-  const btc = Number(sats) / 1e8;
-  let s: string;
-  if (btc >= 1) s = btc.toFixed(4);
-  else if (btc >= 0.01) s = btc.toFixed(6);
-  else s = btc.toFixed(8);
-  return s.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-}
 
 /* ═══════════════════════════════════════════════════════════════
    FRACTALSWAP — Native BTC ↔ Fractal BTC Exchange
@@ -247,7 +225,7 @@ const CrossChainMarketplace: React.FC = () => {
   }, []);
 
   // Bridge mode toggle
-  const [mode, setMode] = useState<BridgeMode>('fractalswap');
+  const [mode] = useState<BridgeMode>('fractalswap');
 
   // Token Bridge state
   const [escrowOrders, setEscrowOrders] = useState<TokenEscrowOrder[]>([]);
@@ -361,8 +339,6 @@ const CrossChainMarketplace: React.FC = () => {
     (o.status === OrderStatus.Open || o.status === OrderStatus.Taken) &&
     (o.expiry <= 0 || o.expiry > currentBlock),
   );
-  const btcToFbOrders = activeOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB);
-  const fbToBtcOrders = activeOrders.filter(o => o.direction === SwapDirection.FB_TO_BTC);
   const isMyOrderFn = (o: FractalSwapOrder) => !!(mldsaHex && o.creator.toLowerCase() === mldsaHex);
   const isTakerFn = (o: FractalSwapOrder) => !!(mldsaHex && o.taker.toLowerCase() === mldsaHex);
   const myOrders = activeOrders.filter(o => isMyOrderFn(o) || isTakerFn(o));
@@ -384,7 +360,7 @@ const CrossChainMarketplace: React.FC = () => {
 
   // Server-synced rates (visible to all users)
   const API_URL = import.meta.env.VITE_API_URL || '';
-  const [serverRates, setServerRates] = useState<Record<string, { send_sats: string; receive_sats: string; send_unit: string; receive_unit: string; rate: number }>>({});
+  const [, setServerRates] = useState<Record<string, { send_sats: string; receive_sats: string; send_unit: string; receive_unit: string; rate: number }>>({});
 
   // Fetch rates from server on mount
   useEffect(() => {
@@ -416,24 +392,6 @@ const CrossChainMarketplace: React.FC = () => {
       }).catch(() => {});
     }
   }, [API_URL]);
-
-  // Get rate: server first, then localStorage fallback
-  const getRate = useCallback((orderId: string): { rate: number; receiveSats: bigint } | null => {
-    // Server rates (available to all users)
-    const sr = serverRates[orderId];
-    if (sr) return { rate: sr.rate, receiveSats: BigInt(sr.receive_sats || '0') };
-    // localStorage fallback (own orders)
-    try {
-      const stored = JSON.parse(localStorage.getItem('fractalswap_rates') || '{}');
-      const v = stored[orderId];
-      if (!v) return null;
-      if (typeof v === 'string') {
-        const m = v.match(/= ([\d.]+)/);
-        return m ? { rate: parseFloat(m[1]), receiveSats: 0n } : null;
-      }
-      return { rate: v.r, receiveSats: BigInt(v.rx || '0') };
-    } catch (e) { console.warn('[CrossChain] Failed to look up saved rate:', e); return null; }
-  }, [serverRates]);
 
   /** Contract P2OP script (for BTC locking) */
   const contractMldsaHex = CROSSCHAIN_PUBKEY.replace('0x', '');
@@ -745,45 +703,6 @@ const CrossChainMarketplace: React.FC = () => {
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(null); }
   }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, getMyP2OPScript]);
-
-  // ── Send on Fractal (via UniSat) — sends FB to counterparty's address ──
-  const handleSendFractal = useCallback(async (orderId: string) => {
-    if (!unisat.connected) { handleConnectUnisat(); return; }
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return;
-
-    setActioning(orderId); setActionStep('Sending Fractal BTC via UniSat...');
-    try {
-      // Determine target address and amount based on direction
-      // BTC_TO_FB: taker sends FB (wantAmount) to maker's address (makerAddr)
-      // FB_TO_BTC: maker sends FB (wantAmount) to taker's address (takerAddr)
-      const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
-      const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
-      const fbAmountSats = order.wantAmount;
-
-      // Decode target Fractal address from u256 hex
-      const addrBytes = new Uint8Array(32);
-      for (let i = 0; i < 32; i++) addrBytes[i] = parseInt(targetHex.slice(i * 2, i * 2 + 2), 16);
-      let end = addrBytes.indexOf(0);
-      if (end === -1) end = 32;
-      const targetFractalAddr = new TextDecoder().decode(addrBytes.slice(0, end));
-
-      const validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
-      if (!targetFractalAddr.startsWith(validPfx)) {
-        throw new Error(`Invalid Fractal address for ${CURRENT_ENV} (expected ${validPfx}): ${targetFractalAddr}`);
-      }
-
-      const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
-      setActionStep('');
-      setMsg(`Fractal BTC sent! TX: ${txid.slice(0, 16)}... — Now call Complete to claim locked BTC.`);
-      setTimeout(() => setMsg(''), 12000);
-
-      window.open(getFractalTxUrl(txid, CURRENT_ENV !== 'mainnet'), '_blank');
-    } catch (e) {
-      setActionStep(e instanceof Error ? e.message : 'Fractal send failed');
-      setTimeout(() => setActionStep(''), 5000);
-    } finally { setActioning(null); }
-  }, [unisat.connected, orders, handleConnectUnisat]);
 
   // ── AUTO-SWAP: Take + Send FB + Complete in one flow ──
   // For BTC_TO_FB taker: takeOrder → waitBlock → sendFB → completeOrder

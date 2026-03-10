@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
-  type IOP20Contract, type CallResult, type BaseContractProperties,
+  getContract, BitcoinUtils,
+  type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { STAKING_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { Address } from '@btc-vision/transaction';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
   DEPLOYED_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
@@ -35,7 +34,7 @@ const STAKING_TOKEN = DEPLOYED_CONTRACTS.MINE;
 const Staking: React.FC = () => {
   const { walletAddress, walletInstance, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, completeOp, failOp } = useOps();
+  const { trackOp, completeOp } = useOps();
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');

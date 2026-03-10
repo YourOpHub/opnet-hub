@@ -3,8 +3,8 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Transaction } from '@btc-vision/bitcoin';
 import { BinaryWriter } from '@btc-vision/transaction';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
-  type CallResult, type BaseContractProperties, type IOP20Contract,
+  getContract, BitcoinUtils,
+  type CallResult, type IOP20Contract,
   type TransactionParameters,
 } from 'opnet';
 import { LAUNCHPAD_ABI } from '../abis';
@@ -322,7 +322,7 @@ const DeployModal: React.FC<{
 const Launchpad: React.FC = () => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, completeOp, failOp } = useOps();
+  const { trackOp, completeOp } = useOps();
 
   const [tokens, setTokens] = useState<LaunchToken[]>(() => loadTokens());
   const [selected, setSelected] = useState<LaunchToken | null>(null);

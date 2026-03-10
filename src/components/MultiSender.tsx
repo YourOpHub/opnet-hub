@@ -109,7 +109,7 @@ function formatAmount(amount: string, decimals: number): bigint {
 const MultiSender: React.FC = () => {
   const { walletAddress, openConnectModal, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, completeOp, failOp } = useOps();
+  const { trackOp, completeOp } = useOps();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Wizard state
@@ -128,7 +128,7 @@ const MultiSender: React.FC = () => {
   // Step 4: Sending
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState<SendResult[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [_currentIndex, setCurrentIndex] = useState(0);
   const [sendComplete, setSendComplete] = useState(false);
 
   const connected = !!walletAddress;

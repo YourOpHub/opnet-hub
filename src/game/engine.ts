@@ -73,9 +73,6 @@ export function createParticle(
 }
 
 export function createInitialState(level: number = 1): GameState {
-    const baseParticles = 25;
-    const particleCount = baseParticles + (level - 1) * 5;
-
     return {
         particles: [],
         score: 0,
@@ -354,7 +351,7 @@ export function drawBackground(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    time: number
+    _time: number
 ) {
     // Dark background
     ctx.fillStyle = '#060614';

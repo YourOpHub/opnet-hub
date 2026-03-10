@@ -2,12 +2,8 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { BinaryWriter } from '@btc-vision/transaction';
 import { Transaction } from '@btc-vision/bitcoin';
-import {
-  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult,
-} from 'opnet';
 import { getProvider } from '../contractCache';
-import { NETWORK, CURRENT_ENV } from '../config';
+import { CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { getTxUrl } from '../contracts';
 

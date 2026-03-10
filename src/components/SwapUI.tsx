@@ -1,621 +1,68 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useWalletConnect } from '@btc-vision/walletconnect';
-import { Address, BinaryWriter } from '@btc-vision/transaction';
-import { Transaction } from '@btc-vision/bitcoin';
-import {
-  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
-  MOTOSWAP_ROUTER_ABI,
-  type IOP20Contract, type IMotoswapRouterContract,
-  type CallResult, type BaseContractProperties,
-} from 'opnet';
-import { POOL_ABI, POOL_CREATE_ABI, MINTABLE_ABI } from '../abis';
-import { getProvider } from '../contractCache';
-import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
-import * as opnetRpc from '../opnet';
-import { fetchBtcPrice } from '../btc-price';
-import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
-import {
-  DEPLOYED_CONTRACTS,
-  POOL_ADDRESS, POOL_PUBKEY,
-  MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_PUBKEY,
-  getTxUrl, getContractOpscanUrl,
-} from '../contracts';
-import { fetchAllTokens, fetchHolderBalances, fetchMotoswapPools, type IndexedToken, type MotoswapPool } from '../tokenApi';
+import React from 'react';
+import { CURRENT_ENV } from '../config';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl } from '../contracts';
 import LiquidityModal from './LiquidityModal';
-import { useOps } from '../contexts/OpsContext';
-
-type SwapMainTab = 'swap' | 'pools';
-
-interface UserPool {
-  address: string;
-  tokenA: string;
-  tokenB: string;
-  symbolA: string;
-  symbolB: string;
-  deployedAt: number;
-  deployer: string;
-}
-
-
-const MINT_AMOUNT = 1000; // Fixed 1000 tokens per mint
-
-interface IPoolContract extends BaseContractProperties {
-  swap(tokenIn: Address, amountIn: bigint, minAmountOut: bigint): Promise<CallResult>;
-  getReserves(): Promise<CallResult>;
-  sync(): Promise<CallResult>;
-}
-
-interface IMintableContract extends BaseContractProperties {
-  publicMint(amount: bigint): Promise<CallResult>;
-}
-
-/** Initial pool reserves (will be read from chain once pool is deployed) */
-const INIT_RESERVE_A = 5_000_000;  // MINE
-const INIT_RESERVE_B = 25_000_000; // VIBE
-
-function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): { out: number; impact: number } {
-  const fee = amountIn * 0.003;
-  const inAfterFee = amountIn - fee;
-  const out = (reserveOut * inAfterFee) / (reserveIn + inAfterFee);
-  const spotPrice = reserveOut / reserveIn;
-  const effectivePrice = out / amountIn;
-  const impact = Math.abs(1 - effectivePrice / spotPrice) * 100;
-  return { out, impact };
-}
-
-interface Token { symbol: string; name: string; icon: string; decimals: number; address: string; pubkey: string; }
-
-const BASE_TOKENS: Token[] = [
-  { symbol: 'MINE', name: DEPLOYED_CONTRACTS.MINE.name, icon: DEPLOYED_CONTRACTS.MINE.icon, decimals: 8, address: DEPLOYED_CONTRACTS.MINE.address, pubkey: DEPLOYED_CONTRACTS.MINE.pubkey },
-  { symbol: 'VIBE', name: DEPLOYED_CONTRACTS.VIBE.name, icon: DEPLOYED_CONTRACTS.VIBE.icon, decimals: 8, address: DEPLOYED_CONTRACTS.VIBE.address, pubkey: DEPLOYED_CONTRACTS.VIBE.pubkey },
-];
+import {
+  useSwap,
+  type Token,
+  type UserPool,
+  getTxUrl,
+  formatTimeAgo,
+} from '../hooks/useSwap';
 
 const TokenIcon: React.FC<{ token: Token; size?: number }> = ({ token, size = 24 }) =>
   <span style={{ fontSize: size * 0.7 }}>{token.icon}</span>;
 
-type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
+const selectStyle: React.CSSProperties = {
+  background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: '14px',
+  color: 'var(--w)', padding: '8px 12px', fontSize: '.82rem', fontWeight: 700,
+  fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none',
+  flexShrink: 0, minWidth: 120, maxWidth: 140, whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis', overflow: 'hidden', appearance: 'none' as const,
+  WebkitAppearance: 'none' as const,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b95a9' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center',
+  paddingRight: '28px',
+};
 
+const iStyle: React.CSSProperties = {
+  width: '100%', padding: '10px 12px', borderRadius: 12,
+  background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
+  fontSize: '.78rem', fontFamily: 'var(--fm)', outline: 'none', boxSizing: 'border-box' as const,
+};
 
 const SwapUI: React.FC = () => {
-  const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
-  const { trackOp, completeOp, failOp } = useOps();
-
-  // Dynamic token list: base + indexer-discovered
-  const [extraTokens, setExtraTokens] = useState<Token[]>([]);
-  const TOKENS = useMemo(() => {
-    const known = new Set(BASE_TOKENS.map(t => t.address));
-    return [...BASE_TOKENS, ...extraTokens.filter(t => !known.has(t.address))];
-  }, [extraTokens]);
-
-  // Tokens user actually holds (for pool creation picker)
-  const [heldTokens, setHeldTokens] = useState<Token[]>([]);
-
-  // Motoswap pools discovered by backend
-  const [motoPools, setMotoPools] = useState<MotoswapPool[]>([]);
-
-  // Fetch Motoswap pools
-  useEffect(() => {
-    fetchMotoswapPools().then(pools => {
-      if (pools.length > 0) setMotoPools(pools);
-    }).catch(() => {});
-    const iv = setInterval(() => {
-      fetchMotoswapPools().then(pools => {
-        if (pools.length > 0) setMotoPools(pools);
-      }).catch(() => {});
-    }, 60_000);
-    return () => clearInterval(iv);
-  }, []);
-
-  // Fetch tokens from indexer on mount
-  useEffect(() => {
-    fetchAllTokens().then(indexed => {
-      const extra: Token[] = indexed
-        .filter(t => !BASE_TOKENS.some(bt => bt.address === t.address))
-        .map(t => ({
-          symbol: t.symbol,
-          name: t.name,
-          icon: '',
-          decimals: t.decimals,
-          address: t.address,
-          pubkey: t.pubkey,
-        }));
-      if (extra.length > 0) setExtraTokens(extra);
-    }).catch(() => {});
-  }, []);
-
-  // Load tokens user holds (for pool creation picker)
-  useEffect(() => {
-    if (!walletAddress || !hashedMLDSAKey) { setHeldTokens([]); return; }
-    const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
-    const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
-    fetchHolderBalances(mldsa, tweaked).then(results => {
-      const held: Token[] = results.map(r => ({
-        symbol: r.symbol, name: r.name, icon: '',
-        decimals: r.decimals, address: r.token, pubkey: r.pubkey,
-      }));
-      // Base tokens with balance first, then extra held tokens
-      const heldAddrs = new Set(held.map(t => t.pubkey));
-      const base = BASE_TOKENS.filter(bt => heldAddrs.has(bt.pubkey));
-      const extra = held.filter(t => !BASE_TOKENS.some(bt => bt.pubkey === t.pubkey));
-      setHeldTokens([...base, ...extra]);
-    }).catch(() => {});
-  }, [walletAddress, hashedMLDSAKey, publicKey]);
-
-  const [fromIdx, setFromIdx] = useState(0);
-  const [toIdx, setToIdx] = useState(1);
-  const [fromAmt, setFromAmt] = useState('');
-  const [slippage, setSlippage] = useState(0.5);
-  const [swapping, setSwapping] = useState(false);
-  const [swapStep, setSwapStep] = useState('');
-  const [swapResult, setSwapResult] = useState<SwapResultType | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [btcPrice, setBtcPrice] = useState(0);
-  const [balances, setBalances] = useState<Record<string, bigint>>({});
-  const [balLoading, setBalLoading] = useState(false);
-  const [balRefreshKey, setBalRefreshKey] = useState(0);
-  const [minting, setMinting] = useState<string | null>(null);
-  const [mintResult, setMintResult] = useState<{sym: string; ok: boolean; msg: string} | null>(null);
-  const [tokenSupplies, setTokenSupplies] = useState<Record<string, bigint>>({});
-  const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
-  const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
-  const [history, setHistory] = useState<TxRecord[]>([]);
-  const [mainTab, setMainTab] = useState<SwapMainTab>('swap');
-  const [userPools, setUserPools] = useState<UserPool[]>(() => {
-    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch (e) { console.warn('[SwapUI] Failed to parse user pools from localStorage:', e); return []; }
-  });
-  const [createPoolOpen, setCreatePoolOpen] = useState(false);
-  const [poolTokenA, setPoolTokenA] = useState('');
-  const [poolTokenB, setPoolTokenB] = useState('');
-  const [poolSymA, setPoolSymA] = useState('');
-  const [poolSymB, setPoolSymB] = useState('');
-  const [poolSeedA, setPoolSeedA] = useState('');
-  const [poolSeedB, setPoolSeedB] = useState('');
-  const [deployingPool, setDeployingPool] = useState(false);
-  const [poolDeployStep, setPoolDeployStep] = useState('');
-  const [poolDeployResult, setPoolDeployResult] = useState<{ ok: boolean; msg: string; address?: string } | null>(null);
-  const [showLiquidity, setShowLiquidity] = useState(false);
-  const [lpMineAmt, setLpMineAmt] = useState('');
-  const [lpVibeAmt, setLpVibeAmt] = useState('');
-  const [addingLP, setAddingLP] = useState(false);
-  const [lpStep, setLpStep] = useState('');
-  const [lpResult, setLpResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [lpUserMine, setLpUserMine] = useState(() => {
-    try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch (e) { console.warn('[SwapUI] Failed to parse LP MINE amount from localStorage:', e); return 0; }
-  });
-  const [lpUserVibe, setLpUserVibe] = useState(() => {
-    try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch (e) { console.warn('[SwapUI] Failed to parse LP VIBE amount from localStorage:', e); return 0; }
-  });
-
-  useEffect(() => {
-    if (walletAddress) setHistory(getTxHistory(walletAddress).filter(r => r.type === 'swap' || r.type === 'mint' || r.type === 'claim'));
-  }, [walletAddress, balRefreshKey]);
-
-  const poolReady = !!POOL_ADDRESS;
-
-  /** Fetch pool reserves from chain */
-  const fetchReserves = useCallback(async () => {
-    if (!POOL_ADDRESS) return;
-    try {
-      const res = await opnetRpc.callContract(POOL_ADDRESS, '06374bfc');
-      if (res) {
-        const hex = res.startsWith('0x') ? res.slice(2) : res;
-        if (hex.length >= 128) {
-          const r0 = Number(BigInt('0x' + hex.slice(0, 64))) / 1e8;
-          const r1 = Number(BigInt('0x' + hex.slice(64, 128))) / 1e8;
-          if (r0 > 0) setReserveA(r0);
-          if (r1 > 0) setReserveB(r1);
-        }
-      }
-    } catch (e) { console.warn('[SwapUI] Pool reserves fetch failed:', e); }
-  }, []);
-
-  useEffect(() => { fetchReserves(); }, [fetchReserves]);
-  useEffect(() => { fetchBtcPrice().then(p => { if (p.usd > 0) setBtcPrice(p.usd); }); }, []);
-
-  useEffect(() => {
-    const prevNet = opnetRpc.getNetwork();
-    opnetRpc.setNetwork(CURRENT_ENV);
-    Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
-      opnetRpc.getTokenTotalSupply(tok.address).then(supply => {
-        if (supply > 0n) setTokenSupplies(prev => ({ ...prev, [sym]: supply }));
-      }).catch(() => {});
-    });
-    return () => { opnetRpc.setNetwork(prevNet); };
-  }, []);
-
-  // Fetch balances
-  useEffect(() => {
-    if (!walletAddress || !hashedMLDSAKey) { setBalances({}); return; }
-    const prevNet = opnetRpc.getNetwork();
-    opnetRpc.setNetwork(CURRENT_ENV);
-    setBalLoading(true);
-    const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
-    const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
-    const jobs: Promise<void>[] = [];
-    for (const [sym, tok] of Object.entries(DEPLOYED_CONTRACTS)) {
-      jobs.push(
-        opnetRpc.getTokenBalance(tok.address, mldsa, tweaked)
-          .then(b => setBalances(prev => ({ ...prev, [sym]: b })))
-          .catch(() => {})
-      );
-    }
-    jobs.push(
-      opnetRpc.getBalance(walletAddress)
-        .then(b => setBalances(prev => ({ ...prev, BTC: b })))
-        .catch(() => {})
-    );
-    Promise.allSettled(jobs).finally(() => setBalLoading(false));
-    return () => { opnetRpc.setNetwork(prevNet); };
-  }, [walletAddress, hashedMLDSAKey, publicKey, balRefreshKey]);
-
-  // Build swappable tokens list: BASE_TOKENS + unique tokens from Motoswap pools
-  const SWAP_TOKENS = useMemo(() => {
-    const known = new Set(BASE_TOKENS.map(t => t.pubkey));
-    const extra: Token[] = [];
-    for (const p of motoPools) {
-      if (!known.has(p.token0_pubkey)) {
-        known.add(p.token0_pubkey);
-        extra.push({ symbol: p.token0_symbol, name: p.token0_symbol, icon: '', decimals: p.token0_decimals, address: p.token0_pubkey, pubkey: p.token0_pubkey });
-      }
-      if (!known.has(p.token1_pubkey)) {
-        known.add(p.token1_pubkey);
-        extra.push({ symbol: p.token1_symbol, name: p.token1_symbol, icon: '', decimals: p.token1_decimals, address: p.token1_pubkey, pubkey: p.token1_pubkey });
-      }
-    }
-    return [...BASE_TOKENS, ...extra];
-  }, [motoPools]);
-
-  const from = SWAP_TOKENS[fromIdx] || SWAP_TOKENS[0];
-  const to = SWAP_TOKENS[toIdx] || SWAP_TOKENS[1];
-  const fromVal = parseFloat(fromAmt) || 0;
-
-  // Find which pool handles this pair: SimplePool (MINE/VIBE) or Motoswap
-  const motoPool = useMemo(() => {
-    if (!from || !to) return null;
-    return motoPools.find(p =>
-      (p.token0_pubkey === from.pubkey && p.token1_pubkey === to.pubkey) ||
-      (p.token1_pubkey === from.pubkey && p.token0_pubkey === to.pubkey)
-    ) || null;
-  }, [from, to, motoPools]);
-
-  const isSimplePool = from && to && (
-    (from.symbol === 'MINE' && to.symbol === 'VIBE') ||
-    (from.symbol === 'VIBE' && to.symbol === 'MINE')
-  );
-
-  // Determine reserves based on direction
-  const isAToB = from?.symbol === 'MINE';
-  let rIn = 0, rOut = 0;
-  if (isSimplePool) {
-    rIn = isAToB ? reserveA : reserveB;
-    rOut = isAToB ? reserveB : reserveA;
-  } else if (motoPool) {
-    const isForward = from.pubkey === motoPool.token0_pubkey;
-    const mr0 = Number(BigInt(motoPool.reserve0)) / Math.pow(10, motoPool.token0_decimals);
-    const mr1 = Number(BigInt(motoPool.reserve1)) / Math.pow(10, motoPool.token1_decimals);
-    rIn = isForward ? mr0 : mr1;
-    rOut = isForward ? mr1 : mr0;
-  }
-  const hasPool = rIn > 0 && rOut > 0;
-  const quote = hasPool && fromVal > 0 ? getAmountOut(fromVal, rIn, rOut) : null;
-  const toVal = quote?.out ?? 0;
-  const priceImpact = quote?.impact ?? 0;
-  const rate = hasPool ? rOut / rIn : 0;
-  const fee = fromVal * 0.003;
-
-  const fromBal = balances[from.symbol];
-  const toBal = balances[to.symbol];
-  const fmtBal = (b: bigint | undefined, dec: number) => b != null ? (Number(b) / Math.pow(10, dec)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : (balLoading ? '...' : '--');
-
-  const flip = () => { setFromIdx(toIdx); setToIdx(fromIdx); setFromAmt(''); setSwapResult(null); };
-
-  /** Singleton opnet provider */
-  const provider = useMemo(() => getProvider(), []);
-
-  // senderAddr comes directly from useWalletConnect() as 'address'
-
-  /**
-   * Execute swap — routes through SimplePool (MINE/VIBE) or Motoswap Router.
-   */
-  const doSwap = useCallback(async () => {
-    if (!fromVal || fromVal <= 0 || !hasPool) return;
-
-    if (!walletAddress || !walletInstance) {
-      openConnectModal();
-      return;
-    }
-
-    if (!senderAddr) {
-      setSwapResult({ type: 'error', error: 'Wallet public key not available. Reconnect wallet.' });
-      return;
-    }
-
-    setSwapping(true);
-    setSwapResult(null);
-
-    try {
-      const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
-      const minOut = BitcoinUtils.expandToDecimals(toVal * (1 - slippage / 100), to.decimals);
-
-      if (isSimplePool && poolReady) {
-        // ── SimplePool swap (MINE ↔ VIBE) ──
-        await ensureAllowance(
-          from.address, POOL_PUBKEY, rawAmount,
-          provider, senderAddr!, walletAddress!, setSwapStep, from.symbol,
-        );
-        setSwapStep('Executing swap on SimplePool...');
-        const poolContract = getContract<IPoolContract>(
-          POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr,
-        ) as unknown as IPoolContract;
-        const tokenInAddr = Address.fromString(from.pubkey);
-        const swapSim = await withRetry(() => poolContract.swap(tokenInAddr, rawAmount, minOut));
-        if ((swapSim as CallResult).revert) throw new Error(`Swap simulation reverted: ${(swapSim as CallResult).revert}`);
-        const txParams2 = await buildTxParams(provider, walletAddress!);
-        const swapOpId = `swap_${Date.now()}`;
-        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: '', role: '', step: `Swapping ${fromVal} ${from.symbol}→${to.symbol}...` });
-        const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
-        const txHash = swapReceipt.transactionId || '';
-        completeOp(swapOpId);
-        setSwapStep('');
-        setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
-        addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: walletAddress! });
-      } else if (motoPool) {
-        // ── Motoswap Router swap ──
-        await ensureAllowance(
-          from.pubkey, MOTOSWAP_ROUTER_PUBKEY, rawAmount,
-          provider, senderAddr!, walletAddress!, setSwapStep, from.symbol,
-        );
-        setSwapStep('Executing swap via Motoswap Router...');
-        const router = getContract<IMotoswapRouterContract>(
-          MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_ABI, provider, NETWORK, senderAddr,
-        );
-        const tokenInAddr = Address.fromString(from.pubkey);
-        const tokenOutAddr = Address.fromString(to.pubkey);
-        const toAddr = typeof senderAddr === 'string' ? Address.fromString(senderAddr) : senderAddr!;
-        const deadline = BigInt(Math.floor(Date.now() / 1000) + 600); // 10 min
-        const swapSim = await withRetry(() =>
-          router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            rawAmount, minOut, [tokenInAddr, tokenOutAddr], toAddr, deadline,
-          )
-        );
-        if ((swapSim as CallResult).revert) throw new Error(`Motoswap swap reverted: ${(swapSim as CallResult).revert}`);
-        const txParams2 = await buildTxParams(provider, walletAddress!);
-        const swapOpId = `motoswap_${Date.now()}`;
-        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: 'motoswap', role: '', step: `Swapping via Motoswap...` });
-        const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
-        const txHash = swapReceipt.transactionId || '';
-        completeOp(swapOpId);
-        setSwapStep('');
-        setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
-        addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: walletAddress! });
-      } else {
-        throw new Error('No pool found for this pair');
-      }
-
-      localStorage.setItem('hub_swapped', '1');
-      setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
-    } catch (e) {
-      console.error('[Swap]', e);
-      setSwapStep('');
-      setSwapResult({ type: 'error', error: formatTxError(e) });
-    } finally {
-      setSwapping(false);
-    }
-  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr]);
-
-  /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
-  const mintTokens = useCallback(async (sym: string) => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
-    if (!senderAddr) { setMintResult({ sym, ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
-    setMinting(sym);
-    setMintResult(null);
-    try {
-      const tok = DEPLOYED_CONTRACTS[sym as keyof typeof DEPLOYED_CONTRACTS];
-      if (!tok) throw new Error('Unknown token');
-      const rawAmount = BitcoinUtils.expandToDecimals(MINT_AMOUNT, tok.decimals);
-      const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
-      const sim = await withRetry(() => contract.publicMint(rawAmount));
-      if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
-      const txParams = await buildTxParams(provider, walletAddress!);
-      const mOpId = `mint_${sym}_${Date.now()}`;
-      trackOp({ id: mOpId, market: 'mint', orderId: sym, direction: '', role: '', step: `Minting ${MINT_AMOUNT.toLocaleString()} ${sym}...` });
-      const receipt = await (sim as CallResult).sendTransaction(txParams);
-      completeOp(mOpId);
-      const txHash = receipt.transactionId || '';
-      setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}! TX: ${txHash.slice(0, 16)}…` });
-      addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: walletAddress! });
-      setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
-    } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Mint failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC: https://faucet.opnet.org' : ''}`;
-      setMintResult({ sym, ok: false, msg });
-    } finally {
-      setMinting(null);
-    }
-  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr]);
-
-  /** Add Liquidity: transfer MINE + VIBE to pool → call sync() */
-  const addLiquidity = useCallback(async () => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
-    const mineAmt = parseFloat(lpMineAmt);
-    const vibeAmt = parseFloat(lpVibeAmt);
-    if (!mineAmt || !vibeAmt || mineAmt <= 0 || vibeAmt <= 0) {
-      setLpResult({ ok: false, msg: 'Enter both MINE and VIBE amounts' });
-      return;
-    }
-    if (!senderAddr) { setLpResult({ ok: false, msg: 'Wallet public key not available' }); return; }
-
-    setAddingLP(true);
-    setLpResult(null);
-    const lpOpId = `lp_add_${Date.now()}`;
-    try {
-      trackOp({ id: lpOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: `Adding ${mineAmt} MINE + ${vibeAmt} VIBE...` });
-      const poolAddr = Address.fromString(POOL_ADDRESS);
-
-      // 1. Transfer MINE to pool
-      setLpStep('Transferring MINE to pool...');
-      const mineContract = getContract<IOP20Contract>(DEPLOYED_CONTRACTS.MINE.address, OP_20_ABI, provider, NETWORK, senderAddr);
-      const mineRaw = BitcoinUtils.expandToDecimals(mineAmt, 8);
-      const mineSim = await withRetry(() => mineContract.transfer(poolAddr, mineRaw));
-      if (mineSim.revert) throw new Error(`MINE transfer failed: ${mineSim.revert}`);
-      const txParams1 = await buildTxParams(provider, walletAddress);
-      const mineReceipt = await mineSim.sendTransaction(txParams1);
-      console.log('[LP] MINE transfer TX:', mineReceipt.transactionId);
-
-      // Wait for confirmation
-      setLpStep('Waiting for MINE transfer (~30s)...');
-      await new Promise(r => setTimeout(r, 30000));
-
-      // 2. Transfer VIBE to pool — fresh txParams (UTXOs changed)
-      setLpStep('Transferring VIBE to pool...');
-      const vibeContract = getContract<IOP20Contract>(DEPLOYED_CONTRACTS.VIBE.address, OP_20_ABI, provider, NETWORK, senderAddr);
-      const vibeRaw = BitcoinUtils.expandToDecimals(vibeAmt, 8);
-      const vibeSim = await withRetry(() => vibeContract.transfer(poolAddr, vibeRaw));
-      if (vibeSim.revert) throw new Error(`VIBE transfer failed: ${vibeSim.revert}`);
-      const txParams2 = await buildTxParams(provider, walletAddress);
-      const vibeReceipt = await vibeSim.sendTransaction(txParams2);
-      console.log('[LP] VIBE transfer TX:', vibeReceipt.transactionId);
-
-      // Wait for confirmation
-      setLpStep('Waiting for VIBE transfer (~30s)...');
-      await new Promise(r => setTimeout(r, 30000));
-
-      // 3. Call sync() on pool — fresh txParams again
-      setLpStep('Syncing pool reserves...');
-      const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
-      const syncSim = await withRetry(() => poolContract.sync());
-      if ((syncSim as CallResult).revert) throw new Error(`Sync failed: ${(syncSim as CallResult).revert}`);
-      const txParams3 = await buildTxParams(provider, walletAddress);
-      const syncReceipt = await (syncSim as CallResult).sendTransaction(txParams3);
-      completeOp(lpOpId);
-
-      setLpStep('');
-      setLpResult({ ok: true, msg: `Liquidity added! ${mineAmt} MINE + ${vibeAmt} VIBE. Sync TX: ${syncReceipt.transactionId}` });
-      addTxRecord({ type: 'mint', txHash: syncReceipt.transactionId || '', tokenA: 'LP', amountA: `${mineAmt}+${vibeAmt}`, status: 'confirmed', wallet: walletAddress });
-      setLpUserMine(prev => { const v = prev + mineAmt; localStorage.setItem('hub_lp_mine', String(v)); return v; });
-      setLpUserVibe(prev => { const v = prev + vibeAmt; localStorage.setItem('hub_lp_vibe', String(v)); return v; });
-      // Refresh reserves + balances after LP
-      setTimeout(() => { fetchReserves(); setBalRefreshKey(k => k + 1); }, 3000);
-    } catch (e) {
-      failOp(lpOpId, formatTxError(e));
-      let msg = e instanceof Error ? e.message : 'Add liquidity failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC: https://faucet.opnet.org' : ''}`;
-      setLpStep('');
-      setLpResult({ ok: false, msg });
-    } finally {
-      setAddingLP(false);
-    }
-  }, [walletAddress, walletInstance, lpMineAmt, lpVibeAmt, provider, senderAddr, openConnectModal]);
-
-  /** Auto-calculate VIBE amount based on current pool ratio */
-  useEffect(() => {
-    const mineAmt = parseFloat(lpMineAmt);
-    if (mineAmt > 0 && reserveA > 0 && reserveB > 0) {
-      const vibeNeeded = mineAmt * (reserveB / reserveA);
-      setLpVibeAmt(vibeNeeded.toFixed(2));
-    }
-  }, [lpMineAmt, reserveA, reserveB]);
-
-  useEffect(() => {
-    if (fromIdx === toIdx) setToIdx(fromIdx === 0 ? 1 : 0);
-  }, [fromIdx, toIdx]);
-
-  /** Deploy a new SimplePool for any token pair */
-  const createPool = useCallback(async () => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
-    if (!poolTokenA || !poolTokenB) return;
-    if (poolTokenA === poolTokenB) { setPoolDeployResult({ ok: false, msg: 'Token A and B must be different' }); return; }
-
-    const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
-    const web3 = inst.web3 || inst;
-    if (!(web3 as Record<string, unknown>)?.deployContract) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
-
-    setDeployingPool(true); setPoolDeployResult(null);
-    try {
-      setPoolDeployStep('Loading SimplePool bytecode...');
-      const base = import.meta.env.BASE_URL || '/';
-      const resp = await fetch(`${base}wasm/SimplePool.wasm`);
-      if (!resp.ok) throw new Error('Failed to load SimplePool.wasm');
-      const bytecode = new Uint8Array(await resp.arrayBuffer());
-
-      setPoolDeployStep('Encoding token addresses...');
-      const writer = new BinaryWriter();
-      writer.writeAddress(Address.fromString(poolTokenA));
-      writer.writeAddress(Address.fromString(poolTokenB));
-
-      setPoolDeployStep('Fetching UTXOs...');
-      const provider2 = getProvider();
-      const utxos = await provider2.utxoManager.getUTXOs({ address: walletAddress });
-      if (!utxos?.length) throw new Error(`No UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC from faucet.' : ''}`);
-
-
-      setPoolDeployStep('Sign in your wallet...');
-      const deployFn = (web3 as { deployContract: (...args: unknown[]) => Promise<{ transaction: string[]; contractAddress?: string }> }).deployContract;
-      const result = await deployFn({
-        bytecode, calldata: writer.getBuffer(), utxos, from: walletAddress,
-        feeRate: 10, priorityFee: 10_000n, gasSatFee: 100_000n,
-        revealMLDSAPublicKey: true, linkMLDSAPublicKeyToAddress: true,
-      });
-
-      setPoolDeployStep('Broadcasting...');
-      const [fundingTx, deployTx] = result.transaction;
-      if (fundingTx) await provider2.sendRawTransaction(fundingTx, false);
-      if (deployTx) await provider2.sendRawTransaction(deployTx, false);
-
-      let txid = '';
-      try { txid = Transaction.fromHex(deployTx || fundingTx || '').getId(); } catch (e) { console.warn('[SwapUI] pool deploy txid parse error:', e); }
-
-      const newPool: UserPool = {
-        address: result.contractAddress || txid,
-        tokenA: poolTokenA, tokenB: poolTokenB,
-        symbolA: poolSymA || poolTokenA.slice(-6).toUpperCase(),
-        symbolB: poolSymB || poolTokenB.slice(-6).toUpperCase(),
-        deployedAt: Date.now(), deployer: walletAddress,
-      };
-
-      const updatedPools = [...userPools, newPool];
-      setUserPools(updatedPools);
-      localStorage.setItem('hub_user_pools', JSON.stringify(updatedPools));
-
-      setPoolDeployResult({ ok: true, msg: `Pool deployed at ${newPool.address}`, address: newPool.address });
-      setCreatePoolOpen(false);
-      setPoolTokenA(''); setPoolTokenB(''); setPoolSymA(''); setPoolSymB('');
-      setPoolSeedA(''); setPoolSeedB('');
-    } catch (e) {
-      setPoolDeployResult({ ok: false, msg: e instanceof Error ? e.message : 'Deployment failed' });
-    } finally {
-      setDeployingPool(false);
-      setPoolDeployStep('');
-    }
-  }, [walletAddress, walletInstance, poolTokenA, poolTokenB, poolSymA, poolSymB, userPools, openConnectModal]);
-
-  const selectStyle: React.CSSProperties = {
-    background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: '14px',
-    color: 'var(--w)', padding: '8px 12px', fontSize: '.82rem', fontWeight: 700,
-    fontFamily: 'var(--ff)', cursor: 'pointer', outline: 'none',
-    flexShrink: 0, minWidth: 120, maxWidth: 140, whiteSpace: 'nowrap',
-    textOverflow: 'ellipsis', overflow: 'hidden', appearance: 'none' as const,
-    WebkitAppearance: 'none' as const,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b95a9' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center',
-    paddingRight: '28px',
-  };
-
-  const connected = !!walletAddress;
-
-  const iStyle: React.CSSProperties = {
-    width: '100%', padding: '10px 12px', borderRadius: 12,
-    background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)',
-    fontSize: '.78rem', fontFamily: 'var(--fm)', outline: 'none', boxSizing: 'border-box' as const,
-  };
+  const {
+    walletAddress, connected, openConnectModal,
+    SWAP_TOKENS, heldTokens, motoPools,
+    reserveA, reserveB, fetchReserves, poolReady,
+    fromIdx, setFromIdx, toIdx, setToIdx, fromAmt, setFromAmt,
+    slippage, setSlippage, swapping, swapStep, swapResult, setSwapResult,
+    showSettings, setShowSettings,
+    balances,
+    from, to, fromVal, toVal,
+    hasPool, rIn, rOut, isSimplePool, motoPool,
+    priceImpact, rate, fee,
+    fromBal, toBal, fmtBal,
+    flip, doSwap,
+    minting, mintResult, mintTokens,
+    history,
+    mainTab, setMainTab,
+    userPools, removeUserPool, createPoolOpen, setCreatePoolOpen,
+    poolTokenA, setPoolTokenA, poolTokenB, setPoolTokenB,
+    poolSymA, setPoolSymA, poolSymB, setPoolSymB,
+    deployingPool, poolDeployStep, poolDeployResult, createPool,
+    showLiquidity, setShowLiquidity,
+    lpUserMine,
+    setBalRefreshKey,
+  } = useSwap();
 
   return (
     <div>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
         {/* ── Main tabs ── */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-          {(['swap', 'pools'] as SwapMainTab[]).map(t => (
+          {(['swap', 'pools'] as const).map(t => (
             <button key={t} onClick={() => setMainTab(t)}
               style={{ padding: '9px 22px', borderRadius: 12, border: '1px solid ' + (mainTab === t ? 'rgba(247,147,26,.4)' : 'var(--bd)'),
                 background: mainTab === t ? 'rgba(247,147,26,.08)' : 'var(--bg3)',
@@ -650,7 +97,7 @@ const SwapUI: React.FC = () => {
                   <div style={{ marginBottom: 8 }}>
                     <div style={{ fontSize: '.54rem', color: 'var(--t4)', marginBottom: 4, fontWeight: 600 }}>Your tokens ({heldTokens.length})</div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {heldTokens.map(t => (
+                      {heldTokens.map((t: Token) => (
                         <button key={t.address} onClick={() => {
                           if (!poolTokenA) { setPoolTokenA(t.address); setPoolSymA(t.symbol); }
                           else if (poolTokenA !== t.address && !poolTokenB) { setPoolTokenB(t.address); setPoolSymB(t.symbol); }
@@ -768,7 +215,7 @@ const SwapUI: React.FC = () => {
                     {active.map(pool => {
                       const r0 = Number(BigInt(pool.reserve0)) / Math.pow(10, pool.token0_decimals);
                       const r1 = Number(BigInt(pool.reserve1)) / Math.pow(10, pool.token1_decimals);
-                      const rate = r0 > 0 ? (r1 / r0).toFixed(4) : '—';
+                      const poolRate = r0 > 0 ? (r1 / r0).toFixed(4) : '—';
                       return (
                         <div key={pool.pool_pubkey} style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 12 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -789,7 +236,7 @@ const SwapUI: React.FC = () => {
                             </div>
                             <div style={{ textAlign: 'center', padding: '5px', background: 'rgba(255,255,255,.02)', borderRadius: 7 }}>
                               <div style={{ color: 'var(--t4)', marginBottom: 1, fontSize: '.52rem' }}>Rate</div>
-                              <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600 }}>{rate}</div>
+                              <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600 }}>{poolRate}</div>
                             </div>
                           </div>
                         </div>
@@ -815,7 +262,7 @@ const SwapUI: React.FC = () => {
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: '.6rem', color: 'var(--t4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>Your Pools</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {userPools.map(pool => (
+                  {userPools.map((pool: UserPool) => (
                     <div key={pool.address} style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, padding: 14 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                         <span style={{ fontWeight: 700, fontSize: '.82rem' }}>{pool.symbolA} / {pool.symbolB}</span>
@@ -831,7 +278,7 @@ const SwapUI: React.FC = () => {
                           style={{ flex: 1, padding: '6px', borderRadius: 8, border: '1px solid var(--bd)', color: 'var(--t4)', fontSize: '.64rem', textAlign: 'center', textDecoration: 'none', fontFamily: 'var(--ff)' }}>
                           View on OPScan ↗
                         </a>
-                        <button onClick={() => { const u = userPools.filter(p => p.address !== pool.address); setUserPools(u); localStorage.setItem('hub_user_pools', JSON.stringify(u)); }}
+                        <button onClick={() => removeUserPool(pool.address)}
                           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', color: '#ef4444', fontSize: '.64rem', cursor: 'pointer', fontFamily: 'var(--ff)' }}>
                           Remove
                         </button>
@@ -923,7 +370,7 @@ const SwapUI: React.FC = () => {
                 }}>MAX</button>
               )}
               <select value={fromIdx} onChange={e => setFromIdx(Number(e.target.value))} style={selectStyle}>
-                {SWAP_TOKENS.map((t, i) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
+                {SWAP_TOKENS.map((t: Token, i: number) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
           </div>
@@ -954,7 +401,7 @@ const SwapUI: React.FC = () => {
                 {toVal > 0 ? toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '0.0'}
               </div>
               <select value={toIdx} onChange={e => setToIdx(Number(e.target.value))} style={selectStyle}>
-                {SWAP_TOKENS.map((t, i) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
+                {SWAP_TOKENS.map((t: Token, i: number) => <option key={t.pubkey} value={i}>{t.icon} {t.symbol}</option>)}
               </select>
             </div>
           </div>

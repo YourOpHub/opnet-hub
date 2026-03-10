@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  JSONRpcProvider, getContract, BitcoinUtils,
+  getContract, BitcoinUtils,
   type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
-import { NETWORK, RPC_URL } from '../config';
+import { NETWORK } from '../config';
 import { buildTxParams, withRetry } from '../txUtils';
 import { DEPLOYED_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
@@ -45,14 +45,12 @@ const ACHS = [
 const EP = 5;
 
 /* ─── $MINE Token Economics ─── */
-const MINE_TOTAL_SUPPLY = 21_000_000;
 const MINE_GAME_POOL = 10_500_000;
 const MINE_DAILY_BASE = 350_000;
 const MINE_HALVING_DAYS = 7;
 const MINE_DECIMALS = 8;
 const MINE_CONTRACT = DEPLOYED_CONTRACTS.MINE.address;
 const GAME_NETWORK = NETWORK;
-const GAME_RPC_URL = RPC_URL;
 
 /** Typed interface for MintableToken contract */
 interface MintableContract extends BaseContractProperties {
@@ -88,7 +86,7 @@ const SPRITE_RIG = `${BASE}mining-rig.png`;
 const SatoshiMiner: React.FC = () => {
     const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
     const gameProvider = React.useMemo(() => getProvider(), []);
-    const { trackOp, completeOp, failOp } = useOps();
+    const { trackOp, completeOp } = useOps();
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
     const [tot, setTot] = useState<number>(() => ld('sm_t', 0));
     const [ups, setUps] = useState<Up[]>(() => ld('sm_u', UPS));

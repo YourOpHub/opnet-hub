@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  JSONRpcProvider, getContract, BitcoinUtils,
+  type CallResult, type BaseContractProperties,
 } from 'opnet';
+import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, RPC_URL } from '../config';
 import { buildTxParams, withRetry } from '../txUtils';
@@ -52,9 +53,6 @@ const MINE_DECIMALS = 8;
 const MINE_CONTRACT = DEPLOYED_CONTRACTS.MINE.address;
 const GAME_NETWORK = NETWORK;
 const GAME_RPC_URL = RPC_URL;
-const MINTABLE_ABI: BitcoinInterfaceAbi = [
-  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
-];
 
 /** Typed interface for MintableToken contract */
 interface MintableContract extends BaseContractProperties {

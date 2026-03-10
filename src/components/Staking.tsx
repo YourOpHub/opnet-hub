@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
+  type IOP20Contract, type CallResult, type BaseContractProperties,
 } from 'opnet';
+import { STAKING_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import { Address } from '@btc-vision/transaction';
@@ -16,16 +17,6 @@ import * as opnetRpc from '../opnet';
 import { useOps } from '../contexts/OpsContext';
 import { addTxRecord } from '../txHistory';
 
-/** Staking ABI — matches SimpleStaking contract */
-const STAKING_ABI: BitcoinInterfaceAbi = [
-  { name: 'stake', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'unstake', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'claim', inputs: [], outputs: [{ name: 'reward', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'stakedAmount', constant: true, inputs: [{ name: 'address', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'stakedReward', constant: true, inputs: [{ name: 'address', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'totalStaked', constant: true, inputs: [], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'getRewardRate', constant: true, inputs: [], outputs: [{ name: 'rate', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-];
 
 /** Typed interface for SimpleStaking contract methods */
 interface StakingContract extends BaseContractProperties {

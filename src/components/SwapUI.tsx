@@ -3,11 +3,12 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address, BinaryWriter } from '@btc-vision/transaction';
 import { Transaction } from '@btc-vision/bitcoin';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
+  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
   MOTOSWAP_ROUTER_ABI,
   type IOP20Contract, type IMotoswapRouterContract,
-  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  type CallResult, type BaseContractProperties,
 } from 'opnet';
+import { POOL_ABI, POOL_CREATE_ABI, MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
@@ -36,45 +37,6 @@ interface UserPool {
   deployer: string;
 }
 
-/** Custom ABI for SimplePool contract */
-const POOL_ABI: BitcoinInterfaceAbi = [
-  {
-    name: 'swap',
-    inputs: [
-      { name: 'tokenIn', type: ABIDataTypes.ADDRESS },
-      { name: 'amountIn', type: ABIDataTypes.UINT256 },
-      { name: 'minAmountOut', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'amountOut', type: ABIDataTypes.UINT256 }],
-    type: BitcoinAbiTypes.Function,
-  },
-  {
-    name: 'getReserves',
-    constant: true,
-    inputs: [],
-    outputs: [
-      { name: 'reserveA', type: ABIDataTypes.UINT256 },
-      { name: 'reserveB', type: ABIDataTypes.UINT256 },
-    ],
-    type: BitcoinAbiTypes.Function,
-  },
-  {
-    name: 'sync',
-    inputs: [],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-    type: BitcoinAbiTypes.Function,
-  },
-];
-
-/** ABI for MintableToken publicMint method */
-const MINTABLE_ABI: BitcoinInterfaceAbi = [
-  {
-    name: 'publicMint',
-    inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }],
-    outputs: [],
-    type: BitcoinAbiTypes.Function,
-  },
-];
 
 const MINT_AMOUNT = 1000; // Fixed 1000 tokens per mint
 
@@ -114,10 +76,6 @@ const TokenIcon: React.FC<{ token: Token; size?: number }> = ({ token, size = 24
 
 type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 
-const POOL_CREATE_ABI: BitcoinInterfaceAbi = [
-  { name: 'getTokens', constant: true, inputs: [], outputs: [{ name: 'tokenA', type: ABIDataTypes.ADDRESS }, { name: 'tokenB', type: ABIDataTypes.ADDRESS }], type: BitcoinAbiTypes.Function },
-  { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-];
 
 const SwapUI: React.FC = () => {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();

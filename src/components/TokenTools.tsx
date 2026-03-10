@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
-import { getContract, ABIDataTypes, BitcoinAbiTypes, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties, type TransactionParameters } from 'opnet';
+import { getContract, type CallResult, type BaseContractProperties, type TransactionParameters } from 'opnet';
+import { MINTABLE_ABI, SPLITTER_DUMMY_ABI } from '../abis';
 import * as opnet from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, OPSCAN_API_BASE, OPSCAN_EXPLORER_URL, getContractOpscanUrl } from '../contracts';
@@ -783,20 +784,13 @@ function UTXOSplitter() {
       // Build a dummy view call to SimplePool getReserves
       // This is a read-only call that will succeed, we just need the tx infrastructure
       // to attach extraOutputs for the split
-      const dummyABI: BitcoinInterfaceAbi = [{
-        name: 'getReserves', constant: true, type: BitcoinAbiTypes.Function,
-        inputs: [], outputs: [
-          { name: 'reserveA', type: ABIDataTypes.UINT256 },
-          { name: 'reserveB', type: ABIDataTypes.UINT256 },
-        ],
-      }];
 
       // Use pool contract if available, otherwise use any known contract
       const targetContract = POOL_ADDRESS || DEPLOYED_CONTRACTS.MINE.address;
       interface IReservesContract extends BaseContractProperties {
         getReserves(): Promise<CallResult>;
       }
-      const contract = getContract<IReservesContract>(targetContract, dummyABI, provider, NETWORK, senderAddr);
+      const contract = getContract<IReservesContract>(targetContract, SPLITTER_DUMMY_ABI, provider, NETWORK, senderAddr);
 
       setStep(`Simulating split into ${splitCount} UTXOs...`);
       const sim = await contract.getReserves();
@@ -1095,9 +1089,6 @@ function GasTool() {
 }
 
 /* ─── Faucet (direct publicMint on contract) ─── */
-const MINT_ABI: BitcoinInterfaceAbi = [
-  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
-];
 interface IMintable extends BaseContractProperties { publicMint(amount: bigint): Promise<CallResult>; }
 
 function FaucetTool() {
@@ -1116,7 +1107,7 @@ function FaucetTool() {
     setStatus('loading'); setMsg('Simulating publicMint...');
     const opId = `mint_${info.symbol}_${Date.now()}`;
     try {
-      const contract = getContract<IMintable>(info.address, MINT_ABI, provider, NETWORK, senderAddr);
+      const contract = getContract<IMintable>(info.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await contract.publicMint(mintAmount);
       if ((sim as CallResult).revert) throw new Error(`Reverted: ${(sim as CallResult).revert}`);
       setMsg('Sign transaction in wallet...');

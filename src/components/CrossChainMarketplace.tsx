@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  getContract, ABIDataTypes, BitcoinAbiTypes,
+  getContract,
   TransactionOutputFlags,
-  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  type CallResult, type BaseContractProperties,
 } from 'opnet';
+import { FRACTALSWAP_ABI, TOKEN_ESCROW_ABI } from '../abis';
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
@@ -35,150 +36,11 @@ import {
   isUnisatInstalled, connectUnisat, disconnectUnisat,
   sendFractalBTC, getFractalTxUrl, getFractalAddressUrl,
 } from '../wallets/unisat';
+import CrossChainOrderForm from './crosschain/CrossChainOrderForm';
+import { MyOrderRow, AvailableOrderRow, MY_COLS, AV_COLS } from './crosschain/CrossChainOrderRow';
+import { EscrowOrderCard } from './crosschain/CrossChainOrderActions';
+import { satsToBtc } from './crosschain/types';
 
-/** FractalSwap v7 ABI — real BTC escrow + relayer auto-complete */
-const FRACTALSWAP_ABI: BitcoinInterfaceAbi = [
-  {
-    name: 'createOrder', type: BitcoinAbiTypes.Function,
-    inputs: [
-      { name: 'direction', type: ABIDataTypes.UINT256 },
-      { name: 'btcAmount', type: ABIDataTypes.UINT256 },
-      { name: 'wantAmount', type: ABIDataTypes.UINT256 },
-      { name: 'expiry', type: ABIDataTypes.UINT256 },
-      { name: 'fractalAddr', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-  },
-  {
-    name: 'takeOrder', type: BitcoinAbiTypes.Function,
-    inputs: [
-      { name: 'orderId', type: ABIDataTypes.UINT256 },
-      { name: 'takerAddr', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'completeOrder', type: BitcoinAbiTypes.Function,
-    inputs: [
-      { name: 'orderId', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'cancelOrder', type: BitcoinAbiTypes.Function,
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'refundExpired', type: BitcoinAbiTypes.Function,
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'getOrder', constant: true, type: BitcoinAbiTypes.Function,
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [
-      { name: 'direction', type: ABIDataTypes.UINT256 },
-      { name: 'status', type: ABIDataTypes.UINT256 },
-      { name: 'creator', type: ABIDataTypes.UINT256 },
-      { name: 'taker', type: ABIDataTypes.UINT256 },
-      { name: 'btcAmount', type: ABIDataTypes.UINT256 },
-      { name: 'wantAmount', type: ABIDataTypes.UINT256 },
-      { name: 'expiry', type: ABIDataTypes.UINT256 },
-      { name: 'makerAddr', type: ABIDataTypes.UINT256 },
-      { name: 'takerAddr', type: ABIDataTypes.UINT256 },
-      { name: 'feePaid', type: ABIDataTypes.UINT256 },
-    ],
-  },
-  {
-    name: 'getNextOrderId', constant: true, type: BitcoinAbiTypes.Function,
-    inputs: [],
-    outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }],
-  },
-  {
-    name: 'getFeeInfo', constant: true, type: BitcoinAbiTypes.Function,
-    inputs: [],
-    outputs: [
-      { name: 'feeRecipient', type: ABIDataTypes.UINT256 },
-      { name: 'feeBps', type: ABIDataTypes.UINT256 },
-    ],
-  },
-];
-
-/** TokenEscrowBridge ABI — OP-20 token escrow bridge */
-const TOKEN_ESCROW_ABI: BitcoinInterfaceAbi = [
-  {
-    name: 'createOrder', type: BitcoinAbiTypes.Function,
-    inputs: [
-      { name: 'direction', type: ABIDataTypes.UINT256 },
-      { name: 'token', type: ABIDataTypes.ADDRESS },
-      { name: 'tokenAmount', type: ABIDataTypes.UINT256 },
-      { name: 'btcPrice', type: ABIDataTypes.UINT256 },
-      { name: 'hashlock', type: ABIDataTypes.UINT256 },
-      { name: 'expiry', type: ABIDataTypes.UINT256 },
-      { name: 'makerAddr', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-  },
-  {
-    name: 'takeOrder', type: BitcoinAbiTypes.Function,
-    inputs: [
-      { name: 'orderId', type: ABIDataTypes.UINT256 },
-      { name: 'takerAddr', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'confirmSwap', type: BitcoinAbiTypes.Function,
-    inputs: [
-      { name: 'orderId', type: ABIDataTypes.UINT256 },
-      { name: 'preimage', type: ABIDataTypes.UINT256 },
-    ],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'cancelOrder', type: BitcoinAbiTypes.Function,
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'refundExpired', type: BitcoinAbiTypes.Function,
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-  },
-  {
-    name: 'getOrder', constant: true, type: BitcoinAbiTypes.Function,
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [
-      { name: 'direction', type: ABIDataTypes.UINT256 },
-      { name: 'status', type: ABIDataTypes.UINT256 },
-      { name: 'creator', type: ABIDataTypes.UINT256 },
-      { name: 'taker', type: ABIDataTypes.UINT256 },
-      { name: 'token', type: ABIDataTypes.UINT256 },
-      { name: 'tokenAmount', type: ABIDataTypes.UINT256 },
-      { name: 'btcPrice', type: ABIDataTypes.UINT256 },
-      { name: 'hashlock', type: ABIDataTypes.UINT256 },
-      { name: 'expiry', type: ABIDataTypes.UINT256 },
-      { name: 'makerAddr', type: ABIDataTypes.UINT256 },
-      { name: 'takerAddr', type: ABIDataTypes.UINT256 },
-      { name: 'preimage', type: ABIDataTypes.UINT256 },
-      { name: 'feePaid', type: ABIDataTypes.UINT256 },
-    ],
-  },
-  {
-    name: 'getNextOrderId', constant: true, type: BitcoinAbiTypes.Function,
-    inputs: [],
-    outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }],
-  },
-  {
-    name: 'getFeeInfo', constant: true, type: BitcoinAbiTypes.Function,
-    inputs: [],
-    outputs: [
-      { name: 'feeRecipient', type: ABIDataTypes.UINT256 },
-      { name: 'feeBps', type: ABIDataTypes.UINT256 },
-    ],
-  },
-];
 
 /** Typed interface for FractalSwap v6 contract */
 interface FractalSwapContract extends BaseContractProperties {
@@ -299,11 +161,6 @@ function getP2OPAddress(mldsaHex: string): string {
   const bytes = new Uint8Array(32);
   for (let i = 0; i < 32; i++) bytes[i] = parseInt(mldsaHex.slice(i * 2, i * 2 + 2), 16);
   return Address.wrap(bytes).p2op(NETWORK);
-}
-
-/** Format sats as BTC/FB string — trim trailing zeros */
-function satsToBtc(sats: bigint, unit: 'BTC' | 'FB' = 'BTC'): string {
-  return fmtBtc(sats) + ' ' + unit;
 }
 
 /** Format sats as clean number (no unit) — for table cells */

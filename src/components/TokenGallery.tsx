@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import type { Address } from '@btc-vision/transaction';
 import {
-  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  JSONRpcProvider, getContract, BitcoinUtils,
+  type CallResult, type BaseContractProperties,
   type TransactionParameters,
 } from 'opnet';
+import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import type { TxParams } from '../txUtils';
 import { NETWORK, CURRENT_ENV } from '../config';
@@ -15,15 +16,6 @@ import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHi
 import { useOps } from '../contexts/OpsContext';
 import { fetchAllTokens, type IndexedToken, formatTokenBalance } from '../tokenApi';
 
-/** ABI for MintableToken publicMint method */
-const MINTABLE_ABI: BitcoinInterfaceAbi = [
-  {
-    name: 'publicMint',
-    inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }],
-    outputs: [],
-    type: BitcoinAbiTypes.Function,
-  },
-];
 
 /** Typed interface for MintableToken publicMint */
 interface IMintableContract extends BaseContractProperties {

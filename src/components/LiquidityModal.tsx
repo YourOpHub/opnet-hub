@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address } from '@btc-vision/transaction';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
+  type IOP20Contract, type CallResult, type BaseContractProperties,
 } from 'opnet';
+import { POOL_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
@@ -14,13 +15,6 @@ import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getC
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import { useOps } from '../contexts/OpsContext';
 
-const POOL_ABI: BitcoinInterfaceAbi = [
-  { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'sync', inputs: [], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'addLiquidity', inputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'shares', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'removeLiquidity', inputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'actualA', type: ABIDataTypes.UINT256 }, { name: 'actualB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'liquidityOf', constant: true, inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-];
 
 
 /** Typed interface for SimplePool contract */

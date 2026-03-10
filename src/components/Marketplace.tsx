@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  JSONRpcProvider, getContract, ABIDataTypes, BitcoinAbiTypes,
+  JSONRpcProvider, getContract,
   TransactionOutputFlags,
-  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  type CallResult, type BaseContractProperties,
   type TransactionParameters,
 } from 'opnet';
+import { MARKETPLACE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { Address } from '@btc-vision/transaction';
@@ -31,45 +32,6 @@ interface MarketContract extends BaseContractProperties {
   cancelOrder(orderId: bigint): Promise<CallResult>;
 }
 
-/** P2PMarket ABI */
-const MARKET_ABI: BitcoinInterfaceAbi = [
-  { name: 'createSellOrder', inputs: [
-    { name: 'token', type: ABIDataTypes.ADDRESS },
-    { name: 'amount', type: ABIDataTypes.UINT256 },
-    { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
-  ], outputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'fillSellOrder', inputs: [
-    { name: 'orderId', type: ABIDataTypes.UINT256 },
-    { name: 'fillAmount', type: ABIDataTypes.UINT256 },
-  ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'createBuyOrder', inputs: [
-    { name: 'token', type: ABIDataTypes.ADDRESS },
-    { name: 'amount', type: ABIDataTypes.UINT256 },
-    { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
-  ], outputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'acceptBuyOrder', inputs: [
-    { name: 'orderId', type: ABIDataTypes.UINT256 },
-  ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'executeBuyOrder', inputs: [
-    { name: 'orderId', type: ABIDataTypes.UINT256 },
-  ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'cancelOrder', inputs: [
-    { name: 'orderId', type: ABIDataTypes.UINT256 },
-  ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'getOrder', constant: true, inputs: [
-    { name: 'orderId', type: ABIDataTypes.UINT256 },
-  ], outputs: [
-    { name: 'orderType', type: ABIDataTypes.UINT256 },
-    { name: 'status', type: ABIDataTypes.UINT256 },
-    { name: 'creator', type: ABIDataTypes.UINT256 },
-    { name: 'token', type: ABIDataTypes.UINT256 },
-    { name: 'amount', type: ABIDataTypes.UINT256 },
-    { name: 'filled', type: ABIDataTypes.UINT256 },
-    { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
-    { name: 'seller', type: ABIDataTypes.UINT256 },
-  ], type: BitcoinAbiTypes.Function },
-  { name: 'getNextOrderId', constant: true, inputs: [], outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-];
 
 /* ─── Types ─── */
 interface Order {
@@ -199,7 +161,7 @@ const Marketplace: React.FC = () => {
   // Read orders directly from on-chain contract (fallback when LP_API unavailable)
   const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
     try {
-      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK);
       const nextIdResult = await market.getNextOrderId();
       const nextId = Number((nextIdResult?.properties as Record<string, unknown>)?.nextOrderId ?? 1n);
       const chainOrders: Order[] = [];
@@ -312,7 +274,7 @@ const Marketplace: React.FC = () => {
 
     setCreating(true);
     try {
-      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
       const decimals = selInfo?.decimals || 8;
       const amountU256 = BigInt(Math.round(amt * Math.pow(10, decimals))); // token amount in smallest units
       const priceU256 = BigInt(Math.round(ppt));   // price per token in raw sats (integer)
@@ -405,7 +367,7 @@ const Marketplace: React.FC = () => {
       const fillAmt = amount || (order.amount - order.amountFilled);
       const fillAmtU256 = BigInt(Math.round(fillAmt * 1e8));
 
-      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
 
       if (order.type === 'sell') {
         // Buyer fills sell order: must include BTC output to seller's P2OP address
@@ -513,7 +475,7 @@ const Marketplace: React.FC = () => {
       const sellerP2OPScript = buildP2OPScript(order.seller);
       const sellerP2OPAddress = getP2OPAddress(order.seller);
 
-      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
 
       setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
 
@@ -604,7 +566,7 @@ const Marketplace: React.FC = () => {
   const handleCancel = useCallback(async (orderId: string) => {
     if (!walletAddress || !senderAddr) return;
     try {
-      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKET_ABI, provider, NETWORK, senderAddr);
+      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);

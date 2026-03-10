@@ -3,10 +3,11 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Transaction } from '@btc-vision/bitcoin';
 import { BinaryWriter } from '@btc-vision/transaction';
 import {
-  JSONRpcProvider, getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes, BitcoinUtils,
-  type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties, type IOP20Contract,
+  JSONRpcProvider, getContract, OP_20_ABI, BitcoinUtils,
+  type CallResult, type BaseContractProperties, type IOP20Contract,
   type TransactionParameters,
 } from 'opnet';
+import { LAUNCHPAD_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import { OPSCAN_API_BASE, getContractOpscanUrl, getTxUrl } from '../contracts';
@@ -18,14 +19,6 @@ import {
 import { loadTokens, saveTokens, addToken, addTrade } from '../launchpad/store';
 import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api';
 import { useOps } from '../contexts/OpsContext';
-const OP20_ABI: BitcoinInterfaceAbi = [
-  { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
-  { name: 'totalSupply', constant: true, inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'maximumSupply', constant: true, inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'balanceOf', constant: true, inputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'balance', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'isPublicMintEnabled', constant: true, inputs: [], outputs: [{ name: 'enabled', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'getMaxMintPerTx', constant: true, inputs: [], outputs: [{ name: 'maxAmount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-];
 
 interface MintableOP20 extends IOP20Contract {
   publicMint(amount: bigint): Promise<CallResult>;
@@ -190,7 +183,7 @@ const DeployModal: React.FC<{
         for (let i = 0; i < 30; i++) {
           await new Promise(r => setTimeout(r, 15000));
           try {
-            const c = getContract<IOP20Contract>(token.address, OP20_ABI, provider, NETWORK);
+            const c = getContract<IOP20Contract>(token.address, LAUNCHPAD_ABI, provider, NETWORK);
             const res = await c.maximumSupply();
             if (!(res as CallResult).revert) {
               token.status = 'bonding';
@@ -373,7 +366,7 @@ const Launchpad: React.FC = () => {
   const syncToken = useCallback(async (addr: string) => {
     if (!addr.startsWith('opt1sq')) return;
     try {
-      const c = getContract<IOP20Contract>(addr, OP20_ABI, provider, NETWORK);
+      const c = getContract<IOP20Contract>(addr, LAUNCHPAD_ABI, provider, NETWORK);
       const [tsR, msR] = await Promise.all([
         withRetry(() => c.totalSupply()),
         withRetry(() => c.maximumSupply()),
@@ -398,7 +391,7 @@ const Launchpad: React.FC = () => {
   const syncBalance = useCallback(async (addr: string) => {
     if (!senderAddr || !addr.startsWith('opt1sq')) { setUserBal(0); return; }
     try {
-      const c = getContract<IOP20Contract>(addr, OP20_ABI, provider, NETWORK, senderAddr);
+      const c = getContract<IOP20Contract>(addr, LAUNCHPAD_ABI, provider, NETWORK, senderAddr);
       const res = await c.balanceOf(senderAddr);
       if (!(res as CallResult).revert) {
         const p = (res as CallResult).properties as Record<string, unknown>;
@@ -469,7 +462,7 @@ const Launchpad: React.FC = () => {
     setMinting(true); setMintStep('Preparing...');
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amount, selected.decimals);
-      const contract = getContract<MintableOP20>(selected.address, OP20_ABI, provider, NETWORK, senderAddr);
+      const contract = getContract<MintableOP20>(selected.address, LAUNCHPAD_ABI, provider, NETWORK, senderAddr);
 
       setMintStep('Simulating publicMint...');
       const sim = await withRetry(() => contract.publicMint(rawAmount));
@@ -534,7 +527,7 @@ const Launchpad: React.FC = () => {
     setAdding(true);
     try {
       // Try to read on-chain state
-      const c = getContract<IOP20Contract>(addr, OP20_ABI, provider, NETWORK);
+      const c = getContract<IOP20Contract>(addr, LAUNCHPAD_ABI, provider, NETWORK);
       const [tsR, msR] = await Promise.all([c.totalSupply(), c.maximumSupply()]);
       if ((tsR as CallResult).revert || (msR as CallResult).revert) throw new Error('Not a valid OP20 token');
       const tsP = (tsR as CallResult).properties as Record<string, unknown>;

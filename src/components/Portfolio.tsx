@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  getContract, OP_20_ABI, ABIDataTypes, BitcoinAbiTypes,
-  type IOP20Contract, type BitcoinInterfaceAbi, type CallResult, type BaseContractProperties,
+  getContract, OP_20_ABI,
+  type IOP20Contract, type CallResult, type BaseContractProperties,
 } from 'opnet';
+import { POOL_LP_ABI } from '../abis';
 import { Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
@@ -11,10 +12,6 @@ import { fetchBtcPrice } from '../btc-price';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, getTxUrl, MINE_DEPLOY_TXID, VIBE_DEPLOY_TXID, type ContractTokenInfo } from '../contracts';
 import { getTxHistory, formatTimeAgo } from '../txHistory';
 
-/** SimplePool ABI — only liquidityOf needed for portfolio view */
-const POOL_LP_ABI: BitcoinInterfaceAbi = [
-  { name: 'liquidityOf', constant: true, inputs: [{ name: 'account', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amountA', type: ABIDataTypes.UINT256 }, { name: 'amountB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-];
 
 interface IPoolLPContract extends BaseContractProperties {
   liquidityOf(account: unknown): Promise<CallResult>;

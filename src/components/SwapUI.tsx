@@ -115,7 +115,7 @@ const TokenIcon: React.FC<{ token: Token; size?: number }> = ({ token, size = 24
 type SwapResultType = { type: 'success' | 'error'; hash?: string; amtOut?: string; error?: string };
 
 const POOL_CREATE_ABI: BitcoinInterfaceAbi = [
-  { name: 'getTokens', inputs: [], outputs: [{ name: 'tokenA', type: ABIDataTypes.ADDRESS }, { name: 'tokenB', type: ABIDataTypes.ADDRESS }], type: BitcoinAbiTypes.Function },
+  { name: 'getTokens', constant: true, inputs: [], outputs: [{ name: 'tokenA', type: ABIDataTypes.ADDRESS }, { name: 'tokenB', type: ABIDataTypes.ADDRESS }], type: BitcoinAbiTypes.Function },
   { name: 'getReserves', constant: true, inputs: [], outputs: [{ name: 'reserveA', type: ABIDataTypes.UINT256 }, { name: 'reserveB', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
@@ -204,7 +204,7 @@ const SwapUI: React.FC = () => {
   const [history, setHistory] = useState<TxRecord[]>([]);
   const [mainTab, setMainTab] = useState<SwapMainTab>('swap');
   const [userPools, setUserPools] = useState<UserPool[]>(() => {
-    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem('hub_user_pools') || '[]'); } catch (e) { console.warn('[SwapUI] Failed to parse user pools from localStorage:', e); return []; }
   });
   const [createPoolOpen, setCreatePoolOpen] = useState(false);
   const [poolTokenA, setPoolTokenA] = useState('');
@@ -223,10 +223,10 @@ const SwapUI: React.FC = () => {
   const [lpStep, setLpStep] = useState('');
   const [lpResult, setLpResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [lpUserMine, setLpUserMine] = useState(() => {
-    try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch { return 0; }
+    try { return Number(localStorage.getItem('hub_lp_mine') || '0'); } catch (e) { console.warn('[SwapUI] Failed to parse LP MINE amount from localStorage:', e); return 0; }
   });
   const [lpUserVibe, setLpUserVibe] = useState(() => {
-    try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch { return 0; }
+    try { return Number(localStorage.getItem('hub_lp_vibe') || '0'); } catch (e) { console.warn('[SwapUI] Failed to parse LP VIBE amount from localStorage:', e); return 0; }
   });
 
   useEffect(() => {

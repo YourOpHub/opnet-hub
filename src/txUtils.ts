@@ -7,7 +7,7 @@
  * 3. Wait for next block (poll getBlockNumber) — NOT polling allowance
  * 4. Proceed with operation
  */
-import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult } from 'opnet';
+import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult, type TransactionParameters } from 'opnet';
 import { Address } from '@btc-vision/transaction';
 import type { Network } from '@btc-vision/bitcoin';
 import { NETWORK, CURRENT_ENV } from './config';
@@ -15,11 +15,10 @@ const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffff
 
 /**
  * Transaction parameters for OPNet frontend.
- * Runtime object has NO signer/mldsaSigner keys — wallet extension handles signing.
- * Type uses TransactionParameters for SDK compatibility.
+ * signer/mldsaSigner are set to null — the wallet extension injects real signers
+ * before the transaction is broadcast. Backend TXs override these with real keys.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TxParams = any;
+export type TxParams = TransactionParameters;
 
 // Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
 const approvedThisSession = new Set<string>();
@@ -35,9 +34,8 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const maxPriority = isMainnet ? 100_000n : 10_000n;
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > maxPriority ? maxPriority : priorityFeeSats;
   const maxSats = isMainnet ? 200_000n : 50_000n;
-  // Frontend: NO signer/mldsaSigner keys — wallet extension handles signing
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee } as any;
+  // Frontend: signer/mldsaSigner null — wallet extension injects real signers
+  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee };
 }
 
 export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 2000): Promise<T> {
@@ -59,7 +57,7 @@ export async function waitForNextBlock(
   timeoutMs = 60_000,
 ): Promise<void> {
   let startBlock: bigint;
-  try { startBlock = await provider.getBlockNumber(); } catch { return; }
+  try { startBlock = await provider.getBlockNumber(); } catch (e) { console.warn('[txUtils] Failed to get initial block number for wait:', e); return; }
   
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -69,7 +67,7 @@ export async function waitForNextBlock(
     try {
       const current = await provider.getBlockNumber();
       if (current > startBlock) return;
-    } catch { /* retry */ }
+    } catch (e) { console.warn('[txUtils] Block number poll failed, retrying:', e); }
   }
   // Timeout — proceed anyway (best-effort)
   console.warn('[txUtils] Block wait timeout, proceeding anyway');
@@ -162,7 +160,8 @@ export async function getMinBtcRequired(
       ? `~${(Number(minSats) / 100_000).toFixed(1)}K sats (~${(Number(minSats) / 100_000_000).toFixed(5)} BTC)`
       : `~${Number(minSats).toLocaleString()} sats (~${(Number(minSats) / 100_000_000).toFixed(6)} BTC)`;
     return { minSats, feeRate, label };
-  } catch {
+  } catch (e) {
+    console.warn('[txUtils] Failed to fetch gas parameters for min BTC estimate:', e);
     // Fallback estimates
     const minSats = opType === 'deploy' ? 110_000n : 5_000n;
     return { minSats, feeRate: 2, label: opType === 'deploy' ? '~110K sats' : '~5K sats' };

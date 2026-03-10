@@ -21,10 +21,10 @@ const STAKING_ABI: BitcoinInterfaceAbi = [
   { name: 'stake', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
   { name: 'unstake', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
   { name: 'claim', inputs: [], outputs: [{ name: 'reward', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'stakedAmount', inputs: [{ name: 'address', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'stakedReward', inputs: [{ name: 'address', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'totalStaked', inputs: [], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'getRewardRate', inputs: [], outputs: [{ name: 'rate', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'stakedAmount', constant: true, inputs: [{ name: 'address', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'stakedReward', constant: true, inputs: [{ name: 'address', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'totalStaked', constant: true, inputs: [], outputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'getRewardRate', constant: true, inputs: [], outputs: [{ name: 'rate', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
 /** Typed interface for SimpleStaking contract methods */
@@ -220,7 +220,7 @@ const Staking: React.FC = () => {
       setResult({ type: 'success', msg: `Rewards claimed! TX: ${receipt.transactionId}` });
       const ts = Date.now();
       setLastClaimTs(ts);
-      try { localStorage.setItem(claimKey, String(ts)); } catch {}
+      try { localStorage.setItem(claimKey, String(ts)); } catch (e) { console.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -251,7 +251,7 @@ const Staking: React.FC = () => {
   const CLAIM_COOLDOWN_MS = 5 * 60 * 1000;
   const claimKey = `hub_last_claim_${walletAddress || ''}`;
   const [lastClaimTs, setLastClaimTs] = useState<number>(() => {
-    try { return Number(localStorage.getItem(claimKey) || '0'); } catch { return 0; }
+    try { return Number(localStorage.getItem(claimKey) || '0'); } catch (e) { console.warn('[Staking] Failed to read claim timestamp from localStorage:', e); return 0; }
   });
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(iv); }, []);

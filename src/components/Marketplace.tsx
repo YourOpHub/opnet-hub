@@ -56,7 +56,7 @@ const MARKET_ABI: BitcoinInterfaceAbi = [
   { name: 'cancelOrder', inputs: [
     { name: 'orderId', type: ABIDataTypes.UINT256 },
   ], outputs: [{ name: 'success', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'getOrder', inputs: [
+  { name: 'getOrder', constant: true, inputs: [
     { name: 'orderId', type: ABIDataTypes.UINT256 },
   ], outputs: [
     { name: 'orderType', type: ABIDataTypes.UINT256 },
@@ -68,7 +68,7 @@ const MARKET_ABI: BitcoinInterfaceAbi = [
     { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
     { name: 'seller', type: ABIDataTypes.UINT256 },
   ], type: BitcoinAbiTypes.Function },
-  { name: 'getNextOrderId', inputs: [], outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'getNextOrderId', constant: true, inputs: [], outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
 /* ─── Types ─── */
@@ -158,7 +158,7 @@ const Marketplace: React.FC = () => {
     try {
       const bytes = new Uint8Array(senderAddr as unknown as ArrayBufferLike);
       return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch { return ''; }
+    } catch (e) { console.warn('[Marketplace] Failed to convert senderAddr to hex:', e); return ''; }
   }, [senderAddr]);
 
   // View state: token list vs token detail

@@ -75,7 +75,7 @@ const FRACTALSWAP_ABI: BitcoinInterfaceAbi = [
     outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
   },
   {
-    name: 'getOrder', type: BitcoinAbiTypes.Function,
+    name: 'getOrder', constant: true, type: BitcoinAbiTypes.Function,
     inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
     outputs: [
       { name: 'direction', type: ABIDataTypes.UINT256 },
@@ -91,12 +91,12 @@ const FRACTALSWAP_ABI: BitcoinInterfaceAbi = [
     ],
   },
   {
-    name: 'getNextOrderId', type: BitcoinAbiTypes.Function,
+    name: 'getNextOrderId', constant: true, type: BitcoinAbiTypes.Function,
     inputs: [],
     outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }],
   },
   {
-    name: 'getFeeInfo', type: BitcoinAbiTypes.Function,
+    name: 'getFeeInfo', constant: true, type: BitcoinAbiTypes.Function,
     inputs: [],
     outputs: [
       { name: 'feeRecipient', type: ABIDataTypes.UINT256 },
@@ -147,7 +147,7 @@ const TOKEN_ESCROW_ABI: BitcoinInterfaceAbi = [
     outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
   },
   {
-    name: 'getOrder', type: BitcoinAbiTypes.Function,
+    name: 'getOrder', constant: true, type: BitcoinAbiTypes.Function,
     inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
     outputs: [
       { name: 'direction', type: ABIDataTypes.UINT256 },
@@ -166,12 +166,12 @@ const TOKEN_ESCROW_ABI: BitcoinInterfaceAbi = [
     ],
   },
   {
-    name: 'getNextOrderId', type: BitcoinAbiTypes.Function,
+    name: 'getNextOrderId', constant: true, type: BitcoinAbiTypes.Function,
     inputs: [],
     outputs: [{ name: 'nextOrderId', type: ABIDataTypes.UINT256 }],
   },
   {
-    name: 'getFeeInfo', type: BitcoinAbiTypes.Function,
+    name: 'getFeeInfo', constant: true, type: BitcoinAbiTypes.Function,
     inputs: [],
     outputs: [
       { name: 'feeRecipient', type: ABIDataTypes.UINT256 },
@@ -387,7 +387,7 @@ const CrossChainMarketplace: React.FC = () => {
 
   // Preimage store (localStorage persistence)
   const [preimageStore, setPreimageStore] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') || '{}'); } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') || '{}'); } catch (e) { console.warn('[CrossChain] Failed to parse preimage store from localStorage:', e); return {}; }
   });
   const savePreimage = useCallback((orderId: string, preimage: string) => {
     setPreimageStore(prev => {
@@ -583,7 +583,7 @@ const CrossChainMarketplace: React.FC = () => {
         return m ? { rate: parseFloat(m[1]), receiveSats: 0n } : null;
       }
       return { rate: v.r, receiveSats: BigInt(v.rx || '0') };
-    } catch { return null; }
+    } catch (e) { console.warn('[CrossChain] Failed to look up saved rate:', e); return null; }
   }, [serverRates]);
 
   /** Contract P2OP script (for BTC locking) */

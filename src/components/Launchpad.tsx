@@ -20,11 +20,11 @@ import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api'
 import { useOps } from '../contexts/OpsContext';
 const OP20_ABI: BitcoinInterfaceAbi = [
   { name: 'publicMint', inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }], outputs: [], type: BitcoinAbiTypes.Function },
-  { name: 'totalSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'maximumSupply', inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'balanceOf', inputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'balance', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
-  { name: 'isPublicMintEnabled', inputs: [], outputs: [{ name: 'enabled', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
-  { name: 'getMaxMintPerTx', inputs: [], outputs: [{ name: 'maxAmount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'totalSupply', constant: true, inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'maximumSupply', constant: true, inputs: [], outputs: [{ name: 'supply', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'balanceOf', constant: true, inputs: [{ name: 'owner', type: ABIDataTypes.ADDRESS }], outputs: [{ name: 'balance', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
+  { name: 'isPublicMintEnabled', constant: true, inputs: [], outputs: [{ name: 'enabled', type: ABIDataTypes.BOOL }], type: BitcoinAbiTypes.Function },
+  { name: 'getMaxMintPerTx', constant: true, inputs: [], outputs: [{ name: 'maxAmount', type: ABIDataTypes.UINT256 }], type: BitcoinAbiTypes.Function },
 ];
 
 interface MintableOP20 extends IOP20Contract {
@@ -404,7 +404,7 @@ const Launchpad: React.FC = () => {
         const p = (res as CallResult).properties as Record<string, unknown>;
         setUserBal(Number(BigInt(String(p?.balance || 0))) / 1e8);
       }
-    } catch { setUserBal(0); }
+    } catch (e) { console.warn('[Launchpad] Failed to fetch user token balance:', e); setUserBal(0); }
   }, [senderAddr, provider]);
 
   // Sync when selected changes
@@ -751,7 +751,7 @@ const Launchpad: React.FC = () => {
                         <span style={{ color: 'var(--t2)', fontFamily: 'var(--fm)' }}>{h.address}</span>
                       </div>
                       <span style={{ fontFamily: 'var(--fm)', color: 'var(--w)', fontWeight: 600, fontSize: '.6rem' }}>
-                        {(() => { try { const n = Number(BigInt(h.balance)) / Math.pow(10, selected.decimals); return fmtNum(n); } catch { return h.balance; } })()}
+                        {(() => { try { const n = Number(BigInt(h.balance)) / Math.pow(10, selected.decimals); return fmtNum(n); } catch (e) { console.warn('[Launchpad] Failed to format holder balance:', e); return h.balance; } })()}
                       </span>
                     </div>
                   ))}

@@ -37,7 +37,7 @@ const copyBtnS: React.CSSProperties = { background: 'none', border: '1px solid r
 
 function parseHex(s: string): string {
   if (typeof s !== 'string') return '—';
-  if (s.startsWith('0x')) { try { return Number(BigInt(s)).toLocaleString(); } catch { return s; } }
+  if (s.startsWith('0x')) { try { return Number(BigInt(s)).toLocaleString(); } catch (e) { console.warn('[TokenTools] Failed to parse hex value as BigInt:', e); return s; } }
   return s;
 }
 
@@ -51,7 +51,7 @@ function formatBigNum(s: string): string {
     if (n >= BigInt(1e6)) return (Number(n) / 1e6).toFixed(2) + 'M';
     if (n >= 1000n) return (Number(n) / 1e3).toFixed(2) + 'K';
     return n.toString();
-  } catch { return s; }
+  } catch (e) { console.warn('[TokenTools] Failed to format big number:', e); return s; }
 }
 
 function CopyBtn({ text }: { text: string }) {
@@ -196,7 +196,7 @@ function TokenExplorer() {
                 const d = await r.json();
                 const arr = d?.results || d || [];
                 return Array.isArray(arr) ? arr.length : 0;
-              } catch { return 0; }
+              } catch (e) { console.warn('[TokenTools] Failed to fetch holder count from OPScan:', e); return 0; }
             }));
             setAllTokens(prev => {
               const next = [...prev];
@@ -784,7 +784,7 @@ function UTXOSplitter() {
       // This is a read-only call that will succeed, we just need the tx infrastructure
       // to attach extraOutputs for the split
       const dummyABI: BitcoinInterfaceAbi = [{
-        name: 'getReserves', type: BitcoinAbiTypes.Function,
+        name: 'getReserves', constant: true, type: BitcoinAbiTypes.Function,
         inputs: [], outputs: [
           { name: 'reserveA', type: ABIDataTypes.UINT256 },
           { name: 'reserveB', type: ABIDataTypes.UINT256 },
@@ -1020,7 +1020,7 @@ function GasTool() {
       setGas(g || null);
       setMempool(m || null);
       if (Array.isArray(pt)) setPendingTxs(pt.slice(0, 10));
-    } catch { setGas(null); }
+    } catch (e) { console.warn('[TokenTools] Failed to fetch gas/mempool data:', e); setGas(null); }
     finally { setLoading(false); }
   }, []);
 

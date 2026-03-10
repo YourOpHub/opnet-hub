@@ -7,6 +7,7 @@ import {
   type TransactionParameters,
 } from 'opnet';
 import { getProvider } from '../contractCache';
+import type { TxParams } from '../txUtils';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl } from '../contracts';
@@ -32,21 +33,22 @@ interface IMintableContract extends BaseContractProperties {
 const FAUCET = 'https://faucet.opnet.org';
 
 /** Fetch network gas parameters and build proper tx params */
-async function buildTxParams(provider: JSONRpcProvider, refundTo: string) {
+async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<TxParams> {
   const gas = await provider.gasParameters();
   const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
   const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
   const priorityFeeSats = gas.baseGas / gasPerSat;
   const priorityFee = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  // Frontend: NO signer/mldsaSigner keys — wallet extension handles signing
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Frontend: signer/mldsaSigner null — wallet extension injects real signers
   return {
+    signer: null,
+    mldsaSigner: null,
     refundTo,
     maximumAllowedSatToSpend: 50_000n,
     network: NETWORK,
     feeRate,
     priorityFee,
-  } as any;
+  };
 }
 
 interface DeployedToken {

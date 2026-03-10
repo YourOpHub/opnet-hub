@@ -149,13 +149,13 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       state.setFormReceive('');
       state.setFormMakerAddr('');
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         setCreateStep('');
         toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
         completeOp(createOpId);
-        fetchOrders();
+        void fetchOrders();
       }).catch(() => { setCreateStep(''); });
-      fetchOrders();
+      void fetchOrders();
     } catch (e) {
       setCreateStep(formatTxError(e));
       setTimeout(() => setCreateStep(''), 5000);
@@ -220,17 +220,17 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Confirming...`, 'success');
       setActioning(null);
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         completeOp(opId);
-        unlockOrder(lockKey, walletAddress);
+        void unlockOrder(lockKey, walletAddress);
         toast(`Order #${orderId} confirmed on-chain!`, 'success');
-        fetchOrders();
-      }).catch(() => { completeOp(opId); unlockOrder(lockKey, walletAddress); });
-      fetchOrders();
+        void fetchOrders();
+      }).catch(() => { completeOp(opId); void unlockOrder(lockKey, walletAddress); });
+      void fetchOrders();
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
-      unlockOrder(lockKey, walletAddress);
+      void unlockOrder(lockKey, walletAddress);
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(null); }
@@ -266,18 +266,18 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       toast(`Order #${orderId} completed! BTC claimed.`, 'success');
       setActioning(null);
 
-      waitForNextBlock(provider).then(() => {
+      void waitForNextBlock(provider).then(() => {
         completeOp(opId);
         toast(`Order #${orderId} settled on-chain!`, 'success');
-        fetchOrders();
+        void fetchOrders();
       }).catch(() => { completeOp(opId); });
-      fetchOrders();
+      void fetchOrders();
       return;
     } catch (e) {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(null); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, trackOp, completeOp, getMyP2OPScript, setActioning, setActionStep]);
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, trackOp, completeOp, getMyP2OPScript, setActioning, setActionStep, toast]);
 
   // ── Cancel Order ──
   const handleCancel = useCallback(async (orderId: string) => {
@@ -323,7 +323,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(null); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, getMyP2OPScript, setActioning, setActionStep]);
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, getMyP2OPScript, setActioning, setActionStep, toast]);
 
   // ── Take + Send FB + Complete (auto-swap) ──
   const handleTakeAndSwap = useCallback(async (orderId: string, takerAddrInput: string) => {
@@ -541,7 +541,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       setActionStep(formatTxError(e));
       setTimeout(() => setActionStep(''), 5000);
     } finally { setActioning(null); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, getMyP2OPScript, setActioning, setActionStep]);
+  }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, getMyP2OPScript, setActioning, setActionStep, toast]);
 
   // ── Auto-send FB when maker's FB_TO_BTC order transitions Open → Taken ──
   const prevOrderStatusesRef = useRef<Record<string, OrderStatus>>({});

@@ -57,7 +57,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
 
   useEffect(() => {
     let cancelled = false;
-    fetchBtcPrice().then(p => {
+    void fetchBtcPrice().then(p => {
       if (!cancelled) { setBtcPrice(p.usd); setBtcChange(p.usd_24h_change); setPriceLoading(false); }
     });
     return () => { cancelled = true; };
@@ -81,7 +81,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
         }
       } catch (e) { logger.warn('[Portfolio] Pool reserves fetch failed:', e); }
     };
-    fetchRes();
+    void fetchRes();
   }, [refreshKey]);
 
   // Fetch LP position on-chain via liquidityOf(senderAddress)
@@ -99,7 +99,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
     }
     let cancelled = false;
     setLpLoading(true);
-    (async () => {
+    void (async () => {
       try {
         const poolContract = getContract<IPoolLPContract>(POOL_ADDRESS, POOL_LP_ABI, provider, NETWORK, senderAddress);
         const res = await poolContract.liquidityOf(senderAddress) as CallResult;
@@ -165,7 +165,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
     if (senderAddress) {
       Object.entries(DEPLOYED_CONTRACTS).forEach(([sym, tok]) => {
         setTokenBalances(prev => ({ ...prev, [sym]: { balance: 0n, loading: true, error: false } }));
-        (async () => {
+        void (async () => {
           try {
             const op20 = getContract<IOP20Contract>(tok.address, OP_20_ABI, provider, NETWORK, senderAddress);
             const sim = await op20.balanceOf(senderAddress);
@@ -181,7 +181,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
 
     // M-02 FIX: restore previous network on unmount
     return () => { cancelled = true; opnet.setNetwork(prevNet); };
-  }, [walletAddress, senderAddress]);
+  }, [walletAddress, senderAddress, provider]);
 
   const history = walletAddress ? getTxHistory(walletAddress) : [];
   const btcAmount = btcSats != null ? Number(btcSats) / 1e8 : 0;

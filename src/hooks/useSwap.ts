@@ -422,7 +422,7 @@ export function useSwap() {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, trackOp]);
 
   /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
   const mintTokens = useCallback(async (sym: string) => {
@@ -457,7 +457,7 @@ export function useSwap() {
     } finally {
       setMinting(null);
     }
-  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr]);
+  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr, trackOp, completeOp]);
 
   /** Deploy a new SimplePool for any token pair */
   const createPool = useCallback(async () => {

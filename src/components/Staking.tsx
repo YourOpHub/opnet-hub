@@ -72,7 +72,7 @@ const Staking: React.FC = () => {
     setBalLoading(true);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
-    Promise.allSettled([
+    void Promise.allSettled([
       opnetRpc.getTokenBalance(DEPLOYED_CONTRACTS.MINE.address, mldsa, tweaked).then(b => setMineBalance(b)),
       opnetRpc.getTokenBalance(DEPLOYED_CONTRACTS.VIBE.address, mldsa, tweaked).then(b => setVibeBalance(b)),
       opnetRpc.getBalance(walletAddress).then(b => setBtcBalance(b)),
@@ -112,10 +112,17 @@ const Staking: React.FC = () => {
         }
       } catch (e) { logger.warn('[Staking] Failed to fetch staking stats:', e); }
     };
-    fetchStats();
-    const iv = setInterval(fetchStats, 30000);
+    void fetchStats();
+    const iv = setInterval(() => void fetchStats(), 30000);
     return () => { cancelled = true; clearInterval(iv); };
   }, [senderAddr, provider, refreshKey]);
+
+  // Claim cooldown: 5 min between claims per wallet
+  const CLAIM_COOLDOWN_MS = 5 * 60 * 1000;
+  const claimKey = `hub_last_claim_${walletAddress || ''}`;
+  const [lastClaimTs, setLastClaimTs] = useState<number>(() => {
+    try { return Number(localStorage.getItem(claimKey) || '0'); } catch (e) { logger.warn('[Staking] Failed to read claim timestamp from localStorage:', e); return 0; }
+  });
 
   const doStake = useCallback(async () => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
@@ -155,7 +162,7 @@ const Staking: React.FC = () => {
     } finally {
       setStaking(false);
     }
-  }, [walletAddress, walletInstance, stakeAmount, provider, senderAddr, openConnectModal]);
+  }, [walletAddress, walletInstance, stakeAmount, provider, senderAddr, openConnectModal, trackOp, completeOp]);
 
   const doUnstake = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }
@@ -187,7 +194,7 @@ const Staking: React.FC = () => {
     } finally {
       setUnstaking(false);
     }
-  }, [walletAddress, walletInstance, unstakeAmount, provider, senderAddr, openConnectModal]);
+  }, [walletAddress, walletInstance, unstakeAmount, provider, senderAddr, openConnectModal, trackOp, completeOp]);
 
   const doClaim = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }
@@ -219,7 +226,7 @@ const Staking: React.FC = () => {
     } finally {
       setClaiming(false);
     }
-  }, [walletAddress, walletInstance, provider, senderAddr, openConnectModal]);
+  }, [walletAddress, walletInstance, provider, senderAddr, openConnectModal, claimKey, trackOp, completeOp]);
 
   const connected = !!walletAddress;
   const busy = staking || unstaking || claiming;
@@ -238,12 +245,6 @@ const Staking: React.FC = () => {
   // Cap display — testnet rate is intentionally high for testing
   const projectedAPR = Math.min(rawAPR, 999);
 
-  // Claim cooldown: 5 min between claims per wallet
-  const CLAIM_COOLDOWN_MS = 5 * 60 * 1000;
-  const claimKey = `hub_last_claim_${walletAddress || ''}`;
-  const [lastClaimTs, setLastClaimTs] = useState<number>(() => {
-    try { return Number(localStorage.getItem(claimKey) || '0'); } catch (e) { logger.warn('[Staking] Failed to read claim timestamp from localStorage:', e); return 0; }
-  });
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(iv); }, []);
   const cooldownLeft = Math.max(0, CLAIM_COOLDOWN_MS - (now - lastClaimTs));

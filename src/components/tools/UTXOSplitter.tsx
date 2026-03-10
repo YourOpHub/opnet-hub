@@ -35,7 +35,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
     finally { setLoading(false); }
   }, [walletAddress]);
 
-  useEffect(() => { fetchUTXOs(); }, [fetchUTXOs]);
+  useEffect(() => { void fetchUTXOs(); }, [fetchUTXOs]);
 
   const getUtxoValue = (u: { value: string | number }) => {
     const v = typeof u.value === 'string' ? (u.value.startsWith('0x') ? Number(BigInt(u.value)) : Number(u.value)) : u.value;
@@ -100,7 +100,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
         await waitForNextBlock(provider, setStep, 90_000);
         completeOp(opId);
         setStep('');
-        fetchUTXOs();
+        void fetchUTXOs();
       } catch (e2) {
         failOp(opId, formatTxError(e2));
         throw e2;
@@ -109,7 +109,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
       setErr(formatTxError(e));
       setStep('');
     } finally { setSplitting(false); }
-  }, [walletAddress, senderAddr, splitCount, perSplitSats, isDust, totalSats, provider, openConnectModal, fetchUTXOs]);
+  }, [walletAddress, senderAddr, splitCount, perSplitSats, isDust, provider, openConnectModal, fetchUTXOs, completeOp, failOp, splitSats, trackOp]);
 
   return (
     <div style={cardS}>

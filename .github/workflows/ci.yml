@@ -16,5 +16,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npx eslint src/ --quiet --max-warnings=300
       - run: npx vitest run
       - run: npm run build

@@ -73,7 +73,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     setMineAmt('');
     setVibeAmt('');
     if (!senderAddr) return;
-    (async () => {
+    void (async () => {
       try {
         const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
         const res = await withRetry(() => poolContract.liquidityOf(senderAddr)) as CallResult;
@@ -153,7 +153,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh]);
+  }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh, trackOp, completeOp]);
 
   const removeLiquidity = useCallback(async () => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
@@ -190,7 +190,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, walletInstance, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh]);
+  }, [walletAddress, walletInstance, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, completeOp]);
 
   if (!open) return null;
 

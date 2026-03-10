@@ -240,7 +240,7 @@ const MultiSender: React.FC = () => {
 
     setSending(false);
     setSendComplete(true);
-  }, [walletAddress, tokenAddr, validRecipients, tokenDecimals, provider]);
+  }, [walletAddress, tokenAddr, validRecipients, tokenDecimals, provider, completeOp, senderAddr, trackOp]);
 
   // Navigation helpers
   const canGoNext = (): boolean => {

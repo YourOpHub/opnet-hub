@@ -110,7 +110,7 @@ const TokenGallery: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (tab === 'all') loadAllTokens();
+    if (tab === 'all') void loadAllTokens();
   }, [tab, loadAllTokens]);
 
   const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -132,7 +132,7 @@ const TokenGallery: React.FC = () => {
       } else {
         setImportResult({ ok: true, msg: `${data.existed ? 'Already indexed' : 'Added'}: ${data.token.symbol} (${data.token.name})` });
         setImportAddr('');
-        loadAllTokens();
+        void loadAllTokens();
       }
     } catch (e) {
       setImportResult({ ok: false, msg: e instanceof Error ? e.message : 'Import failed' });
@@ -244,7 +244,7 @@ const TokenGallery: React.FC = () => {
       if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`;
       setFeatMintResult({ ok: false, msg });
     } finally { setFeatMinting(false); }
-  }, [walletAddress, walletInstance, featMintAmt, openConnectModal, provider, senderAddr]);
+  }, [walletAddress, walletInstance, featMintAmt, openConnectModal, provider, senderAddr, trackOp, completeOp]);
 
   const removeToken = (addr: string) => {
     const updated = tokens.filter(t => t.address !== addr);
@@ -303,7 +303,7 @@ const TokenGallery: React.FC = () => {
     } finally {
       setMinting(false);
     }
-  }, [walletAddress, walletInstance, mintAmount, openConnectModal, provider, senderAddr]);
+  }, [walletAddress, walletInstance, mintAmount, openConnectModal, provider, senderAddr, trackOp, completeOp]);
 
   const connected = !!walletAddress;
   const inputStyle: React.CSSProperties = {

@@ -330,7 +330,7 @@ const Launchpad: React.FC = () => {
 
   // Load from server + OPScan on mount
   useEffect(() => {
-    (async () => {
+    void (async () => {
       const available = await isServerAvailable();
       setUseServer(available);
       let merged: LaunchToken[] = loadTokens();
@@ -394,14 +394,16 @@ const Launchpad: React.FC = () => {
   // Sync when selected changes
   useEffect(() => {
     if (!selected) return;
-    syncToken(selected.address);
-    syncBalance(selected.address);
+    void syncToken(selected.address);
+    void syncBalance(selected.address);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally depend on selected?.address, not the whole object, to avoid re-fetching on unrelated property changes
   }, [selected?.address, walletAddress, syncToken, syncBalance]);
 
   // Auto-select first token
   useEffect(() => {
     if (!selected && tokens.length > 0) setSelected(tokens[0] ?? null);
-  }, [tokens, selected]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when tokens list changes; including selected would prevent auto-selection
+  }, [tokens]);
 
   // Filter + sort tokens
   const filtered = useMemo(() => {
@@ -504,7 +506,7 @@ const Launchpad: React.FC = () => {
     } finally {
       setMinting(false);
     }
-  }, [walletAddress, senderAddr, selected, mintAmt, provider, openConnectModal, syncToken, syncBalance]);
+  }, [walletAddress, senderAddr, selected, mintAmt, provider, openConnectModal, syncToken, syncBalance, trackOp, completeOp, userBal]);
 
   // Add contract by address
   const handleAddContract = useCallback(async () => {
@@ -575,7 +577,7 @@ const Launchpad: React.FC = () => {
     // If address is hex or starts with 0x, use directly; otherwise try txHash-based lookup
     const hexAddr = addr.startsWith('0x') ? addr : (addr.length === 64 ? '0x' + addr : null);
     if (!hexAddr) return;
-    (async () => {
+    void (async () => {
       try {
         const r = await fetch(`${OPSCAN_API_BASE}/tokens/${hexAddr}/holders`);
         if (!r.ok) return;
@@ -590,6 +592,7 @@ const Launchpad: React.FC = () => {
         }
       } catch (e) { logger.warn('[Launchpad] Holder data fetch failed:', e); }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally depend on selected?.address only to avoid refetching on unrelated property changes
   }, [selected?.address]);
   const holderCount = opscanHolders !== null ? opscanHolders : localHolderCount;
   const progress = selected ? getProgress(selected) : 0;

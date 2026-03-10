@@ -200,7 +200,7 @@ const FaucetTool = React.memo(function FaucetTool() {
       setMsg(formatTxError(e));
       setStatus('error');
     }
-  }, [walletAddress, senderAddr, token, info, mintAmount]);
+  }, [walletAddress, senderAddr, info, mintAmount, completeOp, failOp, openConnectModal, provider, trackOp]);
 
   return (
     <div style={cardS}>

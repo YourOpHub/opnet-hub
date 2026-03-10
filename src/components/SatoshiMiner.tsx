@@ -168,8 +168,8 @@ const SatoshiMiner: React.FC = () => {
                 }
             } catch (e) { logger.warn('[SatoshiMiner] Chain sync failed:', e); }
         };
-        sync();
-        const iv = setInterval(sync, 15000);
+        void sync();
+        const iv = setInterval(() => void sync(), 15000);
         return () => { cancelled = true; clearInterval(iv); };
     }, [spc]);
 
@@ -229,6 +229,8 @@ const SatoshiMiner: React.FC = () => {
     const dailyEmission = getMineEmission(daysSinceStart);
     const minePoolRaw = serverPool !== null ? serverPool : Math.max(0, MINE_GAME_POOL - mineBalance);
     const minePoolRemaining = Number.isFinite(minePoolRaw) ? minePoolRaw : MINE_GAME_POOL;
+    const minePoolRemainingRef = useRef(minePoolRemaining);
+    minePoolRemainingRef.current = minePoolRemaining;
 
     // Server sync: push game state every 30s + fetch leaderboard
     useEffect(() => {
@@ -242,8 +244,8 @@ const SatoshiMiner: React.FC = () => {
                 if (lb) { setLeaderboard(lb.leaderboard); setServerPool(lb.stats.remaining); }
             } catch (e) { logger.warn('[SatoshiMiner] Leaderboard sync failed:', e); }
         };
-        doSync();
-        const iv = setInterval(doSync, 30000);
+        void doSync();
+        const iv = setInterval(() => void doSync(), 30000);
         return () => clearInterval(iv);
     }, [mineBalance, tot, sps]);
 
@@ -276,7 +278,7 @@ const SatoshiMiner: React.FC = () => {
         clickCount.current++;
         // $MINE on click
         const mineEarned = v * MINE_PER_SAT * (g ? 5 : 1) * prestigeMulti;
-        if (minePoolRemaining > 0) setMineBalance(p => Math.min(MINE_GAME_POOL, p + mineEarned));
+        if (minePoolRemainingRef.current > 0) setMineBalance(p => Math.min(MINE_GAME_POOL, p + mineEarned));
         const id = fidRef.current++;
         setFx(p => [...p, { id, x, y, v, gold: g }]);
         setTimeout(() => setFx(p => p.filter(f => f.id !== id)), 800);

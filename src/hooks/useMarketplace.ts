@@ -323,7 +323,7 @@ export function useMarketplace() {
       setCreateStep(formatTxError(e));
       setTimeout(() => setCreateStep(''), 5000);
     } finally { setCreating(false); }
-  }, [walletAddress, senderAddr, selectedToken, orderAmount, orderPrice, orderType, selInfo, provider, openConnectModal, fetchOrders, fetchTokens]);
+  }, [walletAddress, senderAddr, selectedToken, orderAmount, orderPrice, orderType, selInfo, provider, openConnectModal, fetchOrders, fetchTokens, completeOp, toast, trackOp]);
 
   // Fill order
   const handleFill = useCallback(async (orderId: string, amount?: number) => {
@@ -420,7 +420,7 @@ export function useMarketplace() {
       setFillStep(formatTxError(e));
       setTimeout(() => setFillStep(''), 5000);
     } finally { setFilling(false); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, fetchOrders, toast, trackOp, completeOp, failOp]);
+  }, [walletAddress, senderAddr, senderHex, orders, provider, openConnectModal, fetchOrders, toast, trackOp, completeOp, failOp]);
 
   // Execute accepted buy order
   const handleExecuteBuyOrder = useCallback(async (orderId: string) => {
@@ -517,7 +517,7 @@ export function useMarketplace() {
       }
     }, 15_000);
     return () => clearInterval(interval);
-  }, [walletAddress, senderAddr, selectedToken, filling, fetchOrdersOnChain, handleExecuteBuyOrder]);
+  }, [walletAddress, senderAddr, senderHex, selectedToken, filling, fetchOrdersOnChain, handleExecuteBuyOrder]);
 
   // Request notification permission on mount
   useEffect(() => {
@@ -552,7 +552,7 @@ export function useMarketplace() {
       setMsg(formatTxError(e));
       setTimeout(() => setMsg(''), 5000);
     }
-  }, [walletAddress, senderAddr, provider, fetchOrders]);
+  }, [walletAddress, senderAddr, provider, fetchOrders, toast]);
 
   // Select token from search input
   const handleSearchSelect = useCallback(() => {

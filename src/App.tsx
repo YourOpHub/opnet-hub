@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
+import { logger } from './logger';
 import logoUrl from './assets/logo.png';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
@@ -155,7 +156,7 @@ const App: React.FC = () => {
                     const bal = sim?.properties?.balance ?? 0n;
                     const human = (Number(BigInt(bal.toString())) / Math.pow(10, tok.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
                     if (!cancelled) setBalances(prev => ({ ...prev, [sym]: human }));
-                } catch (e) { console.warn('[App] Failed to fetch token balance:', e); }
+                } catch (e) { logger.warn('[App] Failed to fetch token balance:', e); }
             })();
         });
         return () => { cancelled = true; };

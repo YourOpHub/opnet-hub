@@ -3,6 +3,7 @@
  * Deployed: 2026-03-04 by OPNet Hub (post-testnet-reset)
  */
 import { OPSCAN_NETWORK, CURRENT_ENV } from './config';
+import { logger } from './logger';
 
 /** v6 deployment — MintableToken with publicMint (post-testnet-reset #2, block ~3821) */
 export const TESTNET_CONTRACTS = {
@@ -89,7 +90,7 @@ export const DEPLOYED_CONTRACTS: ContractsMap = CURRENT_ENV === 'mainnet' ? MAIN
 
 // Mainnet safety guard — warn if mainnet selected but contracts not configured
 if (CURRENT_ENV === 'mainnet' && (!DEPLOYED_CONTRACTS.MINE.address || !DEPLOYED_CONTRACTS.VIBE.address)) {
-  console.error('[FATAL] Mainnet contracts not configured! Set VITE_MINE_ADDRESS and VITE_VIBE_ADDRESS env vars.');
+  logger.error('[FATAL] Mainnet contracts not configured! Set VITE_MINE_ADDRESS and VITE_VIBE_ADDRESS env vars.');
 }
 
 export const DEPLOYER_ADDRESS = import.meta.env.VITE_DEPLOYER_ADDRESS || 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my';

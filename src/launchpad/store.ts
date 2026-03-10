@@ -3,6 +3,7 @@
  * In v2 this will be backed by an API server.
  */
 import type { LaunchToken, TradeRecord } from './types';
+import { logger } from '../logger';
 
 const STORE_KEY = 'hub_launchpad_tokens';
 const STORE_VERSION = 4;
@@ -43,7 +44,7 @@ export function loadTokens(): LaunchToken[] {
       const data = JSON.parse(raw);
       if (data.version === STORE_VERSION) return data.tokens as LaunchToken[];
     }
-  } catch (e) { console.warn('[launchpad/store] Failed to parse tokens from localStorage:', e); }
+  } catch (e) { logger.warn('[launchpad/store] Failed to parse tokens from localStorage:', e); }
   // First load or version mismatch — seed
   const tokens = seedTokens();
   saveTokens(tokens);

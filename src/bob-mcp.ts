@@ -5,6 +5,8 @@
  * Falls back to direct URL if VPS unavailable
  */
 
+import { logger } from './logger';
+
 const MCP_URL = '/api/bob';
 const VPS_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/bob` : '';
 const DIRECT_URL = 'https://ai.opnet.org/mcp';
@@ -28,11 +30,11 @@ function parseSSE(text: string): unknown | null {
     if (line.startsWith('data: ')) {
       try {
         return JSON.parse(line.slice(6));
-      } catch (e) { console.warn('[bob-mcp] parseSSE line parse error:', e); }
+      } catch (e) { logger.warn('[bob-mcp] parseSSE line parse error:', e); }
     }
   }
   // Try parsing as direct JSON
-  try { return JSON.parse(text); } catch (e) { console.warn('[bob-mcp] parseSSE fallback parse error:', e); return null; }
+  try { return JSON.parse(text); } catch (e) { logger.warn('[bob-mcp] parseSSE fallback parse error:', e); return null; }
 }
 
 async function mcpCall(method: string, params?: Record<string, unknown>, id?: number): Promise<unknown> {
@@ -71,7 +73,7 @@ export async function initBob(): Promise<boolean> {
     initialized = !!res?.result?.serverInfo;
     if (initialized) { vpsAvailable = (getUrl() === VPS_URL); return true; }
   } catch (e) {
-    console.warn('[bob-mcp] initBob primary connection error:', e);
+    logger.warn('[bob-mcp] initBob primary connection error:', e);
     if (vpsAvailable === null) {
       vpsAvailable = false;
       sessionId = null;
@@ -84,7 +86,7 @@ export async function initBob(): Promise<boolean> {
         initialized = !!res?.result?.serverInfo;
         return initialized;
       } catch (e2) {
-        console.warn('[bob-mcp] initBob fallback connection error:', e2);
+        logger.warn('[bob-mcp] initBob fallback connection error:', e2);
         return false;
       }
     }
@@ -105,7 +107,7 @@ export async function searchKnowledge(query: string): Promise<string | null> {
     const text = res?.result?.content?.[0]?.text;
     return text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Knowledge search failed:', e);
+    logger.warn('[Bob MCP] Knowledge search failed:', e);
     return null;
   }
 }
@@ -122,7 +124,7 @@ export async function getSkillDoc(skillName: string): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Skill doc failed:', e);
+    logger.warn('[Bob MCP] Skill doc failed:', e);
     return null;
   }
 }
@@ -139,7 +141,7 @@ export async function getBtcMonitor(): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] BTC monitor failed:', e);
+    logger.warn('[Bob MCP] BTC monitor failed:', e);
     return null;
   }
 }
@@ -154,7 +156,7 @@ export async function getContractAddresses(): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Contract addresses failed:', e);
+    logger.warn('[Bob MCP] Contract addresses failed:', e);
     return null;
   }
 }
@@ -169,7 +171,7 @@ export async function bobRpc(method: string, params: string = '[]'): Promise<str
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] RPC failed:', e);
+    logger.warn('[Bob MCP] RPC failed:', e);
     return null;
   }
 }
@@ -184,7 +186,7 @@ export async function getDevDocs(section?: string): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Dev docs failed:', e);
+    logger.warn('[Bob MCP] Dev docs failed:', e);
     return null;
   }
 }
@@ -199,7 +201,7 @@ export async function getAuditInfo(section?: string): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Audit failed:', e);
+    logger.warn('[Bob MCP] Audit failed:', e);
     return null;
   }
 }
@@ -214,7 +216,7 @@ export async function getCliHelp(operation?: string): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] CLI failed:', e);
+    logger.warn('[Bob MCP] CLI failed:', e);
     return null;
   }
 }
@@ -229,7 +231,7 @@ export async function getSkillCatalog(): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Skill catalog failed:', e);
+    logger.warn('[Bob MCP] Skill catalog failed:', e);
     return null;
   }
 }
@@ -244,7 +246,7 @@ export async function getCryptoFrontendDocs(): Promise<string | null> {
     }) as { result?: { content?: Array<{ text?: string }> } };
     return res?.result?.content?.[0]?.text || null;
   } catch (e) {
-    console.warn('[Bob MCP] Crypto frontend failed:', e);
+    logger.warn('[Bob MCP] Crypto frontend failed:', e);
     return null;
   }
 }

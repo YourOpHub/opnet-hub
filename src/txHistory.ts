@@ -1,6 +1,8 @@
 /**
  * Shared transaction history — localStorage-backed log for swaps, mints, claims.
  */
+import { logger } from './logger';
+
 export interface TxRecord {
   id: string;
   type: 'swap' | 'mint' | 'claim';
@@ -24,7 +26,7 @@ export function getTxHistory(wallet?: string): TxRecord[] {
     const all: TxRecord[] = JSON.parse(raw);
     if (wallet) return all.filter(r => r.wallet === wallet);
     return all;
-  } catch (e) { console.warn('[txHistory] Failed to parse transaction history from localStorage:', e); return []; }
+  } catch (e) { logger.warn('[txHistory] Failed to parse transaction history from localStorage:', e); return []; }
 }
 
 export function addTxRecord(record: Omit<TxRecord, 'id' | 'ts'>): TxRecord {

@@ -8,6 +8,7 @@
  * 4. Proceed with operation
  */
 import { JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type CallResult, type TransactionParameters } from 'opnet';
+import { logger } from './logger';
 import { Address } from '@btc-vision/transaction';
 import { NETWORK, CURRENT_ENV } from './config';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
@@ -56,7 +57,7 @@ export async function waitForNextBlock(
   timeoutMs = 60_000,
 ): Promise<void> {
   let startBlock: bigint;
-  try { startBlock = await provider.getBlockNumber(); } catch (e) { console.warn('[txUtils] Failed to get initial block number for wait:', e); return; }
+  try { startBlock = await provider.getBlockNumber(); } catch (e) { logger.warn('[txUtils] Failed to get initial block number for wait:', e); return; }
   
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -66,10 +67,10 @@ export async function waitForNextBlock(
     try {
       const current = await provider.getBlockNumber();
       if (current > startBlock) return;
-    } catch (e) { console.warn('[txUtils] Block number poll failed, retrying:', e); }
+    } catch (e) { logger.warn('[txUtils] Block number poll failed, retrying:', e); }
   }
   // Timeout — proceed anyway (best-effort)
-  console.warn('[txUtils] Block wait timeout, proceeding anyway');
+  logger.warn('[txUtils] Block wait timeout, proceeding anyway');
 }
 
 /**
@@ -114,10 +115,10 @@ export async function ensureAllowance(
         return false; // Already approved
       }
     } else {
-      console.warn('[txUtils] Allowance check reverted:', callRes.revert);
+      logger.warn('[txUtils] Allowance check reverted:', callRes.revert);
     }
   } catch (e) {
-    console.warn('[txUtils] Allowance check failed, proceeding with approval:', e);
+    logger.warn('[txUtils] Allowance check failed, proceeding with approval:', e);
   }
 
   // Send increaseAllowance(max_uint256)
@@ -160,7 +161,7 @@ export async function getMinBtcRequired(
       : `~${Number(minSats).toLocaleString()} sats (~${(Number(minSats) / 100_000_000).toFixed(6)} BTC)`;
     return { minSats, feeRate, label };
   } catch (e) {
-    console.warn('[txUtils] Failed to fetch gas parameters for min BTC estimate:', e);
+    logger.warn('[txUtils] Failed to fetch gas parameters for min BTC estimate:', e);
     // Fallback estimates
     const minSats = opType === 'deploy' ? 110_000n : 5_000n;
     return { minSats, feeRate: 2, label: opType === 'deploy' ? '~110K sats' : '~5K sats' };

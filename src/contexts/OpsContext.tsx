@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { updateSwapOp, getActiveOps, getHistory, type SwapOp, type SwapOpUpdate } from '../swapApi';
 
@@ -49,8 +50,8 @@ function swapOpToEntry(op: SwapOp): OpEntry {
     direction: op.direction, role: op.role, step: op.step,
     status: (op.status === 'active' ? 'active' : op.status === 'failed' ? 'failed' : 'completed') as OpEntry['status'],
     error: op.error || undefined,
-    amounts: (() => { try { return JSON.parse(op.amounts); } catch (e) { console.warn('[OpsContext] Failed to parse op amounts JSON:', e); return undefined; } })(),
-    txIds: (() => { try { return JSON.parse(op.tx_ids); } catch (e) { console.warn('[OpsContext] Failed to parse op tx_ids JSON:', e); return undefined; } })(),
+    amounts: (() => { try { return JSON.parse(op.amounts); } catch (e) { logger.warn('[OpsContext] Failed to parse op amounts JSON:', e); return undefined; } })(),
+    txIds: (() => { try { return JSON.parse(op.tx_ids); } catch (e) { logger.warn('[OpsContext] Failed to parse op tx_ids JSON:', e); return undefined; } })(),
     createdAt: new Date(op.created_at + 'Z').getTime(),
     updatedAt: new Date(op.updated_at + 'Z').getTime(),
   };

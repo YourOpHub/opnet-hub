@@ -4,6 +4,8 @@
  * Caches result for 60s to avoid rate limits.
  */
 
+import { logger } from './logger';
+
 interface PriceData {
   usd: number;
   usd_24h_change: number;
@@ -28,7 +30,7 @@ async function tryBinance(): Promise<PriceData | null> {
     let change = 0;
     if (statsRes.ok) { const s = await statsRes.json(); change = parseFloat(s?.priceChangePercent) || 0; }
     return { usd: price, usd_24h_change: change, usd_market_cap: 0, source: 'Binance' };
-  } catch (e) { console.warn('[btc-price] Binance price fetch failed:', e); return null; }
+  } catch (e) { logger.warn('[btc-price] Binance price fetch failed:', e); return null; }
 }
 
 async function tryKraken(): Promise<PriceData | null> {
@@ -42,7 +44,7 @@ async function tryKraken(): Promise<PriceData | null> {
     const open = parseFloat(pair.o) || price;
     const change = open > 0 ? ((price - open) / open) * 100 : 0;
     return { usd: price, usd_24h_change: change, usd_market_cap: 0, source: 'Kraken' };
-  } catch (e) { console.warn('[btc-price] Kraken price fetch failed:', e); return null; }
+  } catch (e) { logger.warn('[btc-price] Kraken price fetch failed:', e); return null; }
 }
 
 export async function fetchBtcPrice(): Promise<PriceData> {

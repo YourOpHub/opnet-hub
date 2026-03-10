@@ -3,6 +3,8 @@
  * Handles player sync, leaderboard, token info, and claims
  */
 
+import { logger } from './logger';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 let apiFailed = false;
@@ -24,7 +26,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T | null> {
     apiFailCount++;
     if (apiFailCount >= MAX_FAIL) {
       apiFailed = true;
-      console.warn(`[API] Backend unreachable after ${MAX_FAIL} attempts, disabling API calls`);
+      logger.warn(`[API] Backend unreachable after ${MAX_FAIL} attempts, disabling API calls`);
     }
     return null;
   }

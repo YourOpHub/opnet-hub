@@ -3,6 +3,8 @@
  * Falls back to hardcoded DEPLOYED_CONTRACTS when API is unavailable.
  */
 
+import { logger } from './logger';
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export interface IndexedToken {
@@ -35,7 +37,7 @@ export async function fetchAllTokens(): Promise<IndexedToken[]> {
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {
-        console.warn('[tokenApi] Failed to fetch all tokens:', e);
+        logger.warn('[tokenApi] Failed to fetch all tokens:', e);
         return [];
     }
 }
@@ -51,7 +53,7 @@ export async function fetchHolderBalances(pubkey: string, tweakedPubkey?: string
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {
-        console.warn('[tokenApi] Failed to fetch holder balances:', e);
+        logger.warn('[tokenApi] Failed to fetch holder balances:', e);
         return [];
     }
 }
@@ -78,7 +80,7 @@ export async function fetchMotoswapPools(): Promise<MotoswapPool[]> {
         if (!res.ok) return [];
         return await res.json();
     } catch (e) {
-        console.warn('[tokenApi] Failed to fetch Motoswap pools:', e);
+        logger.warn('[tokenApi] Failed to fetch Motoswap pools:', e);
         return [];
     }
 }

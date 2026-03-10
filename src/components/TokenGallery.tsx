@@ -334,8 +334,9 @@ const TokenGallery: React.FC = () => {
           {/* Search + Sort row */}
           <div className="d-flex gap-6 mb-8 flex-wrap">
             <input className="flex-1 min-w-140" style={{ ...inputStyle }} type="text" value={allSearch}
-              onChange={e => setAllSearch(e.target.value)} placeholder="Search name, symbol, address..." />
-            <button onClick={loadAllTokens} disabled={allLoading} className="br-14 fs-70 fw-700 c-t2 ff-ui p-8-12 bg-bg3 bd-bd" style={{ cursor: allLoading ? 'not-allowed' : 'pointer' }}>{allLoading ? '...' : '↻'}</button>
+              onChange={e => setAllSearch(e.target.value)} placeholder="Search name, symbol, address..."
+              aria-label="Search tokens by name, symbol, or address" />
+            <button onClick={loadAllTokens} disabled={allLoading} aria-label="Refresh token list" className="br-14 fs-70 fw-700 c-t2 ff-ui p-8-12 bg-bg3 bd-bd" style={{ cursor: allLoading ? 'not-allowed' : 'pointer' }}>{allLoading ? '...' : '↻'}</button>
           </div>
 
           {/* Sort chips + filter */}
@@ -345,7 +346,7 @@ const TokenGallery: React.FC = () => {
               <button key={id} onClick={() => toggleSort(id)} className="br-20 fs-60 fw-700 pointer ff-ui" style={{ padding: '4px 10px', background: sortField === id ? 'rgba(247,147,26,.12)' : 'transparent', border: `1px solid ${sortField === id ? 'rgba(247,147,26,.3)' : 'rgba(255,255,255,.06)'}`, color: sortField === id ? 'var(--o)' : 'var(--t3)', transition: 'all .15s' }}>{label}{sortIcon(id)}</button>
             ))}
             <span className="sep-v" />
-            <button onClick={() => setFilterMintable(v => !v)} className="br-20 fs-60 fw-700 pointer ff-ui" style={{ padding: '4px 10px', background: filterMintable ? 'rgba(168,85,247,.15)' : 'transparent', border: `1px solid ${filterMintable ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.06)'}`, color: filterMintable ? '#a855f7' : 'var(--t3)', transition: 'all .15s' }}>Mintable{filterMintable ? ' \u2713' : ''}</button>
+            <button onClick={() => setFilterMintable(v => !v)} aria-pressed={filterMintable} aria-label="Filter mintable tokens" className="br-20 fs-60 fw-700 pointer ff-ui" style={{ padding: '4px 10px', background: filterMintable ? 'rgba(168,85,247,.15)' : 'transparent', border: `1px solid ${filterMintable ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.06)'}`, color: filterMintable ? '#a855f7' : 'var(--t3)', transition: 'all .15s' }}>Mintable{filterMintable ? ' \u2713' : ''}</button>
             <span className="ml-auto fs-58 c-t4 text-mono">
               {sortedFiltered.length.toLocaleString()} tokens
             </span>
@@ -359,11 +360,12 @@ const TokenGallery: React.FC = () => {
             <div className="P p-12 mt-4">
               <div className="d-flex gap-6">
                 <input className="flex-1 fs-72" style={{ ...inputStyle }} type="text" value={importAddr}
-                  onChange={e => setImportAddr(e.target.value)} placeholder="0x... or opt1sq..." />
+                  onChange={e => setImportAddr(e.target.value)} placeholder="0x... or opt1sq..."
+                  aria-label="Token contract address to import" />
                 <button onClick={doImportToken} disabled={importing} className="br-14 fs-68 fw-700 c-white ff-ui ws-nowrap p-8-14 btn-blue" style={{ cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1 }}>{importing ? '...' : 'Import'}</button>
               </div>
               {importResult && (
-                <div className={`mt-6 br-6 fs-62 p-6-8 ${importResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`}>{importResult.msg}</div>
+                <div className={`mt-6 br-6 fs-62 p-6-8 ${importResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">{importResult.msg}</div>
               )}
             </div>
           </details>
@@ -384,9 +386,9 @@ const TokenGallery: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="br-14 ov-hidden" style={{ border: '1px solid var(--bd)', background: 'var(--bg2)' }}>
+            <div className="br-14 ov-hidden" role="table" aria-label="Token list" style={{ border: '1px solid var(--bd)', background: 'var(--bg2)' }}>
               {/* Table header — clickable for sorting */}
-              <div className="d-grid gap-4 fs-56 c-t4 text-upper ls-06 fw-700 user-select-none" style={{ gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', padding: '7px 10px', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
+              <div className="d-grid gap-4 fs-56 c-t4 text-upper ls-06 fw-700 user-select-none" role="row" style={{ gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', padding: '7px 10px', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
                 <span className="text-center">#</span>
                 <span onClick={() => toggleSort('symbol')} className="pointer" style={{ color: sortField === 'symbol' ? 'var(--o)' : undefined }}>
                   Token{sortIcon('symbol')}
@@ -442,13 +444,13 @@ const TokenGallery: React.FC = () => {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="d-flex ai-center jc-center gap-6" style={{ padding: '10px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.3)' }}>
-                  <button onClick={() => setPage(0)} disabled={page === 0} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<<'}</button>
-                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<'}</button>
+                  <button onClick={() => setPage(0)} disabled={page === 0} aria-label="First page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<<'}</button>
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Previous page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<'}</button>
                   <span className="fs-62 c-t2 text-mono text-center min-w-80">
                     {page + 1} / {totalPages}
                   </span>
-                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>'}</button>
-                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>>'}</button>
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Next page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>'}</button>
+                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} aria-label="Last page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>>'}</button>
                 </div>
               )}
             </div>
@@ -494,8 +496,9 @@ const TokenGallery: React.FC = () => {
                     <div className="flex-1 pos-relative">
                       <input className="w-full" style={{ ...inputStyle, paddingRight: 48 }} type="text" inputMode="decimal"
                         value={featMintAmt} onChange={e => { const v = e.target.value; const maxMint = tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1_000_000; if (v === '' || (Number(v) >= 0 && Number(v) <= maxMint)) setFeatMintAmt(v); }}
-                        placeholder={`Amount (max ${tok.maxMintPerTx ? (tok.maxMintPerTx / Math.pow(10, tok.decimals)).toLocaleString() : '1,000'})`} />
-                      <button onClick={() => setFeatMintAmt(String(tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1000))} className="pos-absolute fs-52 fw-700 br-4 c-purple pointer ff-ui" style={{ right: 4, top: '50%', transform: 'translateY(-50%)', padding: '3px 6px', background: 'rgba(168,85,247,.15)', border: 'none' }}>MAX</button>
+                        placeholder={`Amount (max ${tok.maxMintPerTx ? (tok.maxMintPerTx / Math.pow(10, tok.decimals)).toLocaleString() : '1,000'})`}
+                        aria-label={`Amount of ${tok.symbol} to mint`} />
+                      <button onClick={() => setFeatMintAmt(String(tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1000))} aria-label={`Use maximum ${tok.symbol} mint amount`} className="pos-absolute fs-52 fw-700 br-4 c-purple pointer ff-ui" style={{ right: 4, top: '50%', transform: 'translateY(-50%)', padding: '3px 6px', background: 'rgba(168,85,247,.15)', border: 'none' }}>MAX</button>
                     </div>
                     {connected ? (
                       <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap p-8-14 btn-purple" style={{ cursor: featMinting ? 'not-allowed' : 'pointer', opacity: featMinting ? 0.6 : 1 }}>{featMinting ? 'Minting...' : 'Mint'}</button>
@@ -504,7 +507,7 @@ const TokenGallery: React.FC = () => {
                     )}
                   </div>
                   {featMintResult && (
-                    <div className={`br-6 fs-68 word-break p-8-10 ${featMintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`}>{featMintResult.msg}</div>
+                    <div className={`br-6 fs-68 word-break p-8-10 ${featMintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">{featMintResult.msg}</div>
                   )}
                 </div>
               )}
@@ -548,7 +551,7 @@ const TokenGallery: React.FC = () => {
                 return (
                   <div key={tok.address || idx} className="P p-16">
                     <div className="d-flex ai-start gap-12">
-                      <img src={genLogo(tok.symbol)} alt={tok.symbol} className="w-48 h-48 br-50 flex-shrink-0" style={{ border: '2px solid rgba(255,255,255,.08)' }} />
+                      <img src={genLogo(tok.symbol)} alt={`${tok.symbol} token logo`} className="w-48 h-48 br-50 flex-shrink-0" style={{ border: '2px solid rgba(255,255,255,.08)' }} />
                       <div className="flex-1 min-w-0">
                         <div className="d-flex ai-center gap-6 flex-wrap">
                           <span className="fw-800 fs-90 c-w">{tok.name}</span>
@@ -599,7 +602,8 @@ const TokenGallery: React.FC = () => {
                         <div className="d-flex gap-8 mb-8">
                           <input className="flex-1" style={{ ...inputStyle }} type="text" inputMode="decimal"
                             value={mintAmount} onChange={e => setMintAmount(e.target.value)}
-                            placeholder={`Amount of ${tok.symbol} to mint`} />
+                            placeholder={`Amount of ${tok.symbol} to mint`}
+                            aria-label={`Amount of ${tok.symbol} to mint`} />
                           {connected ? (
                             <button onClick={() => doMint(tok)} disabled={minting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap p-8-14 btn-purple" style={{ cursor: minting ? 'not-allowed' : 'pointer', opacity: minting ? 0.6 : 1 }}>{minting ? 'Minting...' : 'Mint'}</button>
                           ) : (
@@ -607,7 +611,7 @@ const TokenGallery: React.FC = () => {
                           )}
                         </div>
                         {mintResult && (
-                          <div className={`br-6 fs-68 word-break p-8-10 ${mintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`}>{mintResult.msg}</div>
+                          <div className={`br-6 fs-68 word-break p-8-10 ${mintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">{mintResult.msg}</div>
                         )}
                       </div>
                     )}

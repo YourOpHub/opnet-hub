@@ -304,7 +304,7 @@ const Staking: React.FC = () => {
       </div>
 
       {/* Staking Interface */}
-      <div className="mb-16 staking-panel">
+      <div className="mb-16 staking-panel" role="form" aria-label="Staking interface">
         <div className="flex-between mb-16">
           <span className="fs-95 fw-800 c-white ls-neg02">Stake MINE</span>
           {connected && (
@@ -320,9 +320,10 @@ const Staking: React.FC = () => {
           <div className="fs-58 mb-6 fw-500 c-muted">Amount to Stake</div>
           <div className="pos-relative">
             <input type="number" value={stakeAmount} onChange={e => setStakeAmount(e.target.value)}
-              placeholder="0" className="w-full fs-95 fw-700 outline-none" style={{ padding: '16px 80px 16px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box', transition: 'border-color .2s' }} />
+              placeholder="0" aria-label="Amount of MINE to stake" className="w-full fs-95 fw-700 outline-none" style={{ padding: '16px 80px 16px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box', transition: 'border-color .2s' }} />
             {connected && mineBalance > 0n && (
               <button onClick={() => setStakeAmount((Number(mineBalance) / 1e8).toString())}
+                aria-label="Use maximum MINE balance"
                 className="pos-absolute br-8 pointer fs-65 fw-700 ff-ui" style={{ right: 10, top: '50%', transform: 'translateY(-50%)', padding: '6px 14px', border: '1px solid rgba(167,139,250,.2)', background: 'rgba(167,139,250,.08)', color: '#a78bfa', transition: 'all .2s' }}>MAX</button>
             )}
           </div>
@@ -340,7 +341,7 @@ const Staking: React.FC = () => {
             <div className="fs-58 mb-6 fw-500 c-muted">Amount to Unstake</div>
             <div className="flex-center gap-8 mb-10">
               <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
-                placeholder="0" className="flex-1 fs-85 fw-700 outline-none" style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
+                placeholder="0" aria-label="Amount of MINE to unstake" className="flex-1 fs-85 fw-700 outline-none" style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
               <button onClick={doUnstake} disabled={busy || !unstakeAmount}
                 className="c-red pointer fw-700 fs-78 ff-ui" style={{ padding: '14px 22px', borderRadius: 14, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', opacity: busy || !unstakeAmount ? 0.5 : 1, transition: 'all .2s' }}>
                 {unstaking ? '⏳...' : 'Unstake'}
@@ -359,7 +360,7 @@ const Staking: React.FC = () => {
                 : `Claim ${fmtToken(userRewards)} MINE Rewards`}
             </button>
             {cooldownLeft > 0 && (
-              <div className="mt-6 text-center fs-58 c-muted">
+              <div className="mt-6 text-center fs-58 c-muted" aria-live="polite">
                 Next claim available in {Math.floor(cooldownLeft / 60000)}:{String(Math.floor((cooldownLeft % 60000) / 1000)).padStart(2, '0')}
               </div>
             )}
@@ -368,7 +369,7 @@ const Staking: React.FC = () => {
 
         {/* Result */}
         {result && (
-          <div className="mt-12 p-12 br-8 fs-72 word-break" style={{ background: result.type === 'success' ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${result.type === 'success' ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`, color: result.type === 'success' ? 'var(--g)' : '#ef4444' }}>
+          <div className="mt-12 p-12 br-8 fs-72 word-break" role="alert" aria-live="assertive" style={{ background: result.type === 'success' ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${result.type === 'success' ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`, color: result.type === 'success' ? 'var(--g)' : '#ef4444' }}>
             {result.msg}
           </div>
         )}

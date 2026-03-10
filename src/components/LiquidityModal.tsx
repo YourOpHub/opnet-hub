@@ -200,18 +200,18 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const fmtBal = (b: bigint | undefined) => b != null ? (Number(b) / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
 
   return (
-    <div className="liq-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="liq-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-labelledby="liq-modal-title">
       <div className="liq-card">
         {/* Header */}
         <div className="flex-between mb-18">
-          <span className="fw-800 fs-95 c-w ls-neg02">Liquidity</span>
-          <button onClick={onClose} className="liq-close-btn">&times;</button>
+          <span id="liq-modal-title" className="fw-800 fs-95 c-w ls-neg02">Liquidity</span>
+          <button onClick={onClose} className="liq-close-btn" aria-label="Close liquidity modal">&times;</button>
         </div>
 
         {/* Tabs */}
-        <div className="liq-tab-bar">
+        <div className="liq-tab-bar" role="tablist" aria-label="Liquidity operation">
           {(['add', 'remove'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
+            <button key={t} onClick={() => setTab(t)} role="tab" aria-selected={tab === t} aria-label={t === 'add' ? 'Add liquidity' : 'Remove liquidity'} style={{
               flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: tab === t ? (t === 'add' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'linear-gradient(135deg, #ef4444, #dc2626)') : 'transparent',
               color: tab === t ? '#fff' : '#5a6578', fontWeight: 700, fontSize: '.78rem',
@@ -305,10 +305,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
               </div>
               <div style={{ position: 'relative' }}>
                 <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
-                  placeholder="0.0" className="liq-input" style={{ paddingRight: 70 }} />
+                  placeholder="0.0" className="liq-input" aria-label="MINE amount to add" style={{ paddingRight: 70 }} />
                 {mineBal != null && mineBal > 0n && (
                   <button onClick={() => setMineAmt((Number(mineBal) / 1e8).toString())}
-                    className="liq-max-btn">MAX</button>
+                    className="liq-max-btn" aria-label="Use maximum MINE balance">MAX</button>
                 )}
               </div>
             </div>
@@ -320,7 +320,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                 <span className="liq-field">VIBE (auto)</span>
                 <span className="liq-bal">Balance: {fmtBal(vibeBal)}</span>
               </div>
-              <input type="number" value={vibeAmt} readOnly className="liq-input-ro" />
+              <input type="number" value={vibeAmt} readOnly className="liq-input-ro" aria-label="VIBE amount (auto-calculated)" />
             </div>
 
             {parseFloat(mineAmt) > 0 && reserveA > 0 && (
@@ -389,13 +389,13 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                   <div className="liq-label-sm mb-4">MINE amount</div>
                   <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
                     placeholder={lpMine > 0 ? String(lpMine) : '0'}
-                    className="liq-input-sm" />
+                    className="liq-input-sm" aria-label="MINE amount to remove" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div className="liq-label-sm mb-4">VIBE (auto)</div>
                   <input type="number" value={vibeAmt} readOnly
                     placeholder={lpVibe > 0 ? String(lpVibe) : '0'}
-                    className="liq-input-sm-ro" />
+                    className="liq-input-sm-ro" aria-label="VIBE amount to remove (auto-calculated)" />
                 </div>
               </div>
               {hasLP && (
@@ -421,7 +421,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
         {/* Result */}
         {result && (
-          <div className={`mt-12 fs-72 word-break ${result.ok ? 'cc-result-ok' : 'cc-result-err'}`}>
+          <div className={`mt-12 fs-72 word-break ${result.ok ? 'cc-result-ok' : 'cc-result-err'}`} role="alert" aria-live="assertive">
             {result.msg}
           </div>
         )}

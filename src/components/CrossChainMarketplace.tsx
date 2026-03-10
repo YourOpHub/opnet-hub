@@ -169,7 +169,7 @@ const CrossChainMarketplace: React.FC = () => {
       </div>
 
       {/* Dual Wallet Connection */}
-      <div className="Pg grid-2col mb-16" style={{ gap: 12 }}>
+      <div className="Pg grid-2col mb-16" role="region" aria-label="Wallet connections" style={{ gap: 12 }}>
         {/* OPNet Wallet */}
         <div className="cc-wallet-opnet">
           <div className="cc-wallet-label">
@@ -484,8 +484,8 @@ const CrossChainMarketplace: React.FC = () => {
           )}
 
           {/* Stats bar */}
-          <div className="grid-3col gap-10 mb-16">
-            <div className="Pg p-14-center text-center pointer" onClick={() => { fetchOrders(); }}>
+          <div className="grid-3col gap-10 mb-16" role="region" aria-label="FractalSwap statistics">
+            <div className="Pg p-14-center text-center pointer" onClick={() => { fetchOrders(); }} role="button" tabIndex={0} aria-label="Refresh active orders" onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fetchOrders(); } }}>
               <div className="stat-label-ls">Active Orders ↻</div>
               <div className="stat-val">{activeOrders.length}</div>
             </div>
@@ -569,7 +569,7 @@ const CrossChainMarketplace: React.FC = () => {
           )}
 
           {/* ── Available Swaps — split by direction ── */}
-          <div className="grid-2col gap-12 mb-16">
+          <div className="grid-2col gap-12 mb-16" role="region" aria-label="Available swaps">
             {/* Buy FB — taker pays BTC, gets FB */}
             <div className="P p-0-overflow-hidden">
               <div className="ob-section-hdr c-g fs-86">

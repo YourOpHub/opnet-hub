@@ -34,22 +34,22 @@ class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
+        <div role="alert" aria-live="assertive" style={{
           padding: '48px 24px',
           textAlign: 'center',
           maxWidth: 480,
           margin: '0 auto',
         }}>
-          <div style={{
+          <div aria-hidden="true" style={{
             width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
             background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.15)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1.8rem',
           }}>!</div>
-          <div style={{
+          <h2 style={{
             fontSize: '1.1rem', fontWeight: 700, color: '#fff',
             marginBottom: 8, letterSpacing: '-.02em',
-          }}>Something went wrong</div>
+          }}>Something went wrong</h2>
           <div style={{
             fontSize: '.8rem', color: '#7a8494', lineHeight: 1.6,
             marginBottom: 20,

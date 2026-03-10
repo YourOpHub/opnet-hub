@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <div className="hero-d">
+      <div className="hero-d" role="region" aria-label="Bitcoin price overview" aria-live="polite">
         <div className="hd-s dash-pulse">
           <span className={`dot-live ${pulse ? 'dot-green' : 'dot-t4'}`} />
           Bitcoin Price — OP_NET Consensus Layer
@@ -86,15 +86,15 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
-      <div className="mets">
-        <div className="P met"><div className="met-i">⛏️</div><div className="met-v">{blk > 0 ? blk.toLocaleString() : '—'}</div><div className="met-l">OP_NET Block</div></div>
+      <div className="mets" role="region" aria-label="Network metrics">
+        <div className="P met"><div className="met-i" aria-hidden="true">⛏️</div><div className="met-v">{blk > 0 ? blk.toLocaleString() : '—'}</div><div className="met-l">OP_NET Block</div></div>
         <div className="P met">
           <div className="met-i">🔄</div>
           <div className="met-v c-p">{epoch > 0 ? epoch.toLocaleString() : '—'}</div>
           <div className="met-l">Epoch</div>
           {blk > 0 && (
             <div className="w-full mt-6">
-              <div className="epoch-bar">
+              <div className="epoch-bar" role="progressbar" aria-valuenow={epochBlock} aria-valuemin={0} aria-valuemax={5} aria-label="Epoch progress">
                 <div style={{ height: '100%', background: 'linear-gradient(90deg,var(--p),var(--c))', width: `${epochPct}%`, transition: 'width .5s', borderRadius: 4 }} />
               </div>
               <div className="fs-50 c-t4 mt-2">{epochBlock}/5 blocks</div>
@@ -111,8 +111,8 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="mets mt-16">
-        <div className="P met"><div className="met-i">🔐</div><div className="met-v c-g fs-100">ML-DSA</div><div className="met-l">PQ Security</div></div>
+      <div className="mets mt-16" role="region" aria-label="Network information">
+        <div className="P met"><div className="met-i" aria-hidden="true">🔐</div><div className="met-v c-g fs-100">ML-DSA</div><div className="met-l">PQ Security</div></div>
         <div className="P met"><div className="met-i">📦</div><div className="met-v c-g">26+</div><div className="met-l">dApps Live</div></div>
         <div className="P met"><div className="met-i">🌐</div><div className="met-v c-c fs-100">Mainnet</div><div className="met-l">Network</div></div>
         <div className="P met"><div className="met-i">🔗</div>
@@ -125,11 +125,11 @@ const Dashboard: React.FC = () => {
 
       {/* Live Block Feed */}
       {blockLog.length > 0 && (
-        <div className="P mt-16">
+        <div className="P mt-16" role="log" aria-label="Live block feed" aria-live="polite">
           <div className="Lb">⚡ Live Block Feed</div>
-          <div className="flex-col gap-4">
+          <div className="flex-col gap-4" role="list">
             {blockLog.map((b, i) => (
-              <div key={b.height + '-' + i} style={{
+              <div key={b.height + '-' + i} role="listitem" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                 padding: '8px 12px', borderRadius: '14px', fontSize: '.75rem',
                 background: i === 0 ? 'rgba(247,147,26,.04)' : 'rgba(255,255,255,.02)',

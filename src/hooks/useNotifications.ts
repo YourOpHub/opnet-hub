@@ -12,8 +12,8 @@ function loadPreferences(): NotificationPreferences {
         if (raw) {
             return JSON.parse(raw) as NotificationPreferences;
         }
-    } catch {
-        // Corrupted storage — fall back to defaults
+    } catch (e) {
+        console.warn('[useNotifications] Failed to parse notification preferences from localStorage:', e);
     }
     return { enabled: false };
 }
@@ -21,8 +21,8 @@ function loadPreferences(): NotificationPreferences {
 function savePreferences(prefs: NotificationPreferences): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-    } catch {
-        // Storage full or unavailable — silently ignore
+    } catch (e) {
+        console.warn('[useNotifications] Failed to save notification preferences to localStorage:', e);
     }
 }
 

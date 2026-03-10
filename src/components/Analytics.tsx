@@ -68,7 +68,8 @@ async function fetchServerSnapshots(pool: string, limit = 500): Promise<PoolSnap
     const data = await resp.json();
     if (!data.snapshots || !Array.isArray(data.snapshots)) return [];
     return data.snapshots.filter(validateSnapshot);
-  } catch {
+  } catch (e) {
+    console.warn('[Analytics] Failed to fetch server snapshots:', e);
     return [];
   }
 }

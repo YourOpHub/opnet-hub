@@ -116,8 +116,9 @@ export async function connectUnisat(testnet = true): Promise<UnisatWalletState> 
     let chain: UnisatChain;
     try {
         chain = await unisat.switchChain(targetChain);
-    } catch {
-        // User may have rejected — try to get current chain
+    } catch (e) {
+        console.warn('[unisat] Failed to switch chain (user may have rejected):', e);
+        // Try to get current chain instead
         chain = await unisat.getChain();
     }
 

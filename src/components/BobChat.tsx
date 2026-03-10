@@ -118,7 +118,8 @@ const BobChat: React.FC = () => {
                 } else {
                     reply = localAns(userText);
                 }
-            } catch {
+            } catch (e) {
+                console.warn('[BobChat] MCP query failed, falling back to local answers:', e);
                 reply = localAns(userText);
             }
         } else {

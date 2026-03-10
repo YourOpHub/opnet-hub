@@ -257,7 +257,8 @@ const TokenLauncher: React.FC = () => {
       } else {
         setVerifyResult({ ok: false, info: 'No contract found. Check address or wait for confirmation.' });
       }
-    } catch {
+    } catch (e) {
+      console.warn('[TokenLauncher] Contract verification RPC call failed:', e);
       setVerifyResult({ ok: false, info: 'RPC error — try again.' });
     } finally {
       opnet.setNetwork(prevNet);

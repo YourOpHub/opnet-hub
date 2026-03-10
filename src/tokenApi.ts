@@ -34,7 +34,8 @@ export async function fetchAllTokens(): Promise<IndexedToken[]> {
         });
         if (!res.ok) return [];
         return await res.json();
-    } catch {
+    } catch (e) {
+        console.warn('[tokenApi] Failed to fetch all tokens:', e);
         return [];
     }
 }
@@ -49,7 +50,8 @@ export async function fetchHolderBalances(pubkey: string, tweakedPubkey?: string
         });
         if (!res.ok) return [];
         return await res.json();
-    } catch {
+    } catch (e) {
+        console.warn('[tokenApi] Failed to fetch holder balances:', e);
         return [];
     }
 }
@@ -75,7 +77,8 @@ export async function fetchMotoswapPools(): Promise<MotoswapPool[]> {
         });
         if (!res.ok) return [];
         return await res.json();
-    } catch {
+    } catch (e) {
+        console.warn('[tokenApi] Failed to fetch Motoswap pools:', e);
         return [];
     }
 }

@@ -155,7 +155,7 @@ const App: React.FC = () => {
                     const bal = sim?.properties?.balance ?? 0n;
                     const human = (Number(BigInt(bal.toString())) / Math.pow(10, tok.decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
                     if (!cancelled) setBalances(prev => ({ ...prev, [sym]: human }));
-                } catch { /* ignore */ }
+                } catch (e) { console.warn('[App] Failed to fetch token balance:', e); }
             })();
         });
         return () => { cancelled = true; };

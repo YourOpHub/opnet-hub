@@ -90,7 +90,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
       <div className="m-auto p-16-20 max-w-720">
         {/* Header */}
         <div className="flex-center gap-14 mb-16">
-          <img src={selected.image || genLogo(selected.symbol)} alt="" className="br-50 w-52 h-52" style={{ border: `2px solid ${selColor}44` }} />
+          <img src={selected.image || genLogo(selected.symbol)} alt={`${selected.symbol} token logo`} className="br-50 w-52 h-52" style={{ border: `2px solid ${selColor}44` }} />
           <div className="flex-1">
             <div className="flex-center gap-8 flex-wrap">
               <span className="fw-800 c-w fs-110">{selected.name}</span>
@@ -132,7 +132,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
         {opscanHolderList.length > 0 ? (
           <div className="P p-14 mb-12">
             <div className="Lb mb-8">Top Holders ({opscanHolders ?? opscanHolderList.length})<span className="fs-50 c-t4 fw-400 ml-6">via OPScan</span></div>
-            <div className="max-h-200-overflow">
+            <div className="max-h-200-overflow" role="list" aria-label="Top token holders">
               {opscanHolderList.map((h, i) => (
                 <div key={i} className="flex-between fs-66" style={holderBorderStyle}>
                   <div className="flex-center gap-8"><span className="c-t4 text-mono min-w-20">#{i + 1}</span><span className="c-t2 text-mono">{h.address}</span></div>
@@ -170,13 +170,13 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
             <div className="Lb mb-8">Public Mint</div>
             <div className="mb-6">
               <div className="flex-between mb-4 fs-62 c-t3"><span>Amount</span><span className="fw-700 c-w text-mono">{mintAmt ? fmtNum(Number(mintAmt)) : '0'} / {fmtNum(selected.maxMintPerTx)}</span></div>
-              <input type="range" min={0} max={selected.maxMintPerTx} step={Math.max(1, Math.floor(selected.maxMintPerTx / 100))} value={Number(mintAmt) || 0} onChange={e => setMintAmt(e.target.value === '0' ? '' : e.target.value)} className="w-full mb-4" style={{ accentColor: selColor }} />
+              <input type="range" aria-label="Mint amount" min={0} max={selected.maxMintPerTx} step={Math.max(1, Math.floor(selected.maxMintPerTx / 100))} value={Number(mintAmt) || 0} onChange={e => setMintAmt(e.target.value === '0' ? '' : e.target.value)} className="w-full mb-4" style={{ accentColor: selColor }} />
               <div className="d-flex gap-4">
                 {[25, 50, 75, 100].map(pct => (<button key={pct} onClick={() => setMintAmt(String(Math.floor(selected.maxMintPerTx * pct / 100)))} className="flex-1 br-8 c-t3 fs-56 pointer text-mono" style={{ padding: '4px', background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)' }}>{pct}%</button>))}
               </div>
             </div>
             <button onClick={handleMint} disabled={minting || !mintAmt} className="lbtn w-full" style={{ opacity: minting ? 0.6 : 1 }}>{minting ? mintStep || 'Minting...' : walletAddress ? `Mint ${selected.symbol}` : 'Connect Wallet'}</button>
-            {!minting && mintStep && <div className="mt-6 fs-62 text-center" style={{ color: mintStep.includes('Minted') ? 'var(--g)' : '#ef4444' }}>{mintStep}</div>}
+            {!minting && mintStep && <div className="mt-6 fs-62 text-center" role="alert" style={{ color: mintStep.includes('Minted') ? 'var(--g)' : '#ef4444' }}>{mintStep}</div>}
             <div className="mt-8 c-t4 text-center fs-54">On-chain publicMint &middot; Costs ~1K sats BTC gas</div>
           </div>
         ) : (
@@ -200,7 +200,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
         {/* Recent Activity */}
         <div className="P p-14">
           <div className="Lb mb-8">Recent Activity</div>
-          <div className="max-h-200-overflow">
+          <div className="max-h-200-overflow" role="list" aria-label="Recent activity">
             {selected.trades.slice().reverse().slice(0, 15).map(tr => (
               <div key={tr.id} className="flex-between fs-62" style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
                 <div className="flex-center gap-6"><span className="c-g fw-700">MINT</span><span className="c-t2 text-mono">{fmtNum(tr.amount)} {selected.symbol}</span></div>

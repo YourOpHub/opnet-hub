@@ -57,19 +57,19 @@ const ConverterTool = React.memo(function ConverterTool() {
 
   return (
     <div style={cardS}>
-      <div className="flex-center gap-6 mb-12">
-        <button className={`fbn fs-65 ${mode === 'btc' ? 'on' : ''}`} style={{ padding: '4px 12px' }} onClick={() => setMode('btc')}>BTC input</button>
-        <button className={`fbn fs-65 ${mode === 'sats' ? 'on' : ''}`} style={{ padding: '4px 12px' }} onClick={() => setMode('sats')}>Sats input</button>
+      <div className="flex-center gap-6 mb-12" role="radiogroup" aria-label="Input mode">
+        <button className={`fbn fs-65 ${mode === 'btc' ? 'on' : ''}`} role="radio" aria-checked={mode === 'btc'} style={{ padding: '4px 12px' }} onClick={() => setMode('btc')}>BTC input</button>
+        <button className={`fbn fs-65 ${mode === 'sats' ? 'on' : ''}`} role="radio" aria-checked={mode === 'sats'} style={{ padding: '4px 12px' }} onClick={() => setMode('sats')}>Sats input</button>
         <span className="fs-xs c-t4 ml-auto">BTC/USD: ${bp.toLocaleString()}</span>
       </div>
       {mode === 'btc' ? (
         <div className="flex-center gap-8 mb-12">
-          <input style={inputS} type="number" step="any" value={ba} onChange={e => setBa(e.target.value)} placeholder="BTC amount" />
+          <input style={inputS} type="number" step="any" aria-label="BTC amount" value={ba} onChange={e => setBa(e.target.value)} placeholder="BTC amount" />
           <span className="c-o fw-700 fs-80 ws-nowrap">BTC</span>
         </div>
       ) : (
         <div className="flex-center gap-8 mb-12">
-          <input style={inputS} type="number" step="1" value={satsInput} onChange={e => setSatsInput(e.target.value)} placeholder="Satoshis" />
+          <input style={inputS} type="number" step="1" aria-label="Satoshis amount" value={satsInput} onChange={e => setSatsInput(e.target.value)} placeholder="Satoshis" />
           <span className="c-o fw-700 fs-80 ws-nowrap">sats</span>
         </div>
       )}
@@ -127,10 +127,10 @@ const UTXOViewer = React.memo(function UTXOViewer() {
   return (
     <div style={cardS}>
       <div className="flex-center gap-8 mb-10">
-        <input className="flex-1" style={{ ...inputS }} value={addr} onChange={e => setAddr(e.target.value)} placeholder="Bitcoin / OPNet address" onKeyDown={e => e.key === 'Enter' && lookup()} />
+        <input className="flex-1" style={{ ...inputS }} aria-label="Bitcoin or OPNet address" value={addr} onChange={e => setAddr(e.target.value)} placeholder="Bitcoin / OPNet address" onKeyDown={e => e.key === 'Enter' && lookup()} />
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '⏳' : 'Check'}</button>
       </div>
-      {err && <div className="fs-72 c-r mb-8">{err}</div>}
+      {err && <div className="fs-72 c-r mb-8" role="alert">{err}</div>}
       {balance !== null && (
         <div className="d-grid gap-8 mb-12" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           <div className="text-center p-10 br-12" style={{ background: 'rgba(247,147,26,.06)' }}>
@@ -222,7 +222,7 @@ const FaucetTool = React.memo(function FaucetTool() {
         {status === 'loading' ? '⏳ ' + msg : walletAddress ? `Mint ${info.maxMintPerTx.toLocaleString()} ${info.symbol}` : 'Connect Wallet'}
       </button>
       {msg && status !== 'loading' && (
-        <div className="fs-75 br-10 mt-8" style={{ color: status === 'done' ? 'var(--g)' : 'var(--r)', padding: '8px 12px', background: status === 'done' ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)' }}>
+        <div className="fs-75 br-10 mt-8" role="alert" style={{ color: status === 'done' ? 'var(--g)' : 'var(--r)', padding: '8px 12px', background: status === 'done' ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)' }}>
           {msg}
         </div>
       )}
@@ -266,9 +266,9 @@ const TokenTools: React.FC = () => {
       </div>
 
       {/* Tab bar */}
-      <div className="flex-center gap-4 mb-14" style={{ overflowX: 'auto', padding: '0 0 12px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+      <div className="flex-center gap-4 mb-14" role="tablist" aria-label="Developer tools" style={{ overflowX: 'auto', padding: '0 0 12px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
         {TOOL_TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
+          <button key={t.id} role="tab" aria-selected={activeTab === t.id} onClick={() => setActiveTab(t.id)}
             className="br-12 pointer ws-nowrap fs-70" style={{ padding: '8px 14px', border: 'none', background: activeTab === t.id ? 'linear-gradient(135deg, rgba(247,147,26,.15), rgba(255,171,64,.1))' : 'rgba(255,255,255,.03)', color: activeTab === t.id ? 'var(--o)' : 'var(--t3)', fontWeight: activeTab === t.id ? 700 : 500, transition: '.2s', borderColor: activeTab === t.id ? 'rgba(247,147,26,.2)' : 'transparent' }}>
             {t.icon} {t.label}
           </button>

@@ -302,13 +302,13 @@ const TokenLauncher: React.FC = () => {
           {/* Name */}
           <div className="mb-10">
             <label className="fs-68 c-t3 fw-600 mb-4 d-block">Token Name</label>
-            <input style={inputStyle} value={tokenName} onChange={e => setTokenName(e.target.value)} placeholder="e.g. My Awesome Token" />
+            <input style={inputStyle} aria-label="Token name" value={tokenName} onChange={e => setTokenName(e.target.value)} placeholder="e.g. My Awesome Token" />
           </div>
 
           {/* Symbol */}
           <div className="mb-10">
             <label className="fs-68 c-t3 fw-600 mb-4 d-block">Symbol (ticker)</label>
-            <input className="text-upper" style={{ ...inputStyle }} value={tokenSymbol} onChange={e => setTokenSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="e.g. MTK" maxLength={6} />
+            <input className="text-upper" aria-label="Token symbol" style={{ ...inputStyle }} value={tokenSymbol} onChange={e => setTokenSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="e.g. MTK" maxLength={6} />
           </div>
 
           {/* Supply + Decimals row */}
@@ -380,7 +380,7 @@ const TokenLauncher: React.FC = () => {
 
           {/* Token logo */}
           <div className="upload-zone mb-14" onClick={() => fileRef.current?.click()} style={{ padding: '10px' }}>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} className="d-none" />
+            <input ref={fileRef} type="file" accept="image/*" aria-label="Upload token logo" onChange={handleImage} className="d-none" />
             {img ? <img src={img} alt="Logo" className="w-40 h-40 br-50" style={{ objectFit: 'cover' }} /> : <div className="fs-120">+</div>}
             <div className="fs-62 c-t3">{img ? 'Change logo' : 'Logo (optional)'}</div>
           </div>
@@ -406,6 +406,7 @@ const TokenLauncher: React.FC = () => {
           {connected ? (
             <button className="lbtn w-full" onClick={deployToken} disabled={deploying} style={{ opacity: deploying ? 0.6 : 1 }}>
               {deploying ? `${deployStep || 'Deploying...'}` : `Deploy $${tokenSymbol.trim() || 'TKN'} on Bitcoin L1`}
+
             </button>
           ) : (
             <button className="lbtn w-full" onClick={openConnectModal}
@@ -422,7 +423,7 @@ const TokenLauncher: React.FC = () => {
 
           {/* Deploy Result */}
           {deployResult && (
-            <div className="mt-10 p-12 br-8 bg-success-08">
+            <div className="mt-10 p-12 br-8 bg-success-08" role="alert">
               <div className="c-g fw-700 mb-4">Token Deployed On-Chain!</div>
               <div className="fs-72 c-t2 word-break">
                 <strong>Contract:</strong> {deployResult.contractAddress}
@@ -434,7 +435,7 @@ const TokenLauncher: React.FC = () => {
             </div>
           )}
           {deployError && (
-            <div className="mt-10 p-12 br-8 bg-err-08">
+            <div className="mt-10 p-12 br-8 bg-err-08" role="alert">
               <div className="c-red fs-78">{deployError}</div>
             </div>
           )}
@@ -475,11 +476,11 @@ const TokenLauncher: React.FC = () => {
       </div>
 
       {/* Verify Deployment */}
-      <div className="P mt-14 p-20">
+      <div className="P mt-14 p-20" role="form" aria-label="Verify deployment">
         <div className="Lb">Verify Deployment</div>
         <div className="fs-72 c-t3 mb-8">Enter your contract address to check if it's live on-chain.</div>
         <div className="d-flex gap-8">
-          <input className="lf-i flex-1 fs-76" value={verifyAddr}
+          <input className="lf-i flex-1 fs-76" aria-label="Contract address to verify" value={verifyAddr}
             onChange={e => { setVerifyAddr(e.target.value); setVerifyResult(null); }}
             placeholder="opt1sq... (contract address)" />
           <button className="btn-s ws-nowrap" onClick={verifyDeployment}

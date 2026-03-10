@@ -143,7 +143,7 @@ const Launchpad: React.FC = () => {
   }, [useServer]);
 
   return (
-    <div className="lp-split">
+    <div className="lp-split" role="region" aria-label="Token Launchpad">
       <LaunchpadTokenList
         tokens={tokens}
         selected={selected}

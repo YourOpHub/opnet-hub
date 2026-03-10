@@ -354,7 +354,7 @@ const SatoshiMiner: React.FC = () => {
                     </div>
 
                     {/* Character sprite */}
-                    <div className="pos-relative pointer user-select-none" onClick={click}>
+                    <div className="pos-relative pointer user-select-none" role="button" tabIndex={0} aria-label={`Mine satoshis — ${fs(spc)} per click`} onClick={click} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') click(e as unknown as React.MouseEvent); }}>
                         {/* Shockwave on golden */}
                         {shockwave && <div className="pos-absolute br-50 pointer-events-none" style={{ inset: -60, border: `2px solid ${stage.color}`, animation: 'shockwave .5s ease-out forwards', zIndex: 5 }} />}
 
@@ -367,7 +367,7 @@ const SatoshiMiner: React.FC = () => {
                         <div className="pos-relative" style={{ width: 180, height: 180, transition: 'transform .1s', transform: hitting ? 'scale(1.15) rotate(-5deg)' : 'scale(1)' }}>
                             <img
                                 src={hitting ? SPRITE_HIT : SPRITE_IDLE}
-                                alt="Miner"
+                                alt="Pixel art miner character — click to mine satoshis"
                                 draggable={false}
                                 className="w-full" style={{ height: '100%', objectFit: 'contain', filter: `drop-shadow(0 0 20px ${stage.color}) drop-shadow(0 4px 12px rgba(0,0,0,.6))`, imageRendering: 'pixelated', transition: 'filter .15s' }}
                             />
@@ -386,7 +386,7 @@ const SatoshiMiner: React.FC = () => {
                         ))}
 
                         {/* Click hint */}
-                        <div className="text-center mt-6 c-t4 fs-55 text-upper ls-06">
+                        <div className="text-center mt-6 c-t4 fs-55 text-upper ls-06" aria-hidden="true">
                             ⛏ Click to mine
                         </div>
                     </div>
@@ -395,14 +395,14 @@ const SatoshiMiner: React.FC = () => {
                     {autoLv > 0 && (
                         <div className="flex-center gap-6 mt-14">
                             {Array.from({ length: Math.min(autoLv, 5) }).map((_, i) => (
-                                <img key={i} src={SPRITE_RIG} alt="Rig" draggable={false} className="w-38 h-38" style={{ objectFit: 'contain', imageRendering: 'pixelated', animation: `bob 2s ease-in-out infinite ${i * 0.2}s`, filter: `drop-shadow(0 0 6px ${stage.color})`, opacity: .85 + i * .03 }} />
+                                <img key={i} src={SPRITE_RIG} alt={`Mining rig ${i + 1}`} draggable={false} className="w-38 h-38" style={{ objectFit: 'contain', imageRendering: 'pixelated', animation: `bob 2s ease-in-out infinite ${i * 0.2}s`, filter: `drop-shadow(0 0 6px ${stage.color})`, opacity: .85 + i * .03 }} />
                             ))}
                             <div className="c-t4 fs-55 ml-4">⚡ {autoLv} miners</div>
                         </div>
                     )}
 
                     {/* Sats display */}
-                    <div className="sd mt-16">
+                    <div className="sd mt-16" aria-live="polite">
                         <div className="sd-b" style={{ color: stage.color }}>{fs(sats)}</div>
                         <div className="sd-s">satoshis</div>
                         {sps > 0 && <div className="sd-r">+{fs(sps)}/sec</div>}
@@ -426,7 +426,7 @@ const SatoshiMiner: React.FC = () => {
                     </div>
                     <div className="hb"><div className="hf" style={{ width: `${(epochBlocks / EP) * 100}%`, background: `linear-gradient(90deg,${stage.color},var(--y))` }} /></div>
                     <div className="mt-2 c-t4 fs-52">{epochBlocks}/{EP} blocks · {totalUpgrades} upgrades</div>
-                    <div className="ar">{ACHS.map(a => <span key={a.id} className={`ach ${a.c(tot) ? 'on' : ''}`}>{a.l}</span>)}</div>
+                    <div className="ar" role="list" aria-label="Achievements">{ACHS.map(a => <span key={a.id} className={`ach ${a.c(tot) ? 'on' : ''}`} role="listitem" aria-label={`${a.l}${a.c(tot) ? ' — unlocked' : ' — locked'}`}>{a.l}</span>)}</div>
                 </div>
             </div>
 

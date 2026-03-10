@@ -52,16 +52,16 @@ const EcosystemDir: React.FC = () => {
             </div>
 
             {/* Category filter */}
-            <div className="fb">
+            <div className="fb" role="tablist" aria-label="App categories">
                 {CATS.map(c => (
-                    <button key={c} className={`fbn ${cat === c ? 'on' : ''}`} onClick={() => setCat(c)}>{c}</button>
+                    <button key={c} className={`fbn ${cat === c ? 'on' : ''}`} role="tab" aria-selected={cat === c} aria-label={`Filter by ${c}`} onClick={() => setCat(c)}>{c}</button>
                 ))}
             </div>
 
             {/* App grid */}
-            <div className="eg">
+            <div className="eg" role="list" aria-label="Ecosystem apps">
                 {filtered.map((a, i) => (
-                    <a key={i} href={a.u} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <a key={i} href={a.u} target="_blank" rel="noopener noreferrer" role="listitem" aria-label={`${a.n} — ${a.lv ? 'Live' : 'Building'}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         <div className="Pg ei">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                                 <div style={{ fontSize: '1.4rem', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.04)', borderRadius: 8, border: '1px solid var(--bd)', flexShrink: 0 }}>{a.icon}</div>

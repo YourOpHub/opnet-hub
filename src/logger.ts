@@ -6,6 +6,9 @@
 
 const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
 
+/**
+ * Environment-aware logger. In production only warn/error emit; in dev all levels are active.
+ */
 export const logger = {
   debug(...args: unknown[]): void {
     if (isDev) console.debug(...args);

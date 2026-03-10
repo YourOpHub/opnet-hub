@@ -58,13 +58,13 @@ const TXLookup = React.memo(function TXLookup() {
   };
 
   return (
-    <div style={cardS}>
+    <div style={cardS} role="region" aria-label="Transaction lookup">
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <input style={{ ...inputS, flex: 1 }} value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="OPNet transaction hash" onKeyDown={e => e.key === 'Enter' && lookup()} />
+        <input style={{ ...inputS, flex: 1 }} aria-label="OPNet transaction hash" value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="OPNet transaction hash" onKeyDown={e => e.key === 'Enter' && lookup()} />
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Lookup'}</button>
       </div>
       {err && (
-        <div style={{ fontSize: '.72rem', marginBottom: 8, padding: '8px 12px', borderRadius: 10 , background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.12)', color: 'var(--y)' }}>
+        <div role="alert" style={{ fontSize: '.72rem', marginBottom: 8, padding: '8px 12px', borderRadius: 10 , background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.12)', color: 'var(--y)' }}>
           {err}
           {txHash.trim().length === 64 && (
             <a href={`https://mempool.space/signet/tx/${txHash.trim()}`} target="_blank" rel="noopener noreferrer"

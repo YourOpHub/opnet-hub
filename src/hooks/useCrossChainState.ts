@@ -179,6 +179,10 @@ export interface CrossChainState {
   mode: BridgeMode;
 }
 
+/**
+ * Shared cross-chain state: wallet connections, order polling, block height, fee info, and derived order views.
+ * @returns Complete cross-chain state consumed by useFractalSwap and useTokenEscrow.
+ */
 export function useCrossChainState(): CrossChainState {
   const { walletAddress, address: senderAddr, openConnectModal, hashedMLDSAKey } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);

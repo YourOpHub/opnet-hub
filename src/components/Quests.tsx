@@ -52,14 +52,14 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
 
     return (
         <>
-            {open && <div className="qp-overlay" onClick={onClose} />}
-            <div className={`qp ${open ? 'qp-open' : ''}`}>
+            {open && <div className="qp-overlay" aria-hidden="true" onClick={onClose} />}
+            <div className={`qp ${open ? 'qp-open' : ''}`} role="dialog" aria-label="Quests panel" aria-hidden={!open}>
                 <div className="qp-head">
                     <div>
                         <div className="fw-800 fs-100">🎯 OP_NET Onboarding</div>
                         <div className="fs-65 c-t3">Master Bitcoin L1 — earn proof of knowledge</div>
                     </div>
-                    <button className="qp-close" onClick={onClose}>✕</button>
+                    <button className="qp-close" aria-label="Close quests panel" onClick={onClose}>✕</button>
                 </div>
 
                 <div className="qp-stats">
@@ -83,7 +83,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
                     </div>
                 )}
 
-                <div className="qp-list">
+                <div className="qp-list" role="list" aria-label="Quest items">
                     {tierOrder.map(tier => {
                         const tierQuests = quests.filter(q => q.tier === tier);
                         const tierDone = tierQuests.filter(q => q.done).length;
@@ -94,7 +94,7 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
                                     <span>{t.icon}</span> {t.label} <span className="c-t4 fw-500">({tierDone}/{tierQuests.length})</span>
                                 </div>
                                 {tierQuests.map(q => (
-                                    <div key={q.id} className={`qp-item ${q.done ? 'qp-done' : ''}`} onClick={() => { if (!q.done && q.tab) { onNav(q.tab); onClose() } }}>
+                                    <div key={q.id} className={`qp-item ${q.done ? 'qp-done' : ''}`} role="listitem" aria-label={`${q.title}${q.done ? ' — completed' : ''}`} onClick={() => { if (!q.done && q.tab) { onNav(q.tab); onClose() } }}>
                                         <div className="qp-item-icon">{q.done ? '✅' : q.icon}</div>
                                         <div className="qp-item-body">
                                             <div className="qp-item-title">{q.title}</div>

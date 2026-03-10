@@ -161,6 +161,10 @@ export interface UseMarketplaceReturn {
   lastTxId: string | null;
 }
 
+/**
+ * Manages P2P marketplace orders: create, fill, execute, and cancel on-chain orders.
+ * @returns Order state, token list, form state, and order action handlers.
+ */
 export function useMarketplace(): UseMarketplaceReturn {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);

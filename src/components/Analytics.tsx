@@ -107,7 +107,7 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
           </div>
         </div>
       )}
-      <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }}>
+      <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }} role="img" aria-label={label || 'Chart'}>
         <defs>
           <linearGradient id={`grad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.3" />
@@ -245,22 +245,22 @@ const Analytics: React.FC = () => {
   const vibeReserveHistory = snapshots.map(s => s.reserveVIBE);
 
   return (
-    <div>
+    <div role="region" aria-label="Analytics dashboard">
       <div className="mb-16">
         <h2 className="fs-120 fw-800 mb-4">📊 Analytics</h2>
         <p className="c-t3 fs-78">Real-time pool metrics, token stats, and on-chain activity</p>
       </div>
 
-      {loading && <div className="text-center c-t4 p-30">Loading analytics...</div>}
+      {loading && <div className="text-center c-t4 p-30" aria-busy="true" aria-live="polite">Loading analytics...</div>}
 
       {/* Error banners */}
       {poolError && !loading && (
-        <div className="mb-10 br-8 fs-68 c-red" style={{ padding: '8px 12px', background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)' }}>
+        <div className="mb-10 br-8 fs-68 c-red" role="alert" style={{ padding: '8px 12px', background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)' }}>
           ⚠️ Pool data unavailable — reserves may be stale
         </div>
       )}
       {chainError && !loading && (
-        <div className="mb-10 br-8 fs-68 c-y" style={{ padding: '8px 12px', background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)' }}>
+        <div className="mb-10 br-8 fs-68 c-y" role="alert" style={{ padding: '8px 12px', background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)' }}>
           ⚠️ Some chain metrics unavailable — RPC may be slow
         </div>
       )}

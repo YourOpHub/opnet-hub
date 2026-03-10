@@ -38,6 +38,7 @@ export const TakeOrderButton: React.FC<{
   return (
     <div className="d-flex gap-4 ai-center flex-wrap" onClick={e => e.stopPropagation()}>
       <input style={{ ...iStyle, width: 200, fontSize: '.66rem', padding: '4px 8px' }}
+        aria-label="Receiving address for swap"
         placeholder="Receiving address (bc1p...)"
         value={addr} onChange={e => setAddr(e.target.value)} />
       <button className="ob-btn green"
@@ -45,7 +46,7 @@ export const TakeOrderButton: React.FC<{
         onClick={() => onTake(orderId, addr)}>
         OK
       </button>
-      <button className="ob-btn" onClick={() => setShow(false)}>X</button>
+      <button className="ob-btn" aria-label="Cancel take order" onClick={() => setShow(false)}>X</button>
     </div>
   );
 };
@@ -70,14 +71,14 @@ export const PreimageInput: React.FC<{
   }
   return (
     <div className="d-flex gap-6 ai-center" onClick={e => e.stopPropagation()}>
-      <input style={{ ...iStyle, width: 200, fontSize: '.68rem' }} placeholder="Enter preimage hex..."
+      <input style={{ ...iStyle, width: 200, fontSize: '.68rem' }} aria-label="Preimage hex for swap confirmation" placeholder="Enter preimage hex..."
         value={val} onChange={e => setVal(e.target.value)} />
       <button className="btn-p" style={{ fontSize: '.68rem', padding: '6px 10px' }}
         disabled={disabled || val.length < 64}
         onClick={() => onConfirm(orderId, val)}>
         Confirm
       </button>
-      <button style={btnSmall} onClick={() => setShow(false)}>X</button>
+      <button style={btnSmall} aria-label="Cancel preimage entry" onClick={() => setShow(false)}>X</button>
     </div>
   );
 };
@@ -127,7 +128,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
 
   return (
     <React.Fragment key={order.id}>
-      <div className="ob-row" style={{ gridTemplateColumns: MY_COLS }}>
+      <div className="ob-row" role="row" aria-label={`Order #${order.id}`} style={{ gridTemplateColumns: MY_COLS }}>
         <span className="ob-mono" style={{ color: 'var(--t3)' }}>#{order.id}</span>
         <span>
           <span className="ob-badge" style={{
@@ -179,7 +180,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
         </div>
       </div>
       {isThisActioning && actionStep && (
-        <div className="cc-pending-info">
+        <div className="cc-pending-info" aria-live="polite">
           {actionStep}
         </div>
       )}
@@ -230,7 +231,7 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
 
   return (
     <React.Fragment key={order.id}>
-      <div className="ob-row" style={{ gridTemplateColumns: AV_COLS }}>
+      <div className="ob-row" role="row" aria-label={`Available swap order #${order.id}`} style={{ gridTemplateColumns: AV_COLS }}>
         <span className="ob-mono ob-r" style={{ color: '#22c55e', fontWeight: 700 }}>
           {fmtBtc(takerGetsAmount)} <span style={{ fontWeight: 500, fontSize: '.62rem', color: 'var(--t2)' }}>{takerGetsUnit}</span>
         </span>
@@ -255,7 +256,7 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
         </div>
       </div>
       {isThisActioning && actionStep && (
-        <div className="cc-pending-info">
+        <div className="cc-pending-info" aria-live="polite">
           {actionStep}
         </div>
       )}

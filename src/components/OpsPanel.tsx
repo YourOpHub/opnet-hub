@@ -43,7 +43,7 @@ const OpCard: React.FC<{ op: OpEntry; onDismiss?: () => void }> = ({ op, onDismi
             background: s.bg, color: s.color,
           }}>{op.status}</span>
           {!isActive && onDismiss && (
-            <button onClick={onDismiss} style={{
+            <button onClick={onDismiss} aria-label="Dismiss operation" style={{
               background: 'none', border: 'none', color: 'var(--t4)', cursor: 'pointer',
               fontSize: '.68rem', padding: '0 2px', lineHeight: 1,
             }}>{'\u2715'}</button>
@@ -75,19 +75,19 @@ const OpsPanel: React.FC = () => {
   return (
     <>
       {/* FAB */}
-      <button className="ops-fab" onClick={() => setOpen(v => !v)}>
+      <button className="ops-fab" aria-label={`Operations panel${activeCount > 0 ? ` — ${activeCount} active` : ''}`} aria-expanded={open} onClick={() => setOpen(v => !v)}>
         <span>{'\u{1F514}'}</span>
-        {activeCount > 0 && <span className="ops-badge">{activeCount}</span>}
+        {activeCount > 0 && <span className="ops-badge" aria-hidden="true">{activeCount}</span>}
       </button>
 
       {/* Overlay */}
-      {open && <div className="ops-overlay" onClick={() => setOpen(false)} />}
+      {open && <div className="ops-overlay" aria-hidden="true" onClick={() => setOpen(false)} />}
 
       {/* Panel */}
-      <div className={`ops-panel ${open ? 'ops-open' : ''}`}>
+      <div className={`ops-panel ${open ? 'ops-open' : ''}`} role="dialog" aria-label="Operations panel" aria-hidden={!open}>
         <div className="qp-head">
           <div className="fw-700 fs-88">Operations</div>
-          <button className="qp-close" onClick={() => setOpen(false)}>{'\u2715'}</button>
+          <button className="qp-close" aria-label="Close operations panel" onClick={() => setOpen(false)}>{'\u2715'}</button>
         </div>
 
         <div className="ops-filter-bar">
@@ -103,7 +103,7 @@ const OpsPanel: React.FC = () => {
           </button>
         </div>
 
-        <div className="ops-list">
+        <div className="ops-list" role="list" aria-label="Operation entries">
           {!showHistory ? (
             activeOps.length === 0 ? (
               <div className="ops-empty">

@@ -277,17 +277,17 @@ function LiveFeed(): React.ReactElement {
 
             {/* Refresh button */}
             <div className="flex-between mb-12">
-                <div className="fs-68 c-t3 fw-600">
+                <div className="fs-68 c-t3 fw-600" aria-live="polite">
                     <span className="dot-live dot-green d-inline-block" style={{ marginRight: 6, animation: 'blink 2s infinite' }} />
                     Live on-chain activity
                 </div>
-                <button onClick={fetchLiveData} className="btn-s fs-65" style={{ padding: '5px 14px' }}>
+                <button onClick={fetchLiveData} aria-label="Refresh live activity feed" className="btn-s fs-65" style={{ padding: '5px 14px' }}>
                     {loading ? '\u23F3' : '\u{1F504}'} Refresh
                 </button>
             </div>
 
             {/* Activity list */}
-            <div className="flex-col gap-6">
+            <div className="flex-col gap-6" role="list" aria-label="On-chain activity">
                 {loading && activities.length === 0 ? (
                     Array.from({ length: 5 }).map((_, i) => (
                         <div key={i} className="skeleton-block br-16" style={{ height: 72 }} />
@@ -298,7 +298,7 @@ function LiveFeed(): React.ReactElement {
                     </div>
                 ) : (
                     activities.map(item => (
-                        <div key={item.id} className="P" style={{ padding: '14px 18px', cursor: item.link ? 'pointer' : 'default' }}
+                        <div key={item.id} className="P" role="listitem" style={{ padding: '14px 18px', cursor: item.link ? 'pointer' : 'default' }}
                             onClick={() => { if (item.link) window.open(item.link, '_blank'); }}>
                             <div className="flex-center gap-12">
                                 <div className="act-icon"
@@ -378,14 +378,16 @@ const NewsFeed: React.FC = () => {
             </div>
 
             {/* Mode tabs */}
-            <div className="flex-center gap-6 mb-16">
+            <div className="flex-center gap-6 mb-16" role="tablist" aria-label="Feed mode">
                 <button className={`fbn ${mode === 'live' ? 'on' : ''}`}
+                    role="tab" aria-selected={mode === 'live'}
                     onClick={() => setMode('live')}
                     style={{ padding: '8px 20px', fontSize: '.75rem' }}>
                     <span className={`dot-live d-inline-block ${mode === 'live' ? 'dot-green' : 'dot-t4'}`} style={{ marginRight: 6 }} />
                     Live Activity
                 </button>
                 <button className={`fbn ${mode === 'social' ? 'on' : ''}`}
+                    role="tab" aria-selected={mode === 'social'}
                     onClick={() => setMode('social')}
                     style={{ padding: '8px 20px', fontSize: '.75rem' }}>
                     Social Feed

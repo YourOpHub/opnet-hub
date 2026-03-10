@@ -35,6 +35,10 @@ interface UseNotificationsReturn {
     permission: NotificationPermission;
 }
 
+/**
+ * Manages browser Notification API: permission requests, preference persistence, and notification dispatch.
+ * @returns Notification controls and permission state.
+ */
 export function useNotifications(): UseNotificationsReturn {
     const isSupported = typeof window !== 'undefined' && 'Notification' in window;
 

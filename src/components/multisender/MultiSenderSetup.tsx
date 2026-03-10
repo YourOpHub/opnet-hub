@@ -138,10 +138,12 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
       {step === 1 && (
         <div className="P p-20">
           <div className="Lb">Choose Token</div>
-          <div className="flex-center gap-8 mb-16">
+          <div className="flex-center gap-8 mb-16" role="radiogroup" aria-label="Select token">
             {KNOWN_TOKENS.map(t => (
               <button
                 key={t.symbol}
+                role="radio"
+                aria-checked={selectedToken === t.address && !useCustom}
                 onClick={() => selectKnownToken(t)}
                 style={{
                   flex: 1, padding: '14px 10px', borderRadius: 14, cursor: 'pointer',
@@ -188,6 +190,7 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
             <div>
               <input
                 style={inputStyle}
+                aria-label="Custom contract address"
                 value={customAddress}
                 onChange={e => setCustomAddress(e.target.value)}
                 placeholder="opt1sq... or 0x... contract address"
@@ -197,6 +200,7 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
                   <label className="fs-62 c-t3 d-block mb-4">Decimals</label>
                   <select
                     style={{ ...inputStyle, cursor: 'pointer' }}
+                    aria-label="Token decimals"
                     value={tokenDecimals}
                     onChange={e => setTokenDecimals(Number(e.target.value))}
                   >
@@ -207,6 +211,7 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
                   <label className="fs-62 c-t3 d-block mb-4">Symbol (optional)</label>
                   <input
                     style={inputStyle}
+                    aria-label="Token symbol"
                     value={tokenSymbol}
                     onChange={e => setTokenSymbol(e.target.value.toUpperCase().slice(0, 8))}
                     placeholder="e.g. TKN"
@@ -231,6 +236,7 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
 
           <textarea
             style={textareaStyle}
+            aria-label="Recipient list, one per line: address,amount"
             value={rawInput}
             onChange={e => setRawInput(e.target.value)}
             placeholder={
@@ -244,6 +250,7 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
               ref={fileRef}
               type="file"
               accept=".csv,.txt"
+              aria-label="Upload CSV file with recipients"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />

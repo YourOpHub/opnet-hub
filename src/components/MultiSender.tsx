@@ -83,14 +83,14 @@ const MultiSender: React.FC = () => {
 
   return (
     <div>
-      <div className="Pg ms-header">
+      <div className="Pg ms-header" role="region" aria-label="Multi-Sender">
         <div className="ms-title">Multi-Sender</div>
         <div className="ms-desc">Batch transfer OP-20 tokens to multiple recipients in one session. Select a token, paste your recipient list, review, and send.</div>
       </div>
-      <div className="flex-center" style={{ gap: 0, padding: '0 12px', maxWidth: 480, margin: '0 auto 18px' }}>
+      <div className="flex-center" role="navigation" aria-label="Multi-sender wizard steps" style={{ gap: 0, padding: '0 12px', maxWidth: 480, margin: '0 auto 18px' }}>
         {[1, 2, 3, 4].map((s, i) => (
           <React.Fragment key={s}>
-            <div style={{ ...stepBadge(step === s, step > s), cursor: step > s ? 'pointer' : 'default' }} onClick={() => { if (step > s) setStep(s as WizardStep); }} title={['Select Token', 'Recipients', 'Review', 'Send'][i]}>{step > s ? '\u2713' : s}</div>
+            <div style={{ ...stepBadge(step === s, step > s), cursor: step > s ? 'pointer' : 'default' }} role="button" tabIndex={step > s ? 0 : -1} aria-label={`Step ${s}: ${['Select Token', 'Recipients', 'Review', 'Send'][i]}${step > s ? ' (completed)' : step === s ? ' (current)' : ''}`} onClick={() => { if (step > s) setStep(s as WizardStep); }} onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && step > s) setStep(s as WizardStep); }} title={['Select Token', 'Recipients', 'Review', 'Send'][i]}>{step > s ? '\u2713' : s}</div>
             {i < 3 && <div style={stepConnector(step > s)} />}
           </React.Fragment>
         ))}
@@ -108,7 +108,7 @@ const MultiSender: React.FC = () => {
         </div>
       )}
       {step === 4 && !sendComplete && !sending && <div className="mt-10"><button className="btn-s fs-74" onClick={goBack} style={{ padding: '8px 16px' }}>Back to Review</button></div>}
-      <div className="ms-info-footer">Transfers are executed sequentially. Each transfer requires a wallet signature. Ensure you have enough BTC for gas fees (~5K sats per transfer).</div>
+      <div className="ms-info-footer" role="note">Transfers are executed sequentially. Each transfer requires a wallet signature. Ensure you have enough BTC for gas fees (~5K sats per transfer).</div>
     </div>
   );
 };

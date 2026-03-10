@@ -39,8 +39,8 @@ export default [
     },
     rules: {
       // ── TypeScript strict rules ──
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -69,7 +69,7 @@ export default [
       ],
 
       // ── Console usage — use logger instead ──
-      'no-console': 'warn',
+      'no-console': 'error',
 
       // ── Disable base rules that conflict with TS versions ──
       'no-unused-vars': 'off',

@@ -42,14 +42,14 @@ const GasTool = React.memo(function GasTool() {
   }, [network, refresh]);
 
   return (
-    <div style={cardS}>
+    <div style={cardS} role="region" aria-label="Gas parameters">
       <div className="gas-header">
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6 }} role="tablist" aria-label="Network selection">
           {(['regtest', 'testnet', 'mainnet'] as const).map(n => (
-            <button key={n} className={`fbn ${network === n ? 'on' : ''}`} style={{ padding: '4px 12px', fontSize: '.65rem' }} onClick={() => setNetwork(n)}>{n}</button>
+            <button key={n} role="tab" aria-selected={network === n} className={`fbn ${network === n ? 'on' : ''}`} style={{ padding: '4px 12px', fontSize: '.65rem' }} onClick={() => setNetwork(n)}>{n}</button>
           ))}
         </div>
-        <button onClick={refresh} style={{ ...copyBtnS, padding: '4px 10px' }}>{loading ? '⏳' : '🔄'}</button>
+        <button onClick={refresh} aria-label="Refresh gas data" aria-busy={loading} style={{ ...copyBtnS, padding: '4px 10px' }}>{loading ? '⏳' : '🔄'}</button>
       </div>
       {gas ? (
         <div>
@@ -103,7 +103,7 @@ const GasTool = React.memo(function GasTool() {
           )}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)' }}>{loading ? '⏳ Loading…' : 'Failed to load gas parameters'}</div>
+        <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)' }} aria-live="polite">{loading ? '⏳ Loading…' : 'Failed to load gas parameters'}</div>
       )}
     </div>
   );

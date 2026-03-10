@@ -55,7 +55,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
   const expiryOpts = suggestedExpiryBlocks(1);
 
   return (
-    <div className="Pg" style={{ marginBottom: 16 }}>
+    <div className="Pg" role="form" aria-label="Create swap order" style={{ marginBottom: 16 }}>
       <div className="fw-700 fs-82 mb-12">Create Swap Order</div>
 
       {/* Direction toggle */}
@@ -80,7 +80,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
         {/* You Pay */}
         <div>
           <label style={labelStyle}>You Pay ({sendUnit})</label>
-          <input style={iStyle} type="number" placeholder="0.001" value={formAmount}
+          <input style={iStyle} type="number" aria-label={`Amount you pay in ${sendUnit}`} placeholder="0.001" value={formAmount}
             onChange={e => setFormAmount(e.target.value)} min="0" step="any" />
           {formAmountSats > 0n && (
             <div style={{ fontSize: '.66rem', color: 'var(--t3)', marginTop: 2 }}>
@@ -92,7 +92,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
         {/* You Get */}
         <div>
           <label style={labelStyle}>You Get ({receiveUnit})</label>
-          <input style={iStyle} type="number" placeholder="0.001" value={formReceive}
+          <input style={iStyle} type="number" aria-label={`Amount you get in ${receiveUnit}`} placeholder="0.001" value={formReceive}
             onChange={e => setFormReceive(e.target.value)} min="0" step="any" />
           {formRate && (
             <div style={{ fontSize: '.66rem', color: 'var(--g)', marginTop: 2, fontWeight: 600 }}>
@@ -107,6 +107,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
             Your {formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} Receiving Address
           </label>
           <input style={iStyle}
+            aria-label={`Your ${formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} receiving address`}
             placeholder={formDirection === SwapDirection.BTC_TO_FB ? 'bc1p... (Fractal address)' : 'bc1p... (Bitcoin address)'}
             value={formMakerAddr}
             onChange={e => { setFormMakerAddr(e.target.value); setMakerAddrManual(true); }} />
@@ -151,7 +152,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
       )}
 
       {createStep && (
-        <div className="cc-step-status">
+        <div className="cc-step-status" aria-live="polite">
           {createStep}
         </div>
       )}

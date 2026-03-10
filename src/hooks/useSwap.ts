@@ -174,6 +174,10 @@ export interface UseSwapReturn {
   provider: ReturnType<typeof getProvider>;
 }
 
+/**
+ * Manages token swap logic including pool reserves, Motoswap routing, minting, and pool creation.
+ * @returns Swap state, actions, balances, and pool management utilities.
+ */
 export function useSwap(): UseSwapReturn {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
   const { trackOp, completeOp, failOp } = useOps();

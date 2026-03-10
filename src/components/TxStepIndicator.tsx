@@ -41,7 +41,7 @@ const TxStepIndicator: React.FC<TxStepIndicatorProps> = ({
   const isDone = step === 'done';
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} role="progressbar" aria-label="Transaction progress" aria-valuenow={Math.max(0, current + 1)} aria-valuemin={0} aria-valuemax={steps.length}>
       {/* Step circles + connectors */}
       <div style={styles.track}>
         {steps.map((label, i) => {
@@ -115,7 +115,7 @@ const TxStepIndicator: React.FC<TxStepIndicatorProps> = ({
       {(isError || isDone || step === 'waiting') && (
         <div style={styles.messageRow}>
           {isError && error && (
-            <p style={styles.errorText}>{error}</p>
+            <p style={styles.errorText} role="alert">{error}</p>
           )}
           {isDone && txHash && (
             <p style={styles.doneText}>

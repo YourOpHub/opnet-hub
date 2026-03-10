@@ -42,10 +42,11 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ toast }}>
       {children}
       {toasts.length > 0 && (
-        <div className="toast-container">
+        <div className="toast-container" aria-live="polite" aria-atomic="true">
           {toasts.map(t => (
             <div key={t.id}
               className={`toast toast-${t.type}${t.leaving ? ' leaving' : ''}`}
+              role="alert"
               onClick={() => dismiss(t.id)}
               style={{ cursor: 'pointer' }}
             >

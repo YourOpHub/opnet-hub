@@ -20,9 +20,8 @@ interface UseTokenToolsReturn {
 }
 
 /**
- * Shared hook for TokenTools sub-components.
- * Provides wallet connection, provider and ops tracking
- * so each tool does not need to instantiate them independently.
+ * Shared hook for TokenTools sub-components providing wallet, provider, and ops tracking.
+ * @returns Wallet connection state, JSON-RPC provider, and operation tracking functions.
  */
 export function useTokenTools(): UseTokenToolsReturn {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();

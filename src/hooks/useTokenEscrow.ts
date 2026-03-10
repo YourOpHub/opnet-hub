@@ -41,6 +41,11 @@ export interface TokenEscrowActions {
   handleTbRefund: (orderId: string) => Promise<void>;
 }
 
+/**
+ * Token Bridge escrow order logic: create, take, confirm (HTLC), cancel, and refund token escrow orders.
+ * @param state - Shared cross-chain state from useCrossChainState.
+ * @returns Handler functions for token escrow order lifecycle.
+ */
 export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
   const {
     walletAddress, senderAddr, openConnectModal,

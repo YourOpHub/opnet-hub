@@ -35,6 +35,10 @@ export type UseCrossChainReturn =
   & FractalSwapActions
   & TokenEscrowActions;
 
+/**
+ * Composition hook combining FractalSwap and Token Bridge escrow logic with shared cross-chain state.
+ * @returns Unified cross-chain state, FractalSwap actions, and Token Escrow actions.
+ */
 export function useCrossChain(): UseCrossChainReturn {
   const state = useCrossChainState();
   const fractal = useFractalSwap(state);

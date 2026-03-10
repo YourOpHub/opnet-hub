@@ -49,6 +49,11 @@ export interface FractalSwapActions {
   handleRefund: (orderId: string) => Promise<void>;
 }
 
+/**
+ * FractalSwap order business logic: create, take, complete, cancel, and refund BTC/FB orders.
+ * @param state - Shared cross-chain state from useCrossChainState.
+ * @returns Handler functions for each order lifecycle action.
+ */
 export function useFractalSwap(state: CrossChainState): FractalSwapActions {
   const {
     walletAddress, senderAddr, openConnectModal, mldsaHex,

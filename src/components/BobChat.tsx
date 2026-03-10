@@ -137,10 +137,10 @@ const BobChat: React.FC = () => {
     const statusLabel = mcpStatus === 'live' ? 'MCP Live' : mcpStatus === 'connecting' ? 'Connecting...' : 'Local KB';
 
     return (
-        <div className="P chat-w">
+        <div className="P chat-w" role="region" aria-label="Bob AI Chat">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div className="Lb" style={{ marginBottom: 0 }}>🤖 Bob AI — OP_NET Instructor</div>
-                <span className="tag" style={{ background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>{statusLabel}</span>
+                <span className="tag" aria-live="polite" style={{ background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>{statusLabel}</span>
             </div>
             <a href="https://ai.opnet.org" target="_blank" rel="noopener noreferrer" style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 10,
@@ -150,8 +150,8 @@ const BobChat: React.FC = () => {
                 <span style={{ fontSize: '1.2rem' }}>🔗</span>
                 <span>Full Bob MCP Server — 28+ AI tools for Bitcoin dev → <strong>ai.opnet.org</strong></span>
             </a>
-            <div className="chips">{PROMPTS.map(p => <button key={p.k} className="chip" onClick={() => send(p.l.replace(/^[^ ]+ /, ''))}>{p.l}</button>)}</div>
-            <div className="chat-b">
+            <div className="chips" role="list" aria-label="Suggested topics">{PROMPTS.map(p => <button key={p.k} className="chip" role="listitem" aria-label={`Ask about ${p.l.replace(/^[^ ]+ /, '')}`} onClick={() => send(p.l.replace(/^[^ ]+ /, ''))}>{p.l}</button>)}</div>
+            <div className="chat-b" role="log" aria-label="Chat messages" aria-live="polite">
                 {msgs.map(m => (
                     <div key={m.id} className={`bub ${m.role === 'bot' ? 'ai' : 'me'}`}>
                         <div className="bub-w" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -164,7 +164,7 @@ const BobChat: React.FC = () => {
                 {typ && <div className="bub ai"><div className="bub-w">🤖 Bob</div><div className="dots"><span>●</span><span>●</span><span>●</span></div></div>}
                 <div ref={end} />
             </div>
-            <div className="chat-f"><input className="chat-i" value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key === 'Enter' && send(inp)} placeholder="Ask about OP_NET, consensus, WASM, DeFi..." /><button className="snd" onClick={() => send(inp)}>Send</button></div>
+            <div className="chat-f" role="form" aria-label="Chat input"><input className="chat-i" aria-label="Chat message" value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key === 'Enter' && send(inp)} placeholder="Ask about OP_NET, consensus, WASM, DeFi..." /><button className="snd" aria-label="Send message" onClick={() => send(inp)}>Send</button></div>
         </div>
     );
 };

@@ -15,11 +15,11 @@ const base: React.CSSProperties = {
 };
 
 export const SkeletonLine: React.FC<{ width?: string | number; height?: number; style?: React.CSSProperties }> = ({ width = '100%', height = 14, style }) => (
-  <div style={{ ...base, width, height, ...style }} />
+  <div aria-hidden="true" style={{ ...base, width, height, ...style }} />
 );
 
 export const SkeletonCard: React.FC<{ rows?: number; style?: React.CSSProperties }> = ({ rows = 3, style }) => (
-  <div className="P" style={{ padding: 16, ...style }}>
+  <div className="P" aria-busy="true" aria-label="Loading content" style={{ padding: 16, ...style }}>
     <SkeletonLine width="40%" height={16} style={{ marginBottom: 12 }} />
     {Array.from({ length: rows }).map((_, i) => (
       <SkeletonLine key={i} width={`${70 + Math.random() * 30}%`} height={12} style={{ marginBottom: 8 }} />
@@ -28,7 +28,7 @@ export const SkeletonCard: React.FC<{ rows?: number; style?: React.CSSProperties
 );
 
 export const SkeletonTable: React.FC<{ rows?: number; cols?: number }> = ({ rows = 5, cols = 4 }) => (
-  <div className="P" style={{ padding: 16 }}>
+  <div className="P" aria-busy="true" aria-label="Loading table" style={{ padding: 16 }}>
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 8, marginBottom: 12 }}>
       {Array.from({ length: cols }).map((_, i) => (
         <SkeletonLine key={i} height={12} width="80%" />

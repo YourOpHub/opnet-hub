@@ -30,7 +30,7 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
       <div className="Lb">Sending Transfers</div>
 
       {/* Progress bar */}
-      <div className="ms-progress">
+      <div className="ms-progress" role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100} aria-label="Transfer progress">
         <div style={{
           height: '100%', borderRadius: 4,
           background: failedCount > 0 ? 'linear-gradient(90deg, var(--g), var(--r))' : 'var(--g)',
@@ -39,7 +39,7 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
       </div>
 
       {/* Status summary */}
-      <div className="flex-jc-center gap-12 mb-14 fs-74 fw-600">
+      <div className="flex-jc-center gap-12 mb-14 fs-74 fw-600" aria-live="polite">
         <span className="c-g">{completedCount} sent</span>
         <span className="c-r">{failedCount} failed</span>
         <span className="c-t3">
@@ -48,10 +48,12 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
       </div>
 
       {/* Results list */}
-      <div className="br-12 bd" style={{ maxHeight: 340, overflowY: 'auto' }}>
+      <div className="br-12 bd" role="list" aria-label="Transfer results" style={{ maxHeight: 340, overflowY: 'auto' }}>
         {results.map((r, i) => (
           <div
             key={i}
+            role="listitem"
+            aria-label={`Transfer to ${r.address.length > 30 ? r.address.slice(0, 14) + '...' : r.address}: ${r.status}`}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,.04)',
@@ -107,7 +109,7 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
           background: failedCount === 0 ? 'rgba(34,197,94,.08)' : 'rgba(234,179,8,.08)',
           border: `1px solid ${failedCount === 0 ? 'rgba(34,197,94,.2)' : 'rgba(234,179,8,.2)'}`,
         }}>
-          <div className="fw-700 fs-88"
+          <div className="fw-700 fs-88" role="alert"
             style={{ color: failedCount === 0 ? 'var(--g)' : '#eab308' }}>
             {failedCount === 0
               ? 'All transfers completed!'

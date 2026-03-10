@@ -112,7 +112,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
   }, [walletAddress, senderAddr, splitCount, perSplitSats, isDust, provider, openConnectModal, fetchUTXOs, completeOp, failOp, splitSats, trackOp]);
 
   return (
-    <div style={cardS}>
+    <div style={cardS} role="region" aria-label="UTXO splitter">
       {!walletAddress ? (
         <div className="text-center" style={{ padding: '24px 16px' }}>
           <div className="fs-140 mb-8">✂️</div>
@@ -185,9 +185,11 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
             </label>
             <div className="d-flex gap-8 ai-center">
               <input type="range" min="2" max="20" value={splitCount}
+                aria-label="Number of UTXOs to split into"
                 onChange={e => setSplitCount(parseInt(e.target.value))}
                 className="flex-1" style={{ accentColor: '#F7931A' }} />
               <input type="number" min="2" max="20" value={splitCount}
+                aria-label="Split count"
                 onChange={e => setSplitCount(Math.min(20, Math.max(2, parseInt(e.target.value) || 2)))}
                 className="text-center" style={{ ...inputS, width: 60, padding: '6px 8px' }} />
             </div>
@@ -207,7 +209,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
               </span>
             </div>
             {isDust && (
-              <div className="mt-8 fs-68 c-r fw-600">
+              <div className="mt-8 fs-68 c-r fw-600" role="alert">
                 Per-UTXO amount below dust limit (546 sats). Reduce split count.
               </div>
             )}
@@ -224,12 +226,12 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
           </div>
 
           {step && (
-            <div className="fs-72 c-o mb-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="fs-72 c-o mb-8" aria-live="polite" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {step}
             </div>
           )}
           {err && (
-            <div className="fs-72 c-r mb-8">
+            <div className="fs-72 c-r mb-8" role="alert">
               {err}
             </div>
           )}
@@ -241,7 +243,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
               {splitting ? 'Splitting...' : `Split into ${splitCount} UTXOs`}
             </button>
             <button style={{ ...copyBtnS, padding: '8px 12px' }}
-              onClick={fetchUTXOs} disabled={loading}>
+              aria-label="Refresh UTXOs" onClick={fetchUTXOs} disabled={loading}>
               {loading ? '...' : 'Refresh'}
             </button>
           </div>

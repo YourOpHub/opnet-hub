@@ -25,7 +25,7 @@ const TokenListItem: React.FC<{
   return (
     <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
       style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}`, opacity: isPending ? 0.5 : 1 }}>
-      <img src={imgSrc} alt="" className="w-40 h-40 br-50 flex-shrink-0" />
+      <img src={imgSrc} alt={`${token.symbol} logo`} className="w-40 h-40 br-50 flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex-between">
           <span className="fw-700 fs-88 c-w truncate">{token.symbol}</span>
@@ -156,10 +156,11 @@ const LaunchpadTokenList: React.FC<LaunchpadTokenListProps> = ({
           <span className="fs-66 c-t4 text-mono br-6 p-2-8" style={{ background: 'rgba(255,255,255,.05)' }}>{tokens.length}</span>
         </div>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or address..."
+          aria-label="Search contracts by name or address"
           className="w-full br-12 c-w fs-82 ff-ui outline-none mb-8 p-10-14 bg-bg3 bd-bd box-border" />
-        <div className="d-flex gap-4">
+        <div className="d-flex gap-4" role="tablist" aria-label="Sort mode">
           {([['hot1h', '1H Hot'], ['hot8h', '8H Hot'], ['hot24h', '24H Hot'], ['newest', 'Newest'], ['holders', 'Holders']] as [SortMode, string][]).map(([m, label]) => (
-            <button key={m} onClick={() => setSortMode(m)}
+            <button key={m} role="tab" aria-selected={sortMode === m} onClick={() => setSortMode(m)}
               className="flex-1 br-8 fs-66 pointer ff-ui fw-700" style={{ padding: '6px 2px', border: '1px solid ' + (sortMode === m ? 'rgba(247,147,26,.5)' : 'var(--bd)'), background: sortMode === m ? 'rgba(247,147,26,.15)' : 'rgba(255,255,255,.03)', color: sortMode === m ? 'var(--o)' : 'var(--t3)', transition: 'all .15s' }}>
               {label}
             </button>
@@ -168,7 +169,7 @@ const LaunchpadTokenList: React.FC<LaunchpadTokenListProps> = ({
       </div>
 
       {/* Token list */}
-      <div className="lp-sidebar-list">
+      <div className="lp-sidebar-list" role="list" aria-label="Token contracts">
         {filtered.map(t => (
           <TokenListItem key={t.address} token={t} active={selected?.address === t.address} onClick={() => onSelect(t)} />
         ))}
@@ -181,9 +182,10 @@ const LaunchpadTokenList: React.FC<LaunchpadTokenListProps> = ({
       <div className="p-8-10 bd-t-bd">
         <div className="d-flex gap-4 mb-6">
           <input value={addAddr} onChange={e => setAddAddr(e.target.value)} placeholder="opt1sq... address"
+            aria-label="Add contract by address"
             onKeyDown={e => e.key === 'Enter' && handleAddContract()}
             className="flex-1 br-8 c-w fs-60 text-mono outline-none p-6-8 bg-bg3 bd-bd" />
-          <button onClick={handleAddContract} disabled={adding}
+          <button onClick={handleAddContract} disabled={adding} aria-label="Add contract"
             className="br-8 c-o fs-60 pointer ff-ui fw-700 p-6-10" style={{ background: 'rgba(247,147,26,.15)', border: '1px solid rgba(247,147,26,.3)' }}>
             {adding ? '...' : '+'}
           </button>

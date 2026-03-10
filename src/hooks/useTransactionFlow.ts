@@ -51,6 +51,11 @@ interface UseTransactionFlowReturn extends TxFlowState {
   reset: () => void;
 }
 
+/**
+ * Manages multi-step transaction flows with localStorage persistence and block-height polling.
+ * @param flowId - Unique identifier for this transaction flow (used as localStorage key).
+ * @returns Flow state and transition functions (startApproval, startWaiting, setDone, etc.).
+ */
 export function useTransactionFlow(flowId: string): UseTransactionFlowReturn {
   const [state, setState] = useState<TxFlowState>(() => loadState(flowId));
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);

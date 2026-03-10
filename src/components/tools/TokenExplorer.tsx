@@ -182,9 +182,9 @@ const TokenExplorer = React.memo(function TokenExplorer() {
   return (
     <div>
       {/* Search by address */}
-      <div style={cardS}>
+      <div style={cardS} role="region" aria-label="Token lookup">
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <input style={{ ...inputS, flex: 1 }} value={addr} onChange={e => setAddr(e.target.value)} placeholder="Contract address (opt1sq... or 0x...)" onKeyDown={e => e.key === 'Enter' && lookupAddr(addr.trim())} />
+          <input style={{ ...inputS, flex: 1 }} aria-label="Contract address" value={addr} onChange={e => setAddr(e.target.value)} placeholder="Contract address (opt1sq... or 0x...)" onKeyDown={e => e.key === 'Enter' && lookupAddr(addr.trim())} />
           <button style={btnS} onClick={() => lookupAddr(addr.trim())} disabled={loading}>{loading ? '...' : 'Explore'}</button>
         </div>
         {/* Quick links to known tokens */}
@@ -196,7 +196,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             </button>
           ))}
         </div>
-        {err && <div style={{ fontSize: '.72rem', color: err.includes('not available') ? 'var(--y)' : 'var(--r)', marginBottom: 8 }}>{err}</div>}
+        {err && <div role="alert" style={{ fontSize: '.72rem', color: err.includes('not available') ? 'var(--y)' : 'var(--r)', marginBottom: 8 }}>{err}</div>}
         {result && (
           <div>
             {[
@@ -226,6 +226,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <div style={{ fontWeight: 700, fontSize: '.82rem' }}>All Tokens ({allTokens.length})</div>
           <input style={{ ...inputS, width: 180, fontSize: '.65rem', padding: '6px 10px' }}
+            aria-label="Filter tokens by name or symbol"
             placeholder="Filter by name or symbol..."
             value={filterText} onChange={e => setFilterText(e.target.value)} />
         </div>
@@ -235,7 +236,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
           <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)', fontSize: '.76rem' }}>No tokens found</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.72rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.72rem' }} aria-label="All tokens list">
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
                   <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--t3)', cursor: 'pointer', fontWeight: 600, fontSize: '.66rem' }}

@@ -224,7 +224,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
           💼 Consensus-Verified Holdings
           {walletAddress && <span className="tag tag-g">Live BTC</span>}
         </div>
-        <table className="pt">
+        <table className="pt" aria-label="Portfolio holdings">
           <thead>
             <tr><th>Asset</th><th>Balance</th><th>Price</th><th>24h</th><th>Value</th></tr>
           </thead>
@@ -312,7 +312,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
             {!lpOnChain && hasLP && <span className="tag fs-xs lp-cached-tag">Cached</span>}
           </div>
           {lpLoading ? (
-            <div className="lp-empty">Loading LP position...</div>
+            <div className="lp-empty" aria-busy="true" aria-live="polite">Loading LP position...</div>
           ) : hasLP ? (
             <div className="flex-col gap-10">
               <div className="flex-center gap-10 flex-wrap">
@@ -339,7 +339,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
                       <span className="mono">{reserveB > 0 ? reserveB.toLocaleString() : '...'}</span>
                     </div>
                   </div>
-                  <button onClick={refreshLP} disabled={lpLoading} className={`lp-refresh-btn ${lpLoading ? 'op-50' : ''}`}>
+                  <button onClick={refreshLP} disabled={lpLoading} aria-label="Refresh liquidity position" aria-busy={lpLoading} className={`lp-refresh-btn ${lpLoading ? 'op-50' : ''}`}>
                     {lpLoading ? 'Refreshing...' : 'Refresh Position'}
                   </button>
                 </div>

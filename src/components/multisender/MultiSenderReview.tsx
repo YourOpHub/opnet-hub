@@ -38,7 +38,7 @@ const MultiSenderReview: React.FC<MultiSenderReviewProps> = ({
 
       {/* Recipient table */}
       <div className="br-12 bd mb-14" style={{ maxHeight: 280, overflowY: 'auto' }}>
-        <table className="w-full fs-72" style={{ borderCollapse: 'collapse' }}>
+        <table className="w-full fs-72" aria-label="Recipients to receive transfers" style={{ borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--bg3)', position: 'sticky', top: 0 }}>
               <th className="text-left c-t3 fw-600 fs-66" style={{ padding: '8px 10px' }}>#</th>
@@ -74,7 +74,7 @@ const MultiSenderReview: React.FC<MultiSenderReviewProps> = ({
 
       {/* Wallet check */}
       {!connected && (
-        <div className="mt-12 br-12 fs-72 text-center cc-result-err">
+        <div className="mt-12 br-12 fs-72 text-center cc-result-err" role="alert">
           Connect your wallet to proceed.
           <button className="btn-p fs-68 ml-10 p-4-12" onClick={openConnectModal}>
             Connect
@@ -83,7 +83,7 @@ const MultiSenderReview: React.FC<MultiSenderReviewProps> = ({
       )}
 
       {connected && (
-        <div className="mt-10 br-8 fs-68 c-g cc-result-ok">
+        <div className="mt-10 br-8 fs-68 c-g cc-result-ok" aria-live="polite">
           Wallet: {walletAddress.slice(0, 16)}...{walletAddress.slice(-8)}
         </div>
       )}

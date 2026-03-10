@@ -16,7 +16,10 @@ export interface OPNetContract extends BaseContractProperties {
   [method: string]: ((...args: unknown[]) => Promise<unknown>) | undefined | unknown;
 }
 
-/** Singleton provider */
+/**
+ * Return the singleton JSON-RPC provider, creating it on first call.
+ * @returns Shared JSONRpcProvider instance.
+ */
 let _provider: JSONRpcProvider | null = null;
 export function getProvider(): JSONRpcProvider {
   if (!_provider) _provider = new JSONRpcProvider({ url: RPC_URL, network: NETWORK });
@@ -36,6 +39,12 @@ export const MINTABLE_ABI: BitcoinInterfaceAbi = [
 /** Contract instance cache keyed by address */
 const contractCache = new Map<string, IOP20Contract>();
 
+/**
+ * Get or create a cached OP20 contract instance, updating sender if provided.
+ * @param address - OP20 token contract address.
+ * @param sender - Optional sender address to set on the contract.
+ * @returns Cached IOP20Contract instance.
+ */
 export function getCachedOP20(address: string, sender?: string): IOP20Contract {
   let contract = contractCache.get(address);
   if (!contract) {
@@ -54,6 +63,13 @@ const mintableCache = new Map<string, OPNetContract>();
 /** Generic contract cache for non-OP20 contracts (Market, CrossChain, etc.) */
 const genericCache = new Map<string, OPNetContract>();
 
+/**
+ * Get or create a cached contract instance for any ABI, keyed by address + ABI fingerprint.
+ * @param address - Contract address.
+ * @param abi - Contract ABI definition.
+ * @param sender - Optional sender address to set on the contract.
+ * @returns Cached OPNetContract instance.
+ */
 export function getCachedContract(address: string, abi: BitcoinInterfaceAbi, sender?: string): OPNetContract {
   const abiFingerprint = abi.map(e => e.name).join(',');
   const key = `${address}:${abiFingerprint}`;
@@ -67,6 +83,12 @@ export function getCachedContract(address: string, abi: BitcoinInterfaceAbi, sen
   return contract;
 }
 
+/**
+ * Get or create a cached MintableToken contract instance with publicMint ABI.
+ * @param address - MintableToken contract address.
+ * @param sender - Optional sender address to set on the contract.
+ * @returns Cached OPNetContract instance with publicMint method.
+ */
 export function getCachedMintable(address: string, sender?: string): OPNetContract {
   let contract = mintableCache.get(address);
   if (!contract) {

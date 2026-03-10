@@ -23,6 +23,12 @@ export type TxParams = TransactionParameters;
 // Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
 const approvedThisSession = new Set<string>();
 
+/**
+ * Build transaction parameters from live gas data. Frontend mode: signer/mldsaSigner are null (wallet injects).
+ * @param provider - JSON-RPC provider for gas parameter queries.
+ * @param refundTo - Wallet address for change outputs.
+ * @returns Transaction parameters ready for sendTransaction().
+ */
 export async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<TxParams> {
   const gas = await provider.gasParameters();
   const isMainnet = CURRENT_ENV === 'mainnet';
@@ -47,9 +53,10 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 
 }
 
 /**
- * Wait for the next block on-chain (Bob's recommended pattern).
- * Polls getBlockNumber every 10s until it advances past startBlock.
- * Returns immediately if block advances. After timeout, returns anyway (best-effort).
+ * Wait for the next on-chain block by polling getBlockNumber every 8s.
+ * @param provider - JSON-RPC provider.
+ * @param setStep - Optional callback for progress updates.
+ * @param timeoutMs - Max wait time in ms (default 60s). Proceeds anyway on timeout.
  */
 export async function waitForNextBlock(
   provider: JSONRpcProvider,
@@ -74,9 +81,16 @@ export async function waitForNextBlock(
 }
 
 /**
- * Ensure token has sufficient allowance for spender.
- * If not, sends increaseAllowance(max_uint256) and waits for next block.
- * Returns true if approval was needed (and sent), false if already sufficient.
+ * Ensure OP20 token allowance is sufficient for a spender; approves max_uint256 if not.
+ * @param tokenAddress - OP20 token contract address.
+ * @param spenderPubkeyHex - Spender hex pubkey (e.g. '0xe3523...'), NOT bech32.
+ * @param amount - Required allowance amount.
+ * @param provider - JSON-RPC provider.
+ * @param senderAddr - Sender Address or string.
+ * @param walletAddress - Wallet address for refund outputs.
+ * @param setStep - Callback for progress updates.
+ * @param tokenLabel - Human-readable token name for UI messages.
+ * @returns True if approval TX was sent, false if allowance was already sufficient.
  */
 export async function ensureAllowance(
   tokenAddress: string,
@@ -139,8 +153,10 @@ export async function ensureAllowance(
 }
 
 /**
- * Estimate minimum BTC (in sats) required for an operation.
- * Uses live gas parameters from the network.
+ * Estimate minimum BTC (sats) required for a transaction using live gas parameters.
+ * @param provider - JSON-RPC provider.
+ * @param opType - 'interaction' or 'deploy' (deploy needs ~4x more sats).
+ * @returns Object with minSats, feeRate, and a human-readable label.
  */
 export async function getMinBtcRequired(
   provider: JSONRpcProvider,
@@ -169,7 +185,9 @@ export async function getMinBtcRequired(
 }
 
 /**
- * Format user-friendly error messages for common OPNet issues.
+ * Format user-friendly error messages for common OPNet transaction failures.
+ * @param e - Caught error (Error instance or unknown).
+ * @returns Human-readable error string.
  */
 export function formatTxError(e: unknown): string {
   let msg = e instanceof Error ? e.message : 'Transaction failed';

@@ -75,7 +75,7 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
   const ZERO_HEX = '0'.repeat(64);
 
   return (
-    <div key={`tb_${order.id}`} className="Pg" style={{ marginBottom: 8, cursor: 'pointer' }}
+    <div key={`tb_${order.id}`} className="Pg" role="article" aria-label={`${isSell ? 'Sell' : 'Buy'} ${tokenSymbol} order #${order.id}`} aria-expanded={isExpanded} style={{ marginBottom: 8, cursor: 'pointer' }}
       onClick={() => setExpandedOrder(isExpanded ? null : `tb_${order.id}`)}
     >
       {/* Header */}
@@ -176,7 +176,7 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
           </div>
 
           {isThisTbActioning && actionStep && (
-            <div className="cc-step-status">
+            <div className="cc-step-status" aria-live="polite">
               {actionStep}
             </div>
           )}

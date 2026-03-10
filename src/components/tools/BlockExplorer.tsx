@@ -73,7 +73,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
   };
 
   return (
-    <div style={cardS}>
+    <div style={cardS} role="region" aria-label="Block explorer">
       {/* Visual block chain */}
       {recentBlocks.length > 0 && (
         <div className="be-chain-area">
@@ -125,9 +125,9 @@ const BlockExplorer = React.memo(function BlockExplorer() {
       )}
 
       <div className="be-nav-row">
-        <button onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); setBlock(null); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&lt;</button>
-        <input style={{ ...inputS, flex: 1, textAlign: 'center' }} type="number" value={blockNum} onChange={e => setBlockNum(e.target.value)} placeholder="Block number" onKeyDown={e => e.key === 'Enter' && lookup()} />
-        <button onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) { setBlockNum(String(n)); setBlock(null); } }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&gt;</button>
+        <button aria-label="Previous block" onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); setBlock(null); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&lt;</button>
+        <input style={{ ...inputS, flex: 1, textAlign: 'center' }} type="number" aria-label="Block number" value={blockNum} onChange={e => setBlockNum(e.target.value)} placeholder="Block number" onKeyDown={e => e.key === 'Enter' && lookup()} />
+        <button aria-label="Next block" onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) { setBlockNum(String(n)); setBlock(null); } }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&gt;</button>
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Fetch'}</button>
       </div>
       {latestHeight > 0 && (
@@ -137,7 +137,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
           <button onClick={() => { setBlockNum(String(latestHeight - 100)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-100</button>
         </div>
       )}
-      {err && <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
+      {err && <div role="alert" style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
       {block && (
         <div>
           {Object.entries(block).filter(([, v]) => v !== null && typeof v !== 'object').map(([k, v]) => (

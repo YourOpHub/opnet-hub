@@ -95,17 +95,17 @@ const MiniChart: React.FC<{ data: number[]; color: string; height?: number; labe
   return (
     <div>
       {label && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--t2)', fontWeight: 600 }}>{label}</span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span style={{ fontSize: '1rem', fontWeight: 700, color, fontFamily: 'var(--fm)' }}>{latest.toFixed(2)}</span>
-            <span style={{ fontSize: '.65rem', color: change >= 0 ? 'var(--g)' : '#ef4444', fontWeight: 600 }}>
+        <div className="d-flex jc-between ai-baseline mb-8">
+          <span className="fs-75 c-t2 fw-600">{label}</span>
+          <div className="d-flex ai-baseline gap-6">
+            <span className="fs-100 fw-700 text-mono" style={{ color }}>{latest.toFixed(2)}</span>
+            <span className="fs-65 fw-600" style={{ color: change >= 0 ? 'var(--g)' : '#ef4444' }}>
               {change >= 0 ? '↑' : '↓'}{Math.abs(change).toFixed(2)}%
             </span>
           </div>
         </div>
       )}
-      <svg viewBox={`0 0 ${w} ${height}`} style={{ width: '100%', height }}>
+      <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }}>
         <defs>
           <linearGradient id={`grad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.3" />
@@ -238,56 +238,56 @@ const Analytics: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 4 }}>📊 Analytics</h2>
-        <p style={{ color: 'var(--t3)', fontSize: '.78rem' }}>Real-time pool metrics, token stats, and on-chain activity</p>
+      <div className="mb-16">
+        <h2 className="fs-120 fw-800 mb-4">📊 Analytics</h2>
+        <p className="c-t3 fs-78">Real-time pool metrics, token stats, and on-chain activity</p>
       </div>
 
-      {loading && <div className="text-center c-t4" style={{ padding: 30 }}>Loading analytics...</div>}
+      {loading && <div className="text-center c-t4 p-30">Loading analytics...</div>}
 
       {/* Error banners */}
       {poolError && !loading && (
-        <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)', fontSize: '.68rem', color: '#ef4444' }}>
+        <div className="mb-10 br-8 fs-68 c-red" style={{ padding: '8px 12px', background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)' }}>
           ⚠️ Pool data unavailable — reserves may be stale
         </div>
       )}
       {chainError && !loading && (
-        <div style={{ padding: '8px 12px', marginBottom: 10, borderRadius: 8, background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)', fontSize: '.68rem', color: 'var(--y)' }}>
+        <div className="mb-10 br-8 fs-68 c-y" style={{ padding: '8px 12px', background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)' }}>
           ⚠️ Some chain metrics unavailable — RPC may be slow
         </div>
       )}
 
       {/* Key Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
+      <div className="d-grid gap-10 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
         <div className="P p-14-center text-center">
           <div className="lbl-xs mb-4">MINE/VIBE Rate</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--p)', fontFamily: 'var(--fm)' }}>{rate > 0 ? rate.toFixed(2) : '—'}</div>
+          <div className="fs-110 fw-700 c-p text-mono">{rate > 0 ? rate.toFixed(2) : '—'}</div>
         </div>
         <div className="P p-14-center text-center">
           <div className="lbl-xs mb-4">Pool TVL</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--g)', fontFamily: 'var(--fm)' }}>{tvl > 0 ? `${(tvl / 1e6).toFixed(2)}M` : '—'}</div>
+          <div className="fs-110 fw-700 c-g text-mono">{tvl > 0 ? `${(tvl / 1e6).toFixed(2)}M` : '—'}</div>
         </div>
         <div className="P p-14-center text-center">
           <div className="lbl-xs mb-4">Block Height</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>{blockHeight > 0 ? blockHeight.toLocaleString() : '—'}</div>
+          <div className="fs-110 fw-700 c-o text-mono">{blockHeight > 0 ? blockHeight.toLocaleString() : '—'}</div>
         </div>
         <div className="P p-14-center text-center">
           <div className="lbl-xs mb-4">Gas (sat/vB)</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--c)', fontFamily: 'var(--fm)' }}>{gasParams?.conservative ?? '—'}</div>
+          <div className="fs-110 fw-700 c-c text-mono">{gasParams?.conservative ?? '—'}</div>
         </div>
         <div className="P p-14-center text-center">
           <div className="lbl-xs mb-4">Mempool TXs</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--c2)', fontFamily: 'var(--fm)' }}>{mempoolInfo?.count ?? '—'}</div>
+          <div className="fs-110 fw-700 c-c2 text-mono">{mempoolInfo?.count ?? '—'}</div>
         </div>
         <div className="P p-14-center text-center">
           <div className="lbl-xs mb-4">Your Swaps/Mints</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--w)', fontFamily: 'var(--fm)' }}>{swapCount}/{mintCount}</div>
+          <div className="fs-110 fw-700 c-w text-mono">{swapCount}/{mintCount}</div>
         </div>
       </div>
 
       {/* Price Chart — only show with enough data */}
       {rateHistory.length >= 2 && (
-        <div className="P" style={{ padding: 16, marginBottom: 16 }}>
+        <div className="P p-16 mb-16">
           <MiniChart data={rateHistory} color="#a78bfa" label="MINE/VIBE Exchange Rate" height={140} />
           <div className="flex-between mt-6 fs-2xs c-t4">
             <span>{new Date(snapshots[0]!.ts).toLocaleDateString()} {new Date(snapshots[0]!.ts).toLocaleTimeString()}</span>
@@ -299,20 +299,20 @@ const Analytics: React.FC = () => {
 
       {/* Reserve Charts — only show with enough data */}
       {mineReserveHistory.length >= 2 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: 16 }}>
-          <div className="P" style={{ padding: 14 }}>
+        <div className="d-grid gap-12 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+          <div className="P p-14">
             <MiniChart data={mineReserveHistory} color="#F7931A" label="MINE Reserve" height={100} />
           </div>
-          <div className="P" style={{ padding: 14 }}>
+          <div className="P p-14">
             <MiniChart data={vibeReserveHistory} color="#0ea5e9" label="VIBE Reserve" height={100} />
           </div>
         </div>
       )}
 
       {/* Pool Details */}
-      <div className="P" style={{ padding: 16, marginBottom: 16 }}>
-        <div className="Lb" style={{ marginBottom: 10 }}>💱 Pool Details — MINE/VIBE SimplePool</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+      <div className="P p-16 mb-16">
+        <div className="Lb mb-10">💱 Pool Details — MINE/VIBE SimplePool</div>
+        <div className="d-grid gap-10" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
           <div className="bg3-rounded">
             <div className="fs-62 c-t4 mb-4">MINE Reserve</div>
             <div className="fw-700 text-mono" style={{ color: '#F7931A' }}>
@@ -335,9 +335,9 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* Token Supply Stats */}
-      <div className="P" style={{ padding: 16, marginBottom: 16 }}>
-        <div className="Lb" style={{ marginBottom: 10 }}>🪙 Token Supply</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+      <div className="P p-16 mb-16">
+        <div className="Lb mb-10">🪙 Token Supply</div>
+        <div className="d-grid gap-10" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]: [string, ContractTokenInfo]) => {
             const supply = supplies[sym];
             const totalMinted = supply ? Number(supply) / Math.pow(10, tok.decimals) : 0;
@@ -346,9 +346,9 @@ const Analytics: React.FC = () => {
             return (
               <div key={sym} className="bg3-rounded">
                 <div className="flex-center gap-6 mb-8">
-                  <span style={{ fontSize: '1.1rem' }}>{tok.icon}</span>
-                  <span style={{ fontWeight: 700 }}>${sym}</span>
-                  {tok.publicMint && <span style={{ fontSize: '.5rem', background: 'rgba(168,85,247,.12)', color: '#a855f7', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>MINTABLE</span>}
+                  <span className="fs-110">{tok.icon}</span>
+                  <span className="fw-700">${sym}</span>
+                  {tok.publicMint && <span className="fs-50 c-purple br-4 fw-700" style={{ background: 'rgba(168,85,247,.12)', padding: '2px 6px' }}>MINTABLE</span>}
                 </div>
                 <div className="flex-between fs-sm mb-4">
                   <span className="c-t3">Minted</span>
@@ -359,14 +359,8 @@ const Analytics: React.FC = () => {
                   <span className="text-mono c-t2">{maxSupply.toLocaleString()}</span>
                 </div>
                 {/* Progress bar */}
-                <div style={{ background: 'var(--bg2)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(pct, 100)}%`,
-                    background: `linear-gradient(90deg, ${sym === 'MINE' ? '#F7931A' : '#0ea5e9'}, ${sym === 'MINE' ? '#e8850f' : '#0284c7'})`,
-                    borderRadius: 4,
-                    transition: 'width .5s',
-                  }} />
+                <div className="br-4 h-6 ov-hidden" style={{ background: 'var(--bg2)' }}>
+                  <div className="br-4" style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: `linear-gradient(90deg, ${sym === 'MINE' ? '#F7931A' : '#0ea5e9'}, ${sym === 'MINE' ? '#e8850f' : '#0284c7'})`, transition: 'width .5s' }} />
                 </div>
                 <div className="fs-2xs c-t4 mt-4 text-right">
                   {pct.toFixed(1)}% minted
@@ -378,17 +372,14 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="P" style={{ padding: 16 }}>
-        <div className="Lb" style={{ marginBottom: 10 }}>⚡ Recent On-Chain Activity</div>
+      <div className="P p-16">
+        <div className="Lb mb-10">⚡ Recent On-Chain Activity</div>
         {txHistory.length === 0 ? (
-          <div className="c-t4 fs-72 text-center" style={{ padding: 20 }}>No activity recorded yet. Try minting or swapping!</div>
+          <div className="c-t4 fs-72 text-center p-20">No activity recorded yet. Try minting or swapping!</div>
         ) : (
           <div className="flex-col-gap4">
             {txHistory.slice(0, 15).map((tx: TxRecord) => (
-              <div key={tx.id} className="flex-between fs-72" style={{
-                padding: '8px 12px', borderRadius: '14px',
-                background: 'rgba(255,255,255,.02)', border: '1px solid var(--bd)',
-              }}>
+              <div key={tx.id} className="flex-between fs-72 br-14" style={{ padding: '8px 12px', background: 'rgba(255,255,255,.02)', border: '1px solid var(--bd)' }}>
                 <div className="flex-center gap-8">
                   <span>{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'}</span>
                   <span className="fw-600 c-w" style={{ textTransform: 'capitalize' }}>{tx.type}</span>

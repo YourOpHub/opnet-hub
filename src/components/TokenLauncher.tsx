@@ -276,9 +276,9 @@ const TokenLauncher: React.FC = () => {
 
   return (
     <div>
-      <div className="Pg" style={{ marginBottom: 14, textAlign: 'center', padding: '24px 18px' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--w)', marginBottom: 3 }}>Token Launcher</div>
-        <div style={{ color: 'var(--t3)', fontSize: '.8rem', maxWidth: 480, margin: '0 auto' }}>
+      <div className="Pg mb-14 text-center" style={{ padding: '24px 18px' }}>
+        <div className="fs-110 fw-800 c-w mb-3">Token Launcher</div>
+        <div className="c-t3 fs-80 m-auto" style={{ maxWidth: 480 }}>
           Create your own OP-20 token on Bitcoin L1. Fill in the details, connect your wallet, and deploy. You only sign the transaction — we handle everything else.
         </div>
       </div>
@@ -289,61 +289,49 @@ const TokenLauncher: React.FC = () => {
           <div className="Lb">Token Details</div>
 
           {/* Quick presets */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          <div className="d-flex gap-6 mb-14">
             {PRESETS.map(p => (
-              <button key={p.symbol} onClick={() => applyPreset(p)} style={{
-                flex: 1, padding: '8px 4px', borderRadius: '14px',
-                background: tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.08)' : 'var(--bg3)',
-                border: `1px solid ${tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`,
-                color: tokenSymbol === p.symbol && !customWasm ? 'var(--o)' : 'var(--t2)',
-                fontSize: '.65rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
-              }}>
+              <button key={p.symbol} onClick={() => applyPreset(p)} className="flex-1 br-14 fs-65 fw-700 pointer ff-ui" style={{ padding: '8px 4px', background: tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.08)' : 'var(--bg3)', border: `1px solid ${tokenSymbol === p.symbol && !customWasm ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`, color: tokenSymbol === p.symbol && !customWasm ? 'var(--o)' : 'var(--t2)' }}>
                 <div>{p.symbol}</div>
-                <div style={{ fontSize: '.52rem', fontWeight: 400, marginTop: 2, color: 'var(--t3)' }}>{p.desc}</div>
+                <div className="fs-52 fw-400 mt-2 c-t3">{p.desc}</div>
               </button>
             ))}
           </div>
 
           {/* Name */}
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Token Name</label>
+          <div className="mb-10">
+            <label className="fs-68 c-t3 fw-600 mb-4 d-block">Token Name</label>
             <input style={inputStyle} value={tokenName} onChange={e => setTokenName(e.target.value)} placeholder="e.g. My Awesome Token" />
           </div>
 
           {/* Symbol */}
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Symbol (ticker)</label>
-            <input style={{ ...inputStyle, textTransform: 'uppercase' }} value={tokenSymbol} onChange={e => setTokenSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="e.g. MTK" maxLength={6} />
+          <div className="mb-10">
+            <label className="fs-68 c-t3 fw-600 mb-4 d-block">Symbol (ticker)</label>
+            <input className="text-upper" style={{ ...inputStyle }} value={tokenSymbol} onChange={e => setTokenSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="e.g. MTK" maxLength={6} />
           </div>
 
           {/* Supply + Decimals row */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <div className="d-flex gap-8 mb-10">
             <div style={{ flex: 2 }}>
-              <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Total Supply</label>
+              <label className="fs-68 c-t3 fw-600 mb-4 d-block">Total Supply</label>
               <input style={inputStyle} type="text" inputMode="numeric" value={tokenSupply} onChange={e => setTokenSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000" />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Decimals</label>
-              <select style={{ ...inputStyle, cursor: 'pointer' }} value={tokenDecimals} onChange={e => setTokenDecimals(Number(e.target.value))}>
+            <div className="flex-1">
+              <label className="fs-68 c-t3 fw-600 mb-4 d-block">Decimals</label>
+              <select className="pointer" style={{ ...inputStyle }} value={tokenDecimals} onChange={e => setTokenDecimals(Number(e.target.value))}>
                 {[0, 2, 4, 6, 8, 18].map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
           </div>
 
           {/* Token Mode: Standard vs Mintable */}
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: '.68rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 6, display: 'block' }}>Token Type</label>
-            <div style={{ display: 'flex', gap: 6 }}>
+          <div className="mb-12">
+            <label className="fs-68 c-t3 fw-600 mb-6 d-block">Token Type</label>
+            <div className="d-flex gap-6">
               {([['standard', 'Standard', 'All supply minted to you on deploy'], ['mintable', 'Mintable', 'Split: you + public mint']] as const).map(([mode, label, desc]) => (
-                <button key={mode} onClick={() => setTokenMode(mode)} style={{
-                  flex: 1, padding: '10px 6px', borderRadius: '14px',
-                  background: tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.08)' : 'rgba(168,85,247,.12)') : 'var(--bg3)',
-                  border: `1px solid ${tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.3)' : 'rgba(168,85,247,.3)') : 'var(--bd)'}`,
-                  color: tokenMode === mode ? (mode === 'standard' ? 'var(--o)' : '#a855f7') : 'var(--t2)',
-                  fontSize: '.7rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--ff)',
-                }}>
+                <button key={mode} onClick={() => setTokenMode(mode)} className="flex-1 br-14 fs-70 fw-700 pointer ff-ui" style={{ padding: '10px 6px', background: tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.08)' : 'rgba(168,85,247,.12)') : 'var(--bg3)', border: `1px solid ${tokenMode === mode ? (mode === 'standard' ? 'rgba(247,147,26,.3)' : 'rgba(168,85,247,.3)') : 'var(--bd)'}`, color: tokenMode === mode ? (mode === 'standard' ? 'var(--o)' : '#a855f7') : 'var(--t2)' }}>
                   <div>{mode === 'standard' ? '🔒' : '🌐'} {label}</div>
-                  <div style={{ fontSize: '.52rem', fontWeight: 400, marginTop: 2, color: 'var(--t3)' }}>{desc}</div>
+                  <div className="fs-52 fw-400 mt-2 c-t3">{desc}</div>
                 </button>
               ))}
             </div>
@@ -351,44 +339,37 @@ const TokenLauncher: React.FC = () => {
 
           {/* Mintable mode settings */}
           {tokenMode === 'mintable' && (
-            <div style={{ marginBottom: 12, padding: 12, background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)', borderRadius: '14px' }}>
-              <div style={{ fontSize: '.7rem', fontWeight: 700, color: '#a855f7', marginBottom: 8 }}>Mint Allocation</div>
+            <div className="mb-12 p-12 br-14" style={{ background: 'rgba(168,85,247,.06)', border: '1px solid rgba(168,85,247,.15)' }}>
+              <div className="fs-70 fw-700 c-purple mb-8">Mint Allocation</div>
 
               {/* Initial mint % slider */}
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.64rem', color: 'var(--t3)', marginBottom: 4 }}>
+              <div className="mb-10">
+                <div className="d-flex jc-between fs-64 c-t3 mb-4">
                   <span>Initial mint to you</span>
-                  <span style={{ fontWeight: 700, color: 'var(--w)' }}>{initialMintPct}%</span>
+                  <span className="fw-700 c-w">{initialMintPct}%</span>
                 </div>
                 <input type="range" min={0} max={100} step={5} value={initialMintPct}
                   onChange={e => setInitialMintPct(Number(e.target.value))}
-                  style={{ width: '100%', accentColor: '#a855f7' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.56rem', color: 'var(--t4)' }}>
+                  className="w-full" style={{ accentColor: '#a855f7' }} />
+                <div className="d-flex jc-between fs-56 c-t4">
                   <span>You get: {((parseFloat(tokenSupply) || 0) * initialMintPct / 100).toLocaleString()}</span>
                   <span>Public mint: {((parseFloat(tokenSupply) || 0) * (100 - initialMintPct) / 100).toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Public mint toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
-                  width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-                  background: publicMintEnabled ? '#a855f7' : 'var(--bg3)',
-                  position: 'relative', transition: 'background .2s',
-                }}>
-                  <div style={{
-                    width: 16, height: 16, borderRadius: '50%', background: 'white',
-                    position: 'absolute', top: 2, left: publicMintEnabled ? 18 : 2, transition: 'left .2s',
-                  }} />
+              <div className="d-flex ai-center gap-8 mb-8">
+                <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} className="w-36 br-10 pointer pos-relative" style={{ height: 20, border: 'none', background: publicMintEnabled ? '#a855f7' : 'var(--bg3)', transition: 'background .2s' }}>
+                  <div className="br-50 pos-absolute" style={{ width: 16, height: 16, background: 'white', top: 2, left: publicMintEnabled ? 18 : 2, transition: 'left .2s' }} />
                 </button>
-                <span style={{ fontSize: '.66rem', color: 'var(--t2)' }}>Anyone can mint (public mint)</span>
+                <span className="fs-66 c-t2">Anyone can mint (public mint)</span>
               </div>
 
               {/* Max mint per tx */}
               {publicMintEnabled && (
                 <div>
-                  <label style={{ fontSize: '.62rem', color: 'var(--t3)', fontWeight: 600, marginBottom: 4, display: 'block' }}>Max tokens per mint tx (0 = unlimited)</label>
-                  <input style={{ ...inputStyle, fontSize: '.74rem' }} type="text" inputMode="numeric"
+                  <label className="fs-62 c-t3 fw-600 mb-4 d-block">Max tokens per mint tx (0 = unlimited)</label>
+                  <input className="fs-74" style={{ ...inputStyle }} type="text" inputMode="numeric"
                     value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="10000" />
                 </div>
@@ -397,34 +378,24 @@ const TokenLauncher: React.FC = () => {
           )}
 
           {/* Token logo */}
-          <div className="upload-zone" onClick={() => fileRef.current?.click()} style={{ marginBottom: 14, padding: '10px' }}>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
-            {img ? <img src={img} alt="Logo" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} /> : <div style={{ fontSize: '1.2rem' }}>+</div>}
-            <div style={{ fontSize: '.62rem', color: 'var(--t3)' }}>{img ? 'Change logo' : 'Logo (optional)'}</div>
+          <div className="upload-zone mb-14" onClick={() => fileRef.current?.click()} style={{ padding: '10px' }}>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} className="d-none" />
+            {img ? <img src={img} alt="Logo" className="w-40 h-40 br-50" style={{ objectFit: 'cover' }} /> : <div className="fs-120">+</div>}
+            <div className="fs-62 c-t3">{img ? 'Change logo' : 'Logo (optional)'}</div>
           </div>
 
           {/* Advanced: custom WASM */}
-          <button onClick={() => setAdvancedOpen(!advancedOpen)} style={{
-            width: '100%', padding: '6px', marginBottom: advancedOpen ? 8 : 14,
-            background: 'none', border: '1px solid var(--bd)', borderRadius: '14px',
-            color: 'var(--t4)', fontSize: '.62rem', cursor: 'pointer', fontFamily: 'var(--ff)',
-          }}>
+          <button onClick={() => setAdvancedOpen(!advancedOpen)} className="w-full br-14 c-t4 fs-62 pointer ff-ui" style={{ padding: '6px', marginBottom: advancedOpen ? 8 : 14, background: 'none', border: '1px solid var(--bd)' }}>
             {advancedOpen ? '▾ Hide Advanced' : '▸ Advanced: upload custom .wasm'}
           </button>
 
           {advancedOpen && (
-            <div style={{ marginBottom: 14 }}>
-              <input ref={wasmRef} type="file" accept=".wasm" onChange={handleWasmUpload} style={{ display: 'none' }} />
-              <button onClick={() => wasmRef.current?.click()} style={{
-                width: '100%', padding: '10px', borderRadius: '14px',
-                background: customWasm ? 'rgba(16,185,129,.06)' : 'var(--bg3)',
-                border: `1px solid ${customWasm ? 'rgba(16,185,129,.15)' : 'var(--bd)'}`,
-                color: customWasm ? 'var(--g)' : 'var(--t3)',
-                fontSize: '.72rem', cursor: 'pointer', fontFamily: 'var(--ff)',
-              }}>
+            <div className="mb-14">
+              <input ref={wasmRef} type="file" accept=".wasm" onChange={handleWasmUpload} className="d-none" />
+              <button onClick={() => wasmRef.current?.click()} className="w-full br-14 fs-72 pointer ff-ui" style={{ padding: '10px', background: customWasm ? 'rgba(16,185,129,.06)' : 'var(--bg3)', border: `1px solid ${customWasm ? 'rgba(16,185,129,.15)' : 'var(--bd)'}`, color: customWasm ? 'var(--g)' : 'var(--t3)' }}>
                 {customWasm ? `${customWasmName} (${(customWasm.length / 1024).toFixed(1)} KB)` : 'Upload custom .wasm contract'}
               </button>
-              <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
+              <div className="fs-58 c-t4 mt-4">
                 Override the default OP-20 template with your own compiled contract
               </div>
             </div>
@@ -432,99 +403,96 @@ const TokenLauncher: React.FC = () => {
 
           {/* Deploy Button */}
           {connected ? (
-            <button className="lbtn" onClick={deployToken} disabled={deploying} style={{ width: '100%', opacity: deploying ? 0.6 : 1 }}>
+            <button className="lbtn w-full" onClick={deployToken} disabled={deploying} style={{ opacity: deploying ? 0.6 : 1 }}>
               {deploying ? `${deployStep || 'Deploying...'}` : `Deploy $${tokenSymbol.trim() || 'TKN'} on Bitcoin L1`}
             </button>
           ) : (
-            <button className="lbtn" onClick={openConnectModal}
-              style={{ width: '100%', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }}>
+            <button className="lbtn w-full" onClick={openConnectModal}
+              style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }}>
               Connect Wallet to Deploy
             </button>
           )}
 
           {connected && (
-            <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)', borderRadius: 8, fontSize: '.68rem', color: 'var(--g)' }}>
+            <div className="mt-8 br-8 fs-68 c-g" style={{ padding: '6px 10px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.15)' }}>
               Wallet: {walletAddress.slice(0, 16)}...
             </div>
           )}
 
           {/* Deploy Result */}
           {deployResult && (
-            <div style={{ marginTop: 10, padding: 12, background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)', borderRadius: 8 }}>
-              <div style={{ color: 'var(--g)', fontWeight: 700, marginBottom: 4 }}>Token Deployed On-Chain!</div>
-              <div style={{ fontSize: '.72rem', color: 'var(--t2)', wordBreak: 'break-all' }}>
+            <div className="mt-10 p-12 br-8" style={{ background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.2)' }}>
+              <div className="c-g fw-700 mb-4">Token Deployed On-Chain!</div>
+              <div className="fs-72 c-t2 word-break">
                 <strong>Contract:</strong> {deployResult.contractAddress}
               </div>
               {deployResult.txid && (
                 <a href={getTxUrl(deployResult.txid)} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--c2)', fontSize: '.65rem', marginTop: 4, display: 'block' }}>View Deploy TX →</a>
+                  className="c-c2 fs-65 mt-4 d-block">View Deploy TX →</a>
               )}
             </div>
           )}
           {deployError && (
-            <div style={{ marginTop: 10, padding: 12, background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8 }}>
-              <div style={{ color: '#ef4444', fontSize: '.78rem' }}>{deployError}</div>
+            <div className="mt-10 p-12 br-8" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)' }}>
+              <div className="c-red fs-78">{deployError}</div>
             </div>
           )}
         </div>
 
         {/* Right: Preview */}
-        <div className="P" style={{ textAlign: 'center', padding: 18 }}>
-          <div className="Lb" style={{ justifyContent: 'center' }}>Live Preview</div>
-          <div style={{ width: 80, height: 80, margin: '8px auto', borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(255,255,255,.08)' }}>
-            {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={genLogo(tokenSymbol)} alt={tokenSymbol} style={{ width: '100%', height: '100%' }} />}
+        <div className="P text-center p-18">
+          <div className="Lb jc-center">Live Preview</div>
+          <div className="br-50 ov-hidden" style={{ width: 80, height: 80, margin: '8px auto', border: '2px solid rgba(255,255,255,.08)' }}>
+            {img ? <img src={img} alt="" className="w-full" style={{ height: '100%', objectFit: 'cover' }} /> : <img src={genLogo(tokenSymbol)} alt={tokenSymbol} className="w-full" style={{ height: '100%' }} />}
           </div>
-          <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--w)', marginTop: 6 }}>{tokenName || 'Token Name'}</div>
-          <div style={{ fontFamily: 'var(--fm)', color: 'var(--o)', fontWeight: 600, fontSize: '.82rem' }}>${tokenSymbol || 'TKN'}</div>
-          <div style={{ fontSize: '.68rem', color: 'var(--t3)', marginTop: 4 }}>Supply: {Number(tokenSupply || 0).toLocaleString()}</div>
-          <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 2 }}>Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)}</div>
+          <div className="fw-700 fs-95 c-w mt-6">{tokenName || 'Token Name'}</div>
+          <div className="text-mono c-o fw-600 fs-82">${tokenSymbol || 'TKN'}</div>
+          <div className="fs-68 c-t3 mt-4">Supply: {Number(tokenSupply || 0).toLocaleString()}</div>
+          <div className="fs-58 c-t4 mt-2">Decimals: {tokenDecimals} · OP-20 · Bitcoin L1 · {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)}</div>
 
           {/* Deploy cost — compact */}
-          <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)', borderRadius: '14px', fontSize: '.66rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--t3)' }}>Deploy cost:</span>
-            <span style={{ fontWeight: 700, color: 'var(--o)', fontFamily: 'var(--fm)' }}>~50K sats (~0.0005 BTC)</span>
+          <div className="mt-12 br-14 fs-66 d-flex jc-between ai-center" style={{ padding: '8px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.15)' }}>
+            <span className="c-t3">Deploy cost:</span>
+            <span className="fw-700 c-o text-mono">~50K sats (~0.0005 BTC)</span>
           </div>
 
-          <div style={{ marginTop: 14, textAlign: 'left', padding: '10px', background: 'var(--bg3)', borderRadius: '14px', fontSize: '.68rem', color: 'var(--t3)' }}>
-            <div style={{ fontWeight: 700, color: 'var(--t2)', marginBottom: 4 }}>How it works:</div>
+          <div className="mt-14 text-left br-14 fs-68 c-t3" style={{ padding: '10px', background: 'var(--bg3)' }}>
+            <div className="fw-700 c-t2 mb-4">How it works:</div>
             <div>1. Fill in your token name, symbol & supply</div>
             <div>2. Connect your OP_WALLET</div>
             <div>3. Click Deploy — sign the transaction</div>
             <div>4. Your token goes live on Bitcoin L1!</div>
-            <div style={{ marginTop: 6, fontSize: '.6rem', color: 'var(--t4)' }}>
+            <div className="mt-6 fs-60 c-t4">
               We compile and package everything for you. You only sign the deployment transaction.
             </div>
           </div>
 
-          <div style={{ marginTop: 10, textAlign: 'left', padding: '8px', background: 'rgba(14,165,233,.06)', borderRadius: '14px', border: '1px solid rgba(14,165,233,.15)', fontSize: '.62rem', color: 'var(--t3)' }}>
-            {CURRENT_ENV !== 'mainnet' && <>Need {CURRENT_ENV} BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c2)' }}>Get from faucet →</a></>}
+          <div className="mt-10 text-left br-14 fs-62 c-t3" style={{ padding: '8px', background: 'rgba(14,165,233,.06)', border: '1px solid rgba(14,165,233,.15)' }}>
+            {CURRENT_ENV !== 'mainnet' && <>Need {CURRENT_ENV} BTC? <a href={FAUCET} target="_blank" rel="noopener noreferrer" className="c-c2">Get from faucet →</a></>}
           </div>
         </div>
       </div>
 
       {/* Verify Deployment */}
-      <div className="P" style={{ marginTop: 14, padding: 20 }}>
+      <div className="P mt-14 p-20">
         <div className="Lb">Verify Deployment</div>
-        <div style={{ fontSize: '.72rem', color: 'var(--t3)', marginBottom: 8 }}>Enter your contract address to check if it's live on-chain.</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input className="lf-i" value={verifyAddr}
+        <div className="fs-72 c-t3 mb-8">Enter your contract address to check if it's live on-chain.</div>
+        <div className="d-flex gap-8">
+          <input className="lf-i flex-1 fs-76" value={verifyAddr}
             onChange={e => { setVerifyAddr(e.target.value); setVerifyResult(null); }}
-            placeholder="opt1sq... (contract address)"
-            style={{ flex: 1, fontSize: '.76rem' }} />
-          <button className="btn-s" onClick={verifyDeployment}
+            placeholder="opt1sq... (contract address)" />
+          <button className="btn-s ws-nowrap" onClick={verifyDeployment}
             disabled={!verifyAddr.trim() || verifying}
-            style={{ whiteSpace: 'nowrap', padding: '8px 16px' }}>
+            style={{ padding: '8px 16px' }}>
             {verifying ? '...' : 'Verify'}
           </button>
         </div>
         {verifyResult && (
-          <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8,
-            background: verifyResult.ok ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
-            border: `1px solid ${verifyResult.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}` }}>
-            <div style={{ color: verifyResult.ok ? 'var(--g)' : '#ef4444', fontWeight: 700, fontSize: '.76rem' }}>
+          <div className="mt-8 br-8" style={{ padding: '8px 12px', background: verifyResult.ok ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)', border: `1px solid ${verifyResult.ok ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}` }}>
+            <div className="fw-700 fs-76" style={{ color: verifyResult.ok ? 'var(--g)' : '#ef4444' }}>
               {verifyResult.ok ? 'Contract Verified On-Chain!' : 'Not Found'}
             </div>
-            <div style={{ fontSize: '.68rem', color: 'var(--t2)', marginTop: 2 }}>{verifyResult.info}</div>
+            <div className="fs-68 c-t2 mt-2">{verifyResult.info}</div>
           </div>
         )}
       </div>

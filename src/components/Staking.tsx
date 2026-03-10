@@ -253,15 +253,15 @@ const Staking: React.FC = () => {
     <div>
       <div className="flex-between mb-16" style={{ marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: 4, letterSpacing: '-.02em' }}>Staking</h2>
-          <p style={{ color: '#5a6578', fontSize: '.75rem' }}>
+          <h2 className="fs-110 fw-800 mb-4" style={{ letterSpacing: '-.02em' }}>Staking</h2>
+          <p className="fs-75" style={{ color: '#5a6578' }}>
             Stake <strong style={{ color: '#fff' }}>MINE</strong> to earn block rewards
           </p>
         </div>
         {STAKING_DEPLOYED && (
           <a href={getContractOpscanUrl(STAKING_ADDRESS)} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.12)', textDecoration: 'none', fontSize: '.58rem', color: '#10b981', fontWeight: 600 }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            className="d-flex ai-center gap-6 br-10 no-decoration fs-58 fw-600" style={{ padding: '6px 12px', background: 'rgba(16,185,129,.06)', border: '1px solid rgba(16,185,129,.12)', color: '#10b981' }}>
+            <span className="br-50 d-inline-block" style={{ width: 5, height: 5, background: '#10b981' }} />
             Live on {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} ↗
           </a>
         )}
@@ -269,110 +269,80 @@ const Staking: React.FC = () => {
 
       {/* Wallet Balances */}
       {!connected ? (
-        <div style={{ marginBottom: 16, padding: '28px', borderRadius: 20, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', textAlign: 'center' }}>
-          <div style={{ fontSize: '.75rem', color: '#5a6578', marginBottom: 12 }}>Connect your wallet to start staking</div>
-          <button onClick={openConnectModal} style={{
-            padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff',
-            fontWeight: 700, fontSize: '.82rem', fontFamily: 'var(--ff)',
-            boxShadow: '0 4px 16px rgba(14,165,233,.2)',
-          }}>Connect Wallet</button>
+        <div className="mb-16 br-20 text-center" style={{ padding: '28px', background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)' }}>
+          <div className="fs-75 mb-12" style={{ color: '#5a6578' }}>Connect your wallet to start staking</div>
+          <button onClick={openConnectModal} className="br-12 pointer fw-700 fs-82 ff-ui" style={{ padding: '12px 28px', border: 'none', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', color: '#fff', boxShadow: '0 4px 16px rgba(14,165,233,.2)' }}>Connect Wallet</button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10, marginBottom: 16 }}>
+        <div className="d-grid gap-10 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
           {[
             { label: 'MINE', value: balLoading ? '...' : fmtToken(mineBalance), color: '#F7931A' },
             { label: 'VIBE', value: balLoading ? '...' : fmtToken(vibeBalance), color: '#0ea5e9' },
             { label: 'BTC', value: balLoading ? '...' : (Number(btcBalance) / 1e8).toFixed(4), color: '#F7931A' },
           ].map(b => (
-            <div key={b.label} style={{ padding: '14px 12px', borderRadius: 16, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', textAlign: 'center' }}>
-              <div style={{ fontSize: '.52rem', color: '#5a6578', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{b.label}</div>
-              <div style={{ fontWeight: 700, fontSize: '.95rem', color: b.color, fontFamily: "'JetBrains Mono', monospace" }}>{b.value}</div>
+            <div key={b.label} className="text-center" style={{ padding: '14px 12px', borderRadius: 16, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)' }}>
+              <div className="fs-52 mb-6 fw-600 text-upper ls-06" style={{ color: '#5a6578' }}>{b.label}</div>
+              <div className="fw-700 fs-95" style={{ color: b.color, fontFamily: "'JetBrains Mono', monospace" }}>{b.value}</div>
             </div>
           ))}
         </div>
       )}
 
       {/* APR & Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10, marginBottom: 16 }}>
+      <div className="d-grid gap-10 mb-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))' }}>
         {[
           { label: 'APR', value: projectedAPR > 0 ? (projectedAPR > 10000 ? `${(projectedAPR / 1000).toFixed(0)}K` : projectedAPR.toFixed(0)) + '%' : '—', color: '#10b981', big: true },
           { label: 'Total Staked', value: totalStakedNum > 0 ? fmtToken(totalStakedOnChain) : '—', color: '#a78bfa' },
           { label: 'Your Staked', value: userStakedNum > 0 ? fmtToken(userStaked) : '—', color: '#F7931A' },
           { label: 'Rewards', value: userRewardsNum > 0 ? fmtToken(userRewards) : '—', color: '#10b981' },
         ].map(s => (
-          <div key={s.label} style={{ padding: '16px 12px', borderRadius: 18, textAlign: 'center', background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
-            <div style={{ fontSize: '.52rem', color: '#5a6578', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6, fontWeight: 600 }}>{s.label}</div>
-            <div style={{ fontSize: s.big ? '1.5rem' : '1.05rem', fontWeight: 800, color: s.color, fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
+          <div key={s.label} className="text-center" style={{ padding: '16px 12px', borderRadius: 18, background: 'rgba(10,10,18,.5)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(16px)' }}>
+            <div className="fs-52 text-upper ls-06 mb-6 fw-600" style={{ color: '#5a6578' }}>{s.label}</div>
+            <div className="fw-800" style={{ fontSize: s.big ? '1.5rem' : '1.05rem', color: s.color, fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Staking Interface */}
-      <div style={{ padding: '24px 22px', marginBottom: 16, borderRadius: 22, background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(20px)' }}>
+      <div className="mb-16" style={{ padding: '24px 22px', borderRadius: 22, background: 'rgba(10,10,18,.6)', border: '1px solid rgba(255,255,255,.06)', backdropFilter: 'blur(20px)' }}>
         <div className="flex-between mb-16">
-          <span style={{ fontSize: '.95rem', fontWeight: 800, color: '#fff', letterSpacing: '-.02em' }}>Stake MINE</span>
+          <span className="fs-95 fw-800" style={{ color: '#fff', letterSpacing: '-.02em' }}>Stake MINE</span>
           {connected && (
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '.48rem', color: '#5a6578', marginBottom: 2 }}>AVAILABLE</div>
-              <div style={{ fontWeight: 700, color: '#F7931A', fontFamily: "'JetBrains Mono', monospace", fontSize: '.82rem' }}>{fmtToken(mineBalance)}</div>
+            <div className="text-right">
+              <div className="fs-48 mb-2" style={{ color: '#5a6578' }}>AVAILABLE</div>
+              <div className="fw-700 fs-82" style={{ color: '#F7931A', fontFamily: "'JetBrains Mono', monospace" }}>{fmtToken(mineBalance)}</div>
             </div>
           )}
         </div>
 
         {/* Stake input */}
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 6, fontWeight: 500 }}>Amount to Stake</div>
-          <div style={{ position: 'relative' }}>
+        <div className="mb-10">
+          <div className="fs-58 mb-6 fw-500" style={{ color: '#5a6578' }}>Amount to Stake</div>
+          <div className="pos-relative">
             <input type="number" value={stakeAmount} onChange={e => setStakeAmount(e.target.value)}
-              placeholder="0" style={{
-                width: '100%', padding: '16px 80px 16px 16px', borderRadius: 14,
-                border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff',
-                fontSize: '.95rem', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, outline: 'none', boxSizing: 'border-box',
-                transition: 'border-color .2s',
-              }} />
+              placeholder="0" className="w-full fs-95 fw-700 outline-none" style={{ padding: '16px 80px 16px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box', transition: 'border-color .2s' }} />
             {connected && mineBalance > 0n && (
               <button onClick={() => setStakeAmount((Number(mineBalance) / 1e8).toString())}
-                style={{
-                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                  padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(167,139,250,.2)',
-                  background: 'rgba(167,139,250,.08)', color: '#a78bfa', cursor: 'pointer',
-                  fontSize: '.65rem', fontWeight: 700, fontFamily: 'var(--ff)', transition: 'all .2s',
-                }}>MAX</button>
+                className="pos-absolute br-8 pointer fs-65 fw-700 ff-ui" style={{ right: 10, top: '50%', transform: 'translateY(-50%)', padding: '6px 14px', border: '1px solid rgba(167,139,250,.2)', background: 'rgba(167,139,250,.08)', color: '#a78bfa', transition: 'all .2s' }}>MAX</button>
             )}
           </div>
         </div>
 
         {/* Stake button */}
         <button onClick={doStake} disabled={busy || !stakeAmount}
-          style={{
-            width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: 'pointer',
-            background: busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #a78bfa, #7c3aed)',
-            color: '#fff', fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
-            opacity: busy || !stakeAmount ? 0.5 : 1, transition: 'all .2s', marginBottom: 10,
-            boxShadow: !busy && stakeAmount ? '0 4px 16px rgba(167,139,250,.2)' : 'none',
-          }}>
+          className="w-full pointer fw-700 fs-85 ff-ui mb-10" style={{ padding: '15px', borderRadius: 14, border: 'none', background: busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #a78bfa, #7c3aed)', color: '#fff', opacity: busy || !stakeAmount ? 0.5 : 1, transition: 'all .2s', boxShadow: !busy && stakeAmount ? '0 4px 16px rgba(167,139,250,.2)' : 'none' }}>
           {staking ? (step || 'Staking...') : `Stake MINE`}
         </button>
 
         {/* Unstake section */}
         {STAKING_DEPLOYED && userStakedNum > 0 && (
           <>
-            <div style={{ fontSize: '.58rem', color: '#5a6578', marginBottom: 6, fontWeight: 500 }}>Amount to Unstake</div>
+            <div className="fs-58 mb-6 fw-500" style={{ color: '#5a6578' }}>Amount to Unstake</div>
             <div className="flex-center gap-8 mb-10">
               <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
-                placeholder="0" style={{
-                  flex: 1, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)',
-                  background: 'rgba(255,255,255,.025)', color: '#fff', fontSize: '.85rem', fontFamily: "'JetBrains Mono', monospace",
-                  fontWeight: 700, outline: 'none', boxSizing: 'border-box',
-                }} />
+                placeholder="0" className="flex-1 fs-85 fw-700 outline-none" style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
               <button onClick={doUnstake} disabled={busy || !unstakeAmount}
-                style={{
-                  padding: '14px 22px', borderRadius: 14,
-                  border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)',
-                  color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: '.78rem', fontFamily: 'var(--ff)',
-                  opacity: busy || !unstakeAmount ? 0.5 : 1, transition: 'all .2s',
-                }}>
+                className="c-red pointer fw-700 fs-78 ff-ui" style={{ padding: '14px 22px', borderRadius: 14, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', opacity: busy || !unstakeAmount ? 0.5 : 1, transition: 'all .2s' }}>
                 {unstaking ? '⏳...' : 'Unstake'}
               </button>
             </div>
@@ -383,19 +353,13 @@ const Staking: React.FC = () => {
         {STAKING_DEPLOYED && userRewardsNum > 0 && (
           <div>
             <button onClick={doClaim} disabled={busy || !canClaim}
-              style={{
-                width: '100%', padding: '15px', borderRadius: 14, border: 'none', cursor: canClaim ? 'pointer' : 'not-allowed',
-                background: !canClaim ? 'rgba(30,30,50,.8)' : busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #10b981, #059669)', color: canClaim && !busy ? '#000' : '#5a6578',
-                fontWeight: 700, fontSize: '.85rem', fontFamily: 'var(--ff)',
-                opacity: busy || !canClaim ? 0.5 : 1, transition: 'all .2s',
-                boxShadow: canClaim && !busy ? '0 4px 16px rgba(16,185,129,.2)' : 'none',
-              }}>
+              className="w-full fw-700 fs-85 ff-ui" style={{ padding: '15px', borderRadius: 14, border: 'none', cursor: canClaim ? 'pointer' : 'not-allowed', background: !canClaim ? 'rgba(30,30,50,.8)' : busy ? 'rgba(30,30,50,.8)' : 'linear-gradient(135deg, #10b981, #059669)', color: canClaim && !busy ? '#000' : '#5a6578', opacity: busy || !canClaim ? 0.5 : 1, transition: 'all .2s', boxShadow: canClaim && !busy ? '0 4px 16px rgba(16,185,129,.2)' : 'none' }}>
               {claiming ? (step || 'Claiming...') : cooldownLeft > 0
                 ? `Cooldown ${Math.ceil(cooldownLeft / 1000)}s`
                 : `Claim ${fmtToken(userRewards)} MINE Rewards`}
             </button>
             {cooldownLeft > 0 && (
-              <div className="mt-6 text-center" style={{ fontSize: '.58rem', color: '#5a6578' }}>
+              <div className="mt-6 text-center fs-58" style={{ color: '#5a6578' }}>
                 Next claim available in {Math.floor(cooldownLeft / 60000)}:{String(Math.floor((cooldownLeft % 60000) / 1000)).padStart(2, '0')}
               </div>
             )}
@@ -404,13 +368,7 @@ const Staking: React.FC = () => {
 
         {/* Result */}
         {result && (
-          <div style={{
-            marginTop: 12, padding: 12, borderRadius: 8,
-            background: result.type === 'success' ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)',
-            border: `1px solid ${result.type === 'success' ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`,
-            fontSize: '.72rem', color: result.type === 'success' ? 'var(--g)' : '#ef4444',
-            wordBreak: 'break-all',
-          }}>
+          <div className="mt-12 p-12 br-8 fs-72 word-break" style={{ background: result.type === 'success' ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${result.type === 'success' ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`, color: result.type === 'success' ? 'var(--g)' : '#ef4444' }}>
             {result.msg}
           </div>
         )}

@@ -114,10 +114,10 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
   return (
     <div style={cardS}>
       {!walletAddress ? (
-        <div style={{ textAlign: 'center', padding: '24px 16px' }}>
-          <div style={{ fontSize: '1.4rem', marginBottom: 8 }}>✂️</div>
-          <div style={{ fontSize: '.82rem', fontWeight: 700, marginBottom: 6 }}>UTXO Splitter</div>
-          <p style={{ fontSize: '.72rem', color: 'var(--t3)', marginBottom: 12, maxWidth: 400, margin: '0 auto 12px' }}>
+        <div className="text-center" style={{ padding: '24px 16px' }}>
+          <div className="fs-140 mb-8">✂️</div>
+          <div className="fs-82 fw-700 mb-6">UTXO Splitter</div>
+          <p className="fs-72 c-t3 mb-12" style={{ maxWidth: 400, margin: '0 auto 12px' }}>
             Split your BTC into multiple UTXOs for parallel transactions.
             Useful when you need to submit multiple OPNet operations quickly.
           </p>
@@ -126,28 +126,28 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
       ) : (
         <>
           {/* Current UTXO status */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
-            <div style={{ textAlign: 'center', padding: 10, background: 'rgba(247,147,26,.06)', borderRadius: 12 }}>
-              <div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{(totalSats / 1e8).toFixed(6)}</div>
-              <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>BTC Balance</div>
+          <div className="d-grid gap-8 mb-16" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <div className="text-center p-10 br-12" style={{ background: 'rgba(247,147,26,.06)' }}>
+              <div className="fw-700 c-o" style={{ ...monoSm }}>{(totalSats / 1e8).toFixed(6)}</div>
+              <div className="fs-50 c-t4">BTC Balance</div>
             </div>
-            <div style={{ textAlign: 'center', padding: 10, background: 'rgba(14,165,233,.06)', borderRadius: 12 }}>
-              <div style={{ ...monoSm, fontWeight: 700, color: 'var(--c)' }}>{utxos.length}</div>
-              <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Current UTXOs</div>
+            <div className="text-center p-10 br-12" style={{ background: 'rgba(14,165,233,.06)' }}>
+              <div className="fw-700 c-c" style={{ ...monoSm }}>{utxos.length}</div>
+              <div className="fs-50 c-t4">Current UTXOs</div>
             </div>
-            <div style={{ textAlign: 'center', padding: 10, background: 'rgba(167,139,250,.06)', borderRadius: 12 }}>
-              <div style={{ ...monoSm, fontWeight: 700, color: 'var(--p)' }}>{totalSats.toLocaleString()}</div>
-              <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Total Sats</div>
+            <div className="text-center p-10 br-12" style={{ background: 'rgba(167,139,250,.06)' }}>
+              <div className="fw-700 c-p" style={{ ...monoSm }}>{totalSats.toLocaleString()}</div>
+              <div className="fs-50 c-t4">Total Sats</div>
             </div>
           </div>
 
           {/* Visual UTXO grid */}
           {utxos.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: '.68rem', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 }}>
+            <div className="mb-12">
+              <label className="d-block fs-68 fw-600 c-t2 mb-6">
                 Your UTXOs {selectedUtxo !== null ? `(#${selectedUtxo + 1} selected)` : '(click to select)'}
               </label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div className="d-flex gap-6 flex-wrap">
                 {utxos.map((u, i) => {
                   const v = getUtxoValue(u);
                   const maxV = Math.max(...utxos.map(getUtxoValue));
@@ -156,28 +156,22 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
                   return (
                     <div key={`${u.transactionId}:${u.outputIndex}`}
                       onClick={() => setSelectedUtxo(isSelected ? null : i)}
-                      style={{
-                        width: size, height: size, borderRadius: 8, cursor: 'pointer',
-                        background: isSelected ? 'rgba(247,147,26,.2)' : 'rgba(255,255,255,.04)',
-                        border: `2px solid ${isSelected ? 'var(--o)' : 'rgba(255,255,255,.08)'}`,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all .15s', fontSize: '.52rem', color: isSelected ? 'var(--o)' : 'var(--t3)',
-                      }}>
-                      <div style={{ fontWeight: 700, fontSize: '.56rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                      className="br-8 pointer d-flex flex-col-dir ai-center jc-center fs-52" style={{ width: size, height: size, background: isSelected ? 'rgba(247,147,26,.2)' : 'rgba(255,255,255,.04)', border: `2px solid ${isSelected ? 'var(--o)' : 'rgba(255,255,255,.08)'}`, transition: 'all .15s', color: isSelected ? 'var(--o)' : 'var(--t3)' }}>
+                      <div className="fw-700 fs-56" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                         {v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v}
                       </div>
-                      <div style={{ fontSize: '.44rem', color: 'var(--t4)' }}>sats</div>
+                      <div className="fs-44 c-t4">sats</div>
                     </div>
                   );
                 })}
               </div>
               {selectedUtxo !== null && (
-                <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
+                <div className="fs-58 c-t4 mt-4">
                   Splitting UTXO #{selectedUtxo + 1}: {getUtxoValue(utxos[selectedUtxo]!).toLocaleString()} sats
                 </div>
               )}
               {selectedUtxo === null && utxos.length > 1 && (
-                <div style={{ fontSize: '.58rem', color: 'var(--t4)', marginTop: 4 }}>
+                <div className="fs-58 c-t4 mt-4">
                   No UTXO selected — will split all ({totalSats.toLocaleString()} sats)
                 </div>
               )}
@@ -185,68 +179,63 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
           )}
 
           {/* Split controls */}
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: '.7rem', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 }}>
+          <div className="mb-12">
+            <label className="d-block fs-70 fw-600 c-t2 mb-6">
               Split into {splitCount} UTXOs
             </label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="d-flex gap-8 ai-center">
               <input type="range" min="2" max="20" value={splitCount}
                 onChange={e => setSplitCount(parseInt(e.target.value))}
-                style={{ flex: 1, accentColor: '#F7931A' }} />
+                className="flex-1" style={{ accentColor: '#F7931A' }} />
               <input type="number" min="2" max="20" value={splitCount}
                 onChange={e => setSplitCount(Math.min(20, Math.max(2, parseInt(e.target.value) || 2)))}
-                style={{ ...inputS, width: 60, textAlign: 'center', padding: '6px 8px' }} />
+                className="text-center" style={{ ...inputS, width: 60, padding: '6px 8px' }} />
             </div>
           </div>
 
           {/* Preview */}
-          <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,.03)', borderRadius: 12, marginBottom: 12, border: '1px solid rgba(255,255,255,.06)' }}>
-            <div style={{ fontSize: '.72rem', color: 'var(--t2)', marginBottom: 6, fontWeight: 600 }}>Preview</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: '.72rem' }}>
-              <span style={{ color: 'var(--t3)' }}>Total balance:</span>
-              <span style={{ ...monoSm, fontWeight: 700, textAlign: 'right' }}>{totalSats.toLocaleString()} sats</span>
-              <span style={{ color: 'var(--t3)' }}>Est. fee:</span>
-              <span style={{ ...monoSm, fontWeight: 700, textAlign: 'right', color: 'var(--y)' }}>~{estimatedFee.toLocaleString()} sats</span>
-              <span style={{ color: 'var(--t3)' }}>Per UTXO:</span>
-              <span style={{ ...monoSm, fontWeight: 700, textAlign: 'right', color: isDust ? 'var(--r)' : 'var(--g)' }}>
+          <div className="br-12 mb-12" style={{ padding: '12px 14px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)' }}>
+            <div className="fs-72 c-t2 mb-6 fw-600">Preview</div>
+            <div className="d-grid gap-6 fs-72" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <span className="c-t3">Total balance:</span>
+              <span className="fw-700 text-right" style={{ ...monoSm }}>{totalSats.toLocaleString()} sats</span>
+              <span className="c-t3">Est. fee:</span>
+              <span className="fw-700 text-right c-y" style={{ ...monoSm }}>~{estimatedFee.toLocaleString()} sats</span>
+              <span className="c-t3">Per UTXO:</span>
+              <span className="fw-700 text-right" style={{ ...monoSm, color: isDust ? 'var(--r)' : 'var(--g)' }}>
                 ~{perSplitSats.toLocaleString()} sats
               </span>
             </div>
             {isDust && (
-              <div style={{ marginTop: 8, fontSize: '.68rem', color: 'var(--r)', fontWeight: 600 }}>
+              <div className="mt-8 fs-68 c-r fw-600">
                 Per-UTXO amount below dust limit (546 sats). Reduce split count.
               </div>
             )}
           </div>
 
           {/* Quick presets */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div className="d-flex gap-6 mb-12 flex-wrap">
             {[2, 3, 5, 8, 10, 15, 20].map(n => (
               <button key={n} onClick={() => setSplitCount(n)}
-                style={{
-                  padding: '4px 10px', fontSize: '.62rem', borderRadius: 8, cursor: 'pointer',
-                  border: splitCount === n ? '1px solid rgba(247,147,26,.4)' : '1px solid rgba(255,255,255,.08)',
-                  background: splitCount === n ? 'rgba(247,147,26,.12)' : 'rgba(255,255,255,.03)',
-                  color: splitCount === n ? 'var(--o)' : 'var(--t3)', fontWeight: 600,
-                }}>
+                className="fs-62 br-8 pointer fw-600" style={{ padding: '4px 10px', border: splitCount === n ? '1px solid rgba(247,147,26,.4)' : '1px solid rgba(255,255,255,.08)', background: splitCount === n ? 'rgba(247,147,26,.12)' : 'rgba(255,255,255,.03)', color: splitCount === n ? 'var(--o)' : 'var(--t3)' }}>
                 {n}x
               </button>
             ))}
           </div>
 
           {step && (
-            <div style={{ fontSize: '.72rem', color: 'var(--o)', fontFamily: "'JetBrains Mono', monospace", marginBottom: 8 }}>
+            <div className="fs-72 c-o mb-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {step}
             </div>
           )}
           {err && (
-            <div style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>
+            <div className="fs-72 c-r mb-8">
               {err}
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{ ...btnS, flex: 1, opacity: splitting || isDust || perSplitSats <= 0 ? 0.5 : 1 }}
+          <div className="d-flex gap-8">
+            <button className="flex-1" style={{ ...btnS, opacity: splitting || isDust || perSplitSats <= 0 ? 0.5 : 1 }}
               disabled={splitting || isDust || perSplitSats <= 0 || loading}
               onClick={handleSplit}>
               {splitting ? 'Splitting...' : `Split into ${splitCount} UTXOs`}
@@ -258,7 +247,7 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
           </div>
 
           {/* Info */}
-          <div style={{ marginTop: 12, fontSize: '.6rem', color: 'var(--t4)', lineHeight: 1.5 }}>
+          <div className="mt-12 fs-60 c-t4 lh-15">
             Splitting UTXOs helps with parallel transactions. Each OPNet contract interaction
             needs its own UTXO. If you only have 1 UTXO, you must wait for each tx to confirm
             before sending the next one.

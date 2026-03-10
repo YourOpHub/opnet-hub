@@ -43,30 +43,26 @@ const TokenListItem: React.FC<{
   return (
     <div onClick={onClick} className={`lp-list-item ${active ? 'active' : ''}`}
       style={{ borderLeft: `3px solid ${active ? c1 : 'transparent'}`, opacity: isPending ? 0.5 : 1 }}>
-      <img src={imgSrc} alt="" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
-      <div className="flex-1" style={{ minWidth: 0 }}>
+      <img src={imgSrc} alt="" className="w-40 h-40 br-50 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
         <div className="flex-between">
           <span className="fw-700 fs-88 c-w truncate">
             {token.symbol}
           </span>
           <div className="flex-center gap-4">
-            {isPending && <span className="c-y fw-700" style={{ fontSize: '.5rem' }}>PENDING</span>}
-            {!isPending && isReal && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--g)', flexShrink: 0 }} />}
-            {grad && <span className="c-g fw-700" style={{ fontSize: '.5rem' }}>GRAD</span>}
+            {isPending && <span className="c-y fw-700 fs-50">PENDING</span>}
+            {!isPending && isReal && <span className="w-6 h-6 br-50 flex-shrink-0" style={{ background: 'var(--g)' }} />}
+            {grad && <span className="c-g fw-700 fs-50">GRAD</span>}
           </div>
         </div>
         <div className="fs-sm c-t4 truncate">
           {token.name}
         </div>
         <div className="flex-center gap-6 mt-4">
-          <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 2,
-              background: grad ? 'var(--g)' : `linear-gradient(90deg, ${c1}, ${c1}88)`,
-              width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .3s',
-            }} />
+          <div className="flex-1 br-2 ov-hidden" style={{ height: 4, background: 'rgba(255,255,255,.06)' }}>
+            <div className="br-2" style={{ height: '100%', background: grad ? 'var(--g)' : `linear-gradient(90deg, ${c1}, ${c1}88)`, width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .3s' }} />
           </div>
-          <span className="text-mono c-t4 text-right" style={{ fontSize: '.58rem', minWidth: 28 }}>
+          <span className="text-mono c-t4 text-right fs-58" style={{ minWidth: 28 }}>
             {(progress * 100).toFixed(0)}%
           </span>
         </div>
@@ -217,37 +213,37 @@ const DeployModal: React.FC<{
       <div className="lp-modal" onClick={e => e.stopPropagation()}>
         <div className="flex-between mb-16">
           <div className="fw-800 fs-lg c-w">Deploy Contract</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: '1.2rem', cursor: 'pointer' }}>&#x2715;</button>
+          <button onClick={onClose} className="c-t3 fs-120 pointer" style={{ background: 'none', border: 'none' }}>&#x2715;</button>
         </div>
 
         {/* Image upload */}
         <div className="flex-center-full mb-14">
           <div onClick={() => fileRef.current?.click()}
-            style={{ width: 72, height: 72, borderRadius: '50%', border: '2px dashed var(--bd)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg3)' }}>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
-            {img ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: '1.5rem', color: 'var(--t4)' }}>+</span>}
+            className="br-50 d-flex ai-center jc-center pointer ov-hidden" style={{ width: 72, height: 72, border: '2px dashed var(--bd)', background: 'var(--bg3)' }}>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} className="d-none" />
+            {img ? <img src={img} alt="" className="w-full" style={{ height: '100%', objectFit: 'cover' }} />
+              : <span className="c-t4" style={{ fontSize: '1.5rem' }}>+</span>}
           </div>
         </div>
 
         <div className="flex-gap8-mb10">
           <div style={{ flex: 2 }}>
-            <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Name *</label>
+            <label className="fs-82 c-t3 mb-4 d-block">Name *</label>
             <input style={iStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Bitcoin Pepe" />
           </div>
-          <div style={{ flex: 1 }}>
-            <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Ticker *</label>
-            <input style={{ ...iStyle, textTransform: 'uppercase' }} value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="BPEPE" maxLength={6} />
+          <div className="flex-1">
+            <label className="fs-82 c-t3 mb-4 d-block">Ticker *</label>
+            <input className="text-upper" style={{ ...iStyle }} value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase().slice(0, 6))} placeholder="BPEPE" maxLength={6} />
           </div>
         </div>
 
         <div className="mb-10">
-          <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Description</label>
+          <label className="fs-82 c-t3 mb-4 d-block">Description</label>
           <textarea style={{ ...iStyle, minHeight: 60, resize: 'vertical' }} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Tell the world about your token..." />
         </div>
 
         <div className="mb-10">
-          <label className="fs-82 c-t3 mb-4" style={{ display: 'block' }}>Total Supply (Max Supply)</label>
+          <label className="fs-82 c-t3 mb-4 d-block">Total Supply (Max Supply)</label>
           <input style={iStyle} type="text" inputMode="numeric" value={supply} onChange={e => setSupply(e.target.value.replace(/[^0-9]/g, ''))} placeholder="1000000000" />
           <div className="fs-72 c-t3 mt-4">
             {initialMintPct}% to you ({((parseFloat(supply) || 0) * initialMintPct / 100).toLocaleString()}) &middot; {100 - initialMintPct}% public mint &middot; Max/tx: {maxMintPerTx || ((parseFloat(supply) || 0) * 0.01).toLocaleString()}
@@ -255,32 +251,26 @@ const DeployModal: React.FC<{
         </div>
 
         {/* Token Settings — always visible, compact */}
-        <div style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.12)', borderRadius: 10 }}>
+        <div className="mb-10 br-10" style={{ padding: '8px 10px', background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.12)' }}>
           {/* Row 1: Initial mint slider */}
           <div className="flex-center gap-8 mb-6">
-            <span className="fs-72 c-t3" style={{ whiteSpace: 'nowrap', minWidth: 60 }}>Your mint</span>
+            <span className="fs-72 c-t3 ws-nowrap" style={{ minWidth: 60 }}>Your mint</span>
             <input type="range" min={0} max={100} step={5} value={initialMintPct}
               onChange={e => setInitialMintPct(Number(e.target.value))}
-              style={{ flex: 1, accentColor: '#a855f7', height: 4 }} />
-            <span style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--w)', minWidth: 30, textAlign: 'right' }}>{initialMintPct}%</span>
+              className="flex-1" style={{ accentColor: '#a855f7', height: 4 }} />
+            <span className="fs-76 fw-700 c-w text-right" style={{ minWidth: 30 }}>{initialMintPct}%</span>
           </div>
           {/* Row 2: Public mint toggle + Max per TX */}
           <div className="flex-center gap-8">
-            <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} style={{
-              width: 32, height: 18, borderRadius: 9, border: 'none', cursor: 'pointer', flexShrink: 0,
-              background: publicMintEnabled ? '#a855f7' : 'var(--bg3)', position: 'relative', transition: 'background .2s',
-            }}>
-              <div style={{
-                width: 14, height: 14, borderRadius: '50%', background: 'white',
-                position: 'absolute', top: 2, left: publicMintEnabled ? 16 : 2, transition: 'left .2s',
-              }} />
+            <button onClick={() => setPublicMintEnabled(!publicMintEnabled)} className="pointer flex-shrink-0 pos-relative" style={{ width: 32, height: 18, borderRadius: 9, border: 'none', background: publicMintEnabled ? '#a855f7' : 'var(--bg3)', transition: 'background .2s' }}>
+              <div className="br-50 pos-absolute" style={{ width: 14, height: 14, background: 'white', top: 2, left: publicMintEnabled ? 16 : 2, transition: 'left .2s' }} />
             </button>
-            <span className="fs-72 c-t3" style={{ whiteSpace: 'nowrap' }}>Public mint</span>
+            <span className="fs-72 c-t3 ws-nowrap">Public mint</span>
             {publicMintEnabled && (
               <>
                 <span className="fs-72 c-t4">|</span>
-                <span className="fs-72 c-t3" style={{ whiteSpace: 'nowrap' }}>Max/tx:</span>
-                <input style={{ ...iStyle, fontSize: '.78rem', padding: '5px 8px', width: 100 }} type="text" inputMode="numeric"
+                <span className="fs-72 c-t3 ws-nowrap">Max/tx:</span>
+                <input className="fs-78" style={{ ...iStyle, padding: '5px 8px', width: 100 }} type="text" inputMode="numeric"
                   value={maxMintPerTx} onChange={e => setMaxMintPerTx(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder={String(Math.floor((parseFloat(supply) || 0) * 0.01))} />
               </>
@@ -291,25 +281,25 @@ const DeployModal: React.FC<{
         <div className="flex-gap6-mb14">
           <div className="flex-1">
             <label className="fs-72 c-t3">Website</label>
-            <input style={{ ...iStyle, fontSize: '.8rem' }} value={website} onChange={e => setWebsite(e.target.value)} placeholder="example.com" />
+            <input className="fs-80" style={{ ...iStyle }} value={website} onChange={e => setWebsite(e.target.value)} placeholder="example.com" />
           </div>
           <div className="flex-1">
             <label className="fs-72 c-t3">Twitter</label>
-            <input style={{ ...iStyle, fontSize: '.8rem' }} value={twitter} onChange={e => setTwitter(e.target.value)} placeholder="@handle" />
+            <input className="fs-80" style={{ ...iStyle }} value={twitter} onChange={e => setTwitter(e.target.value)} placeholder="@handle" />
           </div>
           <div className="flex-1">
             <label className="fs-72 c-t3">Telegram</label>
-            <input style={{ ...iStyle, fontSize: '.8rem' }} value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="t.me/group" />
+            <input className="fs-80" style={{ ...iStyle }} value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="t.me/group" />
           </div>
         </div>
 
-        <div style={{ padding: '10px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)', borderRadius: 10, fontSize: '.78rem', color: 'var(--t2)', marginBottom: 12 }}>
-          Deploy cost: <strong style={{ color: 'var(--o)' }}>~50K sats (~0.0005 BTC)</strong> &middot; Contract goes live on Bitcoin L1
+        <div className="br-10 fs-78 c-t2 mb-12" style={{ padding: '10px 12px', background: 'rgba(247,147,26,.06)', border: '1px solid rgba(247,147,26,.12)' }}>
+          Deploy cost: <strong className="c-o">~50K sats (~0.0005 BTC)</strong> &middot; Contract goes live on Bitcoin L1
         </div>
 
-        {error && <div style={{ padding: '10px 12px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', borderRadius: 8, color: '#ef4444', fontSize: '.8rem', marginBottom: 10 }}>{error}</div>}
+        {error && <div className="br-8 c-red fs-80 mb-10" style={{ padding: '10px 12px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)' }}>{error}</div>}
 
-        <button onClick={deploy} disabled={deploying} className="lbtn" style={{ width: '100%', opacity: deploying ? 0.6 : 1 }}>
+        <button onClick={deploy} disabled={deploying} className="lbtn w-full" style={{ opacity: deploying ? 0.6 : 1 }}>
           {deploying ? step || 'Deploying...' : walletAddress ? `Deploy $${symbol || 'TOKEN'}` : 'Connect Wallet'}
         </button>
       </div>
@@ -612,16 +602,16 @@ const Launchpad: React.FC = () => {
       {/* ═══ LEFT SIDEBAR ═══ */}
       <div className="lp-sidebar">
         <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--w)' }}>Contracts</span>
-            <span style={{ fontSize: '.66rem', color: 'var(--t4)', fontFamily: 'var(--fm)', background: 'rgba(255,255,255,.05)', padding: '2px 8px', borderRadius: 6 }}>{tokens.length}</span>
+          <div className="d-flex jc-between ai-center mb-10">
+            <span className="fw-800 fs-100 c-w">Contracts</span>
+            <span className="fs-66 c-t4 text-mono br-6" style={{ background: 'rgba(255,255,255,.05)', padding: '2px 8px' }}>{tokens.length}</span>
           </div>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or address..."
-            style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.82rem', fontFamily: 'var(--ff)', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
-          <div style={{ display: 'flex', gap: 4 }}>
+            className="w-full br-12 c-w fs-82 ff-ui outline-none mb-8" style={{ padding: '10px 14px', background: 'var(--bg3)', border: '1px solid var(--bd)', boxSizing: 'border-box' }} />
+          <div className="d-flex gap-4">
             {([['hot1h', '1H Hot'], ['hot8h', '8H Hot'], ['hot24h', '24H Hot'], ['newest', 'Newest'], ['holders', 'Holders']] as [SortMode, string][]).map(([m, label]) => (
               <button key={m} onClick={() => setSortMode(m)}
-                style={{ flex: 1, padding: '6px 2px', borderRadius: 8, border: '1px solid ' + (sortMode === m ? 'rgba(247,147,26,.5)' : 'var(--bd)'), background: sortMode === m ? 'rgba(247,147,26,.15)' : 'rgba(255,255,255,.03)', color: sortMode === m ? 'var(--o)' : 'var(--t3)', fontSize: '.66rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 700, transition: 'all .15s' }}>
+                className="flex-1 br-8 fs-66 pointer ff-ui fw-700" style={{ padding: '6px 2px', border: '1px solid ' + (sortMode === m ? 'rgba(247,147,26,.5)' : 'var(--bd)'), background: sortMode === m ? 'rgba(247,147,26,.15)' : 'rgba(255,255,255,.03)', color: sortMode === m ? 'var(--o)' : 'var(--t3)', transition: 'all .15s' }}>
                 {label}
               </button>
             ))}
@@ -634,22 +624,22 @@ const Launchpad: React.FC = () => {
             <TokenListItem key={t.address} token={t} active={selected?.address === t.address} onClick={() => setSelected(t)} />
           ))}
           {filtered.length === 0 && (
-            <div className="text-center c-t4" style={{ padding: 20, fontSize: '.7rem' }}>No contracts found</div>
+            <div className="text-center c-t4 p-20 fs-70">No contracts found</div>
           )}
         </div>
 
         {/* Add contract */}
         <div style={{ padding: '8px 10px', borderTop: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+          <div className="d-flex gap-4 mb-6">
             <input value={addAddr} onChange={e => setAddAddr(e.target.value)} placeholder="opt1sq... address"
               onKeyDown={e => e.key === 'Enter' && handleAddContract()}
-              style={{ flex: 1, padding: '6px 8px', borderRadius: 8, background: 'var(--bg3)', border: '1px solid var(--bd)', color: 'var(--w)', fontSize: '.6rem', fontFamily: 'var(--fm)', outline: 'none' }} />
+              className="flex-1 br-8 c-w fs-60 text-mono outline-none" style={{ padding: '6px 8px', background: 'var(--bg3)', border: '1px solid var(--bd)' }} />
             <button onClick={handleAddContract} disabled={adding}
-              style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(247,147,26,.15)', border: '1px solid rgba(247,147,26,.3)', color: 'var(--o)', fontSize: '.6rem', cursor: 'pointer', fontFamily: 'var(--ff)', fontWeight: 700 }}>
+              className="br-8 c-o fs-60 pointer ff-ui fw-700" style={{ padding: '6px 10px', background: 'rgba(247,147,26,.15)', border: '1px solid rgba(247,147,26,.3)' }}>
               {adding ? '...' : '+'}
             </button>
           </div>
-          <button onClick={() => setDeployOpen(true)} className="lbtn" style={{ width: '100%', padding: '8px', fontSize: '.7rem' }}>
+          <button onClick={() => setDeployOpen(true)} className="lbtn w-full fs-70" style={{ padding: '8px' }}>
             Deploy New Contract
           </button>
         </div>
@@ -662,16 +652,16 @@ const Launchpad: React.FC = () => {
             Select a contract from the sidebar
           </div>
         ) : (
-          <div style={{ padding: '16px 20px', maxWidth: 720, margin: '0 auto' }}>
+          <div className="m-auto" style={{ padding: '16px 20px', maxWidth: 720 }}>
             {/* ── Header ── */}
             <div className="flex-center gap-14 mb-16">
-              <img src={selected.image || genLogo(selected.symbol)} alt="" style={{ width: 52, height: 52, borderRadius: '50%', border: `2px solid ${selColor}44` }} />
+              <img src={selected.image || genLogo(selected.symbol)} alt="" className="br-50" style={{ width: 52, height: 52, border: `2px solid ${selColor}44` }} />
               <div className="flex-1">
                 <div className="flex-center gap-8 flex-wrap">
-                  <span className="fw-800 c-w" style={{ fontSize: '1.1rem' }}>{selected.name}</span>
-                  <span className="text-mono fw-700" style={{ color: selColor, fontSize: '.9rem' }}>${selected.symbol}</span>
-                  {grad && <span className="c-g fw-700 fs-xs" style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(16,185,129,.12)' }}>GRADUATED</span>}
-                  {isReal && <span className="c-o fw-600" style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(247,147,26,.1)', fontSize: '.56rem' }}>ON-CHAIN</span>}
+                  <span className="fw-800 c-w fs-110">{selected.name}</span>
+                  <span className="text-mono fw-700 fs-90" style={{ color: selColor }}>${selected.symbol}</span>
+                  {grad && <span className="c-g fw-700 fs-xs br-6" style={{ padding: '2px 8px', background: 'rgba(16,185,129,.12)' }}>GRADUATED</span>}
+                  {isReal && <span className="c-o fw-600 br-6 fs-56" style={{ padding: '2px 8px', background: 'rgba(247,147,26,.1)' }}>ON-CHAIN</span>}
                 </div>
                 <div className="fs-xs c-t4 text-mono mt-2 word-break">
                   {selected.address}
@@ -685,29 +675,25 @@ const Launchpad: React.FC = () => {
             </div>
 
             {selected.description && (
-              <div className="fs-72 c-t3 mb-14" style={{ lineHeight: 1.5 }}>
+              <div className="fs-72 c-t3 mb-14 lh-15">
                 {selected.description}
               </div>
             )}
 
             {/* ── Supply Info ── */}
-            <div className="P" style={{ padding: 14, marginBottom: 12 }}>
-              <div className="Lb" style={{ marginBottom: 8 }}>Supply</div>
+            <div className="P p-14 mb-12">
+              <div className="Lb mb-8">Supply</div>
               {/* Progress bar */}
               <div className="mb-10">
-                <div className="flex-between mb-4" style={{ fontSize: '.58rem', color: 'var(--t4)' }}>
+                <div className="flex-between mb-4 fs-58 c-t4">
                   <span>Minted: {fmtNum(selected.mintedSupply)} / {fmtNum(selected.publicMintSupply)}</span>
-                  <span style={{ color: grad ? 'var(--g)' : selColor, fontWeight: 700 }}>{(progress * 100).toFixed(1)}%</span>
+                  <span className="fw-700" style={{ color: grad ? 'var(--g)' : selColor }}>{(progress * 100).toFixed(1)}%</span>
                 </div>
-                <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 4,
-                    background: grad ? 'var(--g)' : `linear-gradient(90deg, ${selColor}, var(--o))`,
-                    width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .5s',
-                  }} />
+                <div className="br-4 ov-hidden" style={{ height: 8, background: 'rgba(255,255,255,.06)' }}>
+                  <div className="br-4" style={{ height: '100%', background: grad ? 'var(--g)' : `linear-gradient(90deg, ${selColor}, var(--o))`, width: `${Math.min(progress / GRADUATION_PCT, 1) * 100}%`, transition: 'width .5s' }} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '.66rem' }}>
+              <div className="d-grid fs-66" style={{ gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
                 {[
                   ['Total Supply', fmtNum(selected.totalSupply)],
                   ['Public Mint', fmtNum(selected.publicMintSupply)],
@@ -724,18 +710,18 @@ const Launchpad: React.FC = () => {
                 ))}
               </div>
               {walletAddress && userBal > 0 && (
-                <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(16,185,129,.06)', borderRadius: 8, fontSize: '.66rem' }}>
-                  Your balance: <strong style={{ color: 'var(--g)', fontFamily: 'var(--fm)' }}>{fmtNum(userBal)} {selected.symbol}</strong>
+                <div className="mt-8 br-8 fs-66" style={{ padding: '6px 10px', background: 'rgba(16,185,129,.06)' }}>
+                  Your balance: <strong className="c-g text-mono">{fmtNum(userBal)} {selected.symbol}</strong>
                 </div>
               )}
             </div>
 
             {/* ── Holders (OPScan or local) ── */}
             {opscanHolderList.length > 0 ? (
-              <div className="P" style={{ padding: 14, marginBottom: 12 }}>
-                <div className="Lb" style={{ marginBottom: 8 }}>
+              <div className="P p-14 mb-12">
+                <div className="Lb mb-8">
                   Top Holders ({opscanHolders ?? opscanHolderList.length})
-                  <span style={{ fontSize: '.5rem', color: 'var(--t4)', marginLeft: 6, fontWeight: 400 }}>via OPScan</span>
+                  <span className="fs-50 c-t4 fw-400" style={{ marginLeft: 6 }}>via OPScan</span>
                 </div>
                 <div className="max-h-200-overflow">
                   {opscanHolderList.map((h, i) => (
@@ -759,8 +745,8 @@ const Launchpad: React.FC = () => {
               const sorted = Object.entries(bals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
               if (sorted.length === 0) return null;
               return (
-                <div className="P" style={{ padding: 14, marginBottom: 12 }}>
-                  <div className="Lb" style={{ marginBottom: 8 }}>Top Holders ({sorted.length})</div>
+                <div className="P p-14 mb-12">
+                  <div className="Lb mb-8">Top Holders ({sorted.length})</div>
                   <div className="max-h-200-overflow">
                     {sorted.map(([wallet, amount], i) => (
                       <div key={wallet} className="flex-between fs-66" style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
@@ -770,7 +756,7 @@ const Launchpad: React.FC = () => {
                         </div>
                         <div className="flex-center gap-6">
                           <span className="text-mono fw-600 c-w">{fmtNum(amount)}</span>
-                          <span className="c-t4" style={{ fontSize: '.56rem' }}>{selected.symbol}</span>
+                          <span className="c-t4 fs-56">{selected.symbol}</span>
                         </div>
                       </div>
                     ))}
@@ -781,16 +767,16 @@ const Launchpad: React.FC = () => {
 
             {/* ── Mint Panel ── */}
             {selected.status === 'pending_confirm' ? (
-              <div className="P" style={{ padding: 14, marginBottom: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: '1.2rem', marginBottom: 6, animation: 'spin 2s linear infinite' }}>&#x23F3;</div>
-                <div style={{ fontWeight: 700, color: 'var(--y)', fontSize: '.82rem', marginBottom: 4 }}>Awaiting Confirmation</div>
-                <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>
+              <div className="P p-14 mb-12 text-center">
+                <div className="fs-120 mb-6" style={{ animation: 'spin 2s linear infinite' }}>&#x23F3;</div>
+                <div className="fw-700 c-y fs-82 mb-4">Awaiting Confirmation</div>
+                <div className="fs-72 c-t3">
                   Contract is being deployed. Wait ~5 blocks for on-chain confirmation before minting.
                 </div>
               </div>
             ) : !grad ? (
-              <div className="P" style={{ padding: 14, marginBottom: 12 }}>
-                <div className="Lb" style={{ marginBottom: 8 }}>Public Mint</div>
+              <div className="P p-14 mb-12">
+                <div className="Lb mb-8">Public Mint</div>
                 <div className="mb-6">
                   <div className="flex-between mb-4 fs-62 c-t3">
                     <span>Amount</span>
@@ -801,18 +787,18 @@ const Launchpad: React.FC = () => {
                   <input type="range" min={0} max={selected.maxMintPerTx} step={Math.max(1, Math.floor(selected.maxMintPerTx / 100))}
                     value={Number(mintAmt) || 0}
                     onChange={e => setMintAmt(e.target.value === '0' ? '' : e.target.value)}
-                    style={{ width: '100%', accentColor: selColor, marginBottom: 4 }} />
-                  <div style={{ display: 'flex', gap: 4 }}>
+                    className="w-full mb-4" style={{ accentColor: selColor }} />
+                  <div className="d-flex gap-4">
                     {[25, 50, 75, 100].map(pct => (
                       <button key={pct} onClick={() => setMintAmt(String(Math.floor(selected.maxMintPerTx * pct / 100)))}
-                        style={{ flex: 1, padding: '4px', borderRadius: 8, background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)', color: 'var(--t3)', fontSize: '.56rem', cursor: 'pointer', fontFamily: 'var(--fm)' }}>
+                        className="flex-1 br-8 c-t3 fs-56 pointer text-mono" style={{ padding: '4px', background: 'rgba(255,255,255,.04)', border: '1px solid var(--bd)' }}>
                         {pct}%
                       </button>
                     ))}
                   </div>
                 </div>
                 <button onClick={handleMint} disabled={minting || !mintAmt}
-                  className="lbtn" style={{ width: '100%', opacity: minting ? 0.6 : 1 }}>
+                  className="lbtn w-full" style={{ opacity: minting ? 0.6 : 1 }}>
                   {minting ? mintStep || 'Minting...' : walletAddress ? `Mint ${selected.symbol}` : 'Connect Wallet'}
                 </button>
                 {!minting && mintStep && (
@@ -820,45 +806,45 @@ const Launchpad: React.FC = () => {
                     {mintStep}
                   </div>
                 )}
-                <div className="mt-8 c-t4 text-center" style={{ fontSize: '.54rem' }}>
+                <div className="mt-8 c-t4 text-center fs-54">
                   On-chain publicMint &middot; Costs ~1K sats BTC gas
                 </div>
               </div>
             ) : (
-              <div className="P" style={{ padding: 14, marginBottom: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>&#x1F393;</div>
-                <div style={{ fontWeight: 700, color: 'var(--g)', fontSize: '.82rem', marginBottom: 4 }}>Graduated!</div>
-                <div style={{ fontSize: '.72rem', color: 'var(--t3)' }}>
+              <div className="P p-14 mb-12 text-center">
+                <div className="mb-6" style={{ fontSize: '1.5rem' }}>&#x1F393;</div>
+                <div className="fw-700 c-g fs-82 mb-4">Graduated!</div>
+                <div className="fs-72 c-t3">
                   Public mint complete. Trade on <strong>Swap</strong> page via MotoSwap AMM.
                 </div>
               </div>
             )}
 
             {/* ── Links & Trade ── */}
-            <div className="P" style={{ padding: 14, marginBottom: 12 }}>
-              <div className="Lb" style={{ marginBottom: 8 }}>Links & Trade</div>
+            <div className="P p-14 mb-12">
+              <div className="Lb mb-8">Links & Trade</div>
               <div className="flex-center gap-6 flex-wrap mb-8">
                 {isReal && (
                   <a href={getContractOpscanUrl(selected.address)} target="_blank" rel="noopener noreferrer"
-                    style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.15)', color: 'var(--c)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
+                    className="br-8 c-c fs-62 no-decoration fw-600" style={{ padding: '4px 10px', background: 'rgba(14,165,233,.08)', border: '1px solid rgba(14,165,233,.15)' }}>
                     OPScan
                   </a>
                 )}
                 {isReal && selected.txHash && (
                   <a href={getTxUrl(selected.txHash)} target="_blank" rel="noopener noreferrer"
-                    style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)', color: 'var(--o)', fontSize: '.62rem', textDecoration: 'none', fontWeight: 600 }}>
+                    className="br-8 c-o fs-62 no-decoration fw-600" style={{ padding: '4px 10px', background: 'rgba(247,147,26,.08)', border: '1px solid rgba(247,147,26,.15)' }}>
                     Deploy TX
                   </a>
                 )}
               </div>
-              <div className="fs-sm c-t3" style={{ lineHeight: 1.5 }}>
+              <div className="fs-sm c-t3 lh-15">
                 Trade on <strong>Swap</strong> page via MotoSwap AMM pools.
               </div>
             </div>
 
             {/* ── Recent Activity ── */}
-            <div className="P" style={{ padding: 14 }}>
-              <div className="Lb" style={{ marginBottom: 8 }}>Recent Activity</div>
+            <div className="P p-14">
+              <div className="Lb mb-8">Recent Activity</div>
               <div className="max-h-200-overflow">
                 {selected.trades.slice().reverse().slice(0, 15).map(tr => (
                   <div key={tr.id} className="flex-between fs-62" style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,.03)' }}>
@@ -873,7 +859,7 @@ const Launchpad: React.FC = () => {
                   </div>
                 ))}
                 {selected.trades.length === 0 && (
-                  <div className="c-t4 fs-sm text-center" style={{ padding: 16 }}>
+                  <div className="c-t4 fs-sm text-center p-16">
                     No mints yet. Be the first!
                   </div>
                 )}

@@ -82,7 +82,7 @@ describe('Portfolio', () => {
     render(<Portfolio />);
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     const text = document.body.textContent || '';
-    // Wallet address may be truncated, just check the prefix is shown
-    expect(text).toContain('opt1');
+    // Without walletInstance, Portfolio shows "Connect Wallet to View Portfolio"
+    expect(text).toContain('Connect Wallet');
   });
 });

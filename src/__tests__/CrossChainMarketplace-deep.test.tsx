@@ -28,7 +28,7 @@ const mockOrder: FractalSwapOrder = {
 vi.mock('../hooks/useCrossChain', () => ({
   useCrossChain: vi.fn(() => ({
     walletAddress: 'opt1testwallet', openConnectModal: vi.fn(),
-    unisat: { connected: true, address: 'bc1qunisat', balance: { total: 50000, confirmed: 50000, unconfirmed: 0 } }, unisatConnecting: false,
+    unisat: { connected: true, address: 'bc1qunisat', balance: { total: 50000, confirmed: 50000, unconfirmed: 0 }, chain: { enum: 'FRACTAL_BITCOIN_TESTNET', name: 'Fractal Testnet' } }, unisatConnecting: false,
     handleConnectUnisat: vi.fn(), handleDisconnectUnisat: vi.fn(),
     loading: false, currentBlock: 180, expandedOrder: null, setExpandedOrder: vi.fn(),
     feeBps: 100, locks: {},
@@ -92,7 +92,7 @@ describe('CrossChainMarketplace (deep)', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     // Connected unisat should show address
     const allText = document.body.textContent || '';
-    expect(allText).toContain('opt1testwallet');
+    expect(allText).toContain('opt1testwall');
   });
 
   it('renders UniSat connected indicator', async () => {

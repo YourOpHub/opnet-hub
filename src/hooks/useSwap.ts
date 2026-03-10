@@ -15,7 +15,8 @@
  *  - TX history
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { Address, BinaryWriter } from '@btc-vision/transaction';

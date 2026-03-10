@@ -98,7 +98,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const padded = new Uint8Array(32);
       padded.set(addrBytes.slice(0, 32));
       let fractalAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) fractalAddrU256 = (fractalAddrU256 << 8n) | BigInt(padded[i]!);
+      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; fractalAddrU256 = (fractalAddrU256 << 8n) | BigInt(byte); }
 
       const contractBtcAmount = formDirection === SwapDirection.BTC_TO_FB ? formAmountSats : formReceiveSats;
       const contractWantAmount = formDirection === SwapDirection.BTC_TO_FB ? formReceiveSats : formAmountSats;
@@ -186,7 +186,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const padded = new Uint8Array(32);
       padded.set(addrBytes.slice(0, 32));
       let takerAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) takerAddrU256 = (takerAddrU256 << 8n) | BigInt(padded[i]!);
+      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; takerAddrU256 = (takerAddrU256 << 8n) | BigInt(byte); }
 
       const rawFee = (order.btcAmount * BigInt(feeBps)) / 10000n;
       const feeSats = rawFee < 330n ? 330n : rawFee;
@@ -353,7 +353,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const padded = new Uint8Array(32);
       padded.set(addrBytes.slice(0, 32));
       let takerAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) takerAddrU256 = (takerAddrU256 << 8n) | BigInt(padded[i]!);
+      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; takerAddrU256 = (takerAddrU256 << 8n) | BigInt(byte); }
 
       const rawFee = (order.btcAmount * BigInt(feeBps)) / 10000n;
       const feeSats = rawFee < 330n ? 330n : rawFee;

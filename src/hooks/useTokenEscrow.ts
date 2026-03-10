@@ -89,7 +89,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const padded = new Uint8Array(32);
       padded.set(addrBytes.slice(0, 32));
       let makerAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) makerAddrU256 = (makerAddrU256 << 8n) | BigInt(padded[i]!);
+      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; makerAddrU256 = (makerAddrU256 << 8n) | BigInt(byte); }
 
       setTbStep('Creating token escrow order...');
       const tokenAddr = Address.fromString(selectedToken.pubkey.replace('0x', ''));
@@ -146,7 +146,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const padded = new Uint8Array(32);
       padded.set(addrBytes.slice(0, 32));
       let takerAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) takerAddrU256 = (takerAddrU256 << 8n) | BigInt(padded[i]!);
+      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; takerAddrU256 = (takerAddrU256 << 8n) | BigInt(byte); }
 
       const rawFee = (order.btcPrice * BigInt(feeBps)) / 10000n;
       const feeSats = rawFee < 330n ? 330n : rawFee;

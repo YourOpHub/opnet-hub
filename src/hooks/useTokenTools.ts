@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import type { Address } from '@btc-vision/transaction';
-import { JSONRpcProvider } from 'opnet';
+import { type JSONRpcProvider } from 'opnet';
 import { getProvider } from '../contractCache';
 import { useOps } from '../contexts/OpsContext';
 

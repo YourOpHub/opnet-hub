@@ -14,7 +14,8 @@
  *  - senderHex computation
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import type React from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {

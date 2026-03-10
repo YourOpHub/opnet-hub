@@ -460,7 +460,7 @@ const SwapUI: React.FC = () => {
                   <div className="c-g fw-700 mb-4">✓ Swap Executed On-Chain</div>
                   <div className="c-t2 fs-70">Received: {swapResult.amtOut} {to.symbol}</div>
                   <div className="text-mono c-t3 word-break fs-58 mt-4">tx: {swapResult.hash}</div>
-                  <a href={getTxUrl(swapResult.hash!)} target="_blank" rel="noopener noreferrer"
+                  <a href={getTxUrl(swapResult.hash ?? '')} target="_blank" rel="noopener noreferrer"
                     className="c-c2 fs-65 mt-4 d-block">View on Explorer →</a>
                 </>
               )}

@@ -65,7 +65,8 @@ export function addToken(token: LaunchToken): LaunchToken[] {
 export function updateToken(address: string, patch: Partial<LaunchToken>): LaunchToken[] {
   const tokens = loadTokens();
   const idx = tokens.findIndex(t => t.address === address);
-  if (idx >= 0) Object.assign(tokens[idx]!, patch);
+  const token = tokens[idx];
+  if (idx >= 0 && token) Object.assign(token, patch);
   saveTokens(tokens);
   return tokens;
 }

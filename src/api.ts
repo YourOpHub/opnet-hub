@@ -22,7 +22,7 @@ async function api<T>(path: string, opts?: RequestInit): Promise<T | null> {
     if (!res.ok) return null;
     apiFailCount = 0;
     return await res.json() as T;
-  } catch (e) {
+  } catch {
     apiFailCount++;
     if (apiFailCount >= MAX_FAIL) {
       apiFailed = true;

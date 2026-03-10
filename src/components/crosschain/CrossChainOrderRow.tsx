@@ -123,7 +123,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
   const iNeedToAct = order.status === OrderStatus.Taken && (
     (isBtcToFb && isTaker) || (!isBtcToFb && isMyOrder)
   );
-  const statusInfo = STATUS_COLORS[order.status] ?? STATUS_COLORS[OrderStatus.Open]!;
+  const statusInfo = STATUS_COLORS[order.status] ?? STATUS_COLORS[OrderStatus.Open] ?? { bg: 'rgba(59,130,246,.12)', text: '#60a5fa', label: 'Unknown' };
 
   return (
     <React.Fragment key={order.id}>

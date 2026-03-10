@@ -468,7 +468,7 @@ const TokenGallery: React.FC = () => {
                       {tok.total_supply && tok.total_supply !== '0' ? formatTokenBalance(tok.total_supply, tok.decimals) : '—'}
                     </div>
                     <div style={{ textAlign: 'right', fontSize: '.58rem', color: (tok.holder_count || 0) > 0 ? 'var(--t2)' : 'var(--t4)', fontFamily: 'var(--fm)' }}>
-                      {(tok.holder_count || 0) > 0 ? tok.holder_count!.toLocaleString() : '—'}
+                      {(tok.holder_count || 0) > 0 ? tok.holder_count?.toLocaleString() ?? '—' : '—'}
                     </div>
                     <div style={{ textAlign: 'right', fontSize: '.58rem', color: 'var(--t4)', fontFamily: 'var(--fm)' }}>
                       {tok.deploy_block > 0 ? `#${tok.deploy_block}` : '—'}

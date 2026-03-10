@@ -121,9 +121,10 @@ const TokenLauncher: React.FC = () => {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const inst = walletInstance as any;
-    const web3 = inst.web3 || inst;
+    type DeployFn = (...args: unknown[]) => Promise<{ contractAddress?: string; contractPubKey?: string; transaction: string[] }>;
+    type Web3Provider = { deployContract?: DeployFn };
+    const inst = walletInstance as { web3?: Web3Provider } & Web3Provider;
+    const web3 = (inst.web3 || inst) as Web3Provider;
     if (!web3?.deployContract) {
       setDeployError('Your wallet does not support Web3 deployment API. Please use OP_WALLET.');
       return;
@@ -162,7 +163,9 @@ const TokenLauncher: React.FC = () => {
 
       // 4. Deploy via Web3Provider
       setDeployStep('Sign the transaction in your wallet...');
-      const result = await web3.deployContract({
+      // deployContract presence is guarded above
+      const deployFn = web3.deployContract as DeployFn;
+      const result = await deployFn({
         bytecode,
         calldata,
         utxos,

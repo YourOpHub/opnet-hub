@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getProvider } from '../contractCache';
-import { NETWORK } from '../config';
 import * as opnetRpc from '../opnet';
-import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, getContractOpscanUrl, type ContractTokenInfo } from '../contracts';
 import { getTxHistory, type TxRecord } from '../txHistory';
 
 interface PoolSnapshot {
@@ -144,7 +143,7 @@ const Analytics: React.FC = () => {
   const [mempoolInfo, setMempoolInfo] = useState<{ count?: number; opnetCount?: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [poolError, setPoolError] = useState(false);
-  const [supplyError, setSupplyError] = useState(false);
+  const [, setSupplyError] = useState(false);
   const [chainError, setChainError] = useState(false);
   const [serverLoaded, setServerLoaded] = useState(false);
 
@@ -338,7 +337,7 @@ const Analytics: React.FC = () => {
       <div className="P" style={{ padding: 16, marginBottom: 16 }}>
         <div className="Lb" style={{ marginBottom: 10 }}>🪙 Token Supply</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
-          {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]: [string, any]) => {
+          {Object.entries(DEPLOYED_CONTRACTS).map(([sym, tok]: [string, ContractTokenInfo]) => {
             const supply = supplies[sym];
             const totalMinted = supply ? Number(supply) / Math.pow(10, tok.decimals) : 0;
             const maxSupply = tok.supply;

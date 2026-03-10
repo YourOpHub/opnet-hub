@@ -16,10 +16,12 @@ export const TakeOrderButton: React.FC<{
 }> = ({ orderId, feeSats, onTake, disabled, defaultAddr, label }) => {
   const [show, setShow] = useState(false);
   const [addr, setAddr] = useState(defaultAddr || '');
+  const addrRef = React.useRef(addr);
+  addrRef.current = addr;
 
   React.useEffect(() => {
-    if (defaultAddr && !addr) setAddr(defaultAddr);
-  }, [defaultAddr]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (defaultAddr && !addrRef.current) setAddr(defaultAddr);
+  }, [defaultAddr]);
 
   if (!show) {
     return (

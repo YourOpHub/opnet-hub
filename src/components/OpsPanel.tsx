@@ -129,4 +129,4 @@ const OpsPanel: React.FC = () => {
   );
 };
 
-export default OpsPanel;
+export default React.memo(OpsPanel);

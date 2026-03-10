@@ -737,4 +737,4 @@ const MultiSender: React.FC = () => {
   );
 };
 
-export default MultiSender;
+export default React.memo(MultiSender);

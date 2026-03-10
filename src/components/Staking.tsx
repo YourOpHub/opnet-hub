@@ -131,7 +131,7 @@ const Staking: React.FC = () => {
       // 1. Ensure allowance (check → approve → wait for block)
       await ensureAllowance(
         STAKING_TOKEN.address, STAKING_PUBKEY, rawAmount,
-        provider, senderAddr!, walletAddress!, setStep, 'MINE',
+        provider, senderAddr, walletAddress, setStep, 'MINE',
       );
 
       // 2. Stake
@@ -139,7 +139,7 @@ const Staking: React.FC = () => {
       const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
       const stakeSim = await withRetry(() => stakingContract.stake(rawAmount));
       if ((stakeSim as CallResult).revert) throw new Error(`Stake failed: ${(stakeSim as CallResult).revert}`);
-      const txParams = await buildTxParams(provider, walletAddress!);
+      const txParams = await buildTxParams(provider, walletAddress);
       const sOpId = `stake_${Date.now()}`;
       trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Staking ${amt.toLocaleString()} MINE...` });
       const receipt = await (stakeSim as CallResult).sendTransaction(txParams);

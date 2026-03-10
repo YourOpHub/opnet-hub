@@ -73,7 +73,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
         const escrowPubkey = TOKEN_ESCROW_PUBKEY.startsWith('0x') ? TOKEN_ESCROW_PUBKEY : '0x' + TOKEN_ESCROW_PUBKEY;
         await ensureAllowance(
           tbToken, escrowPubkey, tokenAmountRaw,
-          provider, senderAddr!, walletAddress,
+          provider, senderAddr, walletAddress,
           setTbStep, selectedToken.symbol,
         );
       }
@@ -136,7 +136,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
           const escrowPubkey = TOKEN_ESCROW_PUBKEY.startsWith('0x') ? TOKEN_ESCROW_PUBKEY : '0x' + TOKEN_ESCROW_PUBKEY;
           await ensureAllowance(
             tokenInfo.address, escrowPubkey, order.tokenAmount,
-            provider, senderAddr!, walletAddress,
+            provider, senderAddr, walletAddress,
             setActionStep, tokenInfo.symbol,
           );
         }

@@ -272,7 +272,7 @@ export function useMarketplace() {
 
       if (orderType === 'sell') {
         setCreateStep('Approving tokens for marketplace...');
-        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr!, walletAddress, setCreateStep, selInfo?.symbol || 'token');
+        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, setCreateStep, selInfo?.symbol || 'token');
 
         setCreateStep('Creating sell order on-chain...');
         const sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256));
@@ -380,7 +380,7 @@ export function useMarketplace() {
       } else {
         setFillStep('Approving tokens for marketplace...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr!, walletAddress, setFillStep);
+        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, setFillStep);
 
         setFillStep('Accepting buy order (locking tokens)...');
         const sim = await withRetry(() => market.acceptBuyOrder(BigInt(orderId)));

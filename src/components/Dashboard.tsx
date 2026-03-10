@@ -150,4 +150,4 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
-export default Dashboard;
+export default React.memo(Dashboard);

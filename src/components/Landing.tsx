@@ -115,7 +115,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   return (
     <div>
       {/* ═══ HERO ═══ */}
-      <div className="hero-l" style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
+      <div className="hero-l" role="banner" style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 340px' }}>
           <div className="hero-badge">
             <span className="dot" />
@@ -132,9 +132,9 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
             consensus — no bridges, no sidechains, no compromises.
           </p>
 
-          <div className="hero-ctas">
-            <button className="btn-p" onClick={() => nav('swap')}>Start Trading</button>
-            <button className="btn-s" onClick={() => nav('game')}>Play &amp; Earn</button>
+          <div className="hero-ctas" role="group" aria-label="Get started">
+            <button className="btn-p" onClick={() => nav('swap')} aria-label="Start trading tokens">Start Trading</button>
+            <button className="btn-s" onClick={() => nav('game')} aria-label="Play and earn tokens">Play &amp; Earn</button>
             <a className="btn-s" href="https://docs.opnet.org" target="_blank" rel="noopener noreferrer">
               Read Docs
             </a>
@@ -143,7 +143,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
       </div>
 
       {/* ═══ LIVE TICKER ═══ */}
-      <div className="ticker" ref={rev1.ref} style={rev1.style}>
+      <div className="ticker" ref={rev1.ref} style={rev1.style} role="region" aria-label="Live market data" aria-live="polite">
         <div className="tk">
           <div className="tk-l">Bitcoin</div>
           <div className="tk-v">{animBtc > 0 ? '$' + animBtc.toLocaleString() : '...'}</div>
@@ -159,14 +159,14 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
           <div className="tk-v">{animBlock > 0 ? '#' + animBlock.toLocaleString() : '...'}</div>
         </div>
         <div className="tk-s" />
-        <div className="tk" style={{ cursor: 'pointer' }} onClick={() => nav('swap')}>
+        <div className="tk" style={{ cursor: 'pointer' }} onClick={() => nav('swap')} role="button" tabIndex={0} aria-label="View MINE/VIBE swap rate" onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('swap'); } }}>
           <div className="tk-l">MINE / VIBE</div>
           <div className="tk-v" style={{ color: '#F7931A' }}>
             {poolRate > 0 ? `1 : ${poolRate.toFixed(2)}` : '...'}
           </div>
         </div>
         <div className="tk-s" />
-        <div className="tk" style={{ cursor: 'pointer' }} onClick={() => nav('analytics')}>
+        <div className="tk" style={{ cursor: 'pointer' }} onClick={() => nav('analytics')} role="button" tabIndex={0} aria-label="View network analytics" onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('analytics'); } }}>
           <div className="tk-l">Network</div>
           <div className="tk-v" style={{ color: '#10b981' }}>{CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)}</div>
         </div>
@@ -174,11 +174,11 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
 
       {/* ═══ FEATURES ═══ */}
       <div className="label-premium" style={{ marginBottom: 16 }}>What you can do</div>
-      <div className="fgrid" ref={rev2.ref} style={rev2.style}>
+      <div className="fgrid" ref={rev2.ref} style={rev2.style} role="list" aria-label="Features">
         {FEATURES.map((f, i) => (
-          <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)}
-            style={{ animation: rev2.style.opacity === 1 ? `cardRevealIn .5s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` : 'none' }}>
-            <div className="fc-i">{f.icon}</div>
+          <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)} role="listitem" tabIndex={0} aria-label={`${f.title}: ${f.desc}`} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(f.tab); } }}
+            style={{ animation: rev2.style.opacity === 1 ? `cardRevealIn .5s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` : 'none', cursor: 'pointer' }}>
+            <div className="fc-i" aria-hidden="true">{f.icon}</div>
             <div className="fc-t">{f.title}</div>
             <div className="fc-d">{f.desc}</div>
           </div>
@@ -207,7 +207,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
             Deploy OP-20 tokens, create AMM pools, launch on the first Bitcoin L1 smart contract platform.
           </div>
         </div>
-        <button className="btn-p" onClick={() => nav('launch')}>Launch a Token</button>
+        <button className="btn-p" onClick={() => nav('launch')} aria-label="Launch a token on Bitcoin">Launch a Token</button>
       </div>
 
       {/* ═══ LINKS ═══ */}
@@ -223,4 +223,4 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   );
 };
 
-export default Landing;
+export default React.memo(Landing);

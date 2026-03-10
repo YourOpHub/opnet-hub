@@ -118,4 +118,4 @@ const QuestPanel: React.FC<{ open: boolean; onClose: () => void; onNav: (t: stri
         </>
     );
 };
-export default QuestPanel;
+export default React.memo(QuestPanel);

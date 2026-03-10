@@ -5,7 +5,7 @@ import {
   type IOP20Contract, type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { POOL_LP_ABI } from '../abis';
-import { Address } from '@btc-vision/transaction';
+import { type Address } from '@btc-vision/transaction';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
@@ -66,7 +66,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
   // Fetch pool reserves
   useEffect(() => {
     if (!POOL_ADDRESS) return;
-    let cancelled = false;
+    const cancelled = false;
     const fetchRes = async () => {
       try {
         const res = await opnet.callContract(POOL_ADDRESS, '06374bfc');
@@ -381,4 +381,4 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
   );
 };
 
-export default Portfolio;
+export default React.memo(Portfolio);

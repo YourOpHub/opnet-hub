@@ -168,4 +168,4 @@ const BobChat: React.FC = () => {
         </div>
     );
 };
-export default BobChat;
+export default React.memo(BobChat);

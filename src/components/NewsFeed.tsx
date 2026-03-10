@@ -414,4 +414,4 @@ const NewsFeed: React.FC = () => {
         </div>
     );
 };
-export default NewsFeed;
+export default React.memo(NewsFeed);

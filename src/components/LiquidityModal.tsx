@@ -121,14 +121,14 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       // Step 1: Ensure MINE allowance (check → approve → wait for block)
       const mineApproved = await ensureAllowance(
         DEPLOYED_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
-        provider, senderAddr!, walletAddress!, setStep, 'MINE',
+        provider, senderAddr, walletAddress, setStep, 'MINE',
       );
 
       // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
       if (mineApproved) await waitForNextBlock(provider, setStep);
       const vibeApproved = await ensureAllowance(
         DEPLOYED_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
-        provider, senderAddr!, walletAddress!, setStep, 'VIBE',
+        provider, senderAddr, walletAddress, setStep, 'VIBE',
       );
       if (vibeApproved) await waitForNextBlock(provider, setStep);
 
@@ -137,7 +137,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
       const addSim = await withRetry(() => poolContract.addLiquidity(mineRaw, vibeRaw));
       if ((addSim as CallResult).revert) throw new Error(`addLiquidity failed: ${(addSim as CallResult).revert}`);
-      const tp = await buildTxParams(provider, walletAddress!);
+      const tp = await buildTxParams(provider, walletAddress);
       const aOpId = `lp_add_${Date.now()}`;
       trackOp({ id: aOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: `Adding ${mAmt} MINE + ${vAmt} VIBE...` });
       const addReceipt = await (addSim as CallResult).sendTransaction(tp);

@@ -21,8 +21,8 @@ const GasTool = React.memo(function GasTool() {
     try {
       const [g, m, pt] = await Promise.all([
         opnet.getGasParameters(),
-        opnet.getMempoolInfo().catch(() => null),
-        opnet.getLatestPendingTxs(10).catch(() => []),
+        opnet.getMempoolInfo().catch((e) => { logger.warn('[GasTool] Mempool info fetch error:', e); return null; }),
+        opnet.getLatestPendingTxs(10).catch((e) => { logger.warn('[GasTool] Pending txs fetch error:', e); return []; }),
       ]);
       setGas(g || null);
       setMempool(m || null);

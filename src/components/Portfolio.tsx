@@ -160,7 +160,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
     setBtcLoading(true);
     opnet.getBalance(walletAddress)
       .then((sats) => { if (!cancelled) setBtcSats(sats); })
-      .catch(() => { if (!cancelled) setBtcSats(null); })
+      .catch((e) => { logger.warn('[Portfolio] BTC balance fetch error:', e); if (!cancelled) setBtcSats(null); })
       .finally(() => { if (!cancelled) setBtcLoading(false); });
 
     // Fetch OP-20 token balances via opnet SDK (getContract + balanceOf)

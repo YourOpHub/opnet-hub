@@ -136,7 +136,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
       const known = KNOWN_TOKENS[a];
       const [code, supply] = await Promise.all([
         opnet.getCode(a, true),
-        opnet.getTokenTotalSupply(a).catch(() => 0n),
+        opnet.getTokenTotalSupply(a).catch((e) => { logger.warn('[TokenExplorer] Token supply fetch error:', e); return 0n; }),
       ]);
       const isContract = !!code && !!(code as { bytecode?: string }).bytecode;
       const bytecodeLen = isContract && (code as { bytecode?: string }).bytecode ? (code as { bytecode: string }).bytecode.length / 2 : 0;

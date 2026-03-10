@@ -73,7 +73,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
         for (let i = 0; i < 20; i++) { await new Promise(r => setTimeout(r, 15000)); await syncToken(selected.address); await syncBalance(selected.address); if (userBal !== startBal) break; }
         setMintStep('Confirmed!'); setTimeout(() => setMintStep(''), 4000);
       };
-      pollMint().catch(() => { setMintStep(''); });
+      pollMint().catch((e) => { logger.warn('[LaunchpadDeployProgress] Mint poll error:', e); setMintStep(''); });
     } catch (e) { logger.error('[LP Mint]', e); setMintStep(formatTxError(e)); setTimeout(() => setMintStep(''), 6000); } finally { setMinting(false); }
   }, [walletAddress, senderAddr, selected, mintAmt, openConnectModal, syncToken, syncBalance, trackOp, completeOp, userBal, setMinting, setMintStep, setMintAmt, onTokensChange, onSelectedChange]);
 

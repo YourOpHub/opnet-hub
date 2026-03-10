@@ -155,7 +155,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
         completeOp(createOpId);
         void fetchOrders();
-      }).catch(() => { setCreateStep(''); });
+      }).catch((e) => { logger.warn('[useFractalSwap] Create confirmation error:', e); setCreateStep(''); });
       void fetchOrders();
     } catch (e) {
       setCreateStep(formatTxError(e));
@@ -226,7 +226,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         void unlockOrder(lockKey, walletAddress);
         toast(`Order #${orderId} confirmed on-chain!`, 'success');
         void fetchOrders();
-      }).catch(() => { completeOp(opId); void unlockOrder(lockKey, walletAddress); });
+      }).catch((e) => { logger.warn('[useFractalSwap] Take confirmation error:', e); completeOp(opId); void unlockOrder(lockKey, walletAddress); });
       void fetchOrders();
       return;
     } catch (e) {
@@ -271,7 +271,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         completeOp(opId);
         toast(`Order #${orderId} settled on-chain!`, 'success');
         void fetchOrders();
-      }).catch(() => { completeOp(opId); });
+      }).catch((e) => { logger.warn('[useFractalSwap] Complete confirmation error:', e); completeOp(opId); });
       void fetchOrders();
       return;
     } catch (e) {
@@ -431,7 +431,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         void unlockOrder(lockKey, walletAddress);
         toast(`Order #${orderId} fully settled!`, 'success');
         void fetchOrders();
-      }).catch(() => { completeOp(opId); void unlockOrder(lockKey, walletAddress); });
+      }).catch((e) => { logger.warn('[useFractalSwap] Auto-swap confirmation error:', e); completeOp(opId); void unlockOrder(lockKey, walletAddress); });
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -497,7 +497,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         completeOp(opId);
         toast(`Order #${orderId} fully settled!`, 'success');
         void fetchOrders();
-      }).catch(() => completeOp(opId));
+      }).catch((e) => { logger.warn('[useFractalSwap] Auto-claim confirmation error:', e); completeOp(opId); });
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));

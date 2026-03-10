@@ -78,7 +78,7 @@ const BobChat: React.FC = () => {
 
     // Try to connect to MCP on mount
     useEffect(() => {
-        bobMcp.initBob().then(ok => setMcpStatus(ok ? 'live' : 'local')).catch(() => setMcpStatus('local'));
+        bobMcp.initBob().then(ok => setMcpStatus(ok ? 'live' : 'local')).catch((e) => { logger.warn('[BobChat] MCP init error:', e); setMcpStatus('local'); });
     }, []);
 
     const send = useCallback(async (t: string) => {

@@ -34,7 +34,7 @@ async function lpApi<T>(path: string, opts?: RequestInit): Promise<T | null> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err = await res.json().catch((e) => { logger.warn('[LaunchpadAPI] Error response parse failed:', e); return {}; });
     throw new Error((err as {error?: string}).error || `HTTP ${res.status}`);
   }
   return await res.json() as T;

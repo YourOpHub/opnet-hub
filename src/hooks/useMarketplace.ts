@@ -458,7 +458,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         completeOp(opId);
         void unlockOrder(lockKey, walletAddress);
         void fetchOrders();
-      }).catch(() => { void unlockOrder(lockKey, walletAddress); });
+      }).catch((e) => { logger.warn('[useMarketplace] Fill confirmation error:', e); void unlockOrder(lockKey, walletAddress); });
       void fetchOrders();
       return;
     } catch (e) {
@@ -531,7 +531,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         completeOp(opId);
         void unlockOrder(lockKey, walletAddress);
         void fetchOrders();
-      }).catch(() => { void unlockOrder(lockKey, walletAddress); });
+      }).catch((e) => { logger.warn('[useMarketplace] Execution confirmation error:', e); void unlockOrder(lockKey, walletAddress); });
       void fetchOrders();
       return;
     } catch (e) {

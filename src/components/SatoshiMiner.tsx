@@ -147,8 +147,8 @@ const SatoshiMiner: React.FC = () => {
         const sync = async (): Promise<void> => {
             try {
                 const [height, ep] = await Promise.all([
-                    opnet.getBlockHeight().catch(() => 0),
-                    opnet.getLatestEpoch().catch(() => null),
+                    opnet.getBlockHeight().catch((e) => { logger.warn('[SatoshiMiner] Block height fetch error:', e); return 0; }),
+                    opnet.getLatestEpoch().catch((e) => { logger.warn('[SatoshiMiner] Latest epoch fetch error:', e); return null; }),
                 ]);
                 if (cancelled) return;
                 if (height > 0) {

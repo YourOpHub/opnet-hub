@@ -17,7 +17,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
     const ac = new AbortController();
     const load = async (): Promise<void> => {
       try {
-        const h = await opnet.getBlockHeight().catch(() => 0);
+        const h = await opnet.getBlockHeight().catch((e) => { logger.warn('[BlockExplorer] Block height fetch error:', e); return 0; });
         if (ac.signal.aborted) return;
         if (h > 0) {
           setLatestHeight(h);
@@ -25,7 +25,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
           const blocks: Array<{ num: number; txCount: number; hash: string }> = [];
           for (let i = h; i > Math.max(0, h - 15); i--) {
             if (ac.signal.aborted) return;
-            const b = await opnet.getBlockByNumber(i, false).catch(() => null);
+            const b = await opnet.getBlockByNumber(i, false).catch((e) => { logger.warn('[BlockExplorer] Block fetch error:', e); return null; });
             if (b) {
               const txs = Array.isArray(b.transactions) ? (b.transactions as unknown[]).length : 0;
               blocks.push({ num: i, txCount: txs, hash: String(b.hash || b.blockHash || '') });
@@ -34,7 +34,7 @@ const BlockExplorer = React.memo(function BlockExplorer() {
           if (!ac.signal.aborted) setRecentBlocks(blocks);
         }
         if (ac.signal.aborted) return;
-        const mp = await opnet.getMempoolInfo().catch(() => null);
+        const mp = await opnet.getMempoolInfo().catch((e) => { logger.warn('[BlockExplorer] Mempool info fetch error:', e); return null; });
         if (!ac.signal.aborted && mp) setMempool(mp);
       } catch (e) {
         if (!ac.signal.aborted) logger.warn('[BlockExplorer] Load failed:', e);

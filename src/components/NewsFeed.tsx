@@ -118,10 +118,10 @@ function LiveFeed(): React.ReactElement {
         try {
             // Fetch all data in parallel
             const [height, gasParams, mempoolInfo, btcPrice] = await Promise.all([
-                opnet.getBlockHeight().catch(() => 0),
-                opnet.getGasParameters().catch(() => null),
-                opnet.getMempoolInfo().catch(() => null),
-                fetchBtcPrice().catch(() => ({ usd: 0, usd_24h_change: 0 })),
+                opnet.getBlockHeight().catch((e) => { logger.warn('[NewsFeed] Block height fetch error:', e); return 0; }),
+                opnet.getGasParameters().catch((e) => { logger.warn('[NewsFeed] Gas params fetch error:', e); return null; }),
+                opnet.getMempoolInfo().catch((e) => { logger.warn('[NewsFeed] Mempool info fetch error:', e); return null; }),
+                fetchBtcPrice().catch((e) => { logger.warn('[NewsFeed] BTC price fetch error:', e); return { usd: 0, usd_24h_change: 0 }; }),
             ]);
 
             // Block height activity

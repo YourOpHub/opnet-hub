@@ -39,7 +39,7 @@ export const TakeOrderButton: React.FC<{
     <div className="d-flex gap-4 ai-center flex-wrap" onClick={e => e.stopPropagation()}>
       <input style={{ ...iStyle, width: 200, fontSize: '.66rem', padding: '4px 8px' }}
         aria-label="Receiving address for swap"
-        placeholder="Receiving address (tb1p...)"
+        placeholder="Receiving address (bc1p...)"
         value={addr} onChange={e => setAddr(e.target.value)} />
       <button className="ob-btn green"
         disabled={disabled || addr.length < 10}

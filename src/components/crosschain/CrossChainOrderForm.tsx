@@ -2,7 +2,6 @@ import React from 'react';
 import { SwapDirection } from '../../crosschain/types';
 import { iStyle, labelStyle, satsToBtc } from './types';
 import { suggestedExpiryBlocks } from '../../crosschain/chains';
-import { CURRENT_ENV } from '../../config';
 
 interface CrossChainOrderFormProps {
   formDirection: SwapDirection;
@@ -109,7 +108,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
           </label>
           <input style={iStyle}
             aria-label={`Your ${formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} receiving address`}
-            placeholder={`${CURRENT_ENV === 'mainnet' ? 'bc1p' : 'tb1p'}... (${formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} P2TR address)`}
+            placeholder={`bc1p... (${formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} P2TR address)`}
             value={formMakerAddr}
             onChange={e => { setFormMakerAddr(e.target.value); setMakerAddrManual(true); }} />
         </div>

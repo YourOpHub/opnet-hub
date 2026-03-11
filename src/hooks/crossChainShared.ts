@@ -7,7 +7,7 @@
 
 import { DEPLOYED_CONTRACTS, type ContractTokenInfo } from '../contracts';
 import { Address } from '@btc-vision/transaction';
-import { NETWORK, CURRENT_ENV } from '../config';
+import { NETWORK } from '../config';
 import { bech32m } from 'bech32';
 
 /** Token options for the bridge */
@@ -95,7 +95,7 @@ export function decodeFractalAddr(hex64: string): string {
   const bytes = new Uint8Array(32);
   for (let i = 0; i < 32; i++) bytes[i] = parseInt(hex64.slice(i * 2, i * 2 + 2), 16);
   if (bytes.every(b => b === 0)) return '';
-  const prefix = CURRENT_ENV === 'mainnet' ? 'bc' : 'tb';
+  // Fractal Bitcoin always uses 'bc' prefix (bc1p...) regardless of OPNet env
   const words = [1, ...bech32m.toWords(bytes)];
-  return bech32m.encode(prefix, words, 90);
+  return bech32m.encode('bc', words, 90);
 }

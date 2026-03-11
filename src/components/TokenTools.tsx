@@ -14,7 +14,6 @@ import { useOps } from '../contexts/OpsContext';
 import type { BaseContractProperties } from 'opnet';
 
 // Sub-components (>100 lines each)
-import TokenExplorer from './tools/TokenExplorer';
 import TXLookup from './tools/TXLookup';
 import BlockExplorer from './tools/BlockExplorer';
 import UTXOSplitter from './tools/UTXOSplitter';
@@ -27,11 +26,10 @@ import { cardS, inputS, btnS, rowS, monoSm } from './tools/toolStyles';
    TOOLS — Swiss army knife for OPNet developers & users
    ═══════════════════════════════════════════════════════════════ */
 
-type ToolTab = 'converter' | 'explorer' | 'utxo' | 'splitter' | 'tx' | 'block' | 'gas' | 'faucet';
+type ToolTab = 'converter' | 'utxo' | 'splitter' | 'tx' | 'block' | 'gas' | 'faucet';
 
 const TOOL_TABS: { id: ToolTab; icon: string; label: string }[] = [
   { id: 'converter', icon: '💱', label: 'Converter' },
-  { id: 'explorer', icon: '🔍', label: 'Token Explorer' },
   { id: 'utxo', icon: '📦', label: 'UTXO Viewer' },
   { id: 'splitter', icon: '✂️', label: 'UTXO Split' },
   { id: 'tx', icon: '📜', label: 'TX Lookup' },
@@ -277,7 +275,6 @@ const TokenTools: React.FC = () => {
 
       {/* Tool content */}
       {activeTab === 'converter' && <ConverterTool />}
-      {activeTab === 'explorer' && <TokenExplorer />}
       {activeTab === 'utxo' && <UTXOViewer />}
       {activeTab === 'splitter' && <UTXOSplitter />}
       {activeTab === 'tx' && <TXLookup />}

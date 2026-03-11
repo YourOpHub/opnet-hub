@@ -339,13 +339,21 @@ const Staking: React.FC = () => {
         {/* Unstake section */}
         {STAKING_DEPLOYED && userStakedNum > 0 && (
           <>
-            <div className="fs-58 mb-6 fw-500 c-muted">Amount to Unstake</div>
+            <div className="flex-between mb-6">
+              <span className="fs-58 fw-500 c-muted">Amount to Unstake</span>
+              <span className="fs-58 c-muted">Staked: <strong className="c-o text-mono">{fmtToken(userStaked)}</strong></span>
+            </div>
             <div className="flex-center gap-8 mb-10">
-              <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
-                placeholder="0" aria-label="Amount of MINE to unstake" className="flex-1 fs-85 fw-700 outline-none" style={{ padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
+              <div className="flex-1 pos-relative">
+                <input type="number" value={unstakeAmount} onChange={e => setUnstakeAmount(e.target.value)}
+                  placeholder="0" aria-label="Amount of MINE to unstake" className="w-full fs-85 fw-700 outline-none" style={{ padding: '14px 80px 14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.025)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
+                <button onClick={() => setUnstakeAmount((Number(userStaked) / 1e8).toString())}
+                  aria-label="Use maximum staked amount"
+                  className="pos-absolute br-8 pointer fs-65 fw-700 ff-ui" style={{ right: 10, top: '50%', transform: 'translateY(-50%)', padding: '6px 14px', border: '1px solid rgba(239,68,68,.2)', background: 'rgba(239,68,68,.08)', color: '#ef4444', transition: 'all .2s' }}>MAX</button>
+              </div>
               <button onClick={doUnstake} disabled={busy || !unstakeAmount}
                 className="c-red pointer fw-700 fs-78 ff-ui" style={{ padding: '14px 22px', borderRadius: 14, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', opacity: busy || !unstakeAmount ? 0.5 : 1, transition: 'all .2s' }}>
-                {unstaking ? '⏳...' : 'Unstake'}
+                {unstaking ? '...' : 'Unstake'}
               </button>
             </div>
           </>

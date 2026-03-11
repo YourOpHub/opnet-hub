@@ -139,6 +139,7 @@ export interface UseMarketplaceReturn {
   selInfo: MarketToken | undefined;
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  ordersLoading: boolean;
   sellOrders: Order[];
   buyOrders: Order[];
   myOrders: Order[];
@@ -187,6 +188,7 @@ export function useMarketplace(): UseMarketplaceReturn {
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [tokenList, setTokenList] = useState<MarketToken[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -211,16 +213,28 @@ export function useMarketplace(): UseMarketplaceReturn {
     return () => clearInterval(iv);
   }, []);
 
-  // Read orders directly from on-chain contract
+  // Read orders directly from on-chain contract (parallel batches for speed)
   const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
     try {
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK);
       const nextIdResult = await market.getNextOrderId();
       const nextId = Number((nextIdResult?.properties as Record<string, unknown>)?.nextOrderId ?? 1n);
+      if (nextId <= 1) return [];
+
+      // Parallel batch: fetch all orders concurrently (batches of 10)
+      const BATCH_SIZE = 10;
       const chainOrders: Order[] = [];
-      for (let i = 1; i < nextId && i < 200; i++) {
-        try {
-          const r = await market.getOrder(BigInt(i));
+      for (let batch = 1; batch < nextId; batch += BATCH_SIZE) {
+        const end = Math.min(batch + BATCH_SIZE, nextId);
+        const ids = Array.from({ length: end - batch }, (_, k) => batch + k);
+        const results = await Promise.allSettled(ids.map(i => market.getOrder(BigInt(i))));
+
+        for (let k = 0; k < results.length; k++) {
+          const settled: PromiseSettledResult<CallResult> | undefined = results[k];
+          const i: number | undefined = ids[k];
+          if (!settled || i == null || settled.status !== 'fulfilled') continue;
+          const fulfilled = settled as PromiseFulfilledResult<CallResult>;
+          const r = fulfilled.value;
           if (r?.properties == null) continue;
           const p = r.properties as Record<string, unknown>;
           const orderType = Number(p.orderType ?? 0n);
@@ -253,7 +267,7 @@ export function useMarketplace(): UseMarketplaceReturn {
             status: statusStr as Order['status'],
             fills: [],
           });
-        } catch (e) { logger.warn(`[useMarketplace] Skipping unreadable order #${i}:`, e); }
+        }
       }
       return chainOrders;
     } catch (e) { logger.warn('[useMarketplace] Failed to fetch on-chain orders:', e); return []; }
@@ -286,8 +300,13 @@ export function useMarketplace(): UseMarketplaceReturn {
   const fetchOrders = useCallback(async (tokenAddr?: string) => {
     const addr = tokenAddr || selectedToken;
     if (!addr) return;
-    const chainOrders = await fetchOrdersOnChain(addr);
-    setOrders(chainOrders);
+    setOrdersLoading(true);
+    try {
+      const chainOrders = await fetchOrdersOnChain(addr);
+      setOrders(chainOrders);
+    } finally {
+      setOrdersLoading(false);
+    }
   }, [selectedToken, fetchOrdersOnChain]);
 
   useEffect(() => { void fetchTokens(); }, [fetchTokens]);
@@ -652,6 +671,7 @@ export function useMarketplace(): UseMarketplaceReturn {
     selInfo,
     // Orders
     orders, setOrders,
+    ordersLoading,
     sellOrders,
     buyOrders,
     myOrders,

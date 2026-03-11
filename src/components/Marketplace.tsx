@@ -23,7 +23,7 @@ const Marketplace: React.FC = () => {
     walletAddress, senderHex,
     loading, filteredTokens, search, setSearch, handleSearchSelect,
     selectedToken, setSelectedToken, selInfo,
-    setOrders,
+    setOrders, ordersLoading,
     sellOrders, buyOrders, myOrders,
     orderType, setOrderType, orderAmount, setOrderAmount, orderPrice, setOrderPrice,
     creating, createStep, handleCreate,
@@ -60,6 +60,12 @@ const Marketplace: React.FC = () => {
           </div>
         )}
 
+        {ordersLoading && (
+          <div className="br-10 fs-74 mb-12 p-10-14 bg-info-o c-o text-center">
+            Loading orders from chain... ({sellOrders.length + buyOrders.length} found)
+          </div>
+        )}
+
         {/* Two-column: Sell orders | Buy orders — exchange-style tables */}
         <div className="d-grid gap-12 mb-16 grid-1-1">
           {/* SELL ORDERS (asks) */}
@@ -69,7 +75,9 @@ const Marketplace: React.FC = () => {
               <span className="fs-62 fw-600 c-t2">Asks</span>
               <span className="ob-badge c-red ml-auto ob-badge-red">{sellOrders.length}</span>
             </div>
-            {sellOrders.length === 0 ? (
+            {ordersLoading && sellOrders.length === 0 ? (
+              <div className="ob-empty c-t3">Loading sell orders...</div>
+            ) : sellOrders.length === 0 ? (
               <div className="ob-empty">
                 <div className="empty-icon-med">📋</div>
                 No sell orders yet — be the first to create one!
@@ -132,7 +140,9 @@ const Marketplace: React.FC = () => {
               <span className="fs-62 fw-600 c-t2">Bids</span>
               <span className="ob-badge c-g ml-auto ob-badge-green">{buyOrders.length}</span>
             </div>
-            {buyOrders.length === 0 ? (
+            {ordersLoading && buyOrders.length === 0 ? (
+              <div className="ob-empty c-t3">Loading buy orders...</div>
+            ) : buyOrders.length === 0 ? (
               <div className="ob-empty">
                 <div className="empty-icon-med">📋</div>
                 No buy orders yet — be the first to create one!

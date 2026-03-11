@@ -40,8 +40,8 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const maxPriority = isMainnet ? 100_000n : 10_000n;
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > maxPriority ? maxPriority : priorityFeeSats;
   const maxSats = isMainnet ? 200_000n : 50_000n;
-  // Frontend: signer/mldsaSigner null — wallet extension injects real signers
-  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee };
+  // Frontend: signer/mldsaSigner ABSENT — wallet extension injects real signers
+  return { refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee } as TxParams;
 }
 
 /**

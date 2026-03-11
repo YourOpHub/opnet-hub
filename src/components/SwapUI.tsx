@@ -34,7 +34,7 @@ const iStyle: React.CSSProperties = {
 const SwapUI: React.FC = () => {
   const {
     walletAddress, connected, openConnectModal,
-    SWAP_TOKENS, heldTokens, motoPools,
+    SWAP_TOKENS, heldTokens, heldTokensLoaded, motoPools,
     reserveA, reserveB, fetchReserves, poolReady,
     fromIdx, setFromIdx, toIdx, setToIdx, fromAmt, setFromAmt,
     slippage, setSlippage, swapping, swapStep, swapResult, setSwapResult,
@@ -93,7 +93,7 @@ const SwapUI: React.FC = () => {
               <div className="P p-18 mb-14">
                 <div className="Lb mb-12">New Liquidity Pool</div>
                 {/* Quick select tokens — only tokens user holds */}
-                {walletAddress && heldTokens.length > 0 ? (
+                {walletAddress && heldTokensLoaded && heldTokens.length > 0 ? (
                   <div className="mb-8">
                     <div className="fs-2xs c-t4 mb-4 fw-600">Your tokens ({heldTokens.length})</div>
                     <div className="flex-center flex-wrap gap-4">
@@ -116,7 +116,7 @@ const SwapUI: React.FC = () => {
                 ) : (
                   <div className="p-12 mb-8 text-center fs-66 c-t4 br-10" style={{
                     background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.04)' }}>
-                    {!walletAddress ? 'Connect wallet to see your tokens' : 'Loading your tokens...'}
+                    {!walletAddress ? 'Connect wallet to see your tokens' : !heldTokensLoaded ? 'Loading your tokens...' : 'No tokens found — enter addresses manually below'}
                   </div>
                 )}
 

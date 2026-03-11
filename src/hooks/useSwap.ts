@@ -104,6 +104,7 @@ export interface UseSwapReturn {
   senderAddr: Address | null;
   SWAP_TOKENS: Token[];
   heldTokens: Token[];
+  heldTokensLoaded: boolean;
   motoPools: MotoswapPool[];
   reserveA: number;
   reserveB: number;
@@ -187,6 +188,7 @@ export function useSwap(): UseSwapReturn {
 
   // Tokens user actually holds (for pool creation picker)
   const [heldTokens, setHeldTokens] = useState<Token[]>([]);
+  const [heldTokensLoaded, setHeldTokensLoaded] = useState(false);
 
   // Motoswap pools discovered by backend
   const [motoPools, setMotoPools] = useState<MotoswapPool[]>([]);
@@ -223,7 +225,8 @@ export function useSwap(): UseSwapReturn {
 
   // Load tokens user holds (for pool creation picker)
   useEffect(() => {
-    if (!walletAddress || !hashedMLDSAKey) { setHeldTokens([]); return; }
+    if (!walletAddress || !hashedMLDSAKey) { setHeldTokens([]); setHeldTokensLoaded(false); return; }
+    setHeldTokensLoaded(false);
     const mldsa = hashedMLDSAKey.startsWith('0x') ? hashedMLDSAKey.slice(2) : hashedMLDSAKey;
     const tweaked = publicKey ? (publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey) : undefined;
     fetchHolderBalances(mldsa, tweaked).then(results => {
@@ -235,7 +238,8 @@ export function useSwap(): UseSwapReturn {
       const base = BASE_TOKENS.filter(bt => heldAddrs.has(bt.pubkey));
       const extra = held.filter(t => !BASE_TOKENS.some(bt => bt.pubkey === t.pubkey));
       setHeldTokens([...base, ...extra]);
-    }).catch((e) => { logger.warn('[useSwap] Held tokens fetch error:', e); });
+    }).catch((e) => { logger.warn('[useSwap] Held tokens fetch error:', e); })
+    .finally(() => setHeldTokensLoaded(true));
   }, [walletAddress, hashedMLDSAKey, publicKey]);
 
   // Swap state
@@ -625,6 +629,7 @@ export function useSwap(): UseSwapReturn {
     // Tokens
     SWAP_TOKENS,
     heldTokens,
+    heldTokensLoaded,
     motoPools,
     // Pool reserves
     reserveA,

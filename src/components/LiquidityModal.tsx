@@ -255,16 +255,21 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
             {NATIVESWAP_ADDRESS ? (<>
               <div className="fs-72 fw-700 mb-8" style={{ color: '#F7931A' }}>NativeSwap BTC/Token Pool</div>
               <div className="fs-62 lh-16 mb-10" style={{ color: '#8b95a9' }}>
-                This pool uses the deployed NativeSwap v5 contract for BTC/Token swaps.
-                Use the <strong style={{ color: '#0ea5e9' }}>Swap</strong> tab to trade BTC for tokens.
+                BTC/Token swaps use the deployed NativeSwap v5 contract. Select BTC as one of the tokens in the <strong style={{ color: '#0ea5e9' }}>Swap</strong> tab to trade.
               </div>
-              <div className="text-mono fs-50 word-break mb-10" style={{ color: '#5a6578' }}>
+              <div className="d-flex gap-8 mb-10">
+                <button onClick={onClose}
+                  className="flex-1 br-12 pointer fw-700 fs-75 ff-ui" style={{ padding: '12px', border: 'none', background: 'linear-gradient(135deg, #F7931A, #e8850f)', color: '#000' }}>
+                  Go to Swap
+                </button>
+                <a href={getContractOpscanUrl(NATIVESWAP_ADDRESS)} target="_blank" rel="noopener noreferrer"
+                  className="br-12 no-decoration fs-62 fw-600 d-flex ai-center" style={{ padding: '12px 16px', background: 'rgba(56,189,248,.08)', border: '1px solid rgba(56,189,248,.2)', color: '#38bdf8' }}>
+                  OPScan ↗
+                </a>
+              </div>
+              <div className="text-mono fs-50 word-break" style={{ color: '#5a6578' }}>
                 {NATIVESWAP_ADDRESS}
               </div>
-              <a href={getContractOpscanUrl(NATIVESWAP_ADDRESS)} target="_blank" rel="noopener noreferrer"
-                className="fs-60 fw-600" style={{ color: '#38bdf8', textDecoration: 'none' }}>
-                View on OPScan ↗
-              </a>
             </>) : (
               <div className="fs-65" style={{ color: '#f59e0b' }}>
                 NativeSwap contract not yet deployed.

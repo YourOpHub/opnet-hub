@@ -140,6 +140,6 @@ describe('TokenTools', () => {
     render(<TokenTools />);
     await act(async () => { await vi.advanceTimersByTimeAsync(100); });
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.length).toBe(8); // 8 tool tabs
+    expect(tabs.length).toBe(7); // 7 tool tabs (explorer removed)
   });
 });

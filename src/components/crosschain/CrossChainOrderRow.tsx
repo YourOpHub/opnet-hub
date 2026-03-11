@@ -97,7 +97,7 @@ interface MyOrderRowProps {
   unisatConnecting: boolean;
   onCancel: (id: string) => void;
   onSendAndClaim: (id: string) => void;
-  onComplete: (id: string) => void;
+  onComplete?: (id: string) => void;
   onRefund: (id: string) => void;
   onConnectUnisat: () => void;
 }
@@ -113,7 +113,6 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
   unisatConnecting,
   onCancel,
   onSendAndClaim,
-  onComplete,
   onRefund,
   onConnectUnisat,
 }) => {
@@ -163,12 +162,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
               </button>
             )
           )}
-          {iNeedToAct && !isExpired && unisatConnected && (
-            <button className="ob-btn" style={{ color: '#6b7280', borderColor: 'rgba(107,114,128,.2)', fontSize: '.6rem' }}
-              disabled={isThisActioning}
-              title="Only claim BTC (use if FB was already sent separately)"
-              onClick={() => onComplete(order.id)}>Claim only</button>
-          )}
+          {/* "Claim only" hidden — auto-flow handles everything via Send & Claim */}
           {isExpired && order.status === OrderStatus.Taken && (isMyOrder || isTaker) && (
             <button className="ob-btn danger" disabled={isThisActioning}
               onClick={() => onRefund(order.id)}>Refund</button>

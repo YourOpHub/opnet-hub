@@ -213,13 +213,15 @@ export function useMarketplace(): UseMarketplaceReturn {
     return () => clearInterval(iv);
   }, []);
 
-  // Read orders directly from on-chain contract (sequential to avoid RPC rate limits)
+  // Read orders directly from on-chain contract
+  // NOTE: deps must be stable (no toast/setState) to avoid infinite re-fetch loops
   const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
     try {
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK);
       const nextIdResult = await market.getNextOrderId();
       const nextId = Number((nextIdResult?.properties as Record<string, unknown>)?.nextOrderId ?? 1n);
-      logger.info(`[useMarketplace] Fetching orders 1..${nextId - 1} (filter: ${tokenFilter || 'none'})`);
+      // eslint-disable-next-line no-console
+      console.log(`[Market] Fetching orders 1..${nextId - 1} (filter: ${tokenFilter || 'none'})`);
       if (nextId <= 1) return [];
 
       const chainOrders: Order[] = [];
@@ -261,17 +263,19 @@ export function useMarketplace(): UseMarketplaceReturn {
           });
         } catch (e) {
           errors++;
-          logger.warn(`[useMarketplace] Order #${i} fetch error:`, e);
+          // eslint-disable-next-line no-console
+          console.warn(`[Market] Order #${i} error:`, e);
         }
       }
-      logger.info(`[useMarketplace] Found ${chainOrders.length} active orders (${errors} errors)`);
+      // eslint-disable-next-line no-console
+      console.log(`[Market] Found ${chainOrders.length} active orders (${errors} errors)`);
       return chainOrders;
     } catch (e) {
-      logger.warn('[useMarketplace] Failed to fetch on-chain orders:', e);
-      toast(`Failed to load orders: ${e instanceof Error ? e.message : 'RPC error'}`, 'error');
+      // eslint-disable-next-line no-console
+      console.error('[Market] Failed to fetch orders:', e);
       return [];
     }
-  }, [provider, toast]);
+  }, [provider]);
 
   // Fetch token list
   const fetchTokens = useCallback(async () => {

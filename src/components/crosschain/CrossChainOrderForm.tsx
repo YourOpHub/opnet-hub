@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { SwapDirection } from '../../crosschain/types';
 import { iStyle, labelStyle, satsToBtc } from './types';
 import { suggestedExpiryBlocks } from '../../crosschain/chains';
+import { validateFractalAddr } from '../../hooks/crossChainShared';
 
 interface CrossChainOrderFormProps {
   formDirection: SwapDirection;
@@ -53,6 +54,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
   onSubmit,
 }) => {
   const expiryOpts = suggestedExpiryBlocks(1);
+  const addrError = useMemo(() => validateFractalAddr(formMakerAddr), [formMakerAddr]);
 
   return (
     <div className="Pg" role="form" aria-label="Create swap order" style={{ marginBottom: 16 }}>
@@ -106,11 +108,14 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
           <label style={labelStyle}>
             Your {formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} Receiving Address
           </label>
-          <input style={iStyle}
+          <input style={{ ...iStyle, ...(addrError ? { borderColor: '#ef4444' } : {}) }}
             aria-label={`Your ${formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} receiving address`}
             placeholder={`bc1p... (${formDirection === SwapDirection.BTC_TO_FB ? 'Fractal' : 'Bitcoin'} P2TR address)`}
             value={formMakerAddr}
             onChange={e => { setFormMakerAddr(e.target.value); setMakerAddrManual(true); }} />
+          {addrError && (
+            <div style={{ fontSize: '.62rem', color: '#ef4444', marginTop: 2 }}>{addrError}</div>
+          )}
         </div>
 
         {/* Expiry */}
@@ -158,7 +163,7 @@ const CrossChainOrderForm: React.FC<CrossChainOrderFormProps> = ({
       )}
 
       <button className="btn-p" style={{ width: '100%', marginTop: 12, padding: '10px 0' }}
-        disabled={creating || !formAmount || !formReceive || !formMakerAddr || !contractReady || formAmountSats <= 0n}
+        disabled={creating || !formAmount || !formReceive || !formMakerAddr || !!addrError || !contractReady || formAmountSats <= 0n}
         onClick={onSubmit}
       >
         {creating ? 'Creating...' : 'Create Swap Order'}

@@ -248,14 +248,14 @@ export function useCrossChainState(): CrossChainState {
     return () => clearInterval(iv);
   }, []);
 
-  // ── Preimage store ──
+  // ── Preimage store (sessionStorage — preimages are sensitive, should not persist across sessions) ──
   const [preimageStore, setPreimageStore] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem('fractalswap_preimages') ?? '{}') as Record<string, string>; } catch (e) { logger.warn('[CrossChain] Failed to parse preimage store from localStorage:', e); return {}; }
+    try { return JSON.parse(sessionStorage.getItem('fractalswap_preimages') ?? '{}') as Record<string, string>; } catch (e) { logger.warn('[CrossChain] Failed to parse preimage store:', e); return {}; }
   });
   const savePreimage = useCallback((orderId: string, preimage: string) => {
     setPreimageStore(prev => {
       const next = { ...prev, [orderId]: preimage };
-      localStorage.setItem('fractalswap_preimages', JSON.stringify(next));
+      sessionStorage.setItem('fractalswap_preimages', JSON.stringify(next));
       return next;
     });
   }, []);
@@ -419,7 +419,7 @@ export function useCrossChainState(): CrossChainState {
   const [, setServerRates] = useState<Record<string, { send_sats: string; receive_sats: string; send_unit: string; receive_unit: string; rate: number }>>({});
 
   useEffect(() => {
-    if (API_URL === '') return;
+    // Rate persistence works with both full URL and same-origin proxy
     void (async () => {
       try {
         const r = await fetch(`${API_URL}/api/orders/rates`, { signal: AbortSignal.timeout(5000) });
@@ -434,7 +434,7 @@ export function useCrossChainState(): CrossChainState {
       stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
     } catch (e) { logger.warn('[CrossChain] Failed to save rate to localStorage:', e); }
-    if (API_URL !== '') {
+    {
       fetch(`${API_URL}/api/orders/rate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -12,7 +12,7 @@ let apiFailCount = 0;
 const MAX_FAIL = 2;
 
 async function api<T>(path: string, opts?: RequestInit): Promise<T | null> {
-  if (API_BASE === '' || apiFailed) return null;
+  if (apiFailed) return null;
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       ...opts,

@@ -64,7 +64,6 @@ interface PoolHistoryResponse {
 }
 
 async function fetchServerSnapshots(pool: string, limit = 500, signal?: AbortSignal): Promise<PoolSnapshot[]> {
-  if (API_BASE === '') return [];
   try {
     const resp = await fetch(`${API_BASE}/api/pool/history?pool=${encodeURIComponent(pool)}&limit=${limit}`, {
       signal: signal ?? AbortSignal.timeout(8000),

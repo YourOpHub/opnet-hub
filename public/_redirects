@@ -1,1 +1,2 @@
-/api/bob https://ai.opnet.org/mcp 200
+# API proxying handled by Cloudflare Pages Functions (functions/api, functions/lp, functions/market)
+# Bob MCP handled by function too (falls through to /api/* catch-all)

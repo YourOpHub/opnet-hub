@@ -7,7 +7,8 @@
 
 import { DEPLOYED_CONTRACTS, type ContractTokenInfo } from '../contracts';
 import { Address } from '@btc-vision/transaction';
-import { NETWORK } from '../config';
+import { NETWORK, CURRENT_ENV } from '../config';
+import { bech32m } from 'bech32';
 
 /** Token options for the bridge */
 export const TOKEN_OPTIONS = (Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).map(([sym, tok]) => ({
@@ -67,4 +68,34 @@ export function getP2OPAddress(mldsaHex: string): string {
   const bytes = new Uint8Array(32);
   for (let i = 0; i < 32; i++) bytes[i] = parseInt(mldsaHex.slice(i * 2, i * 2 + 2), 16);
   return Address.wrap(bytes).p2op(NETWORK);
+}
+
+/**
+ * Encode a Fractal/Bitcoin bech32m address (P2TR) into a u256 bigint.
+ * Stores the 32-byte witness program directly — fits exactly in u256.
+ * Only P2TR (Taproot, version 1) addresses are supported.
+ */
+export function encodeFractalAddr(addr: string): bigint {
+  const decoded = bech32m.decode(addr, 90);
+  const version = decoded.words[0];
+  const program = bech32m.fromWords(decoded.words.slice(1));
+  if (version !== 1 || program.length !== 32) {
+    throw new Error(`Only Taproot (P2TR) addresses supported. Got version ${version}, program length ${program.length}`);
+  }
+  let result = 0n;
+  for (let i = 0; i < 32; i++) result = (result << 8n) | BigInt(program[i] ?? 0);
+  return result;
+}
+
+/**
+ * Decode a u256 hex (64 chars) back to a Fractal/Bitcoin P2TR bech32m address.
+ * Returns empty string if the hex is all zeros.
+ */
+export function decodeFractalAddr(hex64: string): string {
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) bytes[i] = parseInt(hex64.slice(i * 2, i * 2 + 2), 16);
+  if (bytes.every(b => b === 0)) return '';
+  const prefix = CURRENT_ENV === 'mainnet' ? 'bc' : 'tb';
+  const words = [1, ...bech32m.toWords(bytes)];
+  return bech32m.encode(prefix, words, 90);
 }

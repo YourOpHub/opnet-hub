@@ -16,14 +16,14 @@ import { useCallback, useEffect, useRef } from 'react';
 import { logger } from '../logger';
 import { getContract, TransactionOutputFlags, type CallResult, type BaseContractProperties } from 'opnet';
 import { FRACTALSWAP_ABI } from '../abis';
-import { NETWORK, CURRENT_ENV } from '../config';
+import { NETWORK } from '../config';
 import { lockOrder, unlockOrder } from '../swapApi';
 import { CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX, getContractOpscanUrl } from '../contracts';
 import { buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { SwapDirection, OrderStatus } from '../crosschain/types';
 import { sendFractalBTC } from '../wallets/unisat';
 import { satsToBtc } from '../components/crosschain/types';
-import { buildP2OPScript, getP2OPAddress } from './crossChainShared';
+import { buildP2OPScript, getP2OPAddress, encodeFractalAddr, decodeFractalAddr } from './crossChainShared';
 import type { CrossChainState } from './useCrossChainState';
 
 // Re-export for child components
@@ -99,12 +99,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       const expiryU256 = BigInt(currentBlock + parseInt(formExpiry));
 
-      // Encode fractal address as u256
-      const addrBytes = new TextEncoder().encode(formMakerAddr);
-      const padded = new Uint8Array(32);
-      padded.set(addrBytes.slice(0, 32));
-      let fractalAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; fractalAddrU256 = (fractalAddrU256 << 8n) | BigInt(byte); }
+      // Encode fractal address as u256 (P2TR witness program = 32 bytes)
+      const fractalAddrU256 = encodeFractalAddr(formMakerAddr);
 
       const contractBtcAmount = formDirection === SwapDirection.BTC_TO_FB ? formAmountSats : formReceiveSats;
       const contractWantAmount = formDirection === SwapDirection.BTC_TO_FB ? formReceiveSats : formAmountSats;
@@ -188,11 +184,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('Order not found');
 
-      const addrBytes = new TextEncoder().encode(takerAddrInput);
-      const padded = new Uint8Array(32);
-      padded.set(addrBytes.slice(0, 32));
-      let takerAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; takerAddrU256 = (takerAddrU256 << 8n) | BigInt(byte); }
+      const takerAddrU256 = encodeFractalAddr(takerAddrInput);
 
       const rawFee = (order.btcAmount * BigInt(feeBps)) / 10000n;
       const feeSats = rawFee < 330n ? 330n : rawFee;
@@ -355,11 +347,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
     try {
       // ── Step 1: Take Order on OPNet ──
-      const addrBytes = new TextEncoder().encode(takerAddrInput);
-      const padded = new Uint8Array(32);
-      padded.set(addrBytes.slice(0, 32));
-      let takerAddrU256 = 0n;
-      for (let i = 0; i < 32; i++) { const byte = padded[i] ?? 0; takerAddrU256 = (takerAddrU256 << 8n) | BigInt(byte); }
+      const takerAddrU256 = encodeFractalAddr(takerAddrInput);
 
       const rawFee = (order.btcAmount * BigInt(feeBps)) / 10000n;
       const feeSats = rawFee < 330n ? 330n : rawFee;
@@ -398,15 +386,9 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
       const fbAmountSats = order.wantAmount;
 
-      const addrBytesTarget = new Uint8Array(32);
-      for (let i = 0; i < 32; i++) addrBytesTarget[i] = parseInt(targetHex.slice(i * 2, i * 2 + 2), 16);
-      let end = addrBytesTarget.indexOf(0);
-      if (end === -1) end = 32;
-      const targetFractalAddr = new TextDecoder().decode(addrBytesTarget.slice(0, end));
-
-      const validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
-      if (!targetFractalAddr.startsWith(validPfx)) {
-        throw new Error(`Invalid Fractal address for ${CURRENT_ENV} (expected ${validPfx}): ${targetFractalAddr}`);
+      const targetFractalAddr = decodeFractalAddr(targetHex);
+      if (!targetFractalAddr) {
+        throw new Error('No Fractal address stored for this order');
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
@@ -465,15 +447,9 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
       const fbAmountSats = order.wantAmount;
 
-      const addrBytes = new Uint8Array(32);
-      for (let i = 0; i < 32; i++) addrBytes[i] = parseInt(targetHex.slice(i * 2, i * 2 + 2), 16);
-      let end = addrBytes.indexOf(0);
-      if (end === -1) end = 32;
-      const targetFractalAddr = new TextDecoder().decode(addrBytes.slice(0, end));
-
-      const validPfx = CURRENT_ENV === 'mainnet' ? 'bc1' : 'tb1';
-      if (!targetFractalAddr.startsWith(validPfx)) {
-        throw new Error(`Invalid Fractal address for ${CURRENT_ENV} (expected ${validPfx}): ${targetFractalAddr}`);
+      const targetFractalAddr = decodeFractalAddr(targetHex);
+      if (!targetFractalAddr) {
+        throw new Error('No Fractal address stored for this order');
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);

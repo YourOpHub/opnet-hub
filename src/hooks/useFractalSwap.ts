@@ -389,8 +389,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       toast(`Order #${orderId} taken! Waiting for block...`, 'success');
       updateOpStep(opId, 'Step 1/3: Waiting for block confirmation...');
 
-      // ── Wait for block confirmation ──
-      await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 300_000);
+      // ── Wait for block confirmation (up to 15 min for testnet) ──
+      await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 900_000);
       updateOpStep(opId, 'Step 2/3: Sending Fractal BTC via UniSat...');
 
       // ── Step 2: Send Fractal BTC via UniSat ──

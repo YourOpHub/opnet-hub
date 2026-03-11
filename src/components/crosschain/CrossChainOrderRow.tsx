@@ -164,9 +164,10 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
             )
           )}
           {iNeedToAct && !isExpired && unisatConnected && (
-            <button className="ob-btn" style={{ color: '#3b82f6', borderColor: 'rgba(59,130,246,.2)' }}
+            <button className="ob-btn" style={{ color: '#6b7280', borderColor: 'rgba(107,114,128,.2)', fontSize: '.6rem' }}
               disabled={isThisActioning}
-              onClick={() => onComplete(order.id)}>Claim</button>
+              title="Only claim BTC (use if FB was already sent separately)"
+              onClick={() => onComplete(order.id)}>Claim only</button>
           )}
           {isExpired && order.status === OrderStatus.Taken && (isMyOrder || isTaker) && (
             <button className="ob-btn danger" disabled={isThisActioning}

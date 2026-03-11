@@ -213,28 +213,20 @@ export function useMarketplace(): UseMarketplaceReturn {
     return () => clearInterval(iv);
   }, []);
 
-  // Read orders directly from on-chain contract (parallel batches for speed)
+  // Read orders directly from on-chain contract (sequential to avoid RPC rate limits)
   const fetchOrdersOnChain = useCallback(async (tokenFilter?: string) => {
     try {
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK);
       const nextIdResult = await market.getNextOrderId();
       const nextId = Number((nextIdResult?.properties as Record<string, unknown>)?.nextOrderId ?? 1n);
+      logger.info(`[useMarketplace] Fetching orders 1..${nextId - 1} (filter: ${tokenFilter || 'none'})`);
       if (nextId <= 1) return [];
 
-      // Parallel batch: fetch all orders concurrently (batches of 10)
-      const BATCH_SIZE = 10;
       const chainOrders: Order[] = [];
-      for (let batch = 1; batch < nextId; batch += BATCH_SIZE) {
-        const end = Math.min(batch + BATCH_SIZE, nextId);
-        const ids = Array.from({ length: end - batch }, (_, k) => batch + k);
-        const results = await Promise.allSettled(ids.map(i => market.getOrder(BigInt(i))));
-
-        for (let k = 0; k < results.length; k++) {
-          const settled: PromiseSettledResult<CallResult> | undefined = results[k];
-          const i: number | undefined = ids[k];
-          if (!settled || i == null || settled.status !== 'fulfilled') continue;
-          const fulfilled = settled as PromiseFulfilledResult<CallResult>;
-          const r = fulfilled.value;
+      let errors = 0;
+      for (let i = 1; i < nextId && i < 200; i++) {
+        try {
+          const r = await market.getOrder(BigInt(i));
           if (r?.properties == null) continue;
           const p = r.properties as Record<string, unknown>;
           const orderType = Number(p.orderType ?? 0n);
@@ -267,11 +259,19 @@ export function useMarketplace(): UseMarketplaceReturn {
             status: statusStr as Order['status'],
             fills: [],
           });
+        } catch (e) {
+          errors++;
+          logger.warn(`[useMarketplace] Order #${i} fetch error:`, e);
         }
       }
+      logger.info(`[useMarketplace] Found ${chainOrders.length} active orders (${errors} errors)`);
       return chainOrders;
-    } catch (e) { logger.warn('[useMarketplace] Failed to fetch on-chain orders:', e); return []; }
-  }, [provider]);
+    } catch (e) {
+      logger.warn('[useMarketplace] Failed to fetch on-chain orders:', e);
+      toast(`Failed to load orders: ${e instanceof Error ? e.message : 'RPC error'}`, 'error');
+      return [];
+    }
+  }, [provider, toast]);
 
   // Fetch token list
   const fetchTokens = useCallback(async () => {

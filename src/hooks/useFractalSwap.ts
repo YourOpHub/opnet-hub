@@ -374,15 +374,16 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
       await (sim as CallResult).sendTransaction(tp);
 
-      toast(`Order #${orderId} taken! Waiting for block...`, 'success');
+      const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
+      // eslint-disable-next-line no-console
+      console.log(`[FractalSwap] Take #${orderId}: direction=${isBtcToFb ? 'BTC→FB' : 'FB→BTC'}, btcAmount=${order.btcAmount}, wantAmount=${order.wantAmount}, fee=${feeSats}`);
+      toast(`Order #${orderId} taken! Fee: ${Number(feeSats)} sats. Waiting for block...`, 'success');
       updateOpStep(opId, 'Step 1/3: Waiting for block confirmation...');
 
       // ── Wait for block confirmation (up to 15 min for testnet) ──
       await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 900_000);
-      updateOpStep(opId, 'Step 2/3: Sending Fractal BTC via UniSat...');
 
       // ── Step 2: Send Fractal BTC via UniSat ──
-      const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
       const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
       const fbAmountSats = order.wantAmount;
 
@@ -391,11 +392,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         throw new Error('No Fractal address stored for this order');
       }
 
+      updateOpStep(opId, `Step 2/3: Sending ${satsToBtc(fbAmountSats)} FB to ${targetFractalAddr.slice(0, 12)}...`);
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
-      toast(`FB sent! TX: ${txid.slice(0, 12)}...`, 'success');
-      updateOpStep(opId, 'Step 3/3: Claiming locked BTC...');
+      // eslint-disable-next-line no-console
+      console.log(`[FractalSwap] FB sent: ${Number(fbAmountSats)} sats to ${targetFractalAddr}, txid=${txid}`);
+      toast(`FB sent (${satsToBtc(fbAmountSats)})! Now claiming ${satsToBtc(order.btcAmount)} BTC...`, 'success');
 
       // ── Step 3: Complete Order (claim locked BTC) ──
+      updateOpStep(opId, `Step 3/3: Claiming ${satsToBtc(order.btcAmount)} BTC from escrow...`);
       const market2 = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr ?? undefined);
       const myScript = getMyP2OPScript();
       market2.setTransactionDetails({
@@ -410,8 +414,10 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       (tp2 as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
       await (sim2 as CallResult).sendTransaction(tp2);
 
-      updateOpStep(opId, 'Auto-swap complete! Settling...');
-      toast(`Order #${orderId} auto-completed! BTC claimed.`, 'success');
+      // eslint-disable-next-line no-console
+      console.log(`[FractalSwap] Complete #${orderId}: claimed ${Number(order.btcAmount)} sats BTC`);
+      updateOpStep(opId, `Swap complete! Paid ${satsToBtc(fbAmountSats)} FB, received ${satsToBtc(order.btcAmount)} BTC`);
+      toast(`Order #${orderId} done! You paid ${satsToBtc(fbAmountSats)} FB and received ${satsToBtc(order.btcAmount)} BTC`, 'success');
 
       void waitForNextBlock(provider).then(() => {
         completeOp(opId);

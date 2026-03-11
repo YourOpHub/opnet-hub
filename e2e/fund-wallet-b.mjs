@@ -102,7 +102,7 @@ const result = await factory.signInteraction({
     calldata,
     feeRate: 10,
     priorityFee: 5000n,
-    gasSatFee: SEND_AMOUNT + 100_000n,
+    gasSatFee: 100_000n,
     challenge,
     linkMLDSAPublicKeyToAddress: true,
     revealMLDSAPublicKey: true,

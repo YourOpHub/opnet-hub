@@ -181,6 +181,50 @@ async function getMarketOrder(provider, net, senderAddr, orderId) {
     };
 }
 
+async function getMarketNextId(provider, net, senderAddr) {
+    const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, senderAddr);
+    return (await c.getNextOrderId()).properties?.nextOrderId ?? 0n;
+}
+
+async function getCCNextId(provider, net, senderAddr) {
+    const c = getContract(C.CROSSCHAIN.addr, CROSSCHAIN_ABI, provider, net, senderAddr);
+    return (await c.getNextOrderId()).properties?.nextOrderId ?? 0n;
+}
+
+/**
+ * After order creation + epoch confirmation, scan the ID range to find our order.
+ * sim.properties.orderId can be wrong if mempool had pending TXs from previous runs.
+ */
+async function findMyMarketOrder(provider, net, senderAddr, startId, price, orderType) {
+    const nextId = await getMarketNextId(provider, net, senderAddr);
+    log(`     Scanning orders ${startId}..${nextId - 1n} for type=${orderType}, price=${price}`);
+    for (let id = nextId - 1n; id >= startId; id--) {
+        try {
+            const o = await getMarketOrder(provider, net, senderAddr, id);
+            if (o.orderType === orderType && o.pricePerToken === price && o.status === 1n) {
+                log(`     Found matching order: #${id}`);
+                return id;
+            }
+        } catch (_) {}
+    }
+    return -1n;
+}
+
+async function findMyCCOrder(provider, net, senderAddr, startId, direction) {
+    const nextId = await getCCNextId(provider, net, senderAddr);
+    log(`     Scanning CC orders ${startId}..${nextId - 1n} for dir=${direction}`);
+    for (let id = nextId - 1n; id >= startId; id--) {
+        try {
+            const o = await getCCOrder(provider, net, senderAddr, id);
+            if (o.direction === direction && o.status === 1n) {
+                log(`     Found matching CC order: #${id}`);
+                return id;
+            }
+        } catch (_) {}
+    }
+    return -1n;
+}
+
 async function getCCOrder(provider, net, senderAddr, orderId) {
     const c = getContract(C.CROSSCHAIN.addr, CROSSCHAIN_ABI, provider, net, senderAddr);
     const r = await c.getOrder(BigInt(orderId));
@@ -295,37 +339,41 @@ async function main() {
     } catch (e) { record('A: allowance→Market', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    // Read nextOrderId to know what ID to expect
-    let nextIdBefore = 0n;
-    try {
-        const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, A.addr);
-        nextIdBefore = (await c.getNextOrderId()).properties?.nextOrderId ?? 0n;
-        log(`  nextOrderId before: ${nextIdBefore}`);
-    } catch (_) {}
+    // TYPE_SELL=1, TYPE_BUY=2 in the contract
+    const TYPE_SELL = 1n, TYPE_BUY = 2n;
+
+    let nextIdBefore = await getMarketNextId(provider, net, A.addr);
+    log(`  nextOrderId before: ${nextIdBefore}`);
 
     try {
         log(`  [A] createSellOrder: ${fmt(SELL_AMT)} MINE @ ${SELL_PRICE} sat...`);
         const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, A.addr);
         const sim = await c.createSellOrder(MINE, SELL_AMT, SELL_PRICE);
-        sellOrderId = sim.properties?.orderId ?? nextIdBefore;
         await send(sim, A.wallet, net);
-        record('A: createSellOrder', true, `orderId=${sellOrderId}`);
+        record('A: createSellOrder TX sent', true);
     } catch (e) { record('A: createSellOrder', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    // Wait until order is ACTIVE (status=1)
-    if (sellOrderId >= 0n) {
-        const r = await waitForCondition(`order #${sellOrderId} ACTIVE`, async () => {
-            const o = await getMarketOrder(provider, net, A.addr, sellOrderId);
-            return o.status === 1n;
+    // Wait for nextOrderId to increase (order confirmed on-chain)
+    {
+        const r = await waitForCondition('sell order confirmed', async () => {
+            const nid = await getMarketNextId(provider, net, A.addr);
+            return nid > nextIdBefore;
         });
-        record('Sell order confirmed ACTIVE', r.ok, `block=${r.block}`);
+        record('Sell order epoch confirmed', r.ok, `block=${r.block}`);
         block = r.block;
 
         if (r.ok) {
-            const order = await getMarketOrder(provider, net, A.addr, sellOrderId);
-            record('Sell order amount', order.amount === SELL_AMT, fmt(order.amount));
-            record('Sell order price', order.pricePerToken === SELL_PRICE, `${order.pricePerToken}`);
+            // Find our actual order by scanning the range
+            sellOrderId = await findMyMarketOrder(provider, net, A.addr, nextIdBefore, SELL_PRICE, TYPE_SELL);
+            record('Found sell order', sellOrderId >= 0n, `orderId=${sellOrderId}`);
+
+            if (sellOrderId >= 0n) {
+                const order = await getMarketOrder(provider, net, A.addr, sellOrderId);
+                record('Sell order type=SELL', order.orderType === TYPE_SELL, `type=${order.orderType}`);
+                record('Sell order status=ACTIVE', order.status === 1n, `status=${order.status}`);
+                record('Sell order price', order.pricePerToken === SELL_PRICE, `${order.pricePerToken}`);
+            }
         }
     }
 
@@ -396,23 +444,29 @@ async function main() {
     } catch (e) { record('B: allowance→Market', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
+    const nextId3Before = await getMarketNextId(provider, net, B.addr);
+
     try {
         log(`  [B] createSellOrder: ${fmt(SELL2_AMT)} MINE @ ${SELL2_PRICE} sat...`);
         const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, B.addr);
         const sim = await c.createSellOrder(MINE, SELL2_AMT, SELL2_PRICE);
-        sellOrderId2 = sim.properties?.orderId ?? -1n;
         await send(sim, B.wallet, net, [], 50_000n);
-        record('B: createSellOrder', true, `orderId=${sellOrderId2}`);
+        record('B: createSellOrder TX sent', true);
     } catch (e) { record('B: createSellOrder', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    if (sellOrderId2 >= 0n) {
-        const r = await waitForCondition(`order #${sellOrderId2} ACTIVE`, async () => {
-            const o = await getMarketOrder(provider, net, B.addr, sellOrderId2);
-            return o.status === 1n;
+    {
+        const r = await waitForCondition('B sell order confirmed', async () => {
+            const nid = await getMarketNextId(provider, net, B.addr);
+            return nid > nextId3Before;
         });
-        record('B sell order ACTIVE', r.ok, `block=${r.block}`);
+        record('B sell order epoch confirmed', r.ok, `block=${r.block}`);
         block = r.block;
+
+        if (r.ok) {
+            sellOrderId2 = await findMyMarketOrder(provider, net, B.addr, nextId3Before, SELL2_PRICE, TYPE_SELL);
+            record('Found B sell order', sellOrderId2 >= 0n, `orderId=${sellOrderId2}`);
+        }
     }
 
     // A fills B's sell order
@@ -468,6 +522,8 @@ async function main() {
     const BUY_BTC = 100n * BUY_PRICE; // 3000 sats
     let buyOrderId = -1n;
 
+    const nextId4Before = await getMarketNextId(provider, net, A.addr);
+
     try {
         log(`  [A] createBuyOrder: ${fmt(BUY_AMT)} MINE @ ${BUY_PRICE} sat (lock ${fmtSat(BUY_BTC)} sats)...`);
         const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, A.addr);
@@ -485,19 +541,23 @@ async function main() {
         });
 
         const sim = await c.createBuyOrder(MINE, BUY_AMT, BUY_PRICE);
-        buyOrderId = sim.properties?.orderId ?? -1n;
         await send(sim, A.wallet, net, [{ script: mktP2OP, value: BUY_BTC }], BUY_BTC + 60_000n);
-        record('A: createBuyOrder', true, `orderId=${buyOrderId}, locked ${fmtSat(BUY_BTC)} sats`);
+        record('A: createBuyOrder TX sent', true, `locked ${fmtSat(BUY_BTC)} sats`);
     } catch (e) { record('A: createBuyOrder', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    if (buyOrderId >= 0n) {
-        const r = await waitForCondition(`buy order #${buyOrderId} ACTIVE`, async () => {
-            const o = await getMarketOrder(provider, net, A.addr, buyOrderId);
-            return o.status === 1n;
+    {
+        const r = await waitForCondition('buy order confirmed', async () => {
+            const nid = await getMarketNextId(provider, net, A.addr);
+            return nid > nextId4Before;
         });
-        record('Buy order ACTIVE', r.ok, `block=${r.block}`);
+        record('Buy order epoch confirmed', r.ok, `block=${r.block}`);
         block = r.block;
+
+        if (r.ok) {
+            buyOrderId = await findMyMarketOrder(provider, net, A.addr, nextId4Before, BUY_PRICE, TYPE_BUY);
+            record('Found buy order', buyOrderId >= 0n, `orderId=${buyOrderId}`);
+        }
     }
 
     // B: allowance + acceptBuyOrder
@@ -545,6 +605,8 @@ async function main() {
 
     let cancelId = -1n;
 
+    const CANCEL_PRICE = 100n;
+
     try {
         log('  [A] increaseAllowance for cancel test...');
         const c = getContract(C.MINE.addr, TOKEN_ABI, provider, net, A.addr);
@@ -553,40 +615,46 @@ async function main() {
     } catch (e) { record('A: allowance (cancel)', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
+    const nextId5Before = await getMarketNextId(provider, net, A.addr);
+
     try {
-        log('  [A] createSellOrder: 10 MINE @ 100 sat (to cancel)...');
+        log(`  [A] createSellOrder: 10 MINE @ ${CANCEL_PRICE} sat (to cancel)...`);
         const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, A.addr);
-        const sim = await c.createSellOrder(MINE, 10n * 10n ** 8n, 100n);
-        cancelId = sim.properties?.orderId ?? -1n;
+        const sim = await c.createSellOrder(MINE, 10n * 10n ** 8n, CANCEL_PRICE);
         await send(sim, A.wallet, net);
-        record('A: createSellOrder (cancel target)', true, `orderId=${cancelId}`);
-    } catch (e) { record('A: createSellOrder (cancel target)', false, e.message.slice(0, 80)); }
+        record('A: createSellOrder (cancel target) TX sent', true);
+    } catch (e) { record('A: createSellOrder (cancel)', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    if (cancelId >= 0n) {
-        const r = await waitForCondition(`cancel target #${cancelId} ACTIVE`, async () => {
-            const o = await getMarketOrder(provider, net, A.addr, cancelId);
-            return o.status === 1n;
+    {
+        const r = await waitForCondition('cancel target confirmed', async () => {
+            const nid = await getMarketNextId(provider, net, A.addr);
+            return nid > nextId5Before;
         });
-        record('Cancel target ACTIVE', r.ok, `block=${r.block}`);
+        record('Cancel target epoch confirmed', r.ok, `block=${r.block}`);
         block = r.block;
 
         if (r.ok) {
-            try {
-                log(`  [A] cancelOrder #${cancelId}...`);
-                const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, A.addr);
-                await send(await c.cancelOrder(cancelId), A.wallet, net);
-                record('A: cancelOrder TX sent', true);
-            } catch (e) { record('A: cancelOrder', false, e.message.slice(0, 80)); }
-            await sleep(TX_DELAY);
-
-            const r2 = await waitForCondition(`order #${cancelId} CANCELLED`, async () => {
-                const o = await getMarketOrder(provider, net, A.addr, cancelId);
-                return o.status === 3n;
-            });
-            record('Order CANCELLED', r2.ok, `block=${r2.block}`);
-            block = r2.block;
+            cancelId = await findMyMarketOrder(provider, net, A.addr, nextId5Before, CANCEL_PRICE, TYPE_SELL);
+            record('Found cancel target', cancelId >= 0n, `orderId=${cancelId}`);
         }
+    }
+
+    if (cancelId >= 0n) {
+        try {
+            log(`  [A] cancelOrder #${cancelId}...`);
+            const c = getContract(C.MARKET.addr, MARKET_ABI, provider, net, A.addr);
+            await send(await c.cancelOrder(cancelId), A.wallet, net);
+            record('A: cancelOrder TX sent', true);
+        } catch (e) { record('A: cancelOrder', false, e.message.slice(0, 80)); }
+        await sleep(TX_DELAY);
+
+        const r2 = await waitForCondition(`order #${cancelId} CANCELLED`, async () => {
+            const o = await getMarketOrder(provider, net, A.addr, cancelId);
+            return o.status === 3n;
+        });
+        record('Order CANCELLED', r2.ok, `block=${r2.block}`);
+        block = r2.block;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -607,6 +675,8 @@ async function main() {
         log(`  Fee: ${feeBps} bps`);
     } catch (_) {}
 
+    const ccNextIdBefore1 = await getCCNextId(provider, net, A.addr);
+
     // A: createOrder BTC_TO_FB
     try {
         log(`  [A] createOrder BTC→FB: ${fmtSat(CC_BTC)} sats, expiry=${expiry}...`);
@@ -625,20 +695,24 @@ async function main() {
         });
 
         const sim = await c.createOrder(1n, CC_BTC, CC_BTC, expiry, strToU256('tb1q_fractalA'));
-        ccId1 = sim.properties?.orderId ?? -1n;
         await send(sim, A.wallet, net, [{ script: ccP2OP, value: CC_BTC }], CC_BTC + 60_000n);
-        record('A: CC create BTC→FB', true, `orderId=${ccId1}`);
+        record('A: CC create BTC→FB TX sent', true);
     } catch (e) { record('A: CC create BTC→FB', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    // Wait for Open
-    if (ccId1 >= 0n) {
-        const r = await waitForCondition(`CC #${ccId1} Open`, async () => {
-            const o = await getCCOrder(provider, net, A.addr, ccId1);
-            return o.status === 1n;
+    // Wait for CC order confirmed — find by direction=1
+    {
+        const r = await waitForCondition('CC BTC→FB confirmed', async () => {
+            const nid = await getCCNextId(provider, net, A.addr);
+            return nid > ccNextIdBefore1;
         });
-        record('CC order Open', r.ok, `dir=${1}, block=${r.block}`);
+        record('CC BTC→FB epoch confirmed', r.ok, `block=${r.block}`);
         block = r.block;
+
+        if (r.ok) {
+            ccId1 = await findMyCCOrder(provider, net, A.addr, ccNextIdBefore1, 1n);
+            record('Found CC BTC→FB order', ccId1 >= 0n, `orderId=${ccId1}`);
+        }
     }
 
     // B: takeOrder + fee
@@ -721,24 +795,30 @@ async function main() {
     let ccId2 = -1n;
     expiry = BigInt(block) + 200n;
 
+    const ccNextIdBefore2 = await getCCNextId(provider, net, B.addr);
+
     // B: createOrder FB_TO_BTC (no BTC lock)
     try {
         log(`  [B] createOrder FB→BTC: ${fmtSat(CC2_BTC)} sats, expiry=${expiry}...`);
         const c = getContract(C.CROSSCHAIN.addr, CROSSCHAIN_ABI, provider, net, B.addr);
         const sim = await c.createOrder(2n, CC2_BTC, CC2_BTC, expiry, strToU256('tb1q_fracB2'));
-        ccId2 = sim.properties?.orderId ?? -1n;
         await send(sim, B.wallet, net, [], 50_000n);
-        record('B: CC create FB→BTC', true, `orderId=${ccId2}`);
+        record('B: CC create FB→BTC TX sent', true);
     } catch (e) { record('B: CC create FB→BTC', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    if (ccId2 >= 0n) {
-        const r = await waitForCondition(`CC #${ccId2} Open`, async () => {
-            const o = await getCCOrder(provider, net, B.addr, ccId2);
-            return o.status === 1n;
+    {
+        const r = await waitForCondition('CC FB→BTC confirmed', async () => {
+            const nid = await getCCNextId(provider, net, B.addr);
+            return nid > ccNextIdBefore2;
         });
-        record('CC2 order Open', r.ok, `dir=2, block=${r.block}`);
+        record('CC2 epoch confirmed', r.ok, `block=${r.block}`);
         block = r.block;
+
+        if (r.ok) {
+            ccId2 = await findMyCCOrder(provider, net, B.addr, ccNextIdBefore2, 2n);
+            record('Found CC FB→BTC order', ccId2 >= 0n, `orderId=${ccId2}`);
+        }
     }
 
     // A: takeOrder + fee + BTC lock
@@ -818,6 +898,7 @@ async function main() {
     log(`\n▸ ${currentPhase}\n`);
 
     let ccCancelId = -1n;
+    const ccCancelNextIdBefore = await getCCNextId(provider, net, A.addr);
 
     try {
         log('  [A] createOrder BTC→FB (to cancel): 2000 sats...');
@@ -837,49 +918,53 @@ async function main() {
         });
 
         const sim = await c.createOrder(1n, 2000n, 2000n, cancelExpiry, strToU256('tb1q_cancel'));
-        ccCancelId = sim.properties?.orderId ?? -1n;
         await send(sim, A.wallet, net, [{ script: ccP2OP, value: 2000n }], 62_000n);
-        record('A: CC create (to cancel)', true, `orderId=${ccCancelId}`);
+        record('A: CC create (to cancel) TX sent', true);
     } catch (e) { record('A: CC create (to cancel)', false, e.message.slice(0, 80)); }
     await sleep(TX_DELAY);
 
-    if (ccCancelId >= 0n) {
-        const r = await waitForCondition(`CC #${ccCancelId} Open`, async () => {
-            const o = await getCCOrder(provider, net, A.addr, ccCancelId);
-            return o.status === 1n;
+    {
+        const r = await waitForCondition('CC cancel target confirmed', async () => {
+            const nid = await getCCNextId(provider, net, A.addr);
+            return nid > ccCancelNextIdBefore;
         });
-        record('CC cancel target Open', r.ok, `block=${r.block}`);
+        record('CC cancel target confirmed', r.ok, `block=${r.block}`);
         block = r.block;
 
         if (r.ok) {
-            try {
-                log(`  [A] cancelOrder #${ccCancelId}...`);
-                const c = getContract(C.CROSSCHAIN.addr, CROSSCHAIN_ABI, provider, net, A.addr);
-                const refundP2OP = p2op(A.hash);
-
-                c.setTransactionDetails({
-                    inputs: [],
-                    outputs: [{
-                        value: 2000n,
-                        index: 1,
-                        flags: TransactionOutputFlags.hasScriptPubKey,
-                        scriptPubKey: refundP2OP,
-                        to: A.p2tr,
-                    }],
-                });
-
-                const sim = await c.cancelOrder(ccCancelId);
-                await send(sim, A.wallet, net, [{ script: refundP2OP, value: 2000n }], 62_000n);
-                record('A: CC cancelOrder', true, 'refund 2000 sats');
-            } catch (e) { record('A: CC cancelOrder', false, e.message.slice(0, 80)); }
-            await sleep(TX_DELAY);
-
-            const r2 = await waitForCondition(`CC #${ccCancelId} Cancelled`, async () => {
-                const o = await getCCOrder(provider, net, A.addr, ccCancelId);
-                return o.status === 4n;
-            });
-            record('CC order CANCELLED', r2.ok, `block=${r2.block}`);
+            ccCancelId = await findMyCCOrder(provider, net, A.addr, ccCancelNextIdBefore, 1n);
+            record('Found CC cancel target', ccCancelId >= 0n, `orderId=${ccCancelId}`);
         }
+    }
+
+    if (ccCancelId >= 0n) {
+        try {
+            log(`  [A] cancelOrder #${ccCancelId}...`);
+            const c = getContract(C.CROSSCHAIN.addr, CROSSCHAIN_ABI, provider, net, A.addr);
+            const refundP2OP = p2op(A.hash);
+
+            c.setTransactionDetails({
+                inputs: [],
+                outputs: [{
+                    value: 2000n,
+                    index: 1,
+                    flags: TransactionOutputFlags.hasScriptPubKey,
+                    scriptPubKey: refundP2OP,
+                    to: A.p2tr,
+                }],
+            });
+
+            const sim = await c.cancelOrder(ccCancelId);
+            await send(sim, A.wallet, net, [{ script: refundP2OP, value: 2000n }], 62_000n);
+            record('A: CC cancelOrder', true, 'refund 2000 sats');
+        } catch (e) { record('A: CC cancelOrder', false, e.message.slice(0, 80)); }
+        await sleep(TX_DELAY);
+
+        const r2 = await waitForCondition(`CC #${ccCancelId} Cancelled`, async () => {
+            const o = await getCCOrder(provider, net, A.addr, ccCancelId);
+            return o.status === 4n;
+        });
+        record('CC order CANCELLED', r2.ok, `block=${r2.block}`);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

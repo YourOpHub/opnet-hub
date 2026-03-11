@@ -284,12 +284,16 @@ export function useMarketplace(): UseMarketplaceReturn {
       if (res.ok) {
         const body = (await res.json()) as MarketTokensResponse;
         const serverTokens: MarketToken[] = body.tokens ?? [];
-        const merged: MarketToken[] = serverTokens.map((st: MarketToken) => {
-          const known = KNOWN_TOKENS.find(k => k.address === st.address);
-          return { ...st, pubkey: st.pubkey || known?.pubkey || '', decimals: st.decimals || known?.decimals || 8 };
+        // KNOWN_TOKENS have canonical post-reset addresses — match server data by SYMBOL
+        const merged: MarketToken[] = KNOWN_TOKENS.map(kt => {
+          const srv = serverTokens.find(s => s.symbol.toUpperCase() === kt.symbol.toUpperCase());
+          return { ...kt, sellCount: srv?.sellCount ?? 0, buyCount: srv?.buyCount ?? 0, totalVolume: srv?.totalVolume ?? 0 };
         });
-        for (const kt of KNOWN_TOKENS) {
-          if (!merged.find((m: MarketToken) => m.address === kt.address)) merged.push(kt);
+        // Append any server tokens not in KNOWN_TOKENS (truly unknown tokens)
+        for (const st of serverTokens) {
+          if (!KNOWN_TOKENS.find(k => k.symbol.toUpperCase() === st.symbol.toUpperCase())) {
+            merged.push({ ...st, pubkey: st.pubkey || '', decimals: st.decimals || 8 });
+          }
         }
         setTokenList(merged);
         setLoading(false);

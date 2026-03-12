@@ -176,10 +176,26 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     setBusy(true);
     setResult(null);
     try {
-      const mineRaw = BitcoinUtils.expandToDecimals(m, 8);
-      // Reduce amountA by 0.01% to avoid contract rounding revert ("AmountA exceeds share entitlement")
-      const safeMineRaw = mineRaw > 1000n ? mineRaw - (mineRaw / 10000n) : mineRaw;
       const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
+
+      // Query FRESH liquidityOf right before removal — reserves may have changed since modal opened
+      setStep('Checking your LP position...');
+      let freshMineRaw: bigint;
+      try {
+        const freshLp = await withRetry(() => poolContract.liquidityOf(senderAddr)) as CallResult;
+        if (!freshLp.revert && freshLp.properties != null) {
+          const props = freshLp.properties as Record<string, unknown>;
+          freshMineRaw = BigInt(String(props.amountA ?? 0n));
+        } else {
+          freshMineRaw = BitcoinUtils.expandToDecimals(m, 8);
+        }
+      } catch {
+        freshMineRaw = BitcoinUtils.expandToDecimals(m, 8);
+      }
+
+      // Reduce by 0.5% to avoid contract integer rounding revert ("AmountA exceeds share entitlement")
+      // The contract does double integer division (amountA→shares→maxA) creating rounding gaps
+      const safeMineRaw = freshMineRaw > 1000n ? freshMineRaw - (freshMineRaw / 200n) : freshMineRaw;
 
       setStep('Removing liquidity from pool...');
       // Pass 0n for minAmountB — contract calculates proportional VIBE from shares

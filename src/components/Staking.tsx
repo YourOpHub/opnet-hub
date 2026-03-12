@@ -366,7 +366,7 @@ const Staking: React.FC = () => {
               </div>
               <button onClick={doUnstake} disabled={busy || !unstakeAmount}
                 className="c-red pointer fw-700 fs-78 ff-ui" style={{ padding: '14px 22px', borderRadius: 14, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.04)', opacity: busy || !unstakeAmount ? 0.5 : 1, transition: 'all .2s' }}>
-                {unstaking ? '...' : 'Unstake'}
+                {unstaking ? (step || 'Unstaking...') : 'Unstake'}
               </button>
             </div>
           </>

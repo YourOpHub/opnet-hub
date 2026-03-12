@@ -199,14 +199,11 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         freshMineRaw = BitcoinUtils.expandToDecimals(m, 8);
       }
 
-      // Reduce by 2% to avoid contract integer rounding revert ("AmountA exceeds share entitlement")
-      // The contract does double integer division (amountA→shares→maxA) creating rounding gaps
-      const safeMineRaw = freshMineRaw > 1000n ? freshMineRaw - (freshMineRaw / 50n) : freshMineRaw;
-
       updateOpStep(rOpId, `Removing ${m} MINE + ${v} VIBE...`);
       setStep('Removing liquidity from pool...');
-      // Pass 0n for minAmountB — contract calculates proportional VIBE from shares
-      const removeSim = await withRetry(() => poolContract.removeLiquidity(safeMineRaw, 0n));
+      // Contract v6: amountA is used to compute shares, actual withdrawal is proportional from shares
+      // No rounding margin needed — contract derives both amounts from shares consistently
+      const removeSim = await withRetry(() => poolContract.removeLiquidity(freshMineRaw, 0n));
       if ((removeSim as CallResult).revert) throw new Error(`removeLiquidity failed: ${(removeSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       const receipt = await (removeSim as CallResult).sendTransaction(tp);

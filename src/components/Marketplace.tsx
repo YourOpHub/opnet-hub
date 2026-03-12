@@ -29,7 +29,7 @@ const Marketplace: React.FC = () => {
     creating, createStep, handleCreate,
     fillId, setFillId, fillAmount, setFillAmount, filling, fillStep,
     handleFill, handleExecuteBuyOrder, handleCancel,
-    msg, lastTxId,
+    msg, lastTxId, tokenBalance,
   } = useMarketplace();
 
   /* ─── RENDER ─── */
@@ -51,6 +51,12 @@ const Marketplace: React.FC = () => {
             <div className="fw-800 fs-88 c-w fs-110">{selInfo?.symbol || selectedToken.slice(-8)}</div>
             <div className="fs-62 c-t4 text-mono">{selectedToken}</div>
           </div>
+          {walletAddress && tokenBalance !== null && (
+            <div className="ml-auto br-10 p-6-14 bg-bg3 bd-bd">
+              <div className="fs-62 c-t3">Your balance</div>
+              <div className="fw-700 fs-86 c-w text-mono">{tokenBalance}</div>
+            </div>
+          )}
         </div>
 
         {msg && (

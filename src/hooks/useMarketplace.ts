@@ -21,6 +21,8 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
   getContract,
   TransactionOutputFlags,
+  OP_20_ABI,
+  type IOP20Contract,
   type CallResult, type BaseContractProperties,
   type TransactionParameters,
 } from 'opnet';
@@ -166,6 +168,7 @@ export interface UseMarketplaceReturn {
   msg: string;
   setMsg: React.Dispatch<React.SetStateAction<string>>;
   lastTxId: string | null;
+  tokenBalance: string | null;
 }
 
 /**
@@ -204,6 +207,8 @@ export function useMarketplace(): UseMarketplaceReturn {
   const [fillStep, setFillStep] = useState('');
 
   const [msg, setMsg] = useState('');
+  const [tokenBalance, setTokenBalance] = useState<string | null>(null);
+  const [balRefreshKey, setBalRefreshKey] = useState(0);
 
   const { trackOp, completeOp, failOp } = useOps();
 
@@ -212,6 +217,29 @@ export function useMarketplace(): UseMarketplaceReturn {
     const iv = setInterval(() => getActiveLocks(), 15_000);
     return () => clearInterval(iv);
   }, []);
+
+  // Fetch user's token balance for the selected token
+  useEffect(() => {
+    if (!selectedToken || !senderAddr) { setTokenBalance(null); return; }
+    let cancelled = false;
+    const fetchBal = async (): Promise<void> => {
+      try {
+        const decimals = selInfoRef.current?.decimals || 8;
+        const op20 = getContract<IOP20Contract>(selectedToken, OP_20_ABI, provider, NETWORK, senderAddr);
+        const sim = await op20.balanceOf(senderAddr);
+        const bal = sim?.properties?.balance ?? 0n;
+        if (!cancelled) {
+          const human = (Number(BigInt(bal.toString())) / Math.pow(10, decimals)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+          setTokenBalance(human);
+        }
+      } catch (e) {
+        logger.warn('[useMarketplace] Balance fetch error:', e);
+        if (!cancelled) setTokenBalance(null);
+      }
+    };
+    void fetchBal();
+    return () => { cancelled = true; };
+  }, [selectedToken, senderAddr, provider, balRefreshKey]);
 
   // Read orders directly from on-chain contract
   // NOTE: deps must be stable (no toast/setState) to avoid infinite re-fetch loops
@@ -332,6 +360,8 @@ export function useMarketplace(): UseMarketplaceReturn {
   }, [tokenList, search]);
 
   const selInfo = tokenList.find(t => t.address === selectedToken);
+  const selInfoRef = useRef(selInfo);
+  selInfoRef.current = selInfo;
 
   const sellOrders = orders.filter(o => o.type === 'sell' && o.status === 'active').sort((a, b) => a.pricePerToken - b.pricePerToken);
   const buyOrders = orders.filter(o => o.type === 'buy' && (o.status === 'active' || o.status === 'accepted')).sort((a, b) => b.pricePerToken - a.pricePerToken);
@@ -402,6 +432,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       toast('Order confirmed on-chain!', 'success', createTxLink);
       completeOp(createOpId);
       setCreateStep('');
+      setBalRefreshKey(k => k + 1);
       void fetchOrders(); void fetchTokens();
       return;
     } catch (e) {
@@ -498,6 +529,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
+      setBalRefreshKey(k => k + 1);
       void fetchOrders();
       return;
     } catch (e) {
@@ -571,6 +603,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
+      setBalRefreshKey(k => k + 1);
       void fetchOrders();
       return;
     } catch (e) {
@@ -639,6 +672,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       toast('Cancel confirmed!', 'success', cancelTxLink);
       completeOp(cancelOpId);
       setFillStep('');
+      setBalRefreshKey(k => k + 1);
       void fetchOrders();
     } catch (e) {
       failOp(cancelOpId, formatTxError(e));
@@ -711,5 +745,6 @@ export function useMarketplace(): UseMarketplaceReturn {
     // Status
     msg, setMsg,
     lastTxId: null as string | null,
+    tokenBalance,
   };
 }

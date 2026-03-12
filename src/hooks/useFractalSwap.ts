@@ -138,16 +138,17 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats, formAmountSats, sendUnit, receiveUnit);
 
+      const createdPayLabel = formDirection === SwapDirection.BTC_TO_FB ? `${satsToBtc(contractBtcAmount)} BTC` : `${satsToBtc(contractWantAmount)} FB`;
+      const createdGetLabel = formDirection === SwapDirection.BTC_TO_FB ? `${satsToBtc(contractWantAmount)} FB` : `${satsToBtc(contractBtcAmount)} BTC`;
       const createOpId = `fractalswap:create:${actualNextId}:${walletAddress}`;
       trackOp({
         id: createOpId, market: 'fractalswap', orderId: actualNextId,
         direction: formDirection === SwapDirection.BTC_TO_FB ? 'BTC_TO_FB' : 'FB_TO_BTC',
-        role: 'maker', step: 'Created, confirming...',
-        amounts: { btc: Number(contractBtcAmount).toString(), want: Number(contractWantAmount).toString() },
+        role: 'maker', step: `Pay ${createdPayLabel} \u2192 Get ${createdGetLabel}`,
+        amounts: { btc: Number(contractBtcAmount).toString(), want: Number(contractWantAmount).toString(), pay: createdPayLabel, get: createdGetLabel },
       });
-
       setCreateStep('Waiting for confirmation...');
-      toast(`Order #${actualNextId} created!${formDirection === SwapDirection.BTC_TO_FB ? ' BTC locked in contract.' : ''} Waiting for block...`, 'success', createTxLink);
+      toast(`Order #${actualNextId} created! Pay ${createdPayLabel} → Get ${createdGetLabel}.${formDirection === SwapDirection.BTC_TO_FB ? ' BTC locked.' : ''} Waiting for block...`, 'success', createTxLink);
       state.setFormAmount('');
       state.setFormReceive('');
       state.setFormMakerAddr('');
@@ -377,10 +378,12 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const tasTxLink = tasTxId ? { url: getTxUrl(tasTxId), label: 'View TX' } : undefined;
 
       const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
+      const payLabel = isBtcToFb ? `${satsToBtc(order.wantAmount)} FB` : `${satsToBtc(order.btcAmount)} BTC`;
+      const getLabel = isBtcToFb ? `${satsToBtc(order.btcAmount)} BTC` : `${satsToBtc(order.wantAmount)} FB`;
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] Take #${orderId}: direction=${isBtcToFb ? 'BTC→FB' : 'FB→BTC'}, btcAmount=${order.btcAmount}, wantAmount=${order.wantAmount}, fee=${feeSats}`);
-      toast(`Order #${orderId} taken! Fee: ${Number(feeSats)} sats. Waiting for block...`, 'success', tasTxLink);
-      updateOpStep(opId, 'Step 1/3: Waiting for block confirmation...');
+      toast(`Order #${orderId} taken! Pay ${payLabel} → Get ${getLabel}. Fee: ${Number(feeSats)} sats.`, 'success', tasTxLink);
+      updateOpStep(opId, `Step 1/3: Pay ${payLabel} → Get ${getLabel}. Confirming...`);
 
       // ── Wait for block confirmation (up to 15 min for testnet) ──
       await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 900_000);
@@ -401,6 +404,10 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       toast(`FB sent (${satsToBtc(fbAmountSats)})! Now claiming ${satsToBtc(order.btcAmount)} BTC...`, 'success');
 
       // ── Step 3: Complete Order (claim locked BTC) ──
+      // Wait for block to ensure takeOrder is fully confirmed before completing
+      updateOpStep(opId, 'Step 3/3: Waiting for take confirmation before claiming...');
+      await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 3/3: ${s}`));
+
       updateOpStep(opId, `Step 3/3: Claiming ${satsToBtc(order.btcAmount)} BTC from escrow...`);
       const market2 = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr ?? undefined);
       const myScript = getMyP2OPScript();
@@ -409,7 +416,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         outputs: [{ value: order.btcAmount, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: myScript, to: walletAddress }],
       });
 
-      const sim2 = await withRetry(() => market2.completeOrder(BigInt(orderId)));
+      const sim2 = await withRetry(() => market2.completeOrder(BigInt(orderId)), 3, 5000);
       if ((sim2 as CallResult).revert) throw new Error(`Revert: ${(sim2 as CallResult).revert}`);
 
       const tp2 = await buildTxParams(provider, walletAddress);
@@ -465,7 +472,9 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       toast(`FB sent! TX: ${txid.slice(0, 12)}...`, 'success');
       updateOpStep(opId, 'Step 2/2: Claiming locked BTC...');
 
-      // ── Step 2: Complete Order ──
+      // ── Step 2: Complete Order (wait for take to be fully confirmed) ──
+      await waitForNextBlock(provider, (s) => updateOpStep(opId, `Confirming take... ${s}`));
+
       const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr ?? undefined);
       const myScript = getMyP2OPScript();
       market.setTransactionDetails({
@@ -473,7 +482,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         outputs: [{ value: order.btcAmount, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: myScript, to: walletAddress }],
       });
 
-      const sim = await withRetry(() => market.completeOrder(BigInt(orderId)));
+      const sim = await withRetry(() => market.completeOrder(BigInt(orderId)), 3, 5000);
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);

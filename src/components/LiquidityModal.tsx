@@ -199,9 +199,9 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         freshMineRaw = BitcoinUtils.expandToDecimals(m, 8);
       }
 
-      // Reduce by 0.5% to avoid contract integer rounding revert ("AmountA exceeds share entitlement")
+      // Reduce by 2% to avoid contract integer rounding revert ("AmountA exceeds share entitlement")
       // The contract does double integer division (amountA→shares→maxA) creating rounding gaps
-      const safeMineRaw = freshMineRaw > 1000n ? freshMineRaw - (freshMineRaw / 200n) : freshMineRaw;
+      const safeMineRaw = freshMineRaw > 1000n ? freshMineRaw - (freshMineRaw / 50n) : freshMineRaw;
 
       updateOpStep(rOpId, `Removing ${m} MINE + ${v} VIBE...`);
       setStep('Removing liquidity from pool...');

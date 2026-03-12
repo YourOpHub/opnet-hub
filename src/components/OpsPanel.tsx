@@ -40,8 +40,9 @@ function formatOpAmounts(op: OpEntry): string | null {
     const priceStr = price && price !== '0' ? ` @ ${Number(price).toLocaleString()} sat` : '';
     return `${dir} ${Number(amount).toLocaleString()} ${token}${priceStr}`;
   }
-  if (op.market === 'fractalswap' && a.btc) {
-    return `${Number(a.btc).toLocaleString()} sats`;
+  if (op.market === 'fractalswap') {
+    if (a.pay && a.get) return `Pay ${a.pay} \u2192 Get ${a.get}`;
+    if (a.btc) return `${Number(a.btc).toLocaleString()} sats`;
   }
   if (op.market === 'swap' && a.tokenA && a.tokenB) {
     return `${Number(a.amountA || 0).toLocaleString()} ${a.tokenA} \u2192 ${Number(a.amountB || 0).toLocaleString()} ${a.tokenB}`;
@@ -100,6 +101,16 @@ const OpCard: React.FC<{ op: OpEntry; onDismiss?: () => void }> = ({ op, onDismi
       </div>
       {op.error && (
         <div style={{ fontSize: '.6rem', color: '#ef4444', marginTop: 2 }}>{op.error}</div>
+      )}
+      {op.txIds && Object.keys(op.txIds).length > 0 && (
+        <div style={{ fontSize: '.56rem', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {Object.entries(op.txIds).map(([label, hash]) => hash ? (
+            <a key={label} href={getTxUrl(hash)} target="_blank" rel="noopener noreferrer"
+              style={{ color: 'var(--c2)', textDecoration: 'none' }}>
+              {label}: {hash.slice(0, 12)}... {'\u2197'}
+            </a>
+          ) : null)}
+        </div>
       )}
       <div style={{ fontSize: '.54rem', color: 'var(--t4)', marginTop: 2 }}>
         {op.role && <span style={{ marginRight: 6 }}>{op.role}</span>}

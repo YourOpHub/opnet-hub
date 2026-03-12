@@ -393,9 +393,10 @@ export function useMarketplace(): UseMarketplaceReturn {
 
       let createReceipt: unknown;
       if (orderType === 'sell') {
-        updateOpStep(createOpId, 'Approving tokens...');
-        setCreateStep('Approving tokens for marketplace...');
-        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, (s: string) => { setCreateStep(s); updateOpStep(createOpId, s); }, selInfo?.symbol || 'token');
+        updateOpStep(createOpId, 'Checking token approval...');
+        setCreateStep('Checking token approval...');
+        const sellApprove = await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, (s: string) => { setCreateStep(s); updateOpStep(createOpId, s); }, selInfo?.symbol || 'token');
+        if (sellApprove.txId) updateOpStep(createOpId, 'Token approved!', { approve: sellApprove.txId });
 
         updateOpStep(createOpId, 'Signing sell order TX...');
         setCreateStep('Creating sell order on-chain...');
@@ -505,10 +506,11 @@ export function useMarketplace(): UseMarketplaceReturn {
         (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
         fillReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
-        updateOpStep(opId, 'Approving tokens...');
-        setFillStep('Approving tokens for marketplace...');
+        updateOpStep(opId, 'Checking token approval...');
+        setFillStep('Checking token approval...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, (s: string) => { setFillStep(s); updateOpStep(opId, s); });
+        const fillApprove = await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, (s: string) => { setFillStep(s); updateOpStep(opId, s); });
+        if (fillApprove.txId) updateOpStep(opId, 'Token approved!', { approve: fillApprove.txId });
 
         updateOpStep(opId, 'Signing accept TX...');
         setFillStep('Accepting buy order (locking tokens)...');
@@ -522,7 +524,8 @@ export function useMarketplace(): UseMarketplaceReturn {
       const fillTxId = (fillReceipt as { transactionId?: string })?.transactionId || '';
       const fillTxLink = fillTxId ? { url: getTxUrl(fillTxId), label: 'View TX' } : undefined;
       setFillId(null); setFillAmount('');
-      toast('Order filled! Waiting for block...', 'success', fillTxLink);
+      const isBuyAccept = order.type === 'buy';
+      toast(isBuyAccept ? 'Tokens locked! Buyer will auto-pay BTC...' : 'Order filled! Waiting for block...', 'success', fillTxLink);
 
       updateOpStep(opId, 'TX sent, waiting for block...', fillTxId ? { fill: fillTxId } : undefined);
 
@@ -533,7 +536,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
       await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(opId, s); });
-      toast('Fill confirmed on-chain!', 'success', fillTxLink);
+      toast(isBuyAccept ? 'Accept confirmed! Buyer auto-pay triggered.' : 'Fill confirmed on-chain!', 'success', fillTxLink);
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
@@ -639,11 +642,11 @@ export function useMarketplace(): UseMarketplaceReturn {
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('Buy Order Accepted!', { body: 'A seller locked tokens. Approve BTC payment in your wallet.' });
         }
-        setMsg('Seller accepted your buy order! Approve BTC payment...');
+        toast('Seller accepted! Auto-sending BTC payment...', 'info');
         await handleExecuteBuyOrder(myAccepted.id);
         autoExecuteRef.current = false;
       }
-    }, 15_000);
+    }, 8_000);
     return () => clearInterval(interval);
   }, [walletAddress, senderAddr, senderHex, selectedToken, filling, fetchOrdersOnChain, handleExecuteBuyOrder]);
 

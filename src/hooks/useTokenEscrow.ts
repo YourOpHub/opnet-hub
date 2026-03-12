@@ -77,11 +77,12 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
     try {
       if (tbDirection === DIR_SELL_TOKEN) {
         const escrowPubkey = TOKEN_ESCROW_PUBKEY.startsWith('0x') ? TOKEN_ESCROW_PUBKEY : '0x' + TOKEN_ESCROW_PUBKEY;
-        await ensureAllowance(
+        const escrowApprove = await ensureAllowance(
           tbToken, escrowPubkey, tokenAmountRaw,
           provider, senderAddr, walletAddress,
           setTbStep, selectedToken.symbol,
         );
+        if (escrowApprove.txId) setTbStep(`${selectedToken.symbol} approved!`);
       }
 
       const bridge = getContract<TokenEscrowContract>(TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_ABI, provider, NETWORK, senderAddr ?? undefined);
@@ -140,11 +141,12 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
         const tokenInfo = resolveToken(order.tokenHex);
         if (tokenInfo) {
           const escrowPubkey = TOKEN_ESCROW_PUBKEY.startsWith('0x') ? TOKEN_ESCROW_PUBKEY : '0x' + TOKEN_ESCROW_PUBKEY;
-          await ensureAllowance(
+          const takeApprove = await ensureAllowance(
             tokenInfo.address, escrowPubkey, order.tokenAmount,
             provider, senderAddr, walletAddress,
             setActionStep, tokenInfo.symbol,
           );
+          if (takeApprove.txId) setActionStep(`${tokenInfo.symbol} approved!`);
         }
       }
 

@@ -128,19 +128,21 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       const vibeRaw = BitcoinUtils.expandToDecimals(vAmt, 8);
 
       // Step 1: Ensure MINE allowance (check → approve → wait for block)
-      const mineApproved = await ensureAllowance(
+      const mineRes = await ensureAllowance(
         DEPLOYED_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
         provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(aOpId, s); }, 'MINE',
       );
+      if (mineRes.txId) updateOpStep(aOpId, 'MINE approved, confirming...', { approve_mine: mineRes.txId });
 
       // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
-      if (mineApproved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
+      if (mineRes.approved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
       updateOpStep(aOpId, 'Approving VIBE...');
-      const vibeApproved = await ensureAllowance(
+      const vibeRes = await ensureAllowance(
         DEPLOYED_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
         provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(aOpId, s); }, 'VIBE',
       );
-      if (vibeApproved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
+      if (vibeRes.txId) updateOpStep(aOpId, 'VIBE approved, confirming...', { approve_vibe: vibeRes.txId });
+      if (vibeRes.approved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
 
       // Step 3: addLiquidity on pool
       updateOpStep(aOpId, `Adding ${mAmt} MINE + ${vAmt} VIBE...`);

@@ -449,11 +449,12 @@ export function useSwap(): UseSwapReturn {
 
       if (isSimplePool && poolReady) {
         // ── SimplePool swap (MINE ↔ VIBE) ──
-        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'simplepool', role: '', step: `Approving ${from.symbol}...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
-        await ensureAllowance(
+        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'simplepool', role: '', step: `Checking ${from.symbol} approval...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
+        const spApprove = await ensureAllowance(
           from.address, POOL_PUBKEY, rawAmount,
           provider, activeSender, activeWallet, (s: string) => { setSwapStep(s); updateOpStep(swapOpId, s); }, from.symbol,
         );
+        if (spApprove.txId) updateOpStep(swapOpId, `${from.symbol} approved!`, { approve: spApprove.txId });
         updateOpStep(swapOpId, `Swapping ${fromVal} ${from.symbol}\u2192${to.symbol}...`);
         setSwapStep('Executing swap on SimplePool...');
         const poolContract = getContract<IPoolContract>(
@@ -474,11 +475,12 @@ export function useSwap(): UseSwapReturn {
         addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: activeWallet });
       } else if (motoPool) {
         // ── Motoswap Router swap ──
-        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'motoswap', role: '', step: `Approving ${from.symbol}...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
-        await ensureAllowance(
+        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'motoswap', role: '', step: `Checking ${from.symbol} approval...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
+        const msApprove = await ensureAllowance(
           from.pubkey, MOTOSWAP_ROUTER_PUBKEY, rawAmount,
           provider, activeSender, activeWallet, (s: string) => { setSwapStep(s); updateOpStep(swapOpId, s); }, from.symbol,
         );
+        if (msApprove.txId) updateOpStep(swapOpId, `${from.symbol} approved!`, { approve: msApprove.txId });
         updateOpStep(swapOpId, 'Swapping via Motoswap...');
         setSwapStep('Executing swap via Motoswap Router...');
         const router = getContract<IMotoswapRouterContract>(

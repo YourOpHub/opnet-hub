@@ -191,7 +191,7 @@ const Marketplace: React.FC = () => {
                             {filling ? '..' : 'Accept'}
                           </button>
                         ) : (
-                          <span className="fs-62 c-t3">Awaiting pay</span>
+                          <span className="fs-62 c-t3">Buyer paying...</span>
                         )}
                       </div>
                     </div>

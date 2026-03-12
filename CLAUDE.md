@@ -29,7 +29,7 @@ Mission control for programmable Bitcoin. Built on OP_NET consensus layer.
 - Wallet A: `opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my`
 - MINE: `opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa`
 - VIBE: `opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl`
-- Pool: `opt1sqztrzryk063ta3nx98f4v4xfsl0l8fdjgujl9s4e`
+- Pool v6: `opt1sqqhj9pld6lwsts0qljrlm3l4hjek8lhz4q4y2cl4`
 - NativeSwap v4: `opt1sqral2q69evhz02lt8yrytfqheyjqy9rk4scf86p8`
 - Market: `opt1sqr9djv83f9yg94x5zfv7ppgd4narm3ewyvp3pnkl`
 

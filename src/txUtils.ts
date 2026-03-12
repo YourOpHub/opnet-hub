@@ -99,7 +99,7 @@ export async function waitForNextBlock(
  * @param walletAddress - Wallet address for refund outputs.
  * @param setStep - Callback for progress updates.
  * @param tokenLabel - Human-readable token name for UI messages.
- * @returns True if approval TX was sent, false if allowance was already sufficient.
+ * @returns Object with `approved` (true if TX was sent), `txId` (approval TX hash if sent), `skipped` (true if allowance was already sufficient).
  */
 export async function ensureAllowance(
   tokenAddress: string,
@@ -110,7 +110,7 @@ export async function ensureAllowance(
   walletAddress: string,
   setStep: (s: string) => void,
   tokenLabel = 'token',
-): Promise<boolean> {
+): Promise<{ approved: boolean; txId: string }> {
   // Clear cache on wallet change
   if (_cachedWallet !== walletAddress) {
     approvedThisSession.clear();
@@ -120,8 +120,8 @@ export async function ensureAllowance(
 
   // Session cache: if we already approved this token for this spender, skip
   if (approvedThisSession.has(cacheKey)) {
-    setStep('');
-    return false;
+    setStep(`${tokenLabel} already approved \u2713`);
+    return { approved: false, txId: '' };
   }
 
   const senderAddress = senderAddr instanceof Address ? senderAddr : Address.fromString(senderAddr);
@@ -139,8 +139,8 @@ export async function ensureAllowance(
       const cur = props?.remaining != null ? BigInt(String(props.remaining)) : 0n;
       if (cur >= amount) {
         approvedThisSession.add(cacheKey);
-        setStep('');
-        return false; // Already approved
+        setStep(`${tokenLabel} already approved \u2713`);
+        return { approved: false, txId: '' }; // Already approved
       }
     } else {
       logger.warn('[txUtils] Allowance check reverted:', callRes.revert);
@@ -155,16 +155,18 @@ export async function ensureAllowance(
   const approveResult = approveSim as CallResult;
   if (approveResult.revert) throw new Error(`${tokenLabel} approval failed: ${approveResult.revert}`);
   const tp = await buildTxParams(provider, walletAddress);
-  await approveResult.sendTransaction(tp);
+  const approveReceipt = await approveResult.sendTransaction(tp);
+  const approveTxId = (approveReceipt as { transactionId?: string })?.transactionId || '';
 
   // Wait for next block BEFORE marking as approved — prevents race condition
   // where cache says "approved" but on-chain allowance hasn't confirmed yet
+  setStep(`${tokenLabel} approved! Waiting for confirmation...`);
   await waitForNextBlock(provider, setStep);
 
   // Mark as approved in session cache (after block confirmation)
   approvedThisSession.add(cacheKey);
 
-  return true; // Approval was sent
+  return { approved: true, txId: approveTxId };
 }
 
 /**

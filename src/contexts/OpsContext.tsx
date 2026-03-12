@@ -126,10 +126,11 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [wallet]);
 
   const updateOpStep = useCallback((id: string, step: string, txIds?: Record<string, string>) => {
-    setOps(prev => prev.map(o => o.id === id ? { ...o, step, txIds: txIds || o.txIds, updatedAt: Date.now() } : o));
+    const mergedTxIds = txIds ? (prev: Record<string, string> | undefined) => ({ ...prev, ...txIds }) : undefined;
+    setOps(prev => prev.map(o => o.id === id ? { ...o, step, txIds: mergedTxIds ? mergedTxIds(o.txIds) : o.txIds, updatedAt: Date.now() } : o));
     if (wallet) {
       const op = opsRef.current.find(o => o.id === id);
-      if (op) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', ...(txIds !== undefined ? { tx_ids: txIds } : {}) });
+      if (op) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', ...(txIds !== undefined ? { tx_ids: { ...op.txIds, ...txIds } } : {}) });
     }
   }, [wallet]);
 

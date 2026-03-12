@@ -137,11 +137,12 @@ const Staking: React.FC = () => {
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
 
       // 1. Track in bell + ensure allowance
-      trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Approving MINE...`, amounts: { amount: amt.toString(), token: 'MINE' } });
-      await ensureAllowance(
+      trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Checking MINE approval...`, amounts: { amount: amt.toString(), token: 'MINE' } });
+      const approveRes = await ensureAllowance(
         STAKING_TOKEN.address, STAKING_PUBKEY, rawAmount,
         provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(sOpId, s); }, 'MINE',
       );
+      if (approveRes.txId) updateOpStep(sOpId, 'MINE approved, confirming...', { approve: approveRes.txId });
 
       // 2. Stake
       updateOpStep(sOpId, `Staking ${amt.toLocaleString()} MINE...`);

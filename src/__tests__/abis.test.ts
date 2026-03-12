@@ -43,12 +43,12 @@ function expectValidAbi(abi: unknown, expectedNames: string[]) {
 
 // ---- POOL_ABI ----
 describe('POOL_ABI', () => {
-  it('has 7 functions', () => {
-    expect(POOL_ABI.length).toBe(7);
+  it('has 9 functions', () => {
+    expect(POOL_ABI.length).toBe(9);
   });
 
   it('contains all expected pool methods', () => {
-    expectValidAbi(POOL_ABI, ['swap', 'getReserves', 'sync', 'addLiquidity', 'removeLiquidity', 'liquidityOf', 'getTokens']);
+    expectValidAbi(POOL_ABI, ['swap', 'getReserves', 'sync', 'addLiquidity', 'removeLiquidity', 'liquidityOf', 'getTokens', 'getFeeRate', 'setFeeRate']);
   });
 
   it('swap has 3 inputs and 1 output', () => {
@@ -99,12 +99,12 @@ describe('POOL_CREATE_ABI', () => {
 
 // ---- STAKING_ABI ----
 describe('STAKING_ABI', () => {
-  it('has 7 functions', () => {
-    expect(STAKING_ABI.length).toBe(7);
+  it('has 10 functions', () => {
+    expect(STAKING_ABI.length).toBe(10);
   });
 
   it('contains all staking methods', () => {
-    expectValidAbi(STAKING_ABI, ['stake', 'unstake', 'claim', 'stakedAmount', 'stakedReward', 'totalStaked', 'getRewardRate']);
+    expectValidAbi(STAKING_ABI, ['stake', 'unstake', 'claim', 'stakedAmount', 'stakedReward', 'totalStaked', 'getRewardRate', 'getRewardEndBlock', 'getRewardCapacity', 'fundRewards']);
   });
 
   it('stake has 1 input', () => {
@@ -118,7 +118,7 @@ describe('STAKING_ABI', () => {
   });
 
   it('view functions are marked constant', () => {
-    const views = ['stakedAmount', 'stakedReward', 'totalStaked', 'getRewardRate'];
+    const views = ['stakedAmount', 'stakedReward', 'totalStaked', 'getRewardRate', 'getRewardEndBlock', 'getRewardCapacity'];
     for (const name of views) {
       const entry = STAKING_ABI.find(e => e.name === name)! as AbiEntry;
       expect((entry as AbiEntry).constant).toBe(true);

@@ -74,6 +74,19 @@ export const POOL_ABI: BitcoinInterfaceAbi = [
     ],
     type: BitcoinAbiTypes.Function,
   },
+  {
+    name: 'getFeeRate',
+    constant: true,
+    inputs: [],
+    outputs: [{ name: 'feeRateBps', type: ABIDataTypes.UINT256 }],
+    type: BitcoinAbiTypes.Function,
+  },
+  {
+    name: 'setFeeRate',
+    inputs: [{ name: 'newFeeRateBps', type: ABIDataTypes.UINT256 }],
+    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+    type: BitcoinAbiTypes.Function,
+  },
 ];
 
 /** Minimal SimplePool ABI used by Portfolio: only liquidityOf */
@@ -161,6 +174,26 @@ export const STAKING_ABI: BitcoinInterfaceAbi = [
     constant: true,
     inputs: [],
     outputs: [{ name: 'rate', type: ABIDataTypes.UINT256 }],
+    type: BitcoinAbiTypes.Function,
+  },
+  {
+    name: 'getRewardEndBlock',
+    constant: true,
+    inputs: [],
+    outputs: [{ name: 'endBlock', type: ABIDataTypes.UINT256 }],
+    type: BitcoinAbiTypes.Function,
+  },
+  {
+    name: 'getRewardCapacity',
+    constant: true,
+    inputs: [],
+    outputs: [{ name: 'remainingBlocks', type: ABIDataTypes.UINT256 }],
+    type: BitcoinAbiTypes.Function,
+  },
+  {
+    name: 'fundRewards',
+    inputs: [{ name: 'amount', type: ABIDataTypes.UINT256 }],
+    outputs: [{ name: 'newEndBlock', type: ABIDataTypes.UINT256 }],
     type: BitcoinAbiTypes.Function,
   },
 ];

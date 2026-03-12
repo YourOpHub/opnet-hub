@@ -107,12 +107,12 @@ export const DEPLOYER_TWEAKED_HEX = env('VITE_DEPLOYER_TWEAKED') || '0fb4ee12787
 export const MINE_DEPLOY_TXID = '0c49c38d168dd72b3a8cf622e41af707e6a22256ae3cf2e36d33a24307948fdb';
 export const VIBE_DEPLOY_TXID = '81debce471fa810f416caaa88210a251558acc032a4ac0c0584ea1427ae60a1a';
 
-/** SimplePool v4 AMM — LP shares + events (PoolLiquidityAdded/Removed/Swap) */
-export const POOL_ADDRESS = env('VITE_POOL_ADDRESS') || 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
-export const POOL_PUBKEY = env('VITE_POOL_PUBKEY') || '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
+/** SimplePool v5 AMM — LP shares + configurable fee (1-500 bps) + events */
+export const POOL_ADDRESS = env('VITE_POOL_ADDRESS') || 'opt1sqrfwvy6ekprrx9h5nwem9d07nufuzqhxg5zg6ar2';
+export const POOL_PUBKEY = env('VITE_POOL_PUBKEY') || '0xa01ec094a09a0fbc71118a8a3b6ef2be277e95846685c3773ceb1ece467e2d57';
 export const POOL_HEX = POOL_PUBKEY.replace('0x', '');
 
-/** SimplePool v2 selectors (from opnet-transform build output) */
+/** SimplePool v5 selectors (from opnet-transform build output) */
 export const POOL_SELECTORS = {
     sync: 0x4ffcd515,
     addLiquidity: 0xe4e35d85,    // addLiquidity(uint256,uint256)
@@ -121,6 +121,8 @@ export const POOL_SELECTORS = {
     swap: 0xc345780b,            // swap(address,uint256,uint256)
     getReserves: 0x06374bfc,
     getTokens: 0xf68958f1,
+    getFeeRate: 0x9960835f,      // getFeeRate() → feeRateBps
+    setFeeRate: 0x385d614d,      // setFeeRate(uint256) — deployer only
 } as const;
 
 /** OP-20 selectors (OPNet sha256-based, NOT EVM keccak256) */
@@ -132,9 +134,9 @@ export const OP20_SELECTORS = {
     allowance: 0xd864b7ca,
 } as const;
 
-/** SimpleStaking v3 — events (Staked/Unstaked/RewardClaimed/RewardRateChanged) */
-export const STAKING_ADDRESS = env('VITE_STAKING_ADDRESS') || 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
-export const STAKING_PUBKEY = env('VITE_STAKING_PUBKEY') || '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
+/** SimpleStaking v4 — fundRewards + events (Staked/Unstaked/RewardClaimed/RewardRateChanged/RewardsFunded) */
+export const STAKING_ADDRESS = env('VITE_STAKING_ADDRESS') || 'opt1sqqd90vsx5gryp6gmvenk023s0hahy6e70qjt8ss9';
+export const STAKING_PUBKEY = env('VITE_STAKING_PUBKEY') || '0xb6ea2d2c8773bfe6fe844842ccda369f6aa53399275d63aa4b6fd22e95df0b8d';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
 /** Staking selectors (from opnet-transform build output) */
@@ -149,6 +151,8 @@ export const STAKING_SELECTORS = {
     setRewardRate: 0x0888d584,
     getRewardEndBlock: 0xf749e4a3,  // v2: view reward end block
     setRewardEndBlock: 0xe97e03b2,  // v2: deployer sets end block
+    fundRewards: 0x3aabb23b,       // v3: fundRewards(uint256) — anyone can fund
+    getRewardCapacity: 0x3d8438bb, // v3: remaining blocks of rewards
 } as const;
 
 /** P2PMarket v9 — output bitmap fix (prevents BTC double-counting in batch fills) */

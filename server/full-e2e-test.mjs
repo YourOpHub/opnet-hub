@@ -27,7 +27,7 @@ const RPC_JSONRPC = RPC_URL + '/api/v1/json-rpc';
 const C = {
     MINE:       { addr: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa', pk: 'db2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d' },
     VIBE:       { addr: 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl', pk: '1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818' },
-    POOL:       { addr: 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex', pk: 'cc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc' },
+    POOL:       { addr: 'opt1sqrfwvy6ekprrx9h5nwem9d07nufuzqhxg5zg6ar2', pk: 'a01ec094a09a0fbc71118a8a3b6ef2be277e95846685c3773ceb1ece467e2d57' },
     STAKING:    { addr: 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c', pk: '6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae' },
     MARKET:     { addr: 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt', pk: 'd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595' },
     CROSSCHAIN: { addr: 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu', pk: '526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2' },

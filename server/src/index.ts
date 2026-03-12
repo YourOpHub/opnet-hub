@@ -1097,7 +1097,7 @@ app.post(
 // ---------------------------------------------------------------------------
 
 const POOL_SNAPSHOT_ADDRESS: string =
-  process.env.POOL_ADDRESS ?? "opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex";
+  process.env.POOL_ADDRESS ?? "opt1sqrfwvy6ekprrx9h5nwem9d07nufuzqhxg5zg6ar2";
 const POOL_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000;
 const GET_RESERVES_SELECTOR = "06374bfc";
 

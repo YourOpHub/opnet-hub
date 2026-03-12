@@ -125,8 +125,8 @@ const MultiSenderSetup: React.FC<MultiSenderSetupProps> = ({
   const addSampleData = useCallback(() => {
     setRawInput(
       'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my,100\n' +
-      'opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa,250\n' +
-      'opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802,500',
+      'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa,250\n' +
+      'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl,500',
     );
   }, [setRawInput]);
 

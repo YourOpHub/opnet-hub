@@ -13,7 +13,7 @@ vi.mock('../logger', () => ({
 
 describe('parseRecipients', () => {
   it('parses valid comma-separated lines', () => {
-    const result = parseRecipients('opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my,100\nopt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa,250');
+    const result = parseRecipients('opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my,100\nopt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa,250');
     expect(result.length).toBe(2);
     expect(result[0]!.valid).toBe(true);
     expect(result[0]!.amount).toBe('100');

@@ -19,8 +19,8 @@ describe('MultiSenderProgress', () => {
   const defaultProps = {
     results: [
       mkResult({ status: 'success' }),
-      mkResult({ status: 'error', error: 'Insufficient funds', address: 'opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa' }),
-      mkResult({ status: 'pending', address: 'opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802' }),
+      mkResult({ status: 'error', error: 'Insufficient funds', address: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa' }),
+      mkResult({ status: 'pending', address: 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl' }),
     ],
     sending: false,
     sendComplete: false,

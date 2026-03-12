@@ -24,7 +24,7 @@ describe('MultiSenderReview', () => {
     tokenSymbol: 'MINE',
     validRecipients: [
       mkRecipient('opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my', '100'),
-      mkRecipient('opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa', '250'),
+      mkRecipient('opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa', '250'),
     ],
     totalAmount: 350,
     estimatedGasSats: 10000,

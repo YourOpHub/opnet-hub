@@ -63,6 +63,10 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const wallet = walletAddress ?? '';
 
+  // FIX: ref always holds current ops — prevents stale closure bugs in long-running async callbacks
+  const opsRef = useRef(ops);
+  opsRef.current = ops;
+
   // Load all ops on mount / wallet change
   const loadOps = useCallback(async () => {
     if (!wallet) { setOps([]); return; }
@@ -72,10 +76,18 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
     setOps(prev => {
       const serverOps = [...active, ...hist].map(swapOpToEntry);
-      // Merge: keep local optimistic entries that server doesn't have yet
-      const serverIds = new Set(serverOps.map(o => o.id));
-      const localOnly = prev.filter(p => !serverIds.has(p.id));
-      return [...localOnly, ...serverOps];
+      const serverMap = new Map(serverOps.map(o => [o.id, o]));
+      // Keep local-only entries (not on server yet)
+      const localOnly = prev.filter(p => !serverMap.has(p.id));
+      // Merge: prefer local if it's "ahead" (terminal status while server still active)
+      const merged = serverOps.map(so => {
+        const local = prev.find(p => p.id === so.id);
+        if (local && local.status !== 'active' && so.status === 'active') {
+          return local; // local completed/failed but server hasn't caught up yet
+        }
+        return so;
+      });
+      return [...localOnly, ...merged];
     });
   }, [wallet]);
 
@@ -119,30 +131,41 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateOpStep = useCallback((id: string, step: string, txIds?: Record<string, string>) => {
     setOps(prev => prev.map(o => o.id === id ? { ...o, step, txIds: txIds || o.txIds, updatedAt: Date.now() } : o));
     if (wallet) {
-      const op = ops.find(o => o.id === id);
+      const op = opsRef.current.find(o => o.id === id);
       if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', ...(txIds !== undefined ? { tx_ids: txIds } : {}) });
     }
-  }, [wallet, ops]);
+  }, [wallet]);
 
   const completeOp = useCallback((id: string) => {
     setOps(prev => prev.map(o => o.id === id ? { ...o, status: 'completed', step: 'Done', updatedAt: Date.now() } : o));
     if (wallet) {
-      const op = ops.find(o => o.id === id);
+      const op = opsRef.current.find(o => o.id === id);
       if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Done', status: 'completed' });
     }
-  }, [wallet, ops]);
+  }, [wallet]);
 
   const failOp = useCallback((id: string, error: string) => {
     setOps(prev => prev.map(o => o.id === id ? { ...o, status: 'failed', step: 'Failed', error, updatedAt: Date.now() } : o));
     if (wallet) {
-      const op = ops.find(o => o.id === id);
+      const op = opsRef.current.find(o => o.id === id);
       if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Failed', status: 'failed', error });
     }
-  }, [wallet, ops]);
+  }, [wallet]);
 
   const dismissOp = useCallback((id: string) => {
     setOps(prev => prev.filter(o => o.id !== id));
   }, []);
+
+  // Auto-timeout stale ops: active > 30 min → mark as failed
+  useEffect(() => {
+    const STALE_MS = 30 * 60 * 1000;
+    const now = Date.now();
+    const stale = ops.filter(o => o.status === 'active' && now - o.updatedAt > STALE_MS);
+    if (stale.length === 0) return;
+    for (const op of stale) {
+      failOp(op.id, 'Operation timed out (no block confirmation after 30 min)');
+    }
+  }, [ops, failOp]);
 
   const activeOps = ops.filter(o => o.status === 'active');
   const historyOps = ops.filter(o => o.status !== 'active')

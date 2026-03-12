@@ -60,7 +60,7 @@ describe('launchpad/store', () => {
 
     it('returns stored tokens when version matches', () => {
       const custom = [makeToken({ symbol: 'CUSTOM', address: 'opt1custom' })];
-      localStorage.setItem('hub_launchpad_tokens', JSON.stringify({ version: 4, tokens: custom }));
+      localStorage.setItem('hub_launchpad_tokens', JSON.stringify({ version: 5, tokens: custom }));
       const tokens = loadTokens();
       expect(tokens).toHaveLength(1);
       expect(tokens[0]!.symbol).toBe('CUSTOM');
@@ -87,18 +87,18 @@ describe('launchpad/store', () => {
       const stored = localStorage.getItem('hub_launchpad_tokens');
       expect(stored).not.toBeNull();
       const parsed = JSON.parse(stored!);
-      expect(parsed.version).toBe(4);
+      expect(parsed.version).toBe(5);
       expect(parsed.tokens.length).toBeGreaterThanOrEqual(2);
     });
   });
 
   // ---- saveTokens ----
   describe('saveTokens', () => {
-    it('saves tokens with version 4', () => {
+    it('saves tokens with version 5', () => {
       const tokens = [makeToken()];
       saveTokens(tokens);
       const stored = JSON.parse(localStorage.getItem('hub_launchpad_tokens')!);
-      expect(stored.version).toBe(4);
+      expect(stored.version).toBe(5);
       expect(stored.tokens).toHaveLength(1);
     });
 

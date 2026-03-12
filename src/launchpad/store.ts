@@ -6,30 +6,30 @@ import type { LaunchToken, TradeRecord } from './types';
 import { logger } from '../logger';
 
 const STORE_KEY = 'hub_launchpad_tokens';
-const STORE_VERSION = 4;
+const STORE_VERSION = 5;
 
 /* ─── Seed tokens — REAL on-chain MintableToken contracts only ─── */
 function seedTokens(): LaunchToken[] {
   const now = Date.now();
   return [
     {
-      address: 'opt1sqry48kzm2glqu7heyyygw5lwnlvadpqxdujpntpa',
+      address: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa',
       name: 'Mine Token', symbol: 'MINE', decimals: 8,
       totalSupply: 21_000_000, publicMintSupply: 10_500_000, maxMintPerTx: 1_000_000,
       mintedSupply: 0, creator: 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my',
       createdAt: now - 86400_000 * 2, description: 'The OG mining token. Earn by playing SatoshiMiner, trade on AMM.',
       image: null, website: 'opnet.org', twitter: 'opaboratory',
-      status: 'bonding', txHash: '25843e9643ef623ea0d07fd196da277536b37156f90e1d0a718ebaa58d577cf0',
+      status: 'bonding', txHash: '',
       trades: [], replies: [], likes: 0,
     },
     {
-      address: 'opt1sqrctjfhdku23shnqje26f4n5gne45zylwvm9f802',
+      address: 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl',
       name: 'Vibe Token', symbol: 'VIBE', decimals: 8,
       totalSupply: 100_000_000, publicMintSupply: 50_000_000, maxMintPerTx: 5_000_000,
       mintedSupply: 0, creator: 'opt1pp76wuync084guctnwl7z2rek978l4dzr9ppkuplq6q7ae2g7palsvtj5my',
       createdAt: now - 86400_000 * 2, description: 'Community token for the OPNet ecosystem. Good vibes only.',
       image: null, website: 'opnet.org', twitter: 'opaboratory',
-      status: 'bonding', txHash: 'bfbe3f54be4f56069976e3511ab4a4834462c28469412e1d20cb84746622b46b',
+      status: 'bonding', txHash: '',
       trades: [], replies: [], likes: 0,
     },
   ];

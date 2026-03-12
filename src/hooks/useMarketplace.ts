@@ -395,7 +395,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       if (orderType === 'sell') {
         updateOpStep(createOpId, 'Approving tokens...');
         setCreateStep('Approving tokens for marketplace...');
-        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, setCreateStep, selInfo?.symbol || 'token');
+        await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, (s: string) => { setCreateStep(s); updateOpStep(createOpId, s); }, selInfo?.symbol || 'token');
 
         updateOpStep(createOpId, 'Signing sell order TX...');
         setCreateStep('Creating sell order on-chain...');
@@ -508,7 +508,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         updateOpStep(opId, 'Approving tokens...');
         setFillStep('Approving tokens for marketplace...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, setFillStep);
+        await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, (s: string) => { setFillStep(s); updateOpStep(opId, s); });
 
         updateOpStep(opId, 'Signing accept TX...');
         setFillStep('Accepting buy order (locking tokens)...');

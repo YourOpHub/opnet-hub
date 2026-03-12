@@ -35,7 +35,7 @@ const STAKING_TOKEN = DEPLOYED_CONTRACTS.MINE;
 const Staking: React.FC = () => {
   const { walletAddress, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, updateOpStep, completeOp } = useOps();
+  const { trackOp, updateOpStep, completeOp, failOp } = useOps();
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');
@@ -132,23 +132,24 @@ const Staking: React.FC = () => {
 
     setStaking(true);
     setResult(null);
+    const sOpId = `stake_${Date.now()}`;
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(amt, STAKING_TOKEN.decimals);
 
-      // 1. Ensure allowance (check → approve → wait for block)
+      // 1. Track in bell + ensure allowance
+      trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Approving MINE...`, amounts: { amount: amt.toString(), token: 'MINE' } });
       await ensureAllowance(
         STAKING_TOKEN.address, STAKING_PUBKEY, rawAmount,
-        provider, senderAddr, walletAddress, setStep, 'MINE',
+        provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(sOpId, s); }, 'MINE',
       );
 
       // 2. Stake
+      updateOpStep(sOpId, `Staking ${amt.toLocaleString()} MINE...`);
       setStep('Staking MINE tokens...');
       const stakingContract = getContract<StakingContract>(STAKING_ADDRESS, STAKING_ABI, provider, NETWORK, senderAddr);
       const stakeSim = await withRetry(() => stakingContract.stake(rawAmount));
       if ((stakeSim as CallResult).revert) throw new Error(`Stake failed: ${(stakeSim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress);
-      const sOpId = `stake_${Date.now()}`;
-      trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Staking ${amt.toLocaleString()} MINE...` });
       const receipt = await (stakeSim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
       updateOpStep(sOpId, 'Waiting for block confirmation...', { tx: txHash });
@@ -162,12 +163,13 @@ const Staking: React.FC = () => {
       emitBalanceRefresh();
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
+      failOp(sOpId, formatTxError(e));
       setStep('');
       setResult({ type: 'error', msg: formatTxError(e) });
     } finally {
       setStaking(false);
     }
-  }, [walletAddress, stakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, stakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp, failOp]);
 
   const doUnstake = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }

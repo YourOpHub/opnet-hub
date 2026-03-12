@@ -441,6 +441,7 @@ export function useSwap(): UseSwapReturn {
 
     setSwapping(true);
     setSwapResult(null);
+    const swapOpId = isSimplePool ? `swap_${Date.now()}` : `motoswap_${Date.now()}`;
 
     try {
       const rawAmount = BitcoinUtils.expandToDecimals(fromVal, from.decimals);
@@ -448,10 +449,12 @@ export function useSwap(): UseSwapReturn {
 
       if (isSimplePool && poolReady) {
         // ── SimplePool swap (MINE ↔ VIBE) ──
+        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'simplepool', role: '', step: `Approving ${from.symbol}...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
         await ensureAllowance(
           from.address, POOL_PUBKEY, rawAmount,
-          provider, activeSender, activeWallet, setSwapStep, from.symbol,
+          provider, activeSender, activeWallet, (s: string) => { setSwapStep(s); updateOpStep(swapOpId, s); }, from.symbol,
         );
+        updateOpStep(swapOpId, `Swapping ${fromVal} ${from.symbol}\u2192${to.symbol}...`);
         setSwapStep('Executing swap on SimplePool...');
         const poolContract = getContract<IPoolContract>(
           POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr,
@@ -460,8 +463,6 @@ export function useSwap(): UseSwapReturn {
         const swapSim = await withRetry(() => poolContract.swap(tokenInAddr, rawAmount, minOut));
         if ((swapSim as CallResult).revert) throw new Error(`Swap simulation reverted: ${(swapSim as CallResult).revert}`);
         const txParams2 = await buildTxParams(provider, activeWallet);
-        const swapOpId = `swap_${Date.now()}`;
-        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: '', role: '', step: `Swapping ${fromVal} ${from.symbol}→${to.symbol}...` });
         const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
         const txHash = swapReceipt.transactionId || '';
         updateOpStep(swapOpId, 'Waiting for block confirmation...', { tx: txHash });
@@ -473,10 +474,12 @@ export function useSwap(): UseSwapReturn {
         addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: activeWallet });
       } else if (motoPool) {
         // ── Motoswap Router swap ──
+        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'motoswap', role: '', step: `Approving ${from.symbol}...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
         await ensureAllowance(
           from.pubkey, MOTOSWAP_ROUTER_PUBKEY, rawAmount,
-          provider, activeSender, activeWallet, setSwapStep, from.symbol,
+          provider, activeSender, activeWallet, (s: string) => { setSwapStep(s); updateOpStep(swapOpId, s); }, from.symbol,
         );
+        updateOpStep(swapOpId, 'Swapping via Motoswap...');
         setSwapStep('Executing swap via Motoswap Router...');
         const router = getContract<IMotoswapRouterContract>(
           MOTOSWAP_ROUTER_ADDRESS, MOTOSWAP_ROUTER_ABI, provider, NETWORK, senderAddr,
@@ -492,8 +495,6 @@ export function useSwap(): UseSwapReturn {
         );
         if ((swapSim as CallResult).revert) throw new Error(`Motoswap swap reverted: ${(swapSim as CallResult).revert}`);
         const txParams2 = await buildTxParams(provider, activeWallet);
-        const swapOpId = `motoswap_${Date.now()}`;
-        trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: 'motoswap', role: '', step: `Swapping via Motoswap...` });
         const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
         const txHash = swapReceipt.transactionId || '';
         updateOpStep(swapOpId, 'Waiting for block confirmation...', { tx: txHash });
@@ -512,12 +513,13 @@ export function useSwap(): UseSwapReturn {
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
     } catch (e) {
       logger.error('[Swap]', e);
+      failOp(swapOpId, formatTxError(e));
       setSwapStep('');
       setSwapResult({ type: 'error', error: formatTxError(e) });
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, trackOp, updateOpStep]);
+  }, [fromVal, hasPool, walletAddress, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, failOp, trackOp, updateOpStep]);
 
   /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
   const mintTokens = useCallback(async (sym: string) => {

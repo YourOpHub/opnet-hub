@@ -29,10 +29,37 @@ const TX_TYPE_STYLES: Record<string, { label: string; color: string; icon: strin
   claim: { label: 'Claim', color: '#eab308', icon: '\u{1F3C6}' },
 };
 
+function formatOpAmounts(op: OpEntry): string | null {
+  const a = op.amounts;
+  if (!a) return null;
+  const token = String(a.token || '');
+  const amount = String(a.amount || '');
+  const price = String(a.price || '');
+  if (op.market === 'p2p' && amount && token) {
+    const dir = op.direction === 'sell' ? 'Sell' : op.direction === 'buy' ? 'Buy' : op.direction === 'cancel' ? 'Cancel' : '';
+    const priceStr = price && price !== '0' ? ` @ ${Number(price).toLocaleString()} sat` : '';
+    return `${dir} ${Number(amount).toLocaleString()} ${token}${priceStr}`;
+  }
+  if (op.market === 'fractalswap' && a.btc) {
+    return `${Number(a.btc).toLocaleString()} sats`;
+  }
+  if (op.market === 'swap' && a.tokenA && a.tokenB) {
+    return `${Number(a.amountA || 0).toLocaleString()} ${a.tokenA} \u2192 ${Number(a.amountB || 0).toLocaleString()} ${a.tokenB}`;
+  }
+  if (op.market === 'liquidity' && a.mine) {
+    return `${Number(a.mine).toLocaleString()} MINE + ${Number(a.vibe || 0).toLocaleString()} VIBE`;
+  }
+  if (op.market === 'stake' && amount && token) {
+    return `${Number(amount).toLocaleString()} ${token}`;
+  }
+  return null;
+}
+
 const OpCard: React.FC<{ op: OpEntry; onDismiss?: () => void }> = ({ op, onDismiss }) => {
   const m = MARKET_LABELS[op.market] || { label: op.market, color: 'var(--t2)' };
   const s = STATUS_STYLES[op.status] ?? STATUS_STYLES['active'] ?? { bg: 'rgba(59,130,246,.12)', color: '#3b82f6' };
   const isActive = op.status === 'active';
+  const detail = formatOpAmounts(op);
 
   return (
     <div className="op-card">
@@ -60,7 +87,12 @@ const OpCard: React.FC<{ op: OpEntry; onDismiss?: () => void }> = ({ op, onDismi
           )}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: '.66rem' }}>
+      {detail && (
+        <div style={{ fontSize: '.66rem', color: 'var(--w)', marginTop: 4, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }}>
+          {detail}
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: detail ? 2 : 4, fontSize: '.66rem' }}>
         {isActive && <span style={{ animation: 'spin 2s linear infinite', fontSize: '.72rem' }}>{'\u23F3'}</span>}
         <span style={{ color: isActive ? '#3b82f6' : 'var(--t3)', fontWeight: isActive ? 600 : 400 }}>
           {op.step || 'Processing...'}

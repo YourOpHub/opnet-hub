@@ -38,7 +38,7 @@ interface Props {
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, updateOpStep, completeOp } = useOps();
+  const { trackOp, updateOpStep, completeOp, failOp } = useOps();
   const trapRef = useFocusTrap(open, onClose);
 
   const [tab, setTab] = useState<'add' | 'remove'>('add');
@@ -121,6 +121,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
     setBusy(true);
     setResult(null);
+    const aOpId = `lp_add_${Date.now()}`;
+    trackOp({ id: aOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: 'Approving MINE...', amounts: { mine: mAmt.toString(), vibe: vAmt.toString() } });
     try {
       const mineRaw = BitcoinUtils.expandToDecimals(mAmt, 8);
       const vibeRaw = BitcoinUtils.expandToDecimals(vAmt, 8);
@@ -128,25 +130,25 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       // Step 1: Ensure MINE allowance (check → approve → wait for block)
       const mineApproved = await ensureAllowance(
         DEPLOYED_CONTRACTS.MINE.address, POOL_PUBKEY, mineRaw,
-        provider, senderAddr, walletAddress, setStep, 'MINE',
+        provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(aOpId, s); }, 'MINE',
       );
 
       // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
-      if (mineApproved) await waitForNextBlock(provider, setStep);
+      if (mineApproved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
+      updateOpStep(aOpId, 'Approving VIBE...');
       const vibeApproved = await ensureAllowance(
         DEPLOYED_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
-        provider, senderAddr, walletAddress, setStep, 'VIBE',
+        provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(aOpId, s); }, 'VIBE',
       );
-      if (vibeApproved) await waitForNextBlock(provider, setStep);
+      if (vibeApproved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
 
       // Step 3: addLiquidity on pool
+      updateOpStep(aOpId, `Adding ${mAmt} MINE + ${vAmt} VIBE...`);
       setStep('Adding liquidity to pool...');
       const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
       const addSim = await withRetry(() => poolContract.addLiquidity(mineRaw, vibeRaw));
       if ((addSim as CallResult).revert) throw new Error(`addLiquidity failed: ${(addSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      const aOpId = `lp_add_${Date.now()}`;
-      trackOp({ id: aOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: `Adding ${mAmt} MINE + ${vAmt} VIBE...` });
       const addReceipt = await (addSim as CallResult).sendTransaction(tp);
       updateOpStep(aOpId, 'Waiting for block confirmation...', { tx: addReceipt.transactionId || '' });
       setStep('Waiting for block confirmation...');
@@ -161,10 +163,11 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       emitBalanceRefresh();
       setTimeout(onRefresh, 3000);
     } catch (e) {
+      failOp(aOpId, formatTxError(e));
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, mineAmt, vibeAmt, mineBal, vibeBal, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, mineAmt, vibeAmt, mineBal, vibeBal, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp, failOp]);
 
   const removeLiquidity = useCallback(async () => {
     logger.info('[LiquidityModal] removeLiquidity called', { walletAddress: !!walletAddress, senderAddr: !!senderAddr, mineAmt, lpMine, lpVibe });
@@ -176,6 +179,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
     setBusy(true);
     setResult(null);
+    const rOpId = `lp_rm_${Date.now()}`;
+    trackOp({ id: rOpId, market: 'liquidity', orderId: 'Remove LP', direction: '', role: '', step: 'Checking LP position...', amounts: { mine: m.toString(), vibe: v.toString() } });
     try {
       const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
 
@@ -198,13 +203,12 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       // The contract does double integer division (amountA→shares→maxA) creating rounding gaps
       const safeMineRaw = freshMineRaw > 1000n ? freshMineRaw - (freshMineRaw / 200n) : freshMineRaw;
 
+      updateOpStep(rOpId, `Removing ${m} MINE + ${v} VIBE...`);
       setStep('Removing liquidity from pool...');
       // Pass 0n for minAmountB — contract calculates proportional VIBE from shares
       const removeSim = await withRetry(() => poolContract.removeLiquidity(safeMineRaw, 0n));
       if ((removeSim as CallResult).revert) throw new Error(`removeLiquidity failed: ${(removeSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      const rOpId = `lp_rm_${Date.now()}`;
-      trackOp({ id: rOpId, market: 'liquidity', orderId: 'Remove LP', direction: '', role: '', step: `Removing ${m} MINE + ${v} VIBE...` });
       const receipt = await (removeSim as CallResult).sendTransaction(tp);
       updateOpStep(rOpId, 'Waiting for block confirmation...', { tx: receipt.transactionId || '' });
       setStep('Waiting for block confirmation...');
@@ -221,10 +225,11 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       emitBalanceRefresh();
       setTimeout(onRefresh, 3000);
     } catch (e) {
+      failOp(rOpId, formatTxError(e));
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp, failOp]);
 
   if (!open) return null;
 

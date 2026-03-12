@@ -646,11 +646,10 @@ a:hover {
 /* ═══ HERO ═══ */
 .hero-l {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 24px;
-  text-align: center;
-  padding: 64px 48px 56px;
+  gap: 40px;
+  text-align: left;
+  padding: 72px 56px;
   background: rgba(8, 8, 16, .55);
   backdrop-filter: blur(8px) saturate(1.4);
   -webkit-backdrop-filter: blur(8px) saturate(1.4);
@@ -661,13 +660,13 @@ a:hover {
   overflow: hidden;
   box-shadow: 0 4px 40px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.05)
 }
+.hero-l > *:first-child { flex: 1; min-width: 0 }
 
 .hero-img-wrap {
-  max-width: 340px;
-  width: 100%;
+  flex: 0 0 320px;
+  max-width: 320px;
   position: relative;
-  z-index: 1;
-  order: -1
+  z-index: 1
 }
 .hero-img {
   width: 100%;
@@ -775,10 +774,14 @@ a:hover {
   text-shadow: 0 2px 4px rgba(0,0,0,.5), 0 4px 16px rgba(0,0,0,.2)
 }
 
+@media(max-width:960px) {
+  .hero-l { flex-direction: column; text-align: center; padding: 56px 32px 44px; gap: 20px }
+  .hero-img-wrap { flex: 0 0 auto; max-width: 240px; order: -1 }
+}
 @media(max-width:768px) {
   .hero-h1 { font-size: 2.6rem }
   .hero-l { padding: 48px 24px 36px }
-  .hero-img-wrap { max-width: 240px }
+  .hero-img-wrap { max-width: 200px }
 }
 
 .hero-ac {
@@ -1011,7 +1014,9 @@ a:hover {
   cursor: pointer;
   transition: all .4s var(--ease-out);
   display: flex;
-  flex-direction: column
+  flex-direction: column;
+  align-items: center;
+  text-align: center
 }
 
 .fc:hover {

@@ -17,7 +17,7 @@ import { getContract, TransactionOutputFlags, type CallResult, type BaseContract
 import { FRACTALSWAP_ABI } from '../abis';
 import { NETWORK } from '../config';
 import { lockOrder, unlockOrder } from '../swapApi';
-import { CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX, getContractOpscanUrl } from '../contracts';
+import { CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { SwapDirection, OrderStatus } from '../crosschain/types';
 import { sendFractalBTC } from '../wallets/unisat';
@@ -132,7 +132,9 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = contractBtcAmount + 50_000n;
       }
 
-      await (sim as CallResult).sendTransaction(tp);
+      const createRcpt = await (sim as CallResult).sendTransaction(tp);
+      const createTxId = (createRcpt as { transactionId?: string })?.transactionId || '';
+      const createTxLink = createTxId ? { url: getTxUrl(createTxId), label: 'View TX' } : undefined;
 
       if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats, formAmountSats, sendUnit, receiveUnit);
 
@@ -145,14 +147,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       });
 
       setCreateStep('Waiting for confirmation...');
-      toast(`Order #${actualNextId} created!${formDirection === SwapDirection.BTC_TO_FB ? ' BTC locked in contract.' : ''} Waiting for block...`, 'success');
+      toast(`Order #${actualNextId} created!${formDirection === SwapDirection.BTC_TO_FB ? ' BTC locked in contract.' : ''} Waiting for block...`, 'success', createTxLink);
       state.setFormAmount('');
       state.setFormReceive('');
       state.setFormMakerAddr('');
 
       await waitForNextBlock(provider, setCreateStep);
       setCreateStep('');
-      toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
+      toast(`Order #${actualNextId} confirmed on-chain!`, 'success', createTxLink);
       completeOp(createOpId);
       void fetchOrders();
     } catch (e) {
@@ -208,15 +210,17 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       if (isFbToBtc) extraOuts.push({ script: contractP2OPScript, value: Number(order.btcAmount) });
       (tp as unknown as Record<string, unknown>).extraOutputs = extraOuts;
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
-      await (sim as CallResult).sendTransaction(tp);
+      const takeRcpt = await (sim as CallResult).sendTransaction(tp);
+      const takeTxId = (takeRcpt as { transactionId?: string })?.transactionId || '';
+      const takeTxLink = takeTxId ? { url: getTxUrl(takeTxId), label: 'View TX' } : undefined;
 
       trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'TX sent, confirming...', amounts: { btc: Number(order.btcAmount).toString() } });
-      toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Waiting for block...`, 'success');
+      toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Waiting for block...`, 'success', takeTxLink);
 
       await waitForNextBlock(provider, setActionStep);
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
-      toast(`Order #${orderId} confirmed on-chain!`, 'success');
+      toast(`Order #${orderId} confirmed on-chain!`, 'success', takeTxLink);
       setActionStep('');
       void fetchOrders();
       return;
@@ -250,15 +254,17 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
-      await (sim as CallResult).sendTransaction(tp);
+      const completeRcpt = await (sim as CallResult).sendTransaction(tp);
+      const completeTxId = (completeRcpt as { transactionId?: string })?.transactionId || '';
+      const completeTxLink = completeTxId ? { url: getTxUrl(completeTxId), label: 'View TX' } : undefined;
 
       const opId = `fractalswap:complete:${orderId}:${walletAddress}`;
       trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'BTC claimed, settling...' });
-      toast(`Order #${orderId} completed! Waiting for block...`, 'success');
+      toast(`Order #${orderId} completed! Waiting for block...`, 'success', completeTxLink);
 
       await waitForNextBlock(provider, setActionStep);
       completeOp(opId);
-      toast(`Order #${orderId} settled on-chain!`, 'success');
+      toast(`Order #${orderId} settled on-chain!`, 'success', completeTxLink);
       setActionStep('');
       void fetchOrders();
       return;
@@ -296,12 +302,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
       }
 
-      await (sim as CallResult).sendTransaction(tp);
+      const cancelRcpt = await (sim as CallResult).sendTransaction(tp);
+      const cancelTxId = (cancelRcpt as { transactionId?: string })?.transactionId || '';
+      const cancelTxLink = cancelTxId ? { url: getTxUrl(cancelTxId), label: 'View TX' } : undefined;
 
-      toast(`Order cancelled!${order.direction === SwapDirection.BTC_TO_FB ? ' BTC refunded.' : ''} Waiting for block...`, 'success');
+      toast(`Order cancelled!${order.direction === SwapDirection.BTC_TO_FB ? ' BTC refunded.' : ''} Waiting for block...`, 'success', cancelTxLink);
 
       await waitForNextBlock(provider, setActionStep);
-      toast('Cancellation confirmed!', 'success');
+      toast('Cancellation confirmed!', 'success', cancelTxLink);
       setActionStep('');
       void fetchOrders();
       return;
@@ -360,12 +368,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       if (isFbToBtc) extraOuts.push({ script: contractP2OPScript, value: Number(order.btcAmount) });
       (tp as unknown as Record<string, unknown>).extraOutputs = extraOuts;
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
-      await (sim as CallResult).sendTransaction(tp);
+      const tasRcpt = await (sim as CallResult).sendTransaction(tp);
+      const tasTxId = (tasRcpt as { transactionId?: string })?.transactionId || '';
+      const tasTxLink = tasTxId ? { url: getTxUrl(tasTxId), label: 'View TX' } : undefined;
 
       const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] Take #${orderId}: direction=${isBtcToFb ? 'BTC→FB' : 'FB→BTC'}, btcAmount=${order.btcAmount}, wantAmount=${order.wantAmount}, fee=${feeSats}`);
-      toast(`Order #${orderId} taken! Fee: ${Number(feeSats)} sats. Waiting for block...`, 'success');
+      toast(`Order #${orderId} taken! Fee: ${Number(feeSats)} sats. Waiting for block...`, 'success', tasTxLink);
       updateOpStep(opId, 'Step 1/3: Waiting for block confirmation...');
 
       // ── Wait for block confirmation (up to 15 min for testnet) ──
@@ -400,17 +410,19 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       const tp2 = await buildTxParams(provider, walletAddress);
       (tp2 as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
-      await (sim2 as CallResult).sendTransaction(tp2);
+      const tasCompleteRcpt = await (sim2 as CallResult).sendTransaction(tp2);
+      const tasCompleteTxId = (tasCompleteRcpt as { transactionId?: string })?.transactionId || '';
+      const tasCompleteTxLink = tasCompleteTxId ? { url: getTxUrl(tasCompleteTxId), label: 'View TX' } : undefined;
 
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] Complete #${orderId}: claimed ${Number(order.btcAmount)} sats BTC`);
       updateOpStep(opId, `Swap complete! Paid ${satsToBtc(fbAmountSats)} FB, received ${satsToBtc(order.btcAmount)} BTC`);
-      toast(`Order #${orderId} done! Waiting for block...`, 'success');
+      toast(`Order #${orderId} done! Waiting for block...`, 'success', tasCompleteTxLink);
 
       await waitForNextBlock(provider, (s) => updateOpStep(opId, s));
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
-      toast(`Order #${orderId} fully settled!`, 'success');
+      toast(`Order #${orderId} fully settled!`, 'success', tasCompleteTxLink);
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -461,14 +473,16 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
-      await (sim as CallResult).sendTransaction(tp);
+      const sacRcpt = await (sim as CallResult).sendTransaction(tp);
+      const sacTxId = (sacRcpt as { transactionId?: string })?.transactionId || '';
+      const sacTxLink = sacTxId ? { url: getTxUrl(sacTxId), label: 'View TX' } : undefined;
 
       updateOpStep(opId, 'Auto-claim complete! Settling...');
-      toast(`Order #${orderId} completed! Waiting for block...`, 'success');
+      toast(`Order #${orderId} completed! Waiting for block...`, 'success', sacTxLink);
 
       await waitForNextBlock(provider, (s) => updateOpStep(opId, s));
       completeOp(opId);
-      toast(`Order #${orderId} fully settled!`, 'success');
+      toast(`Order #${orderId} fully settled!`, 'success', sacTxLink);
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -497,12 +511,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
-      await (sim as CallResult).sendTransaction(tp);
+      const refundRcpt = await (sim as CallResult).sendTransaction(tp);
+      const refundTxId = (refundRcpt as { transactionId?: string })?.transactionId || '';
+      const refundTxLink = refundTxId ? { url: getTxUrl(refundTxId), label: 'View TX' } : undefined;
 
-      toast('Refund sent! BTC returned. Waiting for block...', 'success');
+      toast('Refund sent! BTC returned. Waiting for block...', 'success', refundTxLink);
 
       await waitForNextBlock(provider, setActionStep);
-      toast('Refund confirmed!', 'success');
+      toast('Refund confirmed!', 'success', refundTxLink);
       setActionStep('');
       void fetchOrders();
       return;

@@ -493,6 +493,10 @@ const SwapUI: React.FC = () => {
           {mintResult && (
             <div className={`mt-8 p-10 br-10 fs-65 word-break ${mintResult.ok ? 'cc-result-ok' : 'cc-result-err'}`} role="alert">
               {mintResult.msg}
+              {mintResult.txHash && (
+                <a href={getTxUrl(mintResult.txHash)} target="_blank" rel="noopener noreferrer"
+                  className="ml-6 c-c2 no-decoration fw-600">View TX ↗</a>
+              )}
             </div>
           )}
         </div>

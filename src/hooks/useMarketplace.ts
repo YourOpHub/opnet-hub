@@ -355,6 +355,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       const pubkey = selInfo?.pubkey || addressToPubkey(selectedToken);
       const tokenAddr = Address.fromString(pubkey);
 
+      let createReceipt: unknown;
       if (orderType === 'sell') {
         setCreateStep('Approving tokens for marketplace...');
         await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, setCreateStep, selInfo?.symbol || 'token');
@@ -363,15 +364,16 @@ export function useMarketplace(): UseMarketplaceReturn {
         const sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
         const tp = await buildTxParams(provider, walletAddress);
-        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+        createReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
         setCreateStep('Creating buy order on-chain...');
         const sim = await withRetry(() => market.createBuyOrder(tokenAddr, amountU256, priceU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
         const tp = await buildTxParams(provider, walletAddress);
-        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+        createReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
+      const createTxId = (createReceipt as { transactionId?: string })?.transactionId || '';
       setOrderAmount(''); setOrderPrice('');
 
       const createOpId = `p2p:create:${Date.now()}:${walletAddress}`;
@@ -394,9 +396,10 @@ export function useMarketplace(): UseMarketplaceReturn {
         }).catch((e) => { logger.warn('[useMarketplace] Create indexer notify error:', e); });
       } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
-      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Waiting for block...`, 'success');
+      const createTxLink = createTxId ? { url: getTxUrl(createTxId), label: 'View TX' } : undefined;
+      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Waiting for block...`, 'success', createTxLink);
       await waitForNextBlock(provider, setCreateStep);
-      toast('Order confirmed on-chain!', 'success');
+      toast('Order confirmed on-chain!', 'success', createTxLink);
       completeOp(createOpId);
       setCreateStep('');
       void fetchOrders(); void fetchTokens();
@@ -430,6 +433,7 @@ export function useMarketplace(): UseMarketplaceReturn {
 
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
 
+      let fillReceipt: unknown;
       if (order.type === 'sell') {
         const rawPayment = BigInt(Math.ceil(fillAmt * order.pricePerToken));
         const btcPaymentSats = rawPayment < 330n ? 330n : rawPayment;
@@ -458,7 +462,7 @@ export function useMarketplace(): UseMarketplaceReturn {
           value: Number(btcPaymentSats),
         }];
         (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
-        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+        fillReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
         setFillStep('Approving tokens for marketplace...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
@@ -469,11 +473,13 @@ export function useMarketplace(): UseMarketplaceReturn {
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
-        await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+        fillReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
+      const fillTxId = (fillReceipt as { transactionId?: string })?.transactionId || '';
+      const fillTxLink = fillTxId ? { url: getTxUrl(fillTxId), label: 'View TX' } : undefined;
       setFillId(null); setFillAmount('');
-      toast('Order filled! Waiting for block...', 'success');
+      toast('Order filled! Waiting for block...', 'success', fillTxLink);
 
       trackOp({
         id: opId, market: 'p2p', orderId,
@@ -488,7 +494,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
       await waitForNextBlock(provider, setFillStep);
-      toast('Fill confirmed on-chain!', 'success');
+      toast('Fill confirmed on-chain!', 'success', fillTxLink);
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
@@ -547,10 +553,12 @@ export function useMarketplace(): UseMarketplaceReturn {
         value: Number(btcPaymentSats),
       }];
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
-      await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+      const execReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+      const execTxId = (execReceipt as { transactionId?: string })?.transactionId || '';
+      const execTxLink = execTxId ? { url: getTxUrl(execTxId), label: 'View TX' } : undefined;
 
       setFillId(null);
-      toast('Buy order executed! Waiting for block...', 'success');
+      toast('Buy order executed! Waiting for block...', 'success', execTxLink);
 
       trackOp({
         id: opId, market: 'p2p', orderId,
@@ -559,7 +567,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       });
 
       await waitForNextBlock(provider, setFillStep);
-      toast('Execution confirmed on-chain!', 'success');
+      toast('Execution confirmed on-chain!', 'success', execTxLink);
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
@@ -612,9 +620,11 @@ export function useMarketplace(): UseMarketplaceReturn {
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+      const cancelReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
+      const cancelTxId = (cancelReceipt as { transactionId?: string })?.transactionId || '';
+      const cancelTxLink = cancelTxId ? { url: getTxUrl(cancelTxId), label: 'View TX' } : undefined;
 
-      toast('Order cancel submitted! Waiting for block...', 'success');
+      toast('Order cancel submitted! Waiting for block...', 'success', cancelTxLink);
       void fetch(`${MARKET_API}/market/cancel`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, creator: walletAddress }),
@@ -622,7 +632,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       }).catch((e) => { logger.warn('[useMarketplace] Cancel indexer notify error:', e); });
 
       await waitForNextBlock(provider);
-      toast('Cancel confirmed!', 'success');
+      toast('Cancel confirmed!', 'success', cancelTxLink);
       void fetchOrders();
     } catch (e) {
       setMsg(formatTxError(e));

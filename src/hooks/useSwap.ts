@@ -147,8 +147,8 @@ export interface UseSwapReturn {
   flip: () => void;
   doSwap: () => Promise<void>;
   minting: string | null;
-  mintResult: { sym: string; ok: boolean; msg: string } | null;
-  setMintResult: React.Dispatch<React.SetStateAction<{ sym: string; ok: boolean; msg: string } | null>>;
+  mintResult: { sym: string; ok: boolean; msg: string; txHash?: string } | null;
+  setMintResult: React.Dispatch<React.SetStateAction<{ sym: string; ok: boolean; msg: string; txHash?: string } | null>>;
   mintTokens: (sym: string) => Promise<void>;
   history: TxRecord[];
   mainTab: SwapMainTab;
@@ -258,7 +258,7 @@ export function useSwap(): UseSwapReturn {
   const [balLoading, setBalLoading] = useState(false);
   const [balRefreshKey, setBalRefreshKey] = useState(0);
   const [minting, setMinting] = useState<string | null>(null);
-  const [mintResult, setMintResult] = useState<{sym: string; ok: boolean; msg: string} | null>(null);
+  const [mintResult, setMintResult] = useState<{sym: string; ok: boolean; msg: string; txHash?: string} | null>(null);
   const [, setTokenSupplies] = useState<Record<string, bigint>>({});
   const [reserveA, setReserveA] = useState(INIT_RESERVE_A);
   const [reserveB, setReserveB] = useState(INIT_RESERVE_B);
@@ -536,7 +536,7 @@ export function useSwap(): UseSwapReturn {
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       completeOp(mOpId);
       const txHash = receipt.transactionId || '';
-      setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}! TX: ${txHash.slice(0, 16)}…` });
+      setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: activeWallet });
       setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
     } catch (e) {

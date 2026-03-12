@@ -11,7 +11,7 @@ import { NETWORK, CURRENT_ENV } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
 import {
   DEPLOYED_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
-  getContractOpscanUrl,
+  getContractOpscanUrl, getTxUrl,
 } from '../contracts';
 import * as opnetRpc from '../opnet';
 import { useOps } from '../contexts/OpsContext';
@@ -43,7 +43,7 @@ const Staking: React.FC = () => {
   const [unstaking, setUnstaking] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [step, setStep] = useState('');
-  const [result, setResult] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [result, setResult] = useState<{ type: 'success' | 'error'; msg: string; txHash?: string } | null>(null);
 
   // Wallet balances
   const [mineBalance, setMineBalance] = useState<bigint>(0n);
@@ -153,7 +153,7 @@ const Staking: React.FC = () => {
       completeOp(sOpId);
 
       setStep('');
-      setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE! TX: ${receipt.transactionId}` });
+      setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE!`, txHash: receipt.transactionId });
       addTxRecord({ type: 'mint', txHash: receipt.transactionId || '', tokenA: 'MINE', amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
@@ -186,7 +186,7 @@ const Staking: React.FC = () => {
       completeOp(uOpId);
 
       setStep('');
-      setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE! TX: ${receipt.transactionId}` });
+      setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE!`, txHash: receipt.transactionId });
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -215,7 +215,7 @@ const Staking: React.FC = () => {
       completeOp(cOpId);
 
       setStep('');
-      setResult({ type: 'success', msg: `Rewards claimed! TX: ${receipt.transactionId}` });
+      setResult({ type: 'success', msg: 'Rewards claimed!', txHash: receipt.transactionId });
       const ts = Date.now();
       setLastClaimTs(ts);
       try { localStorage.setItem(claimKey, String(ts)); } catch (e) { logger.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
@@ -381,6 +381,10 @@ const Staking: React.FC = () => {
         {result && (
           <div className="mt-12 p-12 br-8 fs-72 word-break" role="alert" aria-live="assertive" style={{ background: result.type === 'success' ? 'rgba(34,197,94,.06)' : 'rgba(239,68,68,.06)', border: `1px solid ${result.type === 'success' ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)'}`, color: result.type === 'success' ? 'var(--g)' : '#ef4444' }}>
             {result.msg}
+            {result.txHash && (
+              <a href={getTxUrl(result.txHash)} target="_blank" rel="noopener noreferrer"
+                className="ml-6 c-c2 no-decoration fw-600">View TX ↗</a>
+            )}
           </div>
         )}
       </div>

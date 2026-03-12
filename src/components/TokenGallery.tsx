@@ -83,12 +83,12 @@ const TokenGallery: React.FC = () => {
   const [mintAddr, setMintAddr] = useState<string | null>(null);
   const [mintAmount, setMintAmount] = useState('');
   const [minting, setMinting] = useState(false);
-  const [mintResult, setMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [mintResult, setMintResult] = useState<{ ok: boolean; msg: string; txHash?: string } | null>(null);
   const [tab, setTab] = useState<'user' | 'featured' | 'all'>('all');
   const [featMintSym, setFeatMintSym] = useState<string | null>(null);
   const [featMintAmt, setFeatMintAmt] = useState('');
   const [featMinting, setFeatMinting] = useState(false);
-  const [featMintResult, setFeatMintResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [featMintResult, setFeatMintResult] = useState<{ ok: boolean; msg: string; txHash?: string } | null>(null);
   const [mintHistory, setMintHistory] = useState<TxRecord[]>([]);
   const [histRefresh, setHistRefresh] = useState(0);
   // All tokens from indexer
@@ -249,7 +249,7 @@ const TokenGallery: React.FC = () => {
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       completeOp(fmOpId);
       const txHash = receipt.transactionId || '';
-      setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}! TX: ${txHash}` });
+      setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setHistRefresh(k => k + 1);
     } catch (e) {
@@ -305,7 +305,7 @@ const TokenGallery: React.FC = () => {
       completeOp(umOpId);
 
       const txHash = receipt.transactionId || '';
-      setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}! TX: ${txHash}` });
+      setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setHistRefresh(k => k + 1);
     } catch (e) {
@@ -524,7 +524,13 @@ const TokenGallery: React.FC = () => {
                     )}
                   </div>
                   {featMintResult && (
-                    <div className={`br-6 fs-68 word-break p-8-10 ${featMintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">{featMintResult.msg}</div>
+                    <div className={`br-6 fs-68 word-break p-8-10 ${featMintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">
+                      {featMintResult.msg}
+                      {featMintResult.txHash && (
+                        <a href={getTxUrl(featMintResult.txHash)} target="_blank" rel="noopener noreferrer"
+                          className="ml-6 c-c2 no-decoration fw-600">View TX ↗</a>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -628,7 +634,13 @@ const TokenGallery: React.FC = () => {
                           )}
                         </div>
                         {mintResult && (
-                          <div className={`br-6 fs-68 word-break p-8-10 ${mintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">{mintResult.msg}</div>
+                          <div className={`br-6 fs-68 word-break p-8-10 ${mintResult.ok ? 'bg-ok c-g' : 'bg-err c-red'}`} role="alert">
+                            {mintResult.msg}
+                            {mintResult.txHash && (
+                              <a href={getTxUrl(mintResult.txHash)} target="_blank" rel="noopener noreferrer"
+                                className="ml-6 c-c2 no-decoration fw-600">View TX ↗</a>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}

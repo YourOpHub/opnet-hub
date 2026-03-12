@@ -79,8 +79,8 @@ const Marketplace: React.FC = () => {
               <div className="ob-empty c-t3">Loading sell orders...</div>
             ) : sellOrders.length === 0 ? (
               <div className="ob-empty">
-                <div className="empty-icon-med">📋</div>
-                No sell orders yet — be the first to create one!
+                <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: 0.7, marginBottom: 8 }} />
+                <div>No sell orders yet — be the first to create one!</div>
               </div>
             ) : (
               <div className="ob-scroll">
@@ -144,8 +144,8 @@ const Marketplace: React.FC = () => {
               <div className="ob-empty c-t3">Loading buy orders...</div>
             ) : buyOrders.length === 0 ? (
               <div className="ob-empty">
-                <div className="empty-icon-med">📋</div>
-                No buy orders yet — be the first to create one!
+                <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: 0.7, marginBottom: 8 }} />
+                <div>No buy orders yet — be the first to create one!</div>
               </div>
             ) : (
               <div className="ob-scroll">

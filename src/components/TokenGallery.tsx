@@ -218,6 +218,7 @@ const TokenGallery: React.FC = () => {
     symbol: tok.symbol,
     name: tok.name,
     icon: tok.icon,
+    iconImg: tok.iconImg,
     supply: tok.supply.toLocaleString(),
     decimals: tok.decimals,
     deployTxid: tok.deployTxid,
@@ -477,7 +478,10 @@ const TokenGallery: React.FC = () => {
           {featured.map(tok => (
             <div key={tok.symbol} className="P p-16">
               <div className="d-flex ai-center gap-12">
-                <span className="fs-180">{tok.icon}</span>
+                {tok.iconImg
+                  ? <img src={tok.iconImg} alt={tok.symbol} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <span className="fs-180">{tok.icon}</span>
+                }
                 <div className="flex-1">
                   <div className="d-flex ai-center gap-6">
                     <span className="fw-800 fs-95 c-w">{tok.name}</span>

@@ -49,6 +49,8 @@ export interface Token {
   symbol: string;
   name: string;
   icon: string;
+  /** Optional path to a coin image in the public/icons folder */
+  iconImg?: string;
   decimals: number;
   address: string;
   pubkey: string;
@@ -80,8 +82,8 @@ const INIT_RESERVE_A = 5_000_000;
 const INIT_RESERVE_B = 25_000_000;
 
 export const BASE_TOKENS: Token[] = [
-  { symbol: 'MINE', name: DEPLOYED_CONTRACTS.MINE.name, icon: DEPLOYED_CONTRACTS.MINE.icon, decimals: 8, address: DEPLOYED_CONTRACTS.MINE.address, pubkey: DEPLOYED_CONTRACTS.MINE.pubkey },
-  { symbol: 'VIBE', name: DEPLOYED_CONTRACTS.VIBE.name, icon: DEPLOYED_CONTRACTS.VIBE.icon, decimals: 8, address: DEPLOYED_CONTRACTS.VIBE.address, pubkey: DEPLOYED_CONTRACTS.VIBE.pubkey },
+  { symbol: 'MINE', name: DEPLOYED_CONTRACTS.MINE.name, icon: DEPLOYED_CONTRACTS.MINE.icon, ...(DEPLOYED_CONTRACTS.MINE.iconImg != null ? { iconImg: DEPLOYED_CONTRACTS.MINE.iconImg } : {}), decimals: 8, address: DEPLOYED_CONTRACTS.MINE.address, pubkey: DEPLOYED_CONTRACTS.MINE.pubkey },
+  { symbol: 'VIBE', name: DEPLOYED_CONTRACTS.VIBE.name, icon: DEPLOYED_CONTRACTS.VIBE.icon, ...(DEPLOYED_CONTRACTS.VIBE.iconImg != null ? { iconImg: DEPLOYED_CONTRACTS.VIBE.iconImg } : {}), decimals: 8, address: DEPLOYED_CONTRACTS.VIBE.address, pubkey: DEPLOYED_CONTRACTS.VIBE.pubkey },
 ];
 
 export function getAmountOut(amountIn: number, reserveIn: number, reserveOut: number): { out: number; impact: number } {

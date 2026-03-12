@@ -20,6 +20,7 @@ export const TESTNET_CONTRACTS = {
         decimals: 8,
         supply: 21_000_000,
         icon: '⛏️',
+        iconImg: '/icons/token-mine.png',
         description: 'OPNet Hub game token — earned by Epoch Miners',
         deployTxid: '0c49c38d168dd72b3a8cf622e41af707e6a22256ae3cf2e36d33a24307948fdb',
         publicMint: true,
@@ -33,6 +34,7 @@ export const TESTNET_CONTRACTS = {
         decimals: 8,
         supply: 100_000_000,
         icon: '⚡',
+        iconImg: '/icons/token-vibe.png',
         description: 'Vibecoding Challenge token — built for #opnetvibecode',
         deployTxid: '81debce471fa810f416caaa88210a251558acc032a4ac0c0584ea1427ae60a1a',
         publicMint: true,
@@ -49,6 +51,8 @@ export interface ContractTokenInfo {
     decimals: number;
     supply: number;
     icon: string;
+    /** Optional path to a custom coin image in the public/icons folder */
+    iconImg?: string;
     description: string;
     deployTxid: string;
     publicMint: boolean;
@@ -70,6 +74,7 @@ const MAINNET_CONTRACTS: ContractsMap = {
         decimals: 8,
         supply: 21_000_000,
         icon: '⛏️',
+        iconImg: '/icons/token-mine.png',
         description: 'OPNet Hub game token — earned by Epoch Miners',
         deployTxid: '',
         publicMint: true,
@@ -83,6 +88,7 @@ const MAINNET_CONTRACTS: ContractsMap = {
         decimals: 8,
         supply: 100_000_000,
         icon: '⚡',
+        iconImg: '/icons/token-vibe.png',
         description: 'Vibecoding Challenge token — built for #opnetvibecode',
         deployTxid: '',
         publicMint: true,

@@ -11,7 +11,9 @@ import {
 } from '../hooks/useSwap';
 
 const TokenIcon: React.FC<{ token: Token; size?: number }> = ({ token, size = 24 }) =>
-  <span style={{ fontSize: size * 0.7 }}>{token.icon}</span>;
+  token.iconImg
+    ? <img src={token.iconImg} alt={token.symbol} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    : <span style={{ fontSize: size * 0.7 }}>{token.icon}</span>;
 
 const selectStyle: React.CSSProperties = {
   background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: '14px',
@@ -164,7 +166,9 @@ const SwapUI: React.FC = () => {
               <div className="bg3-bd-r14 p-14">
                 <div className="flex-between mb-8">
                   <div className="flex-center gap-8">
-                    <span className="fw-700 fs-84">⛏️ MINE / ⚡ VIBE</span>
+                    <img src="/icons/token-mine.png" alt="MINE" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+                    <img src="/icons/token-vibe.png" alt="VIBE" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', marginLeft: -6 }} />
+                    <span className="fw-700 fs-84">MINE / VIBE</span>
                     <span className="tag-live-sm">LIVE</span>
                   </div>
                   <span className="fs-62 c-t4 text-mono">Fee: 0.3%</span>

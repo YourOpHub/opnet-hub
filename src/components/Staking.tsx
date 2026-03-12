@@ -271,6 +271,7 @@ const Staking: React.FC = () => {
       {/* Wallet Balances */}
       {!connected ? (
         <div className="mb-16 br-20 text-center p-28 bg-card">
+          <img src="/icons/empty-the-vault.png" alt="" style={{ width: 100, opacity: 0.75, marginBottom: 14 }} />
           <div className="fs-75 mb-12 c-muted">Connect your wallet to start staking</div>
           <button onClick={openConnectModal} className="br-12 pointer fw-700 fs-82 ff-ui btn-blue" style={{ padding: '12px 28px', boxShadow: '0 4px 16px rgba(14,165,233,.2)' }}>Connect Wallet</button>
         </div>

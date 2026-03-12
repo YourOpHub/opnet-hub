@@ -386,6 +386,14 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
               </div>
             )}
 
+            {/* Empty vault illustration when no LP detected */}
+            {!hasLP && (
+              <div className="text-center mb-12">
+                <img src="/icons/empty-the-vault.png" alt="" style={{ width: 80, opacity: 0.65, marginBottom: 8 }} />
+                <div className="fs-65 c-muted">No LP position detected</div>
+              </div>
+            )}
+
             {/* Manual entry — always shown */}
             <div className="mb-12">
               <div className="liq-field mb-8">

@@ -114,8 +114,7 @@ const SwapUI: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-12 mb-8 text-center fs-66 c-t4 br-10" style={{
-                    background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.04)' }}>
+                  <div className="p-12 mb-8 text-center fs-66 c-t4 br-10 bd-w4" style={{ background: 'rgba(255,255,255,.02)' }}>
                     {!walletAddress ? 'Connect wallet to see your tokens' : !heldTokensLoaded ? 'Loading your tokens...' : 'No tokens found — enter addresses manually below'}
                   </div>
                 )}
@@ -220,9 +219,9 @@ const SwapUI: React.FC = () => {
                               <span className="fw-700 fs-80">{pool.token0_symbol} / {pool.token1_symbol}</span>
                               <span className="tag-moto">LIVE</span>
                             </div>
-                            <span className="fs-56 text-mono" style={{ color: '#a78bfa' }}>Motoswap</span>
+                            <span className="fs-56 text-mono c-p">Motoswap</span>
                           </div>
-                          <div className="grid-3col mb-6" style={{ gap: 6, fontSize: '.62rem' }}>
+                          <div className="grid-3col gap-6 fs-62 mb-6">
                             <div className="text-center pool-cell-sm">
                               <div className="c-t4 mb-4 fs-2xs">{pool.token0_symbol}</div>
                               <div className="mono-t2">{r0 > 1000 ? (r0 / 1000).toFixed(1) + 'K' : r0.toFixed(2)}</div>
@@ -241,7 +240,7 @@ const SwapUI: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center fs-66 c-t4 p-12" style={{ background: 'rgba(255,255,255,.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,.04)' }}>
+                  <div className="text-center fs-66 c-t4 p-12 br-10 bd-w4" style={{ background: 'rgba(255,255,255,.02)' }}>
                     {empty.length} pools discovered but none have liquidity yet
                   </div>
                 )}
@@ -287,7 +286,7 @@ const SwapUI: React.FC = () => {
             )}
 
             {userPools.length === 0 && !createPoolOpen && (
-              <div className="text-center c-t4 fs-78" style={{ padding: '30px 20px', }}>
+              <div className="text-center c-t4 fs-78 p-30-20">
                 <div className="empty-icon">💧</div>
                 No user pools yet. Create the first one for your token!
               </div>
@@ -341,7 +340,7 @@ const SwapUI: React.FC = () => {
           />
 
           {/* From */}
-          <div className="cc-panel" style={{ marginBottom: 4 }}>
+          <div className="cc-panel mb-4">
             <div className="flex-between mb-8">
               <span className="fs-62 c-t4 fw-600">From</span>
               <span className="fs-62 c-t4">Balance: {fmtBal(fromBal, from.decimals)}</span>
@@ -371,7 +370,7 @@ const SwapUI: React.FC = () => {
           </div>
 
           {/* To */}
-          <div className="cc-panel" style={{ marginTop: 4 }}>
+          <div className="cc-panel mt-4">
             <div className="flex-between mb-8">
               <span className="fs-62 c-t4 fw-600">To (estimated)</span>
               <span className="fs-62 c-t4">Balance: {fmtBal(toBal, to.decimals)}</span>
@@ -427,7 +426,7 @@ const SwapUI: React.FC = () => {
               <span className="c-t4">BTC Balance</span>
               <span className="text-mono" style={{ color: Number(balances.BTC) < 5000 ? 'var(--r)' : 'var(--t2)' }}>
                 {(Number(balances.BTC) / 1e8).toFixed(6)} BTC ({Number(balances.BTC).toLocaleString()} sats)
-                {Number(balances.BTC) < 5000 && <span className="c-r" style={{ marginLeft: 4 }}>· Need ~5K sats min</span>}
+                {Number(balances.BTC) < 5000 && <span className="c-r ml-4">· Need ~5K sats min</span>}
               </span>
             </div>
           )}
@@ -475,7 +474,7 @@ const SwapUI: React.FC = () => {
         </div>
 
         {/* Mint tokens */}
-        <div className="cc-panel-sm" style={{ marginTop: 14 }}>
+        <div className="cc-panel-sm mt-14">
           <div className="flex-center gap-8 mb-10">
             <span className="liq-label ls-06">Mint {CURRENT_ENV.charAt(0).toUpperCase() + CURRENT_ENV.slice(1)} Tokens</span>
           </div>
@@ -495,7 +494,7 @@ const SwapUI: React.FC = () => {
         </div>
 
         {/* Pool reserves + LP position compact */}
-        <div className="cc-panel-sm" style={{ marginTop: 10 }}>
+        <div className="cc-panel-sm mt-10">
           <div className="flex-between fs-sm">
             <span className="pool-stat-label">Pool</span>
             <span className="text-mono c-w fw-600">
@@ -505,7 +504,7 @@ const SwapUI: React.FC = () => {
           {lpUserMine > 0 && reserveA > 0 && (
             <div className="flex-between fs-sm mt-6 pt-6 bd-b">
               <span className="pool-stat-label">Your LP</span>
-              <span className="text-mono fw-700" style={{ color: '#0ea5e9' }}>
+              <span className="text-mono fw-700 c-sky">
                 {((lpUserMine / reserveA) * 100).toFixed(2)}%
               </span>
             </div>
@@ -513,19 +512,19 @@ const SwapUI: React.FC = () => {
           <div className="flex-between fs-xxs mt-6 pt-6 bd-b">
             <span className="pool-stat-label">{poolReady ? 'Live' : 'Deploying...'}</span>
             <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-              className="pool-stat-label" style={{ textDecoration: 'none' }}>OPScan ↗</a>
+              className="pool-stat-label no-underline">OPScan ↗</a>
           </div>
         </div>
 
         {/* Recent tx — compact */}
         {history.length > 0 && (
-          <div style={{ marginTop: 10 }}>
+          <div className="mt-10">
             {history.slice(0, 5).map(tx => (
-              <div key={tx.id} className="flex-between bd-b fs-65" style={{ padding: '6px 0' }}>
+              <div key={tx.id} className="flex-between bd-b fs-65 p-6-0">
                 <span className="fw-600" style={{ color: '#7a8494' }}>
                   {tx.type === 'swap' ? `${tx.amountA} ${tx.tokenA} → ${tx.amountB} ${tx.tokenB}` : `+${Number(tx.amountA || 0).toLocaleString()} ${tx.tokenA}`}
                 </span>
-                <span className="fs-55" style={{ color: '#2d3548' }}>{formatTimeAgo(tx.ts)}</span>
+                <span className="fs-55 c-t4">{formatTimeAgo(tx.ts)}</span>
               </div>
             ))}
           </div>

@@ -305,7 +305,7 @@ function LiveFeed(): React.ReactElement {
                                     style={{ background: `color-mix(in srgb, ${item.color} 10%, transparent)` }}>
                                     {item.icon}
                                 </div>
-                                <div style={{ flex: 1 }} className="min-w-0">
+                                <div className="flex-1 min-w-0">
                                     <div className="act-title">
                                         {item.title}
                                     </div>
@@ -328,7 +328,7 @@ function LiveFeed(): React.ReactElement {
 /* ── Social Post Card ── */
 function PostCard({ item }: { item: SocialPost }): React.ReactElement {
     return (
-        <a href={item.url} target="_blank" rel="noopener noreferrer" className="d-block" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className="d-block no-decoration" style={{ color: 'inherit' }}>
             <div className="Pg pointer" style={{ padding: '16px 18px', transition: '.2s' }}>
                 {item.pinned && (
                     <div className="fs-58 c-t4 mb-6 flex-center gap-4">
@@ -337,7 +337,7 @@ function PostCard({ item }: { item: SocialPost }): React.ReactElement {
                 )}
                 <div className="flex-center gap-8 mb-8">
                     <div className="post-avatar">{item.avatar}</div>
-                    <div style={{ flex: 1 }} className="min-w-0">
+                    <div className="flex-1 min-w-0">
                         <div className="flex-center gap-6">
                             <span className="fw-700 fs-78 c-w">{item.account}</span>
                             <span className="fs-65 c-t3">{item.handle}</span>
@@ -369,7 +369,7 @@ const NewsFeed: React.FC = () => {
         <div className="max-w-800">
             {/* Header */}
             <div className="text-center" style={{ padding: '20px 0 16px' }}>
-                <div className="fs-140 fw-800" style={{ background: 'linear-gradient(135deg, #F7931A, #ffab40)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                <div className="fs-140 fw-800 text-gradient-btc">
                     Network Feed
                 </div>
                 <div className="fs-75 c-t3 mt-4">

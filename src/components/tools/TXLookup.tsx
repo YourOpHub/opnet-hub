@@ -39,14 +39,14 @@ const TXLookup = React.memo(function TXLookup() {
   }, [txHash]);
 
   const renderObj = (obj: Record<string, unknown>, depth = 0): React.ReactNode => {
-    if (depth > 3) return <span style={{ ...monoSm, color: 'var(--t4)' }}>[nested]</span>;
+    if (depth > 3) return <span className="c-t4" style={{ ...monoSm }}>[nested]</span>;
     return Object.entries(obj).filter(([, v]) => v !== null && v !== undefined).map(([k, v]) => (
       <div key={k} style={{ ...rowS, paddingLeft: depth * 12 }}>
         <span style={labelS}>{k}</span>
         {typeof v === 'object' && !Array.isArray(v) ? (
           <div style={{ width: '60%' }}>{renderObj(v as Record<string, unknown>, depth + 1)}</div>
         ) : Array.isArray(v) ? (
-          <span style={{ ...valueS, fontSize: '.6rem' }}>[{v.length} items]</span>
+          <span className="fs-60" style={{ ...valueS }}>[{v.length} items]</span>
         ) : (
           <span style={valueS}>
             {String(v).length > 40 ? String(v).slice(0, 20) + '...' + String(v).slice(-16) : String(v)}
@@ -59,16 +59,16 @@ const TXLookup = React.memo(function TXLookup() {
 
   return (
     <div style={cardS} role="region" aria-label="Transaction lookup">
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div className="d-flex gap-8 mb-10">
         <input style={{ ...inputS, flex: 1 }} aria-label="OPNet transaction hash" value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="OPNet transaction hash" onKeyDown={e => e.key === 'Enter' && lookup()} />
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Lookup'}</button>
       </div>
       {err && (
-        <div role="alert" style={{ fontSize: '.72rem', marginBottom: 8, padding: '8px 12px', borderRadius: 10 , background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.12)', color: 'var(--y)' }}>
+        <div role="alert" className="fs-72 mb-8 p-8-12 br-10 c-y" style={{ background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.12)' }}>
           {err}
           {txHash.trim().length === 64 && (
             <a href={`https://mempool.space/signet/tx/${txHash.trim()}`} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', marginTop: 4, color: 'var(--c)', fontSize: '.65rem' }}>
+              className="d-block mt-4 c-c fs-65">
               Check on Mempool.space (Signet) ↗
             </a>
           )}
@@ -76,26 +76,26 @@ const TXLookup = React.memo(function TXLookup() {
       )}
       {tx && (
         <div>
-          <div style={{ fontSize: '.68rem', color: 'var(--o)', fontWeight: 700, marginBottom: 6 }}>Transaction</div>
+          <div className="fs-68 c-o fw-700 mb-6">Transaction</div>
           {renderObj(tx)}
         </div>
       )}
       {receipt && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: '.68rem', color: 'var(--g)', fontWeight: 700, marginBottom: 6 }}>Receipt</div>
+        <div className="mt-10">
+          <div className="fs-68 c-g fw-700 mb-6">Receipt</div>
           {renderObj(receipt)}
         </div>
       )}
       {/* Recent pending TXs from mempool */}
       {!tx && !receipt && !err && pending.length > 0 && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: '.68rem', color: 'var(--c)', fontWeight: 700, marginBottom: 6 }}>Recent Pending TXs (Mempool)</div>
+        <div className="mt-10">
+          <div className="fs-68 c-c fw-700 mb-6">Recent Pending TXs (Mempool)</div>
           {pending.map((p, i) => {
             const hash = String(p.hash ?? p.id ?? p.transactionId ?? '');
             return (
               <div key={i} style={{ ...rowS, cursor: 'pointer' }} onClick={() => { setTxHash(hash); }}>
-                <span style={{ ...monoSm, color: 'var(--c)', flex: 1 }}>{hash.slice(0, 20)}...{hash.slice(-8)}</span>
-                <span style={{ ...monoSm, color: 'var(--t4)', fontSize: '.55rem' }}>{p.from != null ? String(p.from).slice(0, 10) + '...' : ''}</span>
+                <span className="c-c flex-1" style={{ ...monoSm }}>{hash.slice(0, 20)}...{hash.slice(-8)}</span>
+                <span className="c-t4 fs-55" style={{ ...monoSm }}>{p.from != null ? String(p.from).slice(0, 10) + '...' : ''}</span>
               </div>
             );
           })}

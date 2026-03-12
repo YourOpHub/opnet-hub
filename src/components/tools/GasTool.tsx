@@ -44,9 +44,9 @@ const GasTool = React.memo(function GasTool() {
   return (
     <div style={cardS} role="region" aria-label="Gas parameters">
       <div className="gas-header">
-        <div style={{ display: 'flex', gap: 6 }} role="tablist" aria-label="Network selection">
+        <div className="d-flex gap-6" role="tablist" aria-label="Network selection">
           {(['regtest', 'testnet', 'mainnet'] as const).map(n => (
-            <button key={n} role="tab" aria-selected={network === n} className={`fbn ${network === n ? 'on' : ''}`} style={{ padding: '4px 12px', fontSize: '.65rem' }} onClick={() => setNetwork(n)}>{n}</button>
+            <button key={n} role="tab" aria-selected={network === n} className={`fbn ${network === n ? 'on' : ''} p-4-12 fs-65`} onClick={() => setNetwork(n)}>{n}</button>
           ))}
         </div>
         <button onClick={refresh} aria-label="Refresh gas data" aria-busy={loading} style={{ ...copyBtnS, padding: '4px 10px' }}>{loading ? '⏳' : '🔄'}</button>
@@ -70,32 +70,32 @@ const GasTool = React.memo(function GasTool() {
               ].map(([l, v, c]) => (
                 <div key={l} className="gas-cell">
                   <div style={{ ...monoSm, fontWeight: 700, color: c as string }}>{v}</div>
-                  <div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>{l} sat/vB</div>
+                  <div className="fs-50 c-t4">{l} sat/vB</div>
                 </div>
               ))}
             </div>
           )}
           {mempool && (
             <div className="gas-mempool">
-              <div style={{ fontSize: '.65rem', color: 'var(--c)', fontWeight: 700, marginBottom: 4 }}>Mempool</div>
+              <div className="fs-65 c-c fw-700 mb-4">Mempool</div>
               <div className="grid-1-1-1 gap-8">
-                {mempool.count != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700 }}>{mempool.count}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Pending TXs</div></div>}
-                {mempool.opnetCount != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{mempool.opnetCount}</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>OPNet TXs</div></div>}
-                {mempool.sizeBytes != null && <div style={{ textAlign: 'center' }}><div style={{ ...monoSm, fontWeight: 700 }}>{(mempool.sizeBytes / 1024 / 1024).toFixed(1)} MB</div><div style={{ fontSize: '.5rem', color: 'var(--t4)' }}>Size</div></div>}
+                {mempool.count != null && <div className="text-center"><div style={{ ...monoSm, fontWeight: 700 }}>{mempool.count}</div><div className="fs-50 c-t4">Pending TXs</div></div>}
+                {mempool.opnetCount != null && <div className="text-center"><div style={{ ...monoSm, fontWeight: 700, color: 'var(--o)' }}>{mempool.opnetCount}</div><div className="fs-50 c-t4">OPNet TXs</div></div>}
+                {mempool.sizeBytes != null && <div className="text-center"><div style={{ ...monoSm, fontWeight: 700 }}>{(mempool.sizeBytes / 1024 / 1024).toFixed(1)} MB</div><div className="fs-50 c-t4">Size</div></div>}
               </div>
             </div>
           )}
           {pendingTxs.length > 0 && (
             <div className="gas-pending">
-              <div style={{ fontSize: '.65rem', color: 'var(--y)', fontWeight: 700, marginBottom: 6 }}>Pending Transactions ({pendingTxs.length})</div>
+              <div className="fs-65 c-y fw-700 mb-6">Pending Transactions ({pendingTxs.length})</div>
               {pendingTxs.map((tx, i) => {
                 const hash = String(tx.hash ?? tx.id ?? tx.transactionId ?? `tx-${i}`);
                 const from = String(tx.from ?? tx.sender ?? '').slice(0, 16);
                 const to = String(tx.to ?? tx.recipient ?? '').slice(0, 16);
                 return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.04)', fontSize: '.58rem' }}>
+                  <div key={i} className="d-flex jc-between fs-58" style={{ padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
                     <span style={{ ...monoSm, color: 'var(--c)', fontSize: '.55rem' }}>{hash.slice(0, 14)}...</span>
-                    <span style={{ color: 'var(--t3)' }}>{from ? `${from}...` : ''} {to ? `→ ${to}...` : ''}</span>
+                    <span className="c-t3">{from ? `${from}...` : ''} {to ? `→ ${to}...` : ''}</span>
                   </div>
                 );
               })}
@@ -103,7 +103,7 @@ const GasTool = React.memo(function GasTool() {
           )}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)' }} aria-live="polite">{loading ? '⏳ Loading…' : 'Failed to load gas parameters'}</div>
+        <div className="text-center p-20 c-t3" aria-live="polite">{loading ? '⏳ Loading…' : 'Failed to load gas parameters'}</div>
       )}
     </div>
   );

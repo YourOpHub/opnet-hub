@@ -14,9 +14,9 @@ export interface OpEntry {
   role: string;
   step: string;
   status: 'active' | 'completed' | 'failed';
-  error?: string;
-  amounts?: Record<string, unknown>;
-  txIds?: Record<string, string>;
+  error?: string | undefined;
+  amounts?: Record<string, unknown> | undefined;
+  txIds?: Record<string, string> | undefined;
   createdAt: number;
   updatedAt: number;
 }
@@ -108,7 +108,9 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const update: SwapOpUpdate = {
         id: data.id, market: data.market, order_id: data.orderId, wallet,
         direction: data.direction, role: data.role, step: data.step,
-        status: 'active', amounts: data.amounts, tx_ids: data.txIds,
+        status: 'active',
+        ...(data.amounts !== undefined ? { amounts: data.amounts } : {}),
+        ...(data.txIds !== undefined ? { tx_ids: data.txIds } : {}),
       };
       void updateSwapOp(update);
     }
@@ -118,7 +120,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, step, txIds: txIds || o.txIds, updatedAt: Date.now() } : o));
     if (wallet) {
       const op = ops.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', tx_ids: txIds });
+      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', ...(txIds !== undefined ? { tx_ids: txIds } : {}) });
     }
   }, [wallet, ops]);
 

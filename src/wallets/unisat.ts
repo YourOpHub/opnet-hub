@@ -67,7 +67,7 @@ export const FRACTAL_CHAINS = {
 export function getUnisat(): UnisatProvider | null {
     if (typeof window === 'undefined') return null;
     // Cast to avoid conflict with OPNet SDK's Unisat type on window
-    const u = (window as Window & { unisat?: UnisatProvider }).unisat;
+    const u = (window as unknown as { unisat?: UnisatProvider }).unisat;
     return u ?? null;
 }
 

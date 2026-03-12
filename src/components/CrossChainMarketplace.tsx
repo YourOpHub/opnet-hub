@@ -169,7 +169,7 @@ const CrossChainMarketplace: React.FC = () => {
       </div>
 
       {/* Dual Wallet Connection */}
-      <div className="Pg grid-2col mb-16" role="region" aria-label="Wallet connections" style={{ gap: 12 }}>
+      <div className="Pg grid-2col gap-12 mb-16" role="region" aria-label="Wallet connections">
         {/* OPNet Wallet */}
         <div className="cc-wallet-opnet">
           <div className="cc-wallet-label">
@@ -183,7 +183,7 @@ const CrossChainMarketplace: React.FC = () => {
               <div className="fs-66 mt-2 c-g">Connected</div>
             </div>
           ) : (
-            <button className="btn-p fs-70 w-full" style={{ padding: '6px 12px' }}
+            <button className="btn-p fs-70 w-full p-6-12"
               onClick={openConnectModal}>
               Connect OPWallet
             </button>
@@ -215,8 +215,7 @@ const CrossChainMarketplace: React.FC = () => {
               )}
             </div>
           ) : (
-            <button className="btn-p" style={{
-              fontSize: '.7rem', padding: '6px 12px', width: '100%',
+            <button className="btn-p fs-70 p-6-12 w-full" style={{
               background: isUnisatInstalled() ? undefined : 'rgba(107,114,128,.3)',
             }}
               disabled={unisatConnecting}
@@ -268,15 +267,13 @@ const CrossChainMarketplace: React.FC = () => {
             {/* Direction toggle */}
             <div className="flex-gap8-mb12">
               <button
-                className={`${tbDirection === DIR_SELL_TOKEN ? 'btn-p' : 'btn-s'} flex-1 fs-76`}
-                style={{ padding: '10px 0' }}
+                className={`${tbDirection === DIR_SELL_TOKEN ? 'btn-p' : 'btn-s'} flex-1 fs-76 p-10-0`}
                 onClick={() => setTbDirection(DIR_SELL_TOKEN)}
               >
                 Sell Tokens for BTC
               </button>
               <button
-                className={`${tbDirection === DIR_BUY_TOKEN ? 'btn-p' : 'btn-s'} flex-1 fs-76`}
-                style={{ padding: '10px 0' }}
+                className={`${tbDirection === DIR_BUY_TOKEN ? 'btn-p' : 'btn-s'} flex-1 fs-76 p-10-0`}
                 onClick={() => setTbDirection(DIR_BUY_TOKEN)}
               >
                 Buy Tokens with BTC
@@ -289,8 +286,7 @@ const CrossChainMarketplace: React.FC = () => {
               <div className="flex-center gap-6">
                 {TOKEN_OPTIONS.map(tok => (
                   <button key={tok.address}
-                    className={`${tbToken === tok.address ? 'btn-p' : 'btn-s'} fs-76 fw-700`}
-                    style={{ padding: '8px 16px' }}
+                    className={`${tbToken === tok.address ? 'btn-p' : 'btn-s'} fs-76 fw-700 p-8-16`}
                     onClick={() => setTbToken(tok.address)}
                   >
                     {tok.icon} {tok.symbol}
@@ -375,7 +371,7 @@ const CrossChainMarketplace: React.FC = () => {
               </div>
             )}
 
-            <button className="btn-p w-full mt-12" style={{ padding: '10px 0' }}
+            <button className="btn-p w-full mt-12 p-10-0"
               disabled={tbCreating || !tbTokenAmount || !tbBtcPrice || !tbMakerAddr || !escrowReady || tbTokenAmountRaw <= 0n}
               onClick={handleTbCreate}
             >
@@ -434,7 +430,7 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
 
           {/* How it works */}
-          <div className="Pg mt-20" style={{ padding: '16px 20px' }}>
+          <div className="Pg mt-20 p-16-20">
             <div className="fw-700-fs82-mb10">How Token Bridge Works</div>
             <div className="grid-4col gap-12">
               {[
@@ -615,7 +611,7 @@ const CrossChainMarketplace: React.FC = () => {
               <div className="ob-section-hdr c-y fs-86">
                 Get BTC
                 <span className="ob-section-sub">pay FB &#x2192; get BTC</span>
-                <span className="ob-badge ml-auto" style={{ background: 'rgba(245,158,11,.1)', color: '#f59e0b' }}>{availGetBtc.length}</span>
+                <span className="ob-badge ml-auto c-warn-alt" style={{ background: 'rgba(245,158,11,.1)' }}>{availGetBtc.length}</span>
               </div>
               {loading ? (
                 <div className="p-28-center-t2">Loading...</div>
@@ -652,7 +648,7 @@ const CrossChainMarketplace: React.FC = () => {
           </div>
 
           {/* How it works */}
-          <div className="Pg mt-20" style={{ padding: '16px 20px' }}>
+          <div className="Pg mt-20 p-16-20">
             <div className="fw-700-fs82-mb10">How It Works</div>
             <div className="grid-3col gap-12">
               {[

@@ -351,7 +351,7 @@ const TokenLauncher: React.FC = () => {
                 </div>
                 <input type="range" min={0} max={100} step={5} value={initialMintPct}
                   onChange={e => setInitialMintPct(Number(e.target.value))}
-                  className="w-full" style={{ accentColor: '#a855f7' }} />
+                  className="w-full accent-purple" />
                 <div className="d-flex jc-between fs-56 c-t4">
                   <span>You get: {((parseFloat(tokenSupply) || 0) * initialMintPct / 100).toLocaleString()}</span>
                   <span>Public mint: {((parseFloat(tokenSupply) || 0) * (100 - initialMintPct) / 100).toLocaleString()}</span>
@@ -379,9 +379,9 @@ const TokenLauncher: React.FC = () => {
           )}
 
           {/* Token logo */}
-          <div className="upload-zone mb-14" onClick={() => fileRef.current?.click()} style={{ padding: '10px' }}>
+          <div className="upload-zone mb-14 p-10" onClick={() => fileRef.current?.click()}>
             <input ref={fileRef} type="file" accept="image/*" aria-label="Upload token logo" onChange={handleImage} className="d-none" />
-            {img ? <img src={img} alt="Logo" className="w-40 h-40 br-50" style={{ objectFit: 'cover' }} /> : <div className="fs-120">+</div>}
+            {img ? <img src={img} alt="Logo" className="w-40 h-40 br-50 obj-cover" /> : <div className="fs-120">+</div>}
             <div className="fs-62 c-t3">{img ? 'Change logo' : 'Logo (optional)'}</div>
           </div>
 
@@ -409,8 +409,7 @@ const TokenLauncher: React.FC = () => {
 
             </button>
           ) : (
-            <button className="lbtn w-full" onClick={openConnectModal}
-              style={{ background: 'linear-gradient(135deg, #0ea5e9, #0284c7)' }}>
+            <button className="lbtn w-full btn-blue" onClick={openConnectModal}>
               Connect Wallet to Deploy
             </button>
           )}
@@ -444,8 +443,8 @@ const TokenLauncher: React.FC = () => {
         {/* Right: Preview */}
         <div className="P text-center p-18">
           <div className="Lb jc-center">Live Preview</div>
-          <div className="br-50 ov-hidden" style={{ width: 80, height: 80, margin: '8px auto', border: '2px solid rgba(255,255,255,.08)' }}>
-            {img ? <img src={img} alt="" className="w-full" style={{ height: '100%', objectFit: 'cover' }} /> : <img src={genLogo(tokenSymbol)} alt={tokenSymbol} className="w-full" style={{ height: '100%' }} />}
+          <div className="br-50 ov-hidden w-80 h-80" style={{ margin: '8px auto', border: '2px solid rgba(255,255,255,.08)' }}>
+            {img ? <img src={img} alt="" className="w-full h-full obj-cover" /> : <img src={genLogo(tokenSymbol)} alt={tokenSymbol} className="w-full h-full" />}
           </div>
           <div className="fw-700 fs-95 c-w mt-6">{tokenName || 'Token Name'}</div>
           <div className="text-mono c-o fw-600 fs-82">${tokenSymbol || 'TKN'}</div>

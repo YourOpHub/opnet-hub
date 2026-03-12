@@ -295,7 +295,7 @@ const Marketplace: React.FC = () => {
   // TOKEN LIST VIEW
   // ════════════════════════════════
   return (
-    <div className="m-auto" style={{ maxWidth: 900 }}>
+    <div className="max-w-900">
       <div className="mb-16">
         <h2 className="fw-800 fs-120 c-w mb-4">Marketplace <span className="fs-60 c-g fw-500">ON-CHAIN</span></h2>
         <p className="fs-74 c-t3 mt-0 mb-0">
@@ -330,9 +330,9 @@ const Marketplace: React.FC = () => {
             const [c1] = hashColor(t.symbol);
             return (
               <div key={t.address} onClick={() => setSelectedToken(t.address)}
-                className="p-16 pointer" role="listitem" tabIndex={0} aria-label={`${t.symbol} - ${t.name}`}
+                className="p-16 pointer bg3-bd-r14" role="listitem" tabIndex={0} aria-label={`${t.symbol} - ${t.name}`}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedToken(t.address); } }}
-                style={{ background: 'var(--bg3)', border: '1px solid var(--bd)', borderRadius: 14, transition: 'border-color .15s' }}
+                style={{ transition: 'border-color .15s' }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = c1)}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--bd)')}>
                 <div className="flex-center gap-10 mb-8">

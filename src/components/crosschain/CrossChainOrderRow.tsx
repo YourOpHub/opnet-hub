@@ -31,7 +31,7 @@ export const TakeOrderButton: React.FC<{
           onClick={(e) => { e.stopPropagation(); setShow(true); }}>
           {label || 'Take'}
         </button>
-        <span style={{ fontSize: '.54rem', color: 'var(--t3)' }}>+{feeSats.toLocaleString()} sat fee</span>
+        <span className="fs-2xs c-t3">+{feeSats.toLocaleString()} sat fee</span>
       </div>
     );
   }
@@ -62,7 +62,7 @@ export const PreimageInput: React.FC<{
 
   if (!show) {
     return (
-      <button className="btn-p" style={{ fontSize: '.72rem', padding: '6px 14px' }}
+      <button className="btn-p fs-72 p-6-14"
         disabled={disabled}
         onClick={(e) => { e.stopPropagation(); setShow(true); }}>
         Confirm with Preimage
@@ -73,7 +73,7 @@ export const PreimageInput: React.FC<{
     <div className="d-flex gap-6 ai-center" onClick={e => e.stopPropagation()}>
       <input style={{ ...iStyle, width: 200, fontSize: '.68rem' }} aria-label="Preimage hex for swap confirmation" placeholder="Enter preimage hex..."
         value={val} onChange={e => setVal(e.target.value)} />
-      <button className="btn-p" style={{ fontSize: '.68rem', padding: '6px 10px' }}
+      <button className="btn-p fs-68 p-6-10"
         disabled={disabled || val.length < 64}
         onClick={() => onConfirm(orderId, val)}>
         Confirm
@@ -128,7 +128,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
   return (
     <React.Fragment key={order.id}>
       <div className="ob-row" role="row" aria-label={`Order #${order.id}`} style={{ gridTemplateColumns: MY_COLS }}>
-        <span className="ob-mono" style={{ color: 'var(--t3)' }}>#{order.id}</span>
+        <span className="ob-mono c-t3">#{order.id}</span>
         <span>
           <span className="ob-badge" style={{
             background: isBtcToFb ? 'rgba(139,92,246,.15)' : 'rgba(245,158,11,.15)',
@@ -139,7 +139,7 @@ const MyOrderRowBase: React.FC<MyOrderRowProps> = ({
         </span>
         <span className="ob-mono ob-r">{fmtBtc(order.btcAmount)}</span>
         <span className="ob-mono ob-r">{fmtBtc(order.wantAmount)}</span>
-        <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{fmtRate(order.btcAmount, order.wantAmount)}</span>
+        <span className="ob-mono ob-r c-t2">{fmtRate(order.btcAmount, order.wantAmount)}</span>
         <span><span className="ob-badge" style={{ background: statusInfo.bg, color: statusInfo.text }}>{statusInfo.label}</span></span>
         <div className="ob-act">
           {order.status === OrderStatus.Open && isMyOrder && (
@@ -227,13 +227,13 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
   return (
     <React.Fragment key={order.id}>
       <div className="ob-row" role="row" aria-label={`Available swap order #${order.id}`} style={{ gridTemplateColumns: AV_COLS }}>
-        <span className="ob-mono ob-r" style={{ color: '#22c55e', fontWeight: 700 }}>
-          {fmtBtc(takerGetsAmount)} <span style={{ fontWeight: 500, fontSize: '.62rem', color: 'var(--t2)' }}>{takerGetsUnit}</span>
+        <span className="ob-mono ob-r fw-700" style={{ color: '#22c55e' }}>
+          {fmtBtc(takerGetsAmount)} <span className="fw-500 fs-62 c-t2">{takerGetsUnit}</span>
         </span>
-        <span className="ob-mono ob-r" style={{ color: 'var(--t1)' }}>
-          {fmtBtc(takerSendsAmount)} <span style={{ fontSize: '.62rem', color: 'var(--t3)' }}>{takerSendsUnit}</span>
+        <span className="ob-mono ob-r c-t1">
+          {fmtBtc(takerSendsAmount)} <span className="fs-62 c-t3">{takerSendsUnit}</span>
         </span>
-        <span className="ob-mono ob-r" style={{ color: 'var(--t2)' }}>{fmtRate(order.btcAmount, order.wantAmount)}</span>
+        <span className="ob-mono ob-r c-t2">{fmtRate(order.btcAmount, order.wantAmount)}</span>
         <div className="ob-act">
           {!isExpired && isBtcToFb && (
             <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
@@ -247,7 +247,7 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
               defaultAddr={walletAddress || ''}
               label={isLocked ? '\u{1F512}' : 'Take'} />
           )}
-          {isExpired && <span style={{ color: '#ef4444', fontSize: '.64rem' }}>Expired</span>}
+          {isExpired && <span className="c-red fs-64">Expired</span>}
         </div>
       </div>
       {isThisActioning && actionStep && (

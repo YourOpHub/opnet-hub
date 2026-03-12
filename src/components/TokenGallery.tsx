@@ -399,9 +399,9 @@ const TokenGallery: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="br-14 ov-hidden" role="table" aria-label="Token list" style={{ border: '1px solid var(--bd)', background: 'var(--bg2)' }}>
+            <div className="br-14 ov-hidden bd bg-card" role="table" aria-label="Token list">
               {/* Table header — clickable for sorting */}
-              <div className="d-grid gap-4 fs-56 c-t4 text-upper ls-06 fw-700 user-select-none" role="row" style={{ gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', padding: '7px 10px', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
+              <div className="d-grid gap-4 fs-56 c-t4 text-upper ls-06 fw-700 user-select-none p-7-10" role="row" style={{ gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.5)' }}>
                 <span className="text-center">#</span>
                 <span onClick={() => toggleSort('symbol')} className="pointer" style={{ color: sortField === 'symbol' ? 'var(--o)' : undefined }}>
                   Token{sortIcon('symbol')}
@@ -421,14 +421,14 @@ const TokenGallery: React.FC = () => {
               <div>
                 {pagedTokens.map((tok, i) => (
                   <a key={tok.pubkey || tok.address} href={getContractOpscanUrl(tok.pubkey || tok.address)} target="_blank" rel="noopener noreferrer"
-                    className="d-grid gap-4 ai-center no-decoration" style={{ gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', padding: '7px 10px', borderBottom: '1px solid rgba(255,255,255,.03)', color: 'inherit', transition: 'background .15s' }}
+                    className="d-grid gap-4 ai-center no-decoration p-7-10" style={{ gridTemplateColumns: '36px 1fr 70px 80px 50px 50px', borderBottom: '1px solid rgba(255,255,255,.03)', color: 'inherit', transition: 'background .15s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.03)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                     <span className="text-center fs-55 c-t4 text-mono">
                       {page * PAGE_SIZE + i + 1}
                     </span>
                     <div className="d-flex ai-center gap-8 min-w-0">
-                      <img src={genLogo(tok.symbol)} alt={tok.symbol} className="w-28 h-28 br-50 flex-shrink-0" style={{ border: '1px solid rgba(255,255,255,.06)' }} />
+                      <img src={genLogo(tok.symbol)} alt={tok.symbol} className="w-28 h-28 br-50 flex-shrink-0 bd-w6" />
                       <div className="min-w-0">
                         <div className="fw-700 fs-72 c-w ov-hidden text-ellipsis ws-nowrap">{tok.name}</div>
                         <div className="text-mono fs-46 c-t4 ov-hidden text-ellipsis ws-nowrap">
@@ -456,14 +456,14 @@ const TokenGallery: React.FC = () => {
               </div>
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="d-flex ai-center jc-center gap-6" style={{ padding: '10px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.3)' }}>
-                  <button onClick={() => setPage(0)} disabled={page === 0} aria-label="First page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<<'}</button>
-                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Previous page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<'}</button>
+                <div className="d-flex ai-center jc-center gap-6 p-10" style={{ borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(8,8,16,.3)' }}>
+                  <button onClick={() => setPage(0)} disabled={page === 0} aria-label="First page" className="br-6 fs-58 fw-700 ff-ui p-4-8 bg-none bd-bd" style={{ color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<<'}</button>
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Previous page" className="br-6 fs-58 fw-700 ff-ui p-4-10 bg-none bd-bd" style={{ color: page === 0 ? 'var(--t4)' : 'var(--t2)', cursor: page === 0 ? 'default' : 'pointer' }}>{'<'}</button>
                   <span className="fs-62 c-t2 text-mono text-center min-w-80">
                     {page + 1} / {totalPages}
                   </span>
-                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Next page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 10px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>'}</button>
-                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} aria-label="Last page" className="br-6 fs-58 fw-700 ff-ui" style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--bd)', color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>>'}</button>
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Next page" className="br-6 fs-58 fw-700 ff-ui p-4-10 bg-none bd-bd" style={{ color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>'}</button>
+                  <button onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1} aria-label="Last page" className="br-6 fs-58 fw-700 ff-ui p-4-8 bg-none bd-bd" style={{ color: page >= totalPages - 1 ? 'var(--t4)' : 'var(--t2)', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>{'>>'}</button>
                 </div>
               )}
             </div>
@@ -496,7 +496,7 @@ const TokenGallery: React.FC = () => {
                   <a href={getTxUrl(tok.deployTxid)} target="_blank" rel="noopener noreferrer"
                     className="fs-56 c-c2 text-center">Deploy TX</a>
                   {tok.publicMint && (
-                    <button onClick={() => setFeatMintSym(featMintSym === tok.symbol ? null : tok.symbol)} className="br-14 fs-70 fw-800 pointer ff-ui ls-02" style={{ padding: '8px 14px', background: featMintSym === tok.symbol ? 'rgba(168,85,247,.2)' : 'linear-gradient(135deg, #a855f7, #7c3aed)', border: 'none', color: featMintSym === tok.symbol ? '#a855f7' : 'white', boxShadow: featMintSym === tok.symbol ? 'none' : '0 2px 12px rgba(168,85,247,.3)' }}>{featMintSym === tok.symbol ? 'Close' : '🪙 Mint'}</button>
+                    <button onClick={() => setFeatMintSym(featMintSym === tok.symbol ? null : tok.symbol)} className="br-14 fs-70 fw-800 pointer ff-ui ls-02 p-8-14 no-border" style={{ background: featMintSym === tok.symbol ? 'rgba(168,85,247,.2)' : 'linear-gradient(135deg, #a855f7, #7c3aed)', color: featMintSym === tok.symbol ? '#a855f7' : 'white', boxShadow: featMintSym === tok.symbol ? 'none' : '0 2px 12px rgba(168,85,247,.3)' }}>{featMintSym === tok.symbol ? 'Close' : '🪙 Mint'}</button>
                   )}
                 </div>
               </div>
@@ -511,7 +511,7 @@ const TokenGallery: React.FC = () => {
                         value={featMintAmt} onChange={e => { const v = e.target.value; const maxMint = tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1_000_000; if (v === '' || (Number(v) >= 0 && Number(v) <= maxMint)) setFeatMintAmt(v); }}
                         placeholder={`Amount (max ${tok.maxMintPerTx ? (tok.maxMintPerTx / Math.pow(10, tok.decimals)).toLocaleString() : '1,000'})`}
                         aria-label={`Amount of ${tok.symbol} to mint`} />
-                      <button onClick={() => setFeatMintAmt(String(tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1000))} aria-label={`Use maximum ${tok.symbol} mint amount`} className="pos-absolute fs-52 fw-700 br-4 c-purple pointer ff-ui" style={{ right: 4, top: '50%', transform: 'translateY(-50%)', padding: '3px 6px', background: 'rgba(168,85,247,.15)', border: 'none' }}>MAX</button>
+                      <button onClick={() => setFeatMintAmt(String(tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1000))} aria-label={`Use maximum ${tok.symbol} mint amount`} className="abs-right-vc fs-52 fw-700 br-4 c-purple pointer ff-ui p-3-6 bg-purple no-border">MAX</button>
                     </div>
                     {connected ? (
                       <button onClick={() => doFeaturedMint(tok)} disabled={featMinting} className="br-14 fw-700 fs-75 c-white ff-ui ws-nowrap p-8-14 btn-purple" style={{ cursor: featMinting ? 'not-allowed' : 'pointer', opacity: featMinting ? 0.6 : 1 }}>{featMinting ? 'Minting...' : 'Mint'}</button>
@@ -564,7 +564,7 @@ const TokenGallery: React.FC = () => {
                 return (
                   <div key={tok.address || idx} className="P p-16">
                     <div className="d-flex ai-start gap-12">
-                      <img src={genLogo(tok.symbol)} alt={`${tok.symbol} token logo`} className="w-48 h-48 br-50 flex-shrink-0" style={{ border: '2px solid rgba(255,255,255,.08)' }} />
+                      <img src={genLogo(tok.symbol)} alt={`${tok.symbol} token logo`} className="w-48 h-48 br-50 flex-shrink-0 bd-w8" />
                       <div className="flex-1 min-w-0">
                         <div className="d-flex ai-center gap-6 flex-wrap">
                           <span className="fw-800 fs-90 c-w">{tok.name}</span>

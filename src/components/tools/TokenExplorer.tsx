@@ -19,7 +19,7 @@ interface OPScanToken {
   maxSupply: number;
   isPool: boolean;
   deployer: string;
-  holders?: number;
+  holders?: number | undefined;
 }
 
 /** OPScan API raw token entry */
@@ -52,7 +52,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
   const [addr, setAddr] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [result, setResult] = useState<{ name: string; symbol: string; decimals: number; supply: string; isContract: boolean; bytecodeLen?: number; type?: string; holders?: number } | null>(null);
+  const [result, setResult] = useState<{ name: string; symbol: string; decimals: number; supply: string; isContract: boolean; bytecodeLen?: number | undefined; type?: string | undefined; holders?: number | undefined } | null>(null);
 
   // OPScan token list
   const [allTokens, setAllTokens] = useState<OPScanToken[]>([]);
@@ -85,7 +85,6 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             maxSupply: Number(meta.maximumSupply ?? 0) / Math.pow(10, dec),
             isPool: meta.isPool === true,
             deployer: t.deployerAddress ?? '',
-            holders: undefined,
           });
         }
         if (ac.signal.aborted) return;
@@ -112,7 +111,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
                 const chunkItem = chunk[j];
                 if (!chunkItem) continue;
                 const idx = next.findIndex(t => t.address === chunkItem.address);
-                if (idx >= 0 && next[idx]) next[idx] = { ...next[idx], holders: counts[j] };
+                if (idx >= 0 && next[idx]) { const c = counts[j]; next[idx] = { ...next[idx], ...(c !== undefined ? { holders: c } : {}) }; }
               }
               return next;
             });
@@ -182,15 +181,15 @@ const TokenExplorer = React.memo(function TokenExplorer() {
       if (known) {
         const num = Number(supply) / Math.pow(10, known.decimals);
         const supplyStr = num > 0 ? num.toLocaleString(undefined, { maximumFractionDigits: 2 }) : (supply > 0n ? formatBigNum(String(supply)) : '0');
-        setResult({ name: known.name, symbol: known.symbol, decimals: known.decimals, supply: supplyStr, isContract: true, bytecodeLen, type: known.type, holders });
+        setResult({ name: known.name, symbol: known.symbol, decimals: known.decimals, supply: supplyStr, isContract: true, bytecodeLen, type: known.type, ...(holders !== undefined ? { holders } : {}) });
       } else if (isContract) {
         const info = await opnet.getOP20Info(a);
         if (info && info.name !== 'Unknown' && info.symbol !== '?') {
           const supStr = info.totalSupply !== '0' ? formatBigNum(info.totalSupply) : '0';
-          setResult({ name: info.name, symbol: info.symbol, decimals: info.decimals, supply: supStr, isContract, bytecodeLen, type: 'OP-20', holders });
+          setResult({ name: info.name, symbol: info.symbol, decimals: info.decimals, supply: supStr, isContract, bytecodeLen, type: 'OP-20', ...(holders !== undefined ? { holders } : {}) });
         } else {
           const supplyStr = supply > 0n ? formatBigNum(String(supply)) : '0';
-          setResult({ name: 'Unknown Contract', symbol: '\u2014', decimals: 8, supply: supplyStr, isContract, bytecodeLen, type: 'Smart Contract', holders });
+          setResult({ name: 'Unknown Contract', symbol: '\u2014', decimals: 8, supply: supplyStr, isContract, bytecodeLen, type: 'Smart Contract', ...(holders !== undefined ? { holders } : {}) });
           setErr('Contract found. OP-20 metadata not available (may be non-standard).');
         }
       } else {
@@ -207,12 +206,12 @@ const TokenExplorer = React.memo(function TokenExplorer() {
     <div>
       {/* Search by address */}
       <div style={cardS} role="region" aria-label="Token lookup">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <div className="d-flex gap-8 mb-10">
           <input style={{ ...inputS, flex: 1 }} aria-label="Contract address" value={addr} onChange={e => setAddr(e.target.value)} placeholder="Contract address (opt1sq... or 0x...)" onKeyDown={e => e.key === 'Enter' && lookupAddr(addr.trim())} />
           <button style={btnS} onClick={() => lookupAddr(addr.trim())} disabled={loading}>{loading ? '...' : 'Explore'}</button>
         </div>
         {/* Quick links to known tokens */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+        <div className="d-flex gap-6 mb-10 flex-wrap">
           {(Object.entries(DEPLOYED_CONTRACTS) as [string, ContractTokenInfo][]).map(([sym, tok]) => (
             <button key={sym} onClick={() => lookupAddr(tok.address)}
               style={{ padding: '4px 12px', fontSize: '.62rem', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: addr === tok.address ? 'rgba(247,147,26,.1)' : 'rgba(255,255,255,.03)', color: addr === tok.address ? 'var(--o)' : 'var(--t3)', cursor: 'pointer', fontWeight: 600 }}>
@@ -220,7 +219,7 @@ const TokenExplorer = React.memo(function TokenExplorer() {
             </button>
           ))}
         </div>
-        {err && <div role="alert" style={{ fontSize: '.72rem', color: err.includes('not available') ? 'var(--y)' : 'var(--r)', marginBottom: 8 }}>{err}</div>}
+        {err && <div role="alert" className="fs-72 mb-8" style={{ color: err.includes('not available') ? 'var(--y)' : 'var(--r)' }}>{err}</div>}
         {result && (
           <div>
             {[
@@ -237,9 +236,9 @@ const TokenExplorer = React.memo(function TokenExplorer() {
                 <span style={{ ...valueS, color: c as string }}>{v}</span>
               </div>
             ))}
-            {result.isContract && <div style={{ marginTop: 8, textAlign: 'center' }}>
+            {result.isContract && <div className="mt-8 text-center">
               <a href={getContractOpscanUrl(addr.trim())} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '.65rem', color: 'var(--c)', textDecoration: 'none' }}>View on OPScan \u2192</a>
+                className="fs-65 c-c no-underline">View on OPScan \u2192</a>
             </div>}
           </div>
         )}
@@ -247,54 +246,55 @@ const TokenExplorer = React.memo(function TokenExplorer() {
 
       {/* All tokens from OPScan */}
       <div style={{ ...cardS, marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: '.82rem' }}>All Tokens ({allTokens.length})</div>
+        <div className="d-flex jc-between ai-center mb-10">
+          <div className="fw-700 fs-82">All Tokens ({allTokens.length})</div>
           <input style={{ ...inputS, width: 180, fontSize: '.65rem', padding: '6px 10px' }}
             aria-label="Filter tokens by name or symbol"
             placeholder="Filter by name or symbol..."
             value={filterText} onChange={e => setFilterText(e.target.value)} />
         </div>
         {tokensLoading ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)', fontSize: '.76rem' }}>Loading tokens from OPScan...</div>
+          <div className="text-center p-20 c-t3 fs-76">Loading tokens from OPScan...</div>
         ) : sortedTokens.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 20, color: 'var(--t3)', fontSize: '.76rem' }}>No tokens found</div>
+          <div className="text-center p-20 c-t3 fs-76">No tokens found</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="ov-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.72rem' }} aria-label="All tokens list">
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,.08)' }}>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--t3)', cursor: 'pointer', fontWeight: 600, fontSize: '.66rem' }}
+                <tr className="bb-w8">
+                  <th className="p-6-8 c-t3 pointer fw-600 fs-66" style={{ textAlign: 'left' }}
                     onClick={() => toggleSort('symbol')}>Token{sortArrow('symbol')}</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--t3)', cursor: 'pointer', fontWeight: 600, fontSize: '.66rem' }}
+                  <th className="p-6-8 c-t3 pointer fw-600 fs-66 text-right"
                     onClick={() => toggleSort('supply')}>Total Supply{sortArrow('supply')}</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', color: 'var(--t3)', cursor: 'pointer', fontWeight: 600, fontSize: '.66rem' }}
+                  <th className="p-6-8 c-t3 pointer fw-600 fs-66 text-right"
                     onClick={() => toggleSort('holders')}>Holders{sortArrow('holders')}</th>
-                  <th style={{ textAlign: 'center', padding: '6px 8px', color: 'var(--t3)', fontWeight: 600, fontSize: '.66rem' }}>Type</th>
+                  <th className="p-6-8 c-t3 fw-600 fs-66 text-center">Type</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedTokens.map(t => (
                   <tr key={t.address}
                     onClick={() => lookupAddr(t.address)}
-                    style={{ borderBottom: '1px solid rgba(255,255,255,.04)', cursor: 'pointer', transition: 'background .15s' }}
+                    className="bd-w4 pointer"
+                    style={{ transition: 'background .15s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.04)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    <td style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <td className="p-8 d-flex ai-center gap-8">
                       <div>
-                        <div style={{ fontWeight: 700, color: 'var(--w)' }}>{t.symbol}</div>
-                        <div style={{ fontSize: '.62rem', color: 'var(--t4)' }}>{t.name}</div>
+                        <div className="fw-700 c-w">{t.symbol}</div>
+                        <div className="fs-62 c-t4">{t.name}</div>
                       </div>
                     </td>
-                    <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'var(--fm)', color: 'var(--t2)' }}>
+                    <td className="p-8 text-right c-t2" style={{ fontFamily: 'var(--fm)' }}>
                       {t.totalSupply >= 1e9 ? (t.totalSupply / 1e9).toFixed(2) + 'B' :
                         t.totalSupply >= 1e6 ? (t.totalSupply / 1e6).toFixed(2) + 'M' :
                         t.totalSupply >= 1e3 ? (t.totalSupply / 1e3).toFixed(1) + 'K' :
                         t.totalSupply.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'var(--fm)', color: t.holders !== undefined ? 'var(--c)' : 'var(--t4)' }}>
+                    <td className="p-8 text-right" style={{ fontFamily: 'var(--fm)', color: t.holders !== undefined ? 'var(--c)' : 'var(--t4)' }}>
                       {t.holders !== undefined ? t.holders : '\u2014'}
                     </td>
-                    <td style={{ padding: '8px', textAlign: 'center' }}>
+                    <td className="p-8 text-center">
                       <span style={{
                         fontSize: '.58rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6,
                         background: t.isPool ? 'rgba(139,92,246,.12)' : 'rgba(34,197,94,.12)',

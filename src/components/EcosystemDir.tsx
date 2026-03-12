@@ -29,24 +29,24 @@ const EcosystemDir: React.FC = () => {
     return (
         <div>
             {/* Header */}
-            <div className="Pg" style={{ marginBottom: 16, padding: '24px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div className="Pg mb-16 d-flex ai-center jc-between flex-wrap gap-12" style={{ padding: '24px 22px' }}>
                 <div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--w)', letterSpacing: '-.02em' }}>
-                        <span style={{ color: 'var(--o)' }}>{APPS.length}</span> Apps on Bitcoin's Consensus Layer
+                    <div className="fw-800 c-w ls-neg02" style={{ fontSize: '1.15rem' }}>
+                        <span className="c-o">{APPS.length}</span> Apps on Bitcoin's Consensus Layer
                     </div>
-                    <div style={{ color: 'var(--t3)', fontSize: '.76rem', marginTop: 4, lineHeight: 1.5 }}>
+                    <div className="c-t3 fs-76 mt-4 lh-15">
                         Every app runs on cryptographic consensus.{' '}
                         <a href="https://vibecode.finance" target="_blank" rel="noopener noreferrer">vibecode.finance</a>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <div className="stat-card" style={{ padding: '8px 16px', minWidth: 60 }}>
-                        <div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--g)', fontSize: '.95rem' }}>{live}</div>
-                        <div className="stat-label" style={{ marginBottom: 0 }}>Live</div>
+                <div className="d-flex gap-8">
+                    <div className="stat-card min-w-60" style={{ padding: '8px 16px' }}>
+                        <div className="text-mono fw-700 c-g fs-95">{live}</div>
+                        <div className="stat-label mb-0">Live</div>
                     </div>
-                    <div className="stat-card" style={{ padding: '8px 16px', minWidth: 60 }}>
-                        <div style={{ fontFamily: 'var(--fm)', fontWeight: 700, color: 'var(--p)', fontSize: '.95rem' }}>{filtered.length - live}</div>
-                        <div className="stat-label" style={{ marginBottom: 0 }}>Building</div>
+                    <div className="stat-card min-w-60" style={{ padding: '8px 16px' }}>
+                        <div className="text-mono fw-700 c-p fs-95">{filtered.length - live}</div>
+                        <div className="stat-label mb-0">Building</div>
                     </div>
                 </div>
             </div>
@@ -61,12 +61,12 @@ const EcosystemDir: React.FC = () => {
             {/* App grid */}
             <div className="eg" role="list" aria-label="Ecosystem apps">
                 {filtered.map((a, i) => (
-                    <a key={i} href={a.u} target="_blank" rel="noopener noreferrer" role="listitem" aria-label={`${a.n} — ${a.lv ? 'Live' : 'Building'}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <a key={i} href={a.u} target="_blank" rel="noopener noreferrer" role="listitem" aria-label={`${a.n} — ${a.lv ? 'Live' : 'Building'}`} className="no-decoration" style={{ color: 'inherit' }}>
                         <div className="Pg ei">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                <div style={{ fontSize: '1.4rem', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.04)', borderRadius: 8, border: '1px solid var(--bd)', flexShrink: 0 }}>{a.icon}</div>
-                                <div style={{ flex: 1 }}>
-                                    <div className="ei-t" style={{ marginBottom: 0 }}>
+                            <div className="d-flex ai-center gap-8 mb-6">
+                                <div className="fs-140 w-32 h-32 d-flex ai-center jc-center br-8 bd flex-shrink-0" style={{ background: 'rgba(255,255,255,.04)' }}>{a.icon}</div>
+                                <div className="flex-1">
+                                    <div className="ei-t mb-0">
                                         <div className="ei-n">{a.n}</div>
                                         <span className={`ei-s ${a.lv ? 'lv' : 'wp'}`}>{a.lv ? '● Live' : '○ Building'}</span>
                                     </div>

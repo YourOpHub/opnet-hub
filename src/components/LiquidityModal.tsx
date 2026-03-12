@@ -253,7 +253,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {poolType === 'nativeswap' && (
           <div className="liq-ns-info">
             {NATIVESWAP_ADDRESS ? (<>
-              <div className="fs-72 fw-700 mb-8" style={{ color: '#F7931A' }}>NativeSwap BTC/Token Pool</div>
+              <div className="fs-72 fw-700 mb-8 c-o">NativeSwap BTC/Token Pool</div>
               <div className="fs-62 lh-16 mb-10" style={{ color: '#8b95a9' }}>
                 BTC/Token swaps use the deployed NativeSwap v5 contract. Select BTC as one of the tokens in the <strong style={{ color: '#0ea5e9' }}>Swap</strong> tab to trade.
               </div>
@@ -267,11 +267,11 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                   OPScan ↗
                 </a>
               </div>
-              <div className="text-mono fs-50 word-break" style={{ color: '#5a6578' }}>
+              <div className="text-mono fs-50 word-break c-muted">
                 {NATIVESWAP_ADDRESS}
               </div>
             </>) : (
-              <div className="fs-65" style={{ color: '#f59e0b' }}>
+              <div className="fs-65 c-y">
                 NativeSwap contract not yet deployed.
               </div>
             )}
@@ -291,13 +291,13 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
             </div>
             <div className="text-center">
               <div className="liq-label-sm">RATE</div>
-              <div className="liq-mono" style={{ color: '#F7931A' }}>1:{ratio.toFixed(1)}</div>
+              <div className="liq-mono c-o">1:{ratio.toFixed(1)}</div>
             </div>
           </div>
           {hasLP && (
             <div className="flex-between pt-8" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
-              <span className="fs-60" style={{ color: '#5a6578' }}>Your Share</span>
-              <span className="liq-mono" style={{ color: '#0ea5e9' }}>{poolShare.toFixed(2)}%</span>
+              <span className="fs-60 c-muted">Your Share</span>
+              <span className="liq-mono c-c">{poolShare.toFixed(2)}%</span>
             </div>
           )}
         </div>}
@@ -310,7 +310,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                 <span className="liq-field">MINE</span>
                 <span className="liq-bal">Balance: {fmtBal(mineBal)}</span>
               </div>
-              <div style={{ position: 'relative' }}>
+              <div className="pos-relative">
                 <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
                   placeholder="0.0" className="liq-input" aria-label="MINE amount to add" style={{ paddingRight: 70 }} />
                 {mineBal != null && mineBal > 0n && (
@@ -320,7 +320,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
               </div>
             </div>
 
-            <div className="text-center fw-700 fs-85" style={{ color: '#3d4555', margin: '4px 0' }}>+</div>
+            <div className="text-center fw-700 fs-85 c-t4" style={{ margin: '4px 0' }}>+</div>
 
             <div className="mb-14">
               <div className="flex-between mb-6">
@@ -331,10 +331,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
             </div>
 
             {parseFloat(mineAmt) > 0 && reserveA > 0 && (
-              <div className="bg3-rounded mb-12 fs-65 c-t3" style={{ padding: '8px 12px' }}>
+              <div className="bg3-rounded mb-12 fs-65 c-t3 p-8-12">
                 <div className="flex-between">
                   <span>New pool share</span>
-                  <span className="fw-700 text-mono" style={{ color: '#0ea5e9' }}>
+                  <span className="fw-700 text-mono c-c">
                     {((parseFloat(mineAmt) + lpMine) / (reserveA + parseFloat(mineAmt)) * 100).toFixed(2)}%
                   </span>
                 </div>
@@ -380,7 +380,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                 {poolShare > 0 && (
                   <div className="flex-between pt-6 mt-4" style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
                     <span className="liq-field">Pool Share</span>
-                    <span className="fs-75 fw-800 text-mono" style={{ color: '#0ea5e9' }}>{poolShare.toFixed(2)}%</span>
+                    <span className="fs-75 fw-800 text-mono c-c">{poolShare.toFixed(2)}%</span>
                   </div>
                 )}
               </div>
@@ -392,13 +392,13 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
                 {hasLP ? 'Or enter amount manually:' : 'Enter your position to remove:'}
               </div>
               <div className="flex-center gap-8 mb-8">
-                <div style={{ flex: 1 }}>
+                <div className="flex-1">
                   <div className="liq-label-sm mb-4">MINE amount</div>
                   <input type="number" value={mineAmt} onChange={e => setMineAmt(e.target.value)}
                     placeholder={lpMine > 0 ? String(lpMine) : '0'}
                     className="liq-input-sm" aria-label="MINE amount to remove" />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className="flex-1">
                   <div className="liq-label-sm mb-4">VIBE (auto)</div>
                   <input type="number" value={vibeAmt} readOnly
                     placeholder={lpVibe > 0 ? String(lpVibe) : '0'}
@@ -436,7 +436,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {/* Pool link */}
         <div className="mt-14 text-center">
           <a href={getContractOpscanUrl(POOL_ADDRESS)} target="_blank" rel="noopener noreferrer"
-            className="fs-56" style={{ color: '#38bdf8', textDecoration: 'none' }}>
+            className="fs-56 c-c2 no-decoration">
             View pool on OPScan ↗
           </a>
         </div>

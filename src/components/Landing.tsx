@@ -115,8 +115,8 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
   return (
     <div>
       {/* ═══ HERO ═══ */}
-      <div className="hero-l" role="banner" style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 340px' }}>
+      <div className="hero-l" role="banner">
+        <div>
           <div className="hero-badge">
             <span className="dot" />
             Bitcoin L1 Smart Contracts

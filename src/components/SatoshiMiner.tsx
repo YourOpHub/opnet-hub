@@ -342,11 +342,11 @@ const SatoshiMiner: React.FC = () => {
 
     return (
         <div className="mg">
-            <div className="mz-wrap br-20 ov-hidden pos-relative" style={{ background: stage.bg, border: '1px solid var(--bd)' }}>
-                <canvas ref={canvasRef} className="pos-absolute w-full pointer-events-none" style={{ inset: 0, height: '100%', zIndex: 1 }} />
-                {flash && <div className="pos-absolute pointer-events-none br-20" style={{ inset: 0, background: 'rgba(234,179,8,.1)', zIndex: 2, animation: 'fadeIn .15s ease' }} />}
+            <div className="mz-wrap br-20 ov-hidden pos-relative bd" style={{ background: stage.bg }}>
+                <canvas ref={canvasRef} className="pos-absolute w-full h-full pointer-events-none inset-0 z-1" />
+                {flash && <div className="pos-absolute pointer-events-none br-20 inset-0 z-2" style={{ background: 'rgba(234,179,8,.1)', animation: 'fadeIn .15s ease' }} />}
 
-                <div className="pos-relative d-flex flex-col-dir ai-center jc-center" style={{ zIndex: 3, padding: '30px 16px', minHeight: 460 }}>
+                <div className="pos-relative d-flex flex-col-dir ai-center jc-center z-3 min-h-460" style={{ padding: '30px 16px' }}>
                     {/* Stage label */}
                     <div className="text-mono flex-center gap-8 mb-12 fs-58 text-upper ls-12" style={{ color: stage.color }}>
                         <span className="w-6 h-6 br-50" style={{ background: stage.color, boxShadow: `0 0 8px ${stage.color}`, animation: 'blink 2s infinite' }} />
@@ -369,7 +369,7 @@ const SatoshiMiner: React.FC = () => {
                                 src={hitting ? SPRITE_HIT : SPRITE_IDLE}
                                 alt="Pixel art miner character — click to mine satoshis"
                                 draggable={false}
-                                className="w-full" style={{ height: '100%', objectFit: 'contain', filter: `drop-shadow(0 0 20px ${stage.color}) drop-shadow(0 4px 12px rgba(0,0,0,.6))`, imageRendering: 'pixelated', transition: 'filter .15s' }}
+                                className="w-full h-full obj-contain pixel-art" style={{ filter: `drop-shadow(0 0 20px ${stage.color}) drop-shadow(0 4px 12px rgba(0,0,0,.6))`, transition: 'filter .15s' }}
                             />
                             {/* Impact flash on hit */}
                             {hitting && <div className="pos-absolute br-50 pointer-events-none" style={{ inset: 0, background: `radial-gradient(circle, ${stage.ring}, transparent 60%)`, animation: 'fadeIn .1s ease' }} />}
@@ -395,7 +395,7 @@ const SatoshiMiner: React.FC = () => {
                     {autoLv > 0 && (
                         <div className="flex-center gap-6 mt-14">
                             {Array.from({ length: Math.min(autoLv, 5) }).map((_, i) => (
-                                <img key={i} src={SPRITE_RIG} alt={`Mining rig ${i + 1}`} draggable={false} className="w-38 h-38" style={{ objectFit: 'contain', imageRendering: 'pixelated', animation: `bob 2s ease-in-out infinite ${i * 0.2}s`, filter: `drop-shadow(0 0 6px ${stage.color})`, opacity: .85 + i * .03 }} />
+                                <img key={i} src={SPRITE_RIG} alt={`Mining rig ${i + 1}`} draggable={false} className="w-38 h-38 obj-contain pixel-art" style={{ animation: `bob 2s ease-in-out infinite ${i * 0.2}s`, filter: `drop-shadow(0 0 6px ${stage.color})`, opacity: .85 + i * .03 }} />
                             ))}
                             <div className="c-t4 fs-55 ml-4">⚡ {autoLv} miners</div>
                         </div>
@@ -457,7 +457,7 @@ const SatoshiMiner: React.FC = () => {
                 </div>
                 <div className="P p-12 mb-6">
                     <div className="Lb mb-4">📊 Your Stats</div>
-                    <div className="d-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                    <div className="grid-2col gap-5">
                         <div className="text-center"><div className="text-mono fw-700 fs-85" style={{ color: stage.color }}>{fs(tot)}</div><div className="c-t4 fs-48">Total Mined</div></div>
                         <div className="text-center"><div className="text-mono fw-700 c-g fs-85">{sps.toFixed(1)}/s</div><div className="c-t4 fs-48">Hash Rate</div></div>
                     </div>
@@ -465,7 +465,7 @@ const SatoshiMiner: React.FC = () => {
                 {/* $MINE Token Panel */}
                 <div className="P p-12 mb-6" style={{ border: '1px solid rgba(234,179,8,.2)', background: 'rgba(234,179,8,.03)' }}>
                     <div className="Lb mb-6 c-y">🪙 $MINE Token</div>
-                    <div className="fs-sm c-t3" style={{ lineHeight: 1.7 }}>
+                    <div className="fs-sm c-t3 lh-17">
                         <div className="flex-between">
                             <span>Your Balance</span>
                             <span className="text-mono fw-700 c-y">{mineBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} MINE</span>
@@ -483,7 +483,7 @@ const SatoshiMiner: React.FC = () => {
                             <span className="text-mono fw-600 c-c">Every {MINE_HALVING_DAYS} days</span>
                         </div>
                         {/* Pool progress bar */}
-                        <div className="mt-6 br-2" style={{ height: 4, background: 'rgba(255,255,255,.06)' }}>
+                        <div className="mt-6 br-2 h-4 bg-w6">
                             <div className="br-2" style={{ height: '100%', background: 'linear-gradient(90deg, var(--y), var(--o))', width: `${(1 - minePoolRemaining / MINE_GAME_POOL) * 100}%`, transition: 'width .3s' }} />
                         </div>
                         <div className="mt-2 c-t4 text-center fs-50">{((1 - minePoolRemaining / MINE_GAME_POOL) * 100).toFixed(4)}% distributed</div>
@@ -526,18 +526,18 @@ const SatoshiMiner: React.FC = () => {
                             }
                         }}
                         disabled={mineBalance < 1 || claimStatus === 'syncing' || claimStatus === 'claiming'}
-                        className="mt-8 w-full br-14 fw-700 fs-75" style={{ padding: '8px 0', background: claimStatus === 'done' ? 'rgba(16,185,129,.06)' : claimStatus === 'error' ? 'rgba(239,68,68,.15)' : mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)', border: 'none', color: claimStatus === 'done' ? 'var(--g)' : claimStatus === 'error' ? '#ef4444' : mineBalance >= 1 ? '#000' : 'var(--t4)', cursor: mineBalance >= 1 ? 'pointer' : 'not-allowed', transition: '.2s' }}
+                        className="mt-8 w-full br-14 fw-700 fs-75 no-border transition-all-2" style={{ padding: '8px 0', background: claimStatus === 'done' ? 'rgba(16,185,129,.06)' : claimStatus === 'error' ? 'rgba(239,68,68,.15)' : mineBalance >= 1 ? 'linear-gradient(135deg, var(--y), var(--o))' : 'rgba(255,255,255,.05)', color: claimStatus === 'done' ? 'var(--g)' : claimStatus === 'error' ? '#ef4444' : mineBalance >= 1 ? '#000' : 'var(--t4)', cursor: mineBalance >= 1 ? 'pointer' : 'not-allowed' }}
                     >
                         {claimStatus === 'syncing' ? 'Syncing...' : claimStatus === 'claiming' ? 'Minting on-chain...' : claimStatus === 'done' ? 'Minted!' : claimStatus === 'error' ? 'Error — retry' : !walletAddress ? 'Connect Wallet to Claim' : mineBalance >= 1 ? `Claim ${Math.min(Math.floor(mineBalance), 1_000_000).toLocaleString()} MINE` : 'Mine to earn $MINE'}
                     </button>
                     {showClaim && (
-                        <div className="mt-8 fs-62 c-t3 p-10 br-14 lh-15" style={{ background: 'rgba(0,0,0,.3)' }}>
+                        <div className="mt-8 fs-62 c-t3 p-10 br-14 lh-15 bg-black-30">
                             <strong className="c-y">On-Chain Claim via publicMint</strong><br />
                             Token: <span className="text-mono c-c">$MINE (OP-20)</span><br />
                             Max per TX: 1,000,000 MINE | Decimals: {MINE_DECIMALS}<br />
                             Contract: <span className="text-mono fs-55">{MINE_CONTRACT}</span><br />
                             <span className="c-t4">Connect OP_WALLET → Sign ML-DSA tx → Tokens minted on Bitcoin L1</span>
-                            <button onClick={() => setShowClaim(false)} className="mt-4 br-4 c-t3 fs-55 pointer" style={{ background: 'none', border: '1px solid var(--bd)', padding: '2px 8px' }}>Close</button>
+                            <button onClick={() => setShowClaim(false)} className="mt-4 br-4 c-t3 fs-55 pointer bg-none bd-bd p-2-8">Close</button>
                         </div>
                     )}
                     <div className="mt-6 c-t4 text-center fs-50">
@@ -575,13 +575,13 @@ const SatoshiMiner: React.FC = () => {
                                 setShowPrestige(false);
                                 setFlash(true); setTimeout(() => setFlash(false), 600);
                             }} disabled={tot < Math.pow(10, 5 + prestige)}
-                            className="flex-1 br-10 fw-700 fs-68" style={{ padding: '7px 0', border: 'none', cursor: tot >= Math.pow(10, 5 + prestige) ? 'pointer' : 'not-allowed', background: tot >= Math.pow(10, 5 + prestige) ? 'linear-gradient(135deg, var(--p), #ec4899)' : 'rgba(255,255,255,.05)', color: tot >= Math.pow(10, 5 + prestige) ? '#fff' : 'var(--t4)' }}>
+                            className="flex-1 br-10 fw-700 fs-68 p-7-0 no-border" style={{ cursor: tot >= Math.pow(10, 5 + prestige) ? 'pointer' : 'not-allowed', background: tot >= Math.pow(10, 5 + prestige) ? 'linear-gradient(135deg, var(--p), #ec4899)' : 'rgba(255,255,255,.05)', color: tot >= Math.pow(10, 5 + prestige) ? '#fff' : 'var(--t4)' }}>
                                 Prestige Now
                             </button>
-                            <button onClick={() => setShowPrestige(false)} className="br-10 c-t3 fs-65 pointer" style={{ padding: '7px 12px', border: '1px solid var(--bd)', background: 'none' }}>Cancel</button>
+                            <button onClick={() => setShowPrestige(false)} className="br-10 c-t3 fs-65 pointer bg-none bd-bd" style={{ padding: '7px 12px' }}>Cancel</button>
                         </div>
                     ) : (
-                        <button onClick={() => setShowPrestige(true)} className="w-full br-10 c-p fw-600 fs-68 pointer" style={{ padding: '7px 0', border: '1px solid rgba(167,139,250,.2)', background: 'rgba(167,139,250,.06)' }}>
+                        <button onClick={() => setShowPrestige(true)} className="w-full br-10 c-p fw-600 fs-68 pointer p-7-0" style={{ border: '1px solid rgba(167,139,250,.2)', background: 'rgba(167,139,250,.06)' }}>
                             Prestige (Reset for +25%)
                         </button>
                     )}

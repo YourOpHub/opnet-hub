@@ -18,7 +18,9 @@ export const onRequest: PagesFunction = async (context) => {
   });
 
   const respHeaders = new Headers(resp.headers);
-  respHeaders.set('Access-Control-Allow-Origin', '*');
+  const origin = context.request.headers.get('Origin') ?? '';
+  const allowed = origin === 'https://opnethub.xyz' || origin.endsWith('.opnet-hub.pages.dev');
+  respHeaders.set('Access-Control-Allow-Origin', allowed ? origin : 'https://opnethub.xyz');
 
   return new Response(resp.body, { status: resp.status, headers: respHeaders });
 };

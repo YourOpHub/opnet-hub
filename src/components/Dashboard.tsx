@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
       // 3. Fetch gas
       try {
         const gp = await opnet.getGasParameters();
-        if (!ac.signal.aborted && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative), recommended: undefined });
+        if (!ac.signal.aborted && gp) setGasParams({ conservative: Number(gp.bitcoin?.conservative) });
       } catch (e) { if (!ac.signal.aborted) logger.warn('[Dashboard] Gas parameters fetch failed:', e); }
 
       if (!ac.signal.aborted) {
@@ -119,7 +119,7 @@ const Dashboard: React.FC = () => {
         <div className="P met"><div className="met-i">🌐</div><div className="met-v c-c fs-100">Mainnet</div><div className="met-l">Network</div></div>
         <div className="P met"><div className="met-i">🔗</div>
           <div className="met-v fs-100">
-            <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" className="c-c2 fw-700" style={{ textDecoration: 'none' }}>OPScan ↗</a>
+            <a href="https://opscan.org" target="_blank" rel="noopener noreferrer" className="c-c2 fw-700 no-underline">OPScan ↗</a>
           </div>
           <div className="met-l">Block Explorer</div>
         </div>
@@ -140,7 +140,7 @@ const Dashboard: React.FC = () => {
               }}>
                 <div className="flex-center gap-8">
                   <span className="text-mono fw-700" style={{ color: i === 0 ? 'var(--o)' : 'var(--t2)' }}>#{b.height.toLocaleString()}</span>
-                  <span className="fs-60 c-t4 br-4" style={{ background: 'var(--bg3)', padding: '1px 6px' }}>Epoch {b.epoch}</span>
+                  <span className="fs-60 c-t4 br-4 bg-bg3" style={{ padding: '1px 6px' }}>Epoch {b.epoch}</span>
                   {b.height % 5 === 0 && <span className="fs-50 c-y fw-700">⚡ EPOCH</span>}
                 </div>
                 <span className="fs-60 c-t4 text-mono">{b.time.toLocaleTimeString()}</span>

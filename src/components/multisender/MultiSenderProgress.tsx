@@ -48,41 +48,36 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
       </div>
 
       {/* Results list */}
-      <div className="br-12 bd" role="list" aria-label="Transfer results" style={{ maxHeight: 340, overflowY: 'auto' }}>
+      <div className="br-12 bd ov-y-auto" role="list" aria-label="Transfer results" style={{ maxHeight: 340 }}>
         {results.map((r, i) => (
           <div
             key={i}
             role="listitem"
             aria-label={`Transfer to ${r.address.length > 30 ? r.address.slice(0, 14) + '...' : r.address}: ${r.status}`}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,.04)',
-              background: r.status === 'sending' ? 'rgba(247,147,26,.04)' : 'transparent',
-            }}
+            className="d-flex ai-center gap-10 p-10-12 bd-b"
+            style={{ background: r.status === 'sending' ? 'rgba(247,147,26,.04)' : 'transparent' }}
           >
             {/* Status icon */}
-            <div style={{
-              width: 22, height: 22, borderRadius: '50%', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              fontSize: '.7rem',
-              background:
-                r.status === 'success' ? 'rgba(34,197,94,.15)' :
-                r.status === 'error' ? 'rgba(239,68,68,.15)' :
-                r.status === 'sending' ? 'rgba(247,147,26,.15)' :
-                'var(--bg3)',
-            }}>
-              {r.status === 'success' && <span style={{ color: 'var(--g)' }}>{'\u2713'}</span>}
-              {r.status === 'error' && <span style={{ color: 'var(--r)' }}>{'\u2717'}</span>}
+            <div className="w-22 h-22 br-50 d-flex ai-center jc-center flex-shrink-0 fs-70"
+              style={{
+                background:
+                  r.status === 'success' ? 'rgba(34,197,94,.15)' :
+                  r.status === 'error' ? 'rgba(239,68,68,.15)' :
+                  r.status === 'sending' ? 'rgba(247,147,26,.15)' :
+                  'var(--bg3)',
+              }}>
+              {r.status === 'success' && <span className="c-g">{'\u2713'}</span>}
+              {r.status === 'error' && <span className="c-r">{'\u2717'}</span>}
               {r.status === 'sending' && (
-                <span style={{ color: 'var(--o)', animation: 'spin 1s linear infinite' }}>
+                <span className="c-o" style={{ animation: 'spin 1s linear infinite' }}>
                   {'\u25E6'}
                 </span>
               )}
-              {r.status === 'pending' && <span style={{ color: 'var(--t4)' }}>{'\u2022'}</span>}
+              {r.status === 'pending' && <span className="c-t4">{'\u2022'}</span>}
             </div>
 
             {/* Details */}
-            <div style={{ flex: 1 }} className="min-w-0">
+            <div className="flex-1 min-w-0">
               <div className="fs-70 c-t2 text-mono">
                 {r.address.length > 30
                   ? r.address.slice(0, 14) + '...' + r.address.slice(-10)
@@ -104,8 +99,7 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
 
       {/* Complete message */}
       {sendComplete && (
-        <div style={{
-          marginTop: 14, padding: '14px', borderRadius: 12, textAlign: 'center',
+        <div className="mt-14 p-14 br-12 text-center" style={{
           background: failedCount === 0 ? 'rgba(34,197,94,.08)' : 'rgba(234,179,8,.08)',
           border: `1px solid ${failedCount === 0 ? 'rgba(34,197,94,.2)' : 'rgba(234,179,8,.2)'}`,
         }}>
@@ -124,18 +118,16 @@ const MultiSenderProgress: React.FC<MultiSenderProgressProps> = ({
       {/* Start / Reset buttons */}
       {!sending && !sendComplete && (
         <button
-          className="btn-p w-full mt-14 fw-700 fs-82"
+          className="btn-p w-full mt-14 fw-700 fs-82 p-12"
           onClick={onStartSend}
-          style={{ padding: '12px' }}
         >
           Send {validRecipientsCount} Transfer{validRecipientsCount !== 1 ? 's' : ''}
         </button>
       )}
       {sendComplete && (
         <button
-          className="btn-s w-full mt-10 fs-78"
+          className="btn-s w-full mt-10 fs-78 p-10"
           onClick={onReset}
-          style={{ padding: '10px' }}
         >
           New Batch
         </button>

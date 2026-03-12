@@ -75,7 +75,7 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
   const ZERO_HEX = '0'.repeat(64);
 
   return (
-    <div key={`tb_${order.id}`} className="Pg" role="article" aria-label={`${isSell ? 'Sell' : 'Buy'} ${tokenSymbol} order #${order.id}`} aria-expanded={isExpanded} style={{ marginBottom: 8, cursor: 'pointer' }}
+    <div key={`tb_${order.id}`} className="Pg mb-8 pointer" role="article" aria-label={`${isSell ? 'Sell' : 'Buy'} ${tokenSymbol} order #${order.id}`} aria-expanded={isExpanded}
       onClick={() => setExpandedOrder(isExpanded ? null : `tb_${order.id}`)}
     >
       {/* Header */}
@@ -89,19 +89,19 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
           }}>
             {isSell ? 'Sell' : 'Buy'} {tokenIcon} {tokenSymbol}
           </span>
-          <span style={{ fontWeight: 700, fontSize: '.82rem' }}>
+          <span className="fw-700 fs-82">
             {formatTokenAmount(order.tokenAmount, tokenDecimals)} {tokenSymbol}
           </span>
         </div>
         <div className="flex-center gap-8">
           <StatusBadge status={order.status as OrderStatus} />
-          <span style={{ fontSize: '.72rem', color: 'var(--t3)' }}>#{order.id}</span>
+          <span className="fs-72 c-t3">#{order.id}</span>
         </div>
       </div>
 
       {/* Info row */}
       <div className="d-flex gap-16 mt-8 fs-72 c-t2 flex-wrap">
-        <span>Price: <b style={{ color: 'var(--o)' }}>{satsToBtc(order.btcPrice)}</b></span>
+        <span>Price: <b className="c-o">{satsToBtc(order.btcPrice)}</b></span>
         <span>Fee: <b>+{Number(feeSats).toLocaleString()} sats</b></span>
         {order.expiry > 0 && (
           <span style={{ color: isExpired ? 'var(--r)' : 'var(--g)' }}>
@@ -118,14 +118,14 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
             <div className="cc-detail-line"><b>Token:</b> {tokenIcon} {tokenSymbol} ({tokenInfo?.address ? tokenInfo.address.slice(0, 20) + '...' : order.tokenHex.slice(0, 20) + '...'})</div>
             <div className="cc-detail-line"><b>Amount:</b> {formatTokenAmount(order.tokenAmount, tokenDecimals)} {tokenSymbol}</div>
             <div className="cc-detail-line"><b>BTC Price:</b> {satsToBtc(order.btcPrice)}</div>
-            <div className="cc-detail-line"><b>Hashlock:</b> <code style={{ fontSize: '.65rem', wordBreak: 'break-all' }}>{order.hashlock}</code></div>
+            <div className="cc-detail-line"><b>Hashlock:</b> <code className="fs-65 word-break">{order.hashlock}</code></div>
             {order.preimage !== ZERO_HEX && (
-              <div className="cc-detail-line"><b>Preimage:</b> <code style={{ fontSize: '.65rem', wordBreak: 'break-all' }}>{order.preimage}</code></div>
+              <div className="cc-detail-line"><b>Preimage:</b> <code className="fs-65 word-break">{order.preimage}</code></div>
             )}
             {myPreimage && order.preimage === ZERO_HEX && (
               <div className="cc-preimage-box">
-                <b style={{ color: '#f59e0b' }}>Your Preimage (keep secret!):</b>
-                <code style={{ fontSize: '.65rem', wordBreak: 'break-all', display: 'block', marginTop: 2 }}>{myPreimage}</code>
+                <b className="c-y">Your Preimage (keep secret!):</b>
+                <code className="fs-65 word-break d-block mt-2">{myPreimage}</code>
               </div>
             )}
             {order.expiry > 0 && (
@@ -143,7 +143,7 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
 
             {/* Confirm with preimage */}
             {order.status === 2 && !isExpired && myPreimage && (
-              <button className="btn-p" style={{ fontSize: '.72rem', padding: '6px 14px' }}
+              <button className="btn-p fs-72 p-6-14"
                 disabled={isThisTbActioning}
                 onClick={(e) => { e.stopPropagation(); onConfirm(order.id, myPreimage); }}>
                 Reveal Preimage & Release Tokens

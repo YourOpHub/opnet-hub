@@ -56,8 +56,8 @@ const ConverterTool = React.memo(function ConverterTool() {
   return (
     <div style={cardS}>
       <div className="flex-center gap-6 mb-12" role="radiogroup" aria-label="Input mode">
-        <button className={`fbn fs-65 ${mode === 'btc' ? 'on' : ''}`} role="radio" aria-checked={mode === 'btc'} style={{ padding: '4px 12px' }} onClick={() => setMode('btc')}>BTC input</button>
-        <button className={`fbn fs-65 ${mode === 'sats' ? 'on' : ''}`} role="radio" aria-checked={mode === 'sats'} style={{ padding: '4px 12px' }} onClick={() => setMode('sats')}>Sats input</button>
+        <button className={`fbn fs-65 p-4-12 ${mode === 'btc' ? 'on' : ''}`} role="radio" aria-checked={mode === 'btc'} onClick={() => setMode('btc')}>BTC input</button>
+        <button className={`fbn fs-65 p-4-12 ${mode === 'sats' ? 'on' : ''}`} role="radio" aria-checked={mode === 'sats'} onClick={() => setMode('sats')}>Sats input</button>
         <span className="fs-xs c-t4 ml-auto">BTC/USD: ${bp.toLocaleString()}</span>
       </div>
       {mode === 'btc' ? (
@@ -71,7 +71,7 @@ const ConverterTool = React.memo(function ConverterTool() {
           <span className="c-o fw-700 fs-80 ws-nowrap">sats</span>
         </div>
       )}
-      <div className="d-grid gap-8" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+      <div className="grid-3col gap-8">
         <div className="text-center p-10 br-12" style={{ background: 'rgba(247,147,26,.06)' }}>
           <div className="text-mono fw-700 c-o fs-85">{bn >= 1 ? bn.toFixed(4) : bn.toFixed(8)}</div>
           <div className="mt-2 c-t4 fs-55">BTC</div>
@@ -89,7 +89,7 @@ const ConverterTool = React.memo(function ConverterTool() {
       <div className="flex-center gap-6 mt-10 flex-wrap">
         {[0.001, 0.01, 0.1, 1, 10].map(v => (
           <button key={v} onClick={() => { setMode('btc'); setBa(String(v)); }}
-            className="fs-58 br-8 c-t3 pointer" style={{ padding: '3px 10px', border: '1px solid rgba(255,255,255,.08)', background: 'rgba(255,255,255,.03)' }}>
+            className="fs-58 br-8 c-t3 pointer p-3-10 bd-w8 bg-w3">
             {v} BTC
           </button>
         ))}
@@ -130,7 +130,7 @@ const UTXOViewer = React.memo(function UTXOViewer() {
       </div>
       {err && <div className="fs-72 c-r mb-8" role="alert">{err}</div>}
       {balance !== null && (
-        <div className="d-grid gap-8 mb-12" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="grid-3col gap-8 mb-12">
           <div className="text-center p-10 br-12" style={{ background: 'rgba(247,147,26,.06)' }}>
             <div className="text-mono fw-700 c-o">{(Number(balance) / 1e8).toFixed(6)}</div>
             <div className="c-t4 fs-50">BTC Balance</div>
@@ -148,7 +148,7 @@ const UTXOViewer = React.memo(function UTXOViewer() {
       {utxos.length > 0 && (
         <div>
           <div className="fs-66 c-t3 mb-6 fw-600">UTXOs ({utxos.length}) · Total: {totalSats.toLocaleString()} sats</div>
-          <div className="ov-y-auto" style={{ maxHeight: 300 }}>
+          <div className="ov-y-auto max-h-300">
             {utxos.map((u, i) => {
               const val = typeof u.value === 'string' ? (u.value.startsWith('0x') ? Number(BigInt(u.value)) : Number(u.value)) : u.value;
               return (
@@ -224,7 +224,7 @@ const FaucetTool = React.memo(function FaucetTool() {
           {msg}
         </div>
       )}
-      <div className="d-grid gap-8 mt-10" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <div className="grid-2col gap-8 mt-10">
         <div className="text-center p-10 br-10" style={{ background: 'rgba(234,179,8,.05)' }}>
           <div className="fs-85">⛏️</div>
           <div className="text-mono fw-700 c-y">1M MINE</div>
@@ -252,7 +252,7 @@ const TokenTools: React.FC = () => {
   useEffect(() => { localStorage.setItem('hub_tools_used', '1'); }, []);
 
   return (
-    <div className="m-auto" style={{ maxWidth: 800, padding: '0 12px' }}>
+    <div className="max-w-800" style={{ padding: '0 12px' }}>
       {/* Header */}
       <div className="text-center" style={{ padding: '20px 0 14px' }}>
         <div className="fs-140 fw-800" style={{ background: 'linear-gradient(135deg, #F7931A, #ffab40)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -264,7 +264,7 @@ const TokenTools: React.FC = () => {
       </div>
 
       {/* Tab bar */}
-      <div className="flex-center gap-4 mb-14" role="tablist" aria-label="Developer tools" style={{ overflowX: 'auto', padding: '0 0 12px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+      <div className="flex-center gap-4 mb-14 ov-x-auto bb-w6" role="tablist" aria-label="Developer tools" style={{ padding: '0 0 12px' }}>
         {TOOL_TABS.map(t => (
           <button key={t.id} role="tab" aria-selected={activeTab === t.id} onClick={() => setActiveTab(t.id)}
             className="br-12 pointer ws-nowrap fs-70" style={{ padding: '8px 14px', border: 'none', background: activeTab === t.id ? 'linear-gradient(135deg, rgba(247,147,26,.15), rgba(255,171,64,.1))' : 'rgba(255,255,255,.03)', color: activeTab === t.id ? 'var(--o)' : 'var(--t3)', fontWeight: activeTab === t.id ? 700 : 500, transition: '.2s', borderColor: activeTab === t.id ? 'rgba(247,147,26,.2)' : 'transparent' }}>

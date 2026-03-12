@@ -552,7 +552,7 @@ export function useSwap(): UseSwapReturn {
     if (!poolTokenA || !poolTokenB) return;
     if (poolTokenA === poolTokenB) { setPoolDeployResult({ ok: false, msg: 'Token A and B must be different' }); return; }
 
-    const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
+    const inst = walletInstance as unknown as { web3?: Record<string, unknown>; deployContract?: unknown };
     const web3 = inst.web3 ?? inst;
     if ((web3 as Record<string, unknown>)?.deployContract == null) { setPoolDeployResult({ ok: false, msg: 'Wallet does not support deployment. Use OP_WALLET.' }); return; }
 

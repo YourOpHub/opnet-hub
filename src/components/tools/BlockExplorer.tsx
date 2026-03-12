@@ -87,11 +87,11 @@ const BlockExplorer = React.memo(function BlockExplorer() {
                   background: 'rgba(245,158,11,.08)', border: '1px dashed rgba(245,158,11,.3)',
                   cursor: 'default', transition: '.2s',
                 }}>
-                  <div style={{ fontSize: '.5rem', color: 'var(--y)', fontWeight: 600, marginBottom: 2 }}>PENDING</div>
-                  <div style={{ ...monoSm, fontWeight: 700, color: 'var(--y)', fontSize: '.7rem' }}>{mempool.opnetCount ?? mempool.count ?? '?'}</div>
+                  <div className="fs-50 c-y fw-600 mb-2">PENDING</div>
+                  <div className="fw-700 c-y fs-70" style={{ ...monoSm }}>{mempool.opnetCount ?? mempool.count ?? '?'}</div>
                   <div style={{ fontSize: '.45rem', color: 'var(--t4)' }}>txs</div>
                 </div>
-                <div style={{ color: 'var(--t4)', fontSize: '.8rem', padding: '0 2px' }}>...</div>
+                <div className="c-t4 fs-80" style={{ padding: '0 2px' }}>...</div>
               </>
             )}
             {recentBlocks.map((b, i) => {
@@ -106,17 +106,17 @@ const BlockExplorer = React.memo(function BlockExplorer() {
                     border: `1px solid ${selected ? 'rgba(247,147,26,.3)' : isLatest ? 'rgba(16,185,129,.15)' : 'rgba(255,255,255,.06)'}`,
                     transition: '.2s',
                   }}>
-                  <div style={{ fontSize: '.5rem', color: isLatest ? 'var(--g)' : 'var(--t4)', fontWeight: 600, marginBottom: 2 }}>
+                  <div className="fs-50 fw-600 mb-2" style={{ color: isLatest ? 'var(--g)' : 'var(--t4)' }}>
                     {isLatest ? 'LATEST' : `#${b.num.toLocaleString()}`}
                   </div>
                   <div style={{
                     width: '100%', height: barH, borderRadius: 4, marginBottom: 4,
                     background: `linear-gradient(180deg, ${isLatest ? 'rgba(16,185,129,.3)' : 'rgba(14,165,233,.2)'}, transparent)`,
                   }} />
-                  <div style={{ ...monoSm, fontWeight: 700, color: '#fff', fontSize: '.7rem' }}>
+                  <div className="fw-700 c-white fs-70" style={{ ...monoSm }}>
                     {isLatest ? `#${b.num.toLocaleString()}` : `${b.txCount}`}
                   </div>
-                  <div style={{ fontSize: '.45rem', color: 'var(--t4)' }}>{b.txCount} txs</div>
+                  <div className="c-t4" style={{ fontSize: '.45rem' }}>{b.txCount} txs</div>
                 </div>
               );
             })}
@@ -125,34 +125,34 @@ const BlockExplorer = React.memo(function BlockExplorer() {
       )}
 
       <div className="be-nav-row">
-        <button aria-label="Previous block" onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); setBlock(null); }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&lt;</button>
-        <input style={{ ...inputS, flex: 1, textAlign: 'center' }} type="number" aria-label="Block number" value={blockNum} onChange={e => setBlockNum(e.target.value)} placeholder="Block number" onKeyDown={e => e.key === 'Enter' && lookup()} />
-        <button aria-label="Next block" onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) { setBlockNum(String(n)); setBlock(null); } }} style={{ ...copyBtnS, fontSize: '.75rem', padding: '6px 10px' }}>&gt;</button>
+        <button aria-label="Previous block" onClick={() => { const n = Math.max(0, parseInt(blockNum) - 1); setBlockNum(String(n)); setBlock(null); }} style={copyBtnS} className="fs-75 p-6-10">&lt;</button>
+        <input style={{ ...inputS, flex: 1 }} className="text-center" type="number" aria-label="Block number" value={blockNum} onChange={e => setBlockNum(e.target.value)} placeholder="Block number" onKeyDown={e => e.key === 'Enter' && lookup()} />
+        <button aria-label="Next block" onClick={() => { const n = parseInt(blockNum) + 1; if (n <= latestHeight) { setBlockNum(String(n)); setBlock(null); } }} style={copyBtnS} className="fs-75 p-6-10">&gt;</button>
         <button style={btnS} onClick={lookup} disabled={loading}>{loading ? '...' : 'Fetch'}</button>
       </div>
       {latestHeight > 0 && (
         <div className="be-quick-btns">
-          <button onClick={() => { setBlockNum(String(latestHeight)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>Latest (#{latestHeight.toLocaleString()})</button>
-          <button onClick={() => { setBlockNum(String(latestHeight - 10)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-10</button>
-          <button onClick={() => { setBlockNum(String(latestHeight - 100)); setBlock(null); }} style={{ ...copyBtnS, padding: '3px 10px' }}>-100</button>
+          <button onClick={() => { setBlockNum(String(latestHeight)); setBlock(null); }} style={copyBtnS} className="p-3-10">Latest (#{latestHeight.toLocaleString()})</button>
+          <button onClick={() => { setBlockNum(String(latestHeight - 10)); setBlock(null); }} style={copyBtnS} className="p-3-10">-10</button>
+          <button onClick={() => { setBlockNum(String(latestHeight - 100)); setBlock(null); }} style={copyBtnS} className="p-3-10">-100</button>
         </div>
       )}
-      {err && <div role="alert" style={{ fontSize: '.72rem', color: 'var(--r)', marginBottom: 8 }}>{err}</div>}
+      {err && <div role="alert" className="fs-72 c-r mb-8">{err}</div>}
       {block && (
         <div>
           {Object.entries(block).filter(([, v]) => v !== null && typeof v !== 'object').map(([k, v]) => (
             <React.Fragment key={k}>{renderVal(k, v)}</React.Fragment>
           ))}
           {Array.isArray(block.transactions) && (
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: '.68rem', color: 'var(--c)', fontWeight: 700, marginBottom: 4 }}>Transactions ({(block.transactions as Array<unknown>).length})</div>
+            <div className="mt-8">
+              <div className="fs-68 c-c fw-700 mb-4">Transactions ({(block.transactions as Array<unknown>).length})</div>
               {(block.transactions as Array<Record<string, string>>).slice(0, 20).map((tx, i) => {
                 const txHash = String(tx.hash ?? tx.id ?? i);
                 const txFrom = tx.from ? String(tx.from) : '';
                 return (
-                  <div key={i} style={{ ...rowS, fontSize: '.6rem' }}>
-                    <span style={{ ...monoSm, color: 'var(--c)', fontSize: '.58rem' }}>{txHash.slice(0, 16)}...</span>
-                    {txFrom && <span style={{ ...monoSm, color: 'var(--t3)', fontSize: '.55rem' }}>from: {txFrom.slice(0, 10)}...</span>}
+                  <div key={i} className="fs-60" style={{ ...rowS }}>
+                    <span className="c-c fs-58" style={{ ...monoSm }}>{txHash.slice(0, 16)}...</span>
+                    {txFrom && <span className="c-t3 fs-55" style={{ ...monoSm }}>from: {txFrom.slice(0, 10)}...</span>}
                   </div>
                 );
               })}

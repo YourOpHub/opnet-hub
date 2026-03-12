@@ -83,7 +83,7 @@ export function useNotifications(): UseNotificationsReturn {
             if (!isSupported || !enabled) return null;
             if (Notification.permission !== 'granted') return null;
 
-            return new Notification(title, { body, ...options });
+            return new Notification(title, { ...(body !== undefined ? { body } : {}), ...options });
         },
         [isSupported, enabled],
     );

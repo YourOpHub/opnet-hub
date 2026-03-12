@@ -27,9 +27,9 @@ export interface SwapOpUpdate {
   role?: string;
   step?: string;
   status?: string;
-  amounts?: Record<string, unknown>;
-  tx_ids?: Record<string, string>;
-  error?: string;
+  amounts?: Record<string, unknown> | undefined;
+  tx_ids?: Record<string, string> | undefined;
+  error?: string | undefined;
 }
 
 export async function updateSwapOp(data: SwapOpUpdate): Promise<void> {

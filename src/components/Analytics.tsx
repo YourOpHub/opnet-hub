@@ -258,12 +258,12 @@ const Analytics: React.FC = () => {
 
       {/* Error banners */}
       {poolError && !loading && (
-        <div className="mb-10 br-8 fs-68 c-red" role="alert" style={{ padding: '8px 12px', background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)' }}>
+        <div className="mb-10 br-8 fs-68 c-red p-8-12" role="alert" style={{ background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.15)' }}>
           ⚠️ Pool data unavailable — reserves may be stale
         </div>
       )}
       {chainError && !loading && (
-        <div className="mb-10 br-8 fs-68 c-y" role="alert" style={{ padding: '8px 12px', background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)' }}>
+        <div className="mb-10 br-8 fs-68 c-y p-8-12" role="alert" style={{ background: 'rgba(234,179,8,.06)', border: '1px solid rgba(234,179,8,.15)' }}>
           ⚠️ Some chain metrics unavailable — RPC may be slow
         </div>
       )}
@@ -332,7 +332,7 @@ const Analytics: React.FC = () => {
           </div>
           <div className="bg3-rounded">
             <div className="fs-62 c-t4 mb-4">VIBE Reserve</div>
-            <div className="fw-700 text-mono" style={{ color: '#0ea5e9' }}>
+            <div className="fw-700 text-mono c-sky">
               {reserves ? reserves.vibe.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
             </div>
           </div>
@@ -359,7 +359,7 @@ const Analytics: React.FC = () => {
                 <div className="flex-center gap-6 mb-8">
                   <span className="fs-110">{tok.icon}</span>
                   <span className="fw-700">${sym}</span>
-                  {tok.publicMint && <span className="fs-50 c-purple br-4 fw-700" style={{ background: 'rgba(168,85,247,.12)', padding: '2px 6px' }}>MINTABLE</span>}
+                  {tok.publicMint && <span className="fs-50 c-purple br-4 fw-700 p-2-6" style={{ background: 'rgba(168,85,247,.12)' }}>MINTABLE</span>}
                 </div>
                 <div className="flex-between fs-sm mb-4">
                   <span className="c-t3">Minted</span>
@@ -390,7 +390,7 @@ const Analytics: React.FC = () => {
         ) : (
           <div className="flex-col-gap4">
             {txHistory.slice(0, 15).map((tx: TxRecord) => (
-              <div key={tx.id} className="flex-between fs-72 br-14" style={{ padding: '8px 12px', background: 'rgba(255,255,255,.02)', border: '1px solid var(--bd)' }}>
+              <div key={tx.id} className="flex-between fs-72 br-14 p-8-12" style={{ background: 'rgba(255,255,255,.02)', border: '1px solid var(--bd)' }}>
                 <div className="flex-center gap-8">
                   <span>{tx.type === 'swap' ? '🔄' : tx.type === 'mint' ? '🪙' : '🎁'}</span>
                   <span className="fw-600 c-w" style={{ textTransform: 'capitalize' }}>{tx.type}</span>

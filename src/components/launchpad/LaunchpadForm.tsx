@@ -49,7 +49,7 @@ const LaunchpadForm: React.FC<LaunchpadFormProps> = ({ open, onClose, onCreated 
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
     if (!name.trim() || !symbol.trim()) { setError('Name and symbol required'); return; }
 
-    const inst = walletInstance as { web3?: Record<string, unknown>; deployContract?: unknown };
+    const inst = walletInstance as unknown as { web3?: Record<string, unknown>; deployContract?: unknown };
     const web3 = (inst.web3 ?? inst) as Record<string, unknown>;
     if (web3.deployContract == null) { setError('Wallet does not support deployment. Use OP_WALLET.'); return; }
 

@@ -30,7 +30,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toast = useCallback((message: string, type: ToastType = 'info', link?: { url: string; label: string }) => {
     const id = ++nextId;
-    setToasts(prev => [...prev, { id, message, type, link }]);
+    setToasts(prev => [...prev, { id, message, type, ...(link != null ? { link } : {}) }]);
     setTimeout(() => dismiss(id), 4500);
   }, [dismiss]);
 

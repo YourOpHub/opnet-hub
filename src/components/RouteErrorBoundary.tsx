@@ -3,8 +3,8 @@ import { logger } from '../logger';
 
 interface Props {
   children: React.ReactNode;
-  routeName?: string;
-  onReset?: () => void;
+  routeName?: string | undefined;
+  onReset?: (() => void) | undefined;
 }
 
 interface State {

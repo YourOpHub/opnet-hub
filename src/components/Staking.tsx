@@ -33,7 +33,7 @@ interface StakingContract extends BaseContractProperties {
 const STAKING_TOKEN = DEPLOYED_CONTRACTS.MINE;
 
 const Staking: React.FC = () => {
-  const { walletAddress, walletInstance, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
+  const { walletAddress, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const { trackOp, updateOpStep, completeOp } = useOps();
 
@@ -125,7 +125,7 @@ const Staking: React.FC = () => {
   });
 
   const doStake = useCallback(async () => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!walletAddress) { openConnectModal(); return; }
     const amt = parseFloat(stakeAmount);
     if (!amt || amt <= 0) { setResult({ type: 'error', msg: 'Enter a valid amount' }); return; }
     if (!senderAddr) { setResult({ type: 'error', msg: 'Wallet public key not available' }); return; }
@@ -166,11 +166,11 @@ const Staking: React.FC = () => {
     } finally {
       setStaking(false);
     }
-  }, [walletAddress, walletInstance, stakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, stakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
 
   const doUnstake = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!walletAddress) { openConnectModal(); return; }
     const amt = parseFloat(unstakeAmount);
     if (!amt || amt <= 0) { setResult({ type: 'error', msg: 'Enter amount to unstake' }); return; }
     if (!senderAddr) { setResult({ type: 'error', msg: 'Wallet not available' }); return; }
@@ -202,11 +202,11 @@ const Staking: React.FC = () => {
     } finally {
       setUnstaking(false);
     }
-  }, [walletAddress, walletInstance, unstakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, unstakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
 
   const doClaim = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!walletAddress) { openConnectModal(); return; }
     if (!senderAddr) return;
 
     setClaiming(true);
@@ -238,7 +238,7 @@ const Staking: React.FC = () => {
     } finally {
       setClaiming(false);
     }
-  }, [walletAddress, walletInstance, provider, senderAddr, openConnectModal, claimKey, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, provider, senderAddr, openConnectModal, claimKey, trackOp, updateOpStep, completeOp]);
 
   const connected = !!walletAddress;
   const busy = staking || unstaking || claiming;

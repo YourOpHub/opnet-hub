@@ -46,9 +46,9 @@ describe('buildTxParams', () => {
   it('returns transaction parameters with correct shape', async () => {
     const provider = makeProvider();
     const params = await buildTxParams(provider, 'opt1refund');
-    // Frontend: signer/mldsaSigner must be ABSENT — wallet extension injects them
-    expect(params).not.toHaveProperty('signer');
-    expect(params).not.toHaveProperty('mldsaSigner');
+    // Frontend: signer/mldsaSigner must be explicitly null — SDK checks `signer !== null`
+    expect(params).toHaveProperty('signer', null);
+    expect(params).toHaveProperty('mldsaSigner', null);
     expect(params).toHaveProperty('refundTo', 'opt1refund');
     expect(typeof params.feeRate).toBe('number');
     expect(typeof params.priorityFee).toBe('bigint');

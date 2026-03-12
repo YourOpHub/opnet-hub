@@ -36,7 +36,7 @@ interface Props {
 }
 
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
-  const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
+  const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const { trackOp, updateOpStep, completeOp } = useOps();
   const trapRef = useFocusTrap(open, onClose);
@@ -105,7 +105,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   }, [tab]);
 
   const addLiquidity = useCallback(async () => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!walletAddress) { openConnectModal(); return; }
     const mAmt = parseFloat(mineAmt);
     const vAmt = parseFloat(vibeAmt);
     if (!mAmt || !vAmt || mAmt <= 0 || vAmt <= 0) { setResult({ ok: false, msg: 'Enter both amounts' }); return; }
@@ -159,10 +159,11 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
 
   const removeLiquidity = useCallback(async () => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    logger.info('[LiquidityModal] removeLiquidity called', { walletAddress: !!walletAddress, senderAddr: !!senderAddr, mineAmt, lpMine, lpVibe });
+    if (!walletAddress) { openConnectModal(); return; }
     if (!senderAddr) { setResult({ ok: false, msg: 'Wallet key not available' }); return; }
     const m = parseFloat(mineAmt) || lpMine;
     const v = parseFloat(vibeAmt) || lpVibe;
@@ -201,7 +202,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, walletInstance, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
 
   if (!open) return null;
 

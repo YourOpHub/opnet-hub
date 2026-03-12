@@ -425,7 +425,7 @@ export function useSwap(): UseSwapReturn {
   const doSwap = useCallback(async () => {
     if (!fromVal || fromVal <= 0 || !hasPool) return;
 
-    if (!walletAddress || !walletInstance) {
+    if (!walletAddress) {
       openConnectModal();
       return;
     }
@@ -516,11 +516,11 @@ export function useSwap(): UseSwapReturn {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, trackOp, updateOpStep]);
+  }, [fromVal, hasPool, walletAddress, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, trackOp, updateOpStep]);
 
   /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
   const mintTokens = useCallback(async (sym: string) => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!walletAddress) { openConnectModal(); return; }
     if (!senderAddr) { setMintResult({ sym, ok: false, msg: 'Wallet not available. Reconnect.' }); return; }
 
     // Narrowed constant — guard above guarantees walletAddress is defined
@@ -554,7 +554,7 @@ export function useSwap(): UseSwapReturn {
     } finally {
       setMinting(null);
     }
-  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, openConnectModal, provider, senderAddr, trackOp, updateOpStep, completeOp]);
 
   /** Deploy a new SimplePool for any token pair */
   const createPool = useCallback(async () => {

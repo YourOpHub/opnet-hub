@@ -8,7 +8,7 @@ import {
 import { STAKING_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import {
   DEPLOYED_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
   getContractOpscanUrl, getTxUrl,
@@ -35,7 +35,7 @@ const STAKING_TOKEN = DEPLOYED_CONTRACTS.MINE;
 const Staking: React.FC = () => {
   const { walletAddress, walletInstance, openConnectModal, publicKey, hashedMLDSAKey, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, completeOp } = useOps();
+  const { trackOp, updateOpStep, completeOp } = useOps();
 
   const [stakeAmount, setStakeAmount] = useState('');
   const [unstakeAmount, setUnstakeAmount] = useState('');
@@ -150,10 +150,14 @@ const Staking: React.FC = () => {
       const sOpId = `stake_${Date.now()}`;
       trackOp({ id: sOpId, market: 'stake', orderId: 'Stake', direction: '', role: '', step: `Staking ${amt.toLocaleString()} MINE...` });
       const receipt = await (stakeSim as CallResult).sendTransaction(txParams);
+      const txHash = receipt.transactionId || '';
+      updateOpStep(sOpId, 'Waiting for block confirmation...', { tx: txHash });
+      setStep('Waiting for block confirmation...');
+      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(sOpId, s); });
       completeOp(sOpId);
 
       setStep('');
-      setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE!`, txHash: receipt.transactionId });
+      setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE!`, txHash });
       addTxRecord({ type: 'mint', txHash: receipt.transactionId || '', tokenA: 'MINE', amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
@@ -162,7 +166,7 @@ const Staking: React.FC = () => {
     } finally {
       setStaking(false);
     }
-  }, [walletAddress, walletInstance, stakeAmount, provider, senderAddr, openConnectModal, trackOp, completeOp]);
+  }, [walletAddress, walletInstance, stakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
 
   const doUnstake = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }
@@ -183,10 +187,14 @@ const Staking: React.FC = () => {
       const uOpId = `unstake_${Date.now()}`;
       trackOp({ id: uOpId, market: 'stake', orderId: 'Unstake', direction: '', role: '', step: `Unstaking ${amt.toLocaleString()} MINE...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      const txHash = receipt.transactionId || '';
+      updateOpStep(uOpId, 'Waiting for block confirmation...', { tx: txHash });
+      setStep('Waiting for block confirmation...');
+      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(uOpId, s); });
       completeOp(uOpId);
 
       setStep('');
-      setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE!`, txHash: receipt.transactionId });
+      setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE!`, txHash });
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -194,7 +202,7 @@ const Staking: React.FC = () => {
     } finally {
       setUnstaking(false);
     }
-  }, [walletAddress, walletInstance, unstakeAmount, provider, senderAddr, openConnectModal, trackOp, completeOp]);
+  }, [walletAddress, walletInstance, unstakeAmount, provider, senderAddr, openConnectModal, trackOp, updateOpStep, completeOp]);
 
   const doClaim = useCallback(async () => {
     if (!STAKING_DEPLOYED) { setResult({ type: 'error', msg: 'Staking contract not yet deployed' }); return; }
@@ -212,10 +220,14 @@ const Staking: React.FC = () => {
       const cOpId = `claim_${Date.now()}`;
       trackOp({ id: cOpId, market: 'stake', orderId: 'Claim', direction: '', role: '', step: 'Claiming staking rewards...' });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
+      const txHash = receipt.transactionId || '';
+      updateOpStep(cOpId, 'Waiting for block confirmation...', { tx: txHash });
+      setStep('Waiting for block confirmation...');
+      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(cOpId, s); });
       completeOp(cOpId);
 
       setStep('');
-      setResult({ type: 'success', msg: 'Rewards claimed!', txHash: receipt.transactionId });
+      setResult({ type: 'success', msg: 'Rewards claimed!', txHash });
       const ts = Date.now();
       setLastClaimTs(ts);
       try { localStorage.setItem(claimKey, String(ts)); } catch (e) { logger.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
@@ -226,7 +238,7 @@ const Staking: React.FC = () => {
     } finally {
       setClaiming(false);
     }
-  }, [walletAddress, walletInstance, provider, senderAddr, openConnectModal, claimKey, trackOp, completeOp]);
+  }, [walletAddress, walletInstance, provider, senderAddr, openConnectModal, claimKey, trackOp, updateOpStep, completeOp]);
 
   const connected = !!walletAddress;
   const busy = staking || unstaking || claiming;

@@ -10,7 +10,7 @@ import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { addTxRecord } from '../txHistory';
-import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import { useOps } from '../contexts/OpsContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -38,7 +38,7 @@ interface Props {
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
-  const { trackOp, completeOp } = useOps();
+  const { trackOp, updateOpStep, completeOp } = useOps();
   const trapRef = useFocusTrap(open, onClose);
 
   const [tab, setTab] = useState<'add' | 'remove'>('add');
@@ -46,7 +46,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   const [vibeAmt, setVibeAmt] = useState('');
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState('');
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; msg: string; txHash?: string } | null>(null);
   const [, setAllTokens] = useState<IndexedToken[]>([]);
 
   const [lpMine, setLpMine] = useState(0);
@@ -144,10 +144,13 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       const aOpId = `lp_add_${Date.now()}`;
       trackOp({ id: aOpId, market: 'liquidity', orderId: 'Add LP', direction: '', role: '', step: `Adding ${mAmt} MINE + ${vAmt} VIBE...` });
       const addReceipt = await (addSim as CallResult).sendTransaction(tp);
+      updateOpStep(aOpId, 'Waiting for block confirmation...', { tx: addReceipt.transactionId || '' });
+      setStep('Waiting for block confirmation...');
+      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(aOpId, s); });
       completeOp(aOpId);
 
       setStep('');
-      setResult({ ok: true, msg: `Added ${mAmt.toLocaleString()} MINE + ${vAmt.toLocaleString()} VIBE on-chain!` });
+      setResult({ ok: true, msg: `Added ${mAmt.toLocaleString()} MINE + ${vAmt.toLocaleString()} VIBE on-chain!`, txHash: addReceipt.transactionId || '' });
       setLpMine(prev => prev + mAmt);
       setLpVibe(prev => prev + vAmt);
       addTxRecord({ type: 'mint', txHash: addReceipt.transactionId || '', tokenA: 'LP', amountA: `${mAmt}+${vAmt}`, status: 'confirmed', wallet: walletAddress });
@@ -156,7 +159,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh, trackOp, completeOp]);
+  }, [walletAddress, walletInstance, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
 
   const removeLiquidity = useCallback(async () => {
     if (!walletAddress || !walletInstance) { openConnectModal(); return; }
@@ -169,16 +172,21 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     setResult(null);
     try {
       const mineRaw = BitcoinUtils.expandToDecimals(m, 8);
-      const vibeRaw = BitcoinUtils.expandToDecimals(v, 8);
+      // Reduce amountA by 0.01% to avoid contract rounding revert ("AmountA exceeds share entitlement")
+      const safeMineRaw = mineRaw > 1000n ? mineRaw - (mineRaw / 10000n) : mineRaw;
       const poolContract = getContract<IPoolContract>(POOL_ADDRESS, POOL_ABI, provider, NETWORK, senderAddr);
 
       setStep('Removing liquidity from pool...');
-      const removeSim = await withRetry(() => poolContract.removeLiquidity(mineRaw, vibeRaw));
+      // Pass 0n for minAmountB — contract calculates proportional VIBE from shares
+      const removeSim = await withRetry(() => poolContract.removeLiquidity(safeMineRaw, 0n));
       if ((removeSim as CallResult).revert) throw new Error(`removeLiquidity failed: ${(removeSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       const rOpId = `lp_rm_${Date.now()}`;
       trackOp({ id: rOpId, market: 'liquidity', orderId: 'Remove LP', direction: '', role: '', step: `Removing ${m} MINE + ${v} VIBE...` });
       const receipt = await (removeSim as CallResult).sendTransaction(tp);
+      updateOpStep(rOpId, 'Waiting for block confirmation...', { tx: receipt.transactionId || '' });
+      setStep('Waiting for block confirmation...');
+      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(rOpId, s); });
       completeOp(rOpId);
 
       setStep('');
@@ -186,14 +194,14 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setLpVibe(prev => Math.max(0, prev - v));
       setMineAmt('');
       setVibeAmt('');
-      setResult({ ok: true, msg: `Removed ${m.toLocaleString()} MINE + ${v.toLocaleString()} VIBE. Tokens returned to your wallet!` });
+      setResult({ ok: true, msg: `Removed ${m.toLocaleString()} MINE + ${v.toLocaleString()} VIBE. Tokens returned to your wallet!`, txHash: receipt.transactionId || '' });
       addTxRecord({ type: 'claim', txHash: receipt.transactionId || '', tokenA: 'LP', amountA: `${m}+${v}`, status: 'confirmed', wallet: walletAddress });
       setTimeout(onRefresh, 3000);
     } catch (e) {
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, walletInstance, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, completeOp]);
+  }, [walletAddress, walletInstance, mineAmt, vibeAmt, lpMine, lpVibe, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
 
   if (!open) return null;
 
@@ -385,6 +393,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         {result && (
           <div className={`mt-12 fs-72 word-break ${result.ok ? 'cc-result-ok' : 'cc-result-err'}`} role="alert" aria-live="assertive">
             {result.msg}
+            {result.txHash && (
+              <a href={getTxUrl(result.txHash)} target="_blank" rel="noopener noreferrer"
+                className="ml-6 c-c2 no-decoration fw-600">View TX ↗</a>
+            )}
           </div>
         )}
 

@@ -30,7 +30,7 @@ import {
 import { POOL_ABI, MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -183,7 +183,7 @@ export interface UseSwapReturn {
  */
 export function useSwap(): UseSwapReturn {
   const { walletAddress, walletInstance, publicKey, hashedMLDSAKey, address: senderAddr, openConnectModal } = useWalletConnect();
-  const { trackOp, completeOp, failOp } = useOps();
+  const { trackOp, updateOpStep, completeOp, failOp } = useOps();
 
   // Dynamic token list: base + indexer-discovered
   const [, setExtraTokens] = useState<Token[]>([]);
@@ -464,6 +464,9 @@ export function useSwap(): UseSwapReturn {
         trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: '', role: '', step: `Swapping ${fromVal} ${from.symbol}→${to.symbol}...` });
         const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
         const txHash = swapReceipt.transactionId || '';
+        updateOpStep(swapOpId, 'Waiting for block confirmation...', { tx: txHash });
+        setSwapStep('Waiting for block confirmation...');
+        await waitForNextBlock(provider, (s) => { setSwapStep(s); updateOpStep(swapOpId, s); });
         completeOp(swapOpId);
         setSwapStep('');
         setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
@@ -493,6 +496,9 @@ export function useSwap(): UseSwapReturn {
         trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}→${to.symbol}`, direction: 'motoswap', role: '', step: `Swapping via Motoswap...` });
         const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
         const txHash = swapReceipt.transactionId || '';
+        updateOpStep(swapOpId, 'Waiting for block confirmation...', { tx: txHash });
+        setSwapStep('Waiting for block confirmation...');
+        await waitForNextBlock(provider, (s) => { setSwapStep(s); updateOpStep(swapOpId, s); });
         completeOp(swapOpId);
         setSwapStep('');
         setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
@@ -510,7 +516,7 @@ export function useSwap(): UseSwapReturn {
     } finally {
       setSwapping(false);
     }
-  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, trackOp]);
+  }, [fromVal, hasPool, walletAddress, walletInstance, from, to, toVal, slippage, poolReady, isSimplePool, motoPool, openConnectModal, provider, senderAddr, completeOp, trackOp, updateOpStep]);
 
   /** On-chain publicMint — mints fixed 1000 tokens via MintableToken contract */
   const mintTokens = useCallback(async (sym: string) => {
@@ -534,8 +540,10 @@ export function useSwap(): UseSwapReturn {
       const mOpId = `mint_${sym}_${Date.now()}`;
       trackOp({ id: mOpId, market: 'mint', orderId: sym, direction: '', role: '', step: `Minting ${MINT_AMOUNT.toLocaleString()} ${sym}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
-      completeOp(mOpId);
       const txHash = receipt.transactionId || '';
+      updateOpStep(mOpId, 'Waiting for block confirmation...', { tx: txHash });
+      await waitForNextBlock(provider, (s) => updateOpStep(mOpId, s));
+      completeOp(mOpId);
       setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: activeWallet });
       setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
@@ -546,7 +554,7 @@ export function useSwap(): UseSwapReturn {
     } finally {
       setMinting(null);
     }
-  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr, trackOp, completeOp]);
+  }, [walletAddress, walletInstance, openConnectModal, provider, senderAddr, trackOp, updateOpStep, completeOp]);
 
   /** Deploy a new SimplePool for any token pair */
   const createPool = useCallback(async () => {

@@ -28,7 +28,7 @@ const Marketplace: React.FC = () => {
     orderType, setOrderType, orderAmount, setOrderAmount, orderPrice, setOrderPrice,
     creating, createStep, handleCreate,
     fillId, setFillId, fillAmount, setFillAmount, filling, fillStep,
-    handleFill, handleExecuteBuyOrder, handleCancel,
+    handleFill, handleCancel,
     msg, lastTxId, tokenBalance,
   } = useMarketplace();
 
@@ -155,43 +155,32 @@ const Marketplace: React.FC = () => {
               </div>
             ) : (
               <div className="ob-scroll">
-                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 60px auto' }}>
-                  <span>Wants</span><span className="ob-r">Price</span><span className="ob-r">Pays</span>
-                  <span>Status</span><span className="ob-r">Action</span>
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
+                  <span>Wants</span><span className="ob-r">Price</span><span className="ob-r">Locked</span>
+                  <span className="ob-r">Fill</span><span className="ob-r">Action</span>
                 </div>
                 {buyOrders.map((o: Order) => {
                   const remaining = o.amount - o.amountFilled;
                   const totalCostSats = Math.ceil(remaining * o.pricePerToken);
                   const isMyBuyOrder = o.creator === senderHex;
-                  const isAccepted = o.status === 'accepted';
+                  const pct = o.amount > 0 ? Math.round((o.amountFilled / o.amount) * 100) : 0;
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 60px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
                       <span className="ob-mono c-w">
                         {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
                       <span className="ob-mono ob-r fw-700 c-g">{o.pricePerToken}</span>
                       <span className="ob-mono ob-r c-o">{fmtNum(totalCostSats)}</span>
-                      <span>
-                        {isAccepted
-                          ? <span className="ob-badge c-o ob-badge-o">ACCEPTED</span>
-                          : <span className="ob-badge c-g ob-badge-green-12">OPEN</span>}
+                      <span className="ob-r pos-relative">
+                        <span className="c-t2">{pct}%</span>
                       </span>
                       <div className="ob-act">
-                        {isAccepted && isMyBuyOrder ? (
-                          <>
-                            <button className="ob-btn accent" onClick={() => handleExecuteBuyOrder(o.id)} disabled={filling}>
-                              {filling ? '..' : `Pay ${fmtNum(totalCostSats)}`}
-                            </button>
-                            <button className="ob-btn danger" onClick={() => handleCancel(o.id)}>X</button>
-                          </>
-                        ) : isMyBuyOrder || (isAccepted && o.seller === senderHex) ? (
+                        {isMyBuyOrder ? (
                           <button className="ob-btn danger" onClick={() => handleCancel(o.id)}>Cancel</button>
-                        ) : !isAccepted ? (
-                          <button className="ob-btn accent" onClick={() => handleFill(o.id)} disabled={filling}>
-                            {filling ? '..' : 'Accept'}
-                          </button>
                         ) : (
-                          <span className="fs-62 c-t3">Buyer paying...</span>
+                          <button className="ob-btn accent" onClick={() => handleFill(o.id)} disabled={filling}>
+                            {filling ? '..' : 'Sell'}
+                          </button>
                         )}
                       </div>
                     </div>
@@ -251,7 +240,7 @@ const Marketplace: React.FC = () => {
           <div className="mt-8 fs-2xs c-t4 text-center">
             {orderType === 'sell'
               ? 'Tokens are locked in the P2PMarket contract on-chain. Buyers pay BTC directly to you.'
-              : 'Trustless 3-step: 1) You post buy intent → 2) Seller locks tokens in contract → 3) You pay BTC and receive tokens automatically.'}
+              : 'Atomic: your BTC is locked on-chain. When a seller accepts, tokens go to you and BTC goes to them — all in one transaction.'}
           </div>
         </div>
 

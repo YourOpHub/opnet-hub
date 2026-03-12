@@ -44,15 +44,14 @@ interface MarketTokensResponse {
   tokens?: MarketToken[];
 }
 
-/** Typed interface for P2PMarket contract methods */
+/** Typed interface for P2PMarket v10 contract methods */
 interface MarketContract extends BaseContractProperties {
   getNextOrderId(): Promise<CallResult>;
   getOrder(orderId: bigint): Promise<CallResult>;
   createSellOrder(token: Address, amount: bigint, pricePerToken: bigint): Promise<CallResult>;
   createBuyOrder(token: Address, amount: bigint, pricePerToken: bigint): Promise<CallResult>;
   fillSellOrder(orderId: bigint, fillAmount: bigint): Promise<CallResult>;
-  acceptBuyOrder(orderId: bigint): Promise<CallResult>;
-  executeBuyOrder(orderId: bigint): Promise<CallResult>;
+  fillBuyOrder(orderId: bigint): Promise<CallResult>;
   cancelOrder(orderId: bigint): Promise<CallResult>;
 }
 
@@ -163,7 +162,6 @@ export interface UseMarketplaceReturn {
   filling: boolean;
   fillStep: string;
   handleFill: (orderId: string, amount?: number) => Promise<void>;
-  handleExecuteBuyOrder: (orderId: string) => Promise<void>;
   handleCancel: (orderId: string) => Promise<void>;
   msg: string;
   setMsg: React.Dispatch<React.SetStateAction<string>>;
@@ -261,7 +259,7 @@ export function useMarketplace(): UseMarketplaceReturn {
           const p = r.properties as Record<string, unknown>;
           const orderType = Number(p.orderType ?? 0n);
           const status = Number(p.status ?? 0n);
-          if (status !== 1 && status !== 4) continue;
+          if (status !== 1) continue; // v10: only ACTIVE orders shown
           const tokenHex = ((p.token ?? 0n) as bigint).toString(16).padStart(64, '0');
           const resolved = resolveTokenHex(tokenHex);
           const tokenBech32 = resolved?.address || tokenHex;
@@ -272,7 +270,7 @@ export function useMarketplace(): UseMarketplaceReturn {
           const amount = Number(p.amount ?? 0n) / Math.pow(10, decimals);
           const filled = Number(p.filled ?? 0n) / Math.pow(10, decimals);
           const price = Number(p.pricePerToken ?? 0n);
-          const statusStr = status === 1 ? 'active' : 'accepted';
+          const statusStr = 'active'; // v10: only ACTIVE orders pass the filter
           const sellerHex = ((p.seller ?? 0n) as bigint).toString(16).padStart(64, '0');
           chainOrders.push({
             id: String(i),
@@ -364,7 +362,7 @@ export function useMarketplace(): UseMarketplaceReturn {
   selInfoRef.current = selInfo;
 
   const sellOrders = orders.filter(o => o.type === 'sell' && o.status === 'active').sort((a, b) => a.pricePerToken - b.pricePerToken);
-  const buyOrders = orders.filter(o => o.type === 'buy' && (o.status === 'active' || o.status === 'accepted')).sort((a, b) => b.pricePerToken - a.pricePerToken);
+  const buyOrders = orders.filter(o => o.type === 'buy' && o.status === 'active').sort((a, b) => b.pricePerToken - a.pricePerToken);
   const myOrders = orders.filter(o => o.creator === senderHex || o.seller === senderHex);
 
   // Create order
@@ -405,11 +403,34 @@ export function useMarketplace(): UseMarketplaceReturn {
         const tp = await buildTxParams(provider, walletAddress);
         createReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
-        updateOpStep(createOpId, 'Signing buy order TX...');
-        setCreateStep('Creating buy order on-chain...');
+        // v10: Lock BTC at creation — output to contract's P2OP address
+        const rawBtcSats = BigInt(Math.ceil(amt * ppt));
+        const btcSats = rawBtcSats < 330n ? 330n : rawBtcSats;
+        const contractHex = MARKET_PUBKEY.replace('0x', '');
+        const contractScript = buildP2OPScript(contractHex);
+
+        updateOpStep(createOpId, `Signing buy order TX (locking ${Number(btcSats)} sats)...`);
+        setCreateStep(`Creating buy order — locking ${Number(btcSats)} sats...`);
+
+        market.setTransactionDetails({
+          inputs: [],
+          outputs: [{
+            value: btcSats,
+            index: 1,
+            flags: TransactionOutputFlags.hasScriptPubKey,
+            scriptPubKey: contractScript,
+            to: MARKET_ADDRESS,
+          }],
+        });
+
         const sim = await withRetry(() => market.createBuyOrder(tokenAddr, amountU256, priceU256));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
         const tp = await buildTxParams(provider, walletAddress);
+        (tp as unknown as Record<string, unknown>).extraOutputs = [{
+          script: contractScript,
+          value: Number(btcSats),
+        }];
+        (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcSats + 50_000n;
         createReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
@@ -506,26 +527,51 @@ export function useMarketplace(): UseMarketplaceReturn {
         (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
         fillReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
+        // v10: Seller fills buy order atomically — approve tokens + claim BTC
         updateOpStep(opId, 'Checking token approval...');
         setFillStep('Checking token approval...');
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
-        const fillApprove = await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, (s: string) => { setFillStep(s); updateOpStep(opId, s); });
+        const fillApprove = await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, (s: string) => { setFillStep(s); updateOpStep(opId, s); }, order.tokenSymbol || 'token');
         if (fillApprove.txId) updateOpStep(opId, 'Token approved!', { approve: fillApprove.txId });
+        if (fillApprove.approved) await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(opId, s); });
 
-        updateOpStep(opId, 'Signing accept TX...');
-        setFillStep('Accepting buy order (locking tokens)...');
-        const sim = await withRetry(() => market.acceptBuyOrder(BigInt(orderId)));
+        // BTC output to seller (self) — claiming buyer's locked BTC from contract
+        const remaining = order.amount - order.amountFilled;
+        const rawBtcSats = BigInt(Math.ceil(remaining * order.pricePerToken));
+        const btcClaimSats = rawBtcSats < 330n ? 330n : rawBtcSats;
+        const myScript = buildP2OPScript(senderHex);
+        const myP2OPAddr = getP2OPAddress(senderHex);
+
+        updateOpStep(opId, `Signing fill TX — claiming ${Number(btcClaimSats)} sats...`);
+        setFillStep(`Filling buy order — claiming ${Number(btcClaimSats)} sats...`);
+
+        market.setTransactionDetails({
+          inputs: [],
+          outputs: [{
+            value: btcClaimSats,
+            index: 1,
+            flags: TransactionOutputFlags.hasScriptPubKey,
+            scriptPubKey: myScript,
+            to: myP2OPAddr,
+          }],
+        });
+
+        const sim = await withRetry(() => market.fillBuyOrder(BigInt(orderId)));
         if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
         const tp = await buildTxParams(provider, walletAddress);
+        (tp as unknown as Record<string, unknown>).extraOutputs = [{
+          script: myScript,
+          value: Number(btcClaimSats),
+        }];
+        (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcClaimSats + 50_000n;
         fillReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
       const fillTxId = (fillReceipt as { transactionId?: string })?.transactionId || '';
       const fillTxLink = fillTxId ? { url: getTxUrl(fillTxId), label: 'View TX' } : undefined;
       setFillId(null); setFillAmount('');
-      const isBuyAccept = order.type === 'buy';
-      toast(isBuyAccept ? 'Tokens locked! Buyer will auto-pay BTC...' : 'Order filled! Waiting for block...', 'success', fillTxLink);
+      toast('Order filled! Waiting for block...', 'success', fillTxLink);
 
       updateOpStep(opId, 'TX sent, waiting for block...', fillTxId ? { fill: fillTxId } : undefined);
 
@@ -536,7 +582,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
       await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(opId, s); });
-      toast(isBuyAccept ? 'Accept confirmed! Buyer auto-pay triggered.' : 'Fill confirmed on-chain!', 'success', fillTxLink);
+      toast('Fill confirmed on-chain!', 'success', fillTxLink);
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
@@ -551,111 +597,8 @@ export function useMarketplace(): UseMarketplaceReturn {
     } finally { setFilling(false); }
   }, [walletAddress, senderAddr, senderHex, orders, provider, openConnectModal, fetchOrders, toast, trackOp, updateOpStep, completeOp, failOp]);
 
-  // Execute accepted buy order
-  const handleExecuteBuyOrder = useCallback(async (orderId: string) => {
-    if (!walletAddress || !senderAddr) { openConnectModal(); return; }
-
-    const lockKey = `p2p:exec:${orderId}`;
-    const lockRes = await lockOrder(lockKey, walletAddress);
-    if (!lockRes.ok) { toast(lockRes.error || 'Order is locked by another user', 'error'); return; }
-
-    setFilling(true); setFillStep('Preparing BTC payment...');
-    const opId = `p2p:exec:${orderId}:${walletAddress}`;
-    const execOrder = orders.find(o => o.id === orderId);
-    trackOp({
-      id: opId, market: 'p2p', orderId,
-      direction: 'buy', role: 'maker', step: 'Preparing BTC payment...',
-      amounts: { amount: String(execOrder?.amount || 0), price: String(execOrder?.pricePerToken || 0), token: execOrder?.tokenSymbol || '' },
-    });
-    try {
-      if (!execOrder) throw new Error('Order not found');
-      if (execOrder.status !== 'accepted') throw new Error('Order not accepted yet');
-
-      const remaining = execOrder.amount - execOrder.amountFilled;
-      const rawPayment = BigInt(Math.ceil(remaining * execOrder.pricePerToken));
-      const btcPaymentSats = rawPayment < 330n ? 330n : rawPayment;
-      const sellerP2OPScript = buildP2OPScript(execOrder.seller);
-      const sellerP2OPAddress = getP2OPAddress(execOrder.seller);
-
-      const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
-
-      updateOpStep(opId, 'Signing BTC payment TX...');
-      setFillStep(`Sending ${Number(btcPaymentSats)} sats to seller...`);
-
-      market.setTransactionDetails({
-        inputs: [],
-        outputs: [{
-          value: btcPaymentSats,
-          index: 1,
-          flags: TransactionOutputFlags.hasScriptPubKey,
-          scriptPubKey: sellerP2OPScript,
-          to: sellerP2OPAddress,
-        }],
-      });
-
-      const sim = await withRetry(() => market.executeBuyOrder(BigInt(orderId)));
-      if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
-
-      const tp = await buildTxParams(provider, walletAddress);
-      (tp as unknown as Record<string, unknown>).extraOutputs = [{
-        script: sellerP2OPScript,
-        value: Number(btcPaymentSats),
-      }];
-      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
-      const execReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
-      const execTxId = (execReceipt as { transactionId?: string })?.transactionId || '';
-      const execTxLink = execTxId ? { url: getTxUrl(execTxId), label: 'View TX' } : undefined;
-
-      setFillId(null);
-      toast('Buy order executed! Waiting for block...', 'success', execTxLink);
-      updateOpStep(opId, 'TX sent, waiting for block...', execTxId ? { exec: execTxId } : undefined);
-
-      await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(opId, s); });
-      toast('Execution confirmed on-chain!', 'success', execTxLink);
-      completeOp(opId);
-      void unlockOrder(lockKey, walletAddress);
-      setFillStep('');
-      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
-      void fetchOrders();
-      return;
-    } catch (e) {
-      failOp(opId, formatTxError(e));
-      void unlockOrder(lockKey, walletAddress);
-      setFillStep(formatTxError(e));
-      setTimeout(() => setFillStep(''), 5000);
-    } finally { setFilling(false); }
-  }, [walletAddress, senderAddr, orders, provider, openConnectModal, fetchOrders, toast, trackOp, updateOpStep, completeOp, failOp]);
-
-  // Auto-detect ACCEPTED buy orders and auto-execute
-  const autoExecuteRef = useRef(false);
-  useEffect(() => {
-    if (!walletAddress || !senderAddr || !selectedToken) return;
-    const interval = setInterval(async () => {
-      if (autoExecuteRef.current || filling) return;
-      const freshOrders = await fetchOrdersOnChain(selectedToken);
-      const myAccepted = freshOrders.find(
-        o => o.type === 'buy' && o.status === 'accepted' && o.creator === senderHex
-      );
-      if (myAccepted) {
-        autoExecuteRef.current = true;
-        setOrders(freshOrders);
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('Buy Order Accepted!', { body: 'A seller locked tokens. Approve BTC payment in your wallet.' });
-        }
-        toast('Seller accepted! Auto-sending BTC payment...', 'info');
-        await handleExecuteBuyOrder(myAccepted.id);
-        autoExecuteRef.current = false;
-      }
-    }, 8_000);
-    return () => clearInterval(interval);
-  }, [walletAddress, senderAddr, senderHex, selectedToken, filling, fetchOrdersOnChain, handleExecuteBuyOrder]);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      void Notification.requestPermission();
-    }
-  }, []);
+  // v10: No more handleExecuteBuyOrder or auto-execute polling
+  // Buy orders are now atomic: seller fills in one step via fillBuyOrder
 
   // Cancel order
   const handleCancel = useCallback(async (orderId: string) => {
@@ -666,9 +609,45 @@ export function useMarketplace(): UseMarketplaceReturn {
     trackOp({ id: cancelOpId, market: 'p2p', orderId, direction: 'cancel', role: 'maker', step: 'Cancelling...' });
     try {
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
+      const cancelOrder = orders.find(o => o.id === orderId);
+
+      // v10: Buy order cancel needs BTC output to reclaim locked sats
+      if (cancelOrder?.type === 'buy') {
+        const remaining = cancelOrder.amount - cancelOrder.amountFilled;
+        const rawBtcSats = BigInt(Math.ceil(remaining * cancelOrder.pricePerToken));
+        const btcRefundSats = rawBtcSats < 330n ? 330n : rawBtcSats;
+        const myScript = buildP2OPScript(senderHex);
+        const myP2OPAddr = getP2OPAddress(senderHex);
+
+        market.setTransactionDetails({
+          inputs: [],
+          outputs: [{
+            value: btcRefundSats,
+            index: 1,
+            flags: TransactionOutputFlags.hasScriptPubKey,
+            scriptPubKey: myScript,
+            to: myP2OPAddr,
+          }],
+        });
+      }
+
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
+
+      // Add extraOutputs for buy order BTC refund
+      if (cancelOrder?.type === 'buy') {
+        const remaining = cancelOrder.amount - cancelOrder.amountFilled;
+        const rawBtcSats = BigInt(Math.ceil(remaining * cancelOrder.pricePerToken));
+        const btcRefundSats = rawBtcSats < 330n ? 330n : rawBtcSats;
+        const myScript = buildP2OPScript(senderHex);
+        (tp as unknown as Record<string, unknown>).extraOutputs = [{
+          script: myScript,
+          value: Number(btcRefundSats),
+        }];
+        (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcRefundSats + 50_000n;
+      }
+
       updateOpStep(cancelOpId, 'Signing cancel TX...');
       const cancelReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       const cancelTxId = (cancelReceipt as { transactionId?: string })?.transactionId || '';
@@ -754,7 +733,6 @@ export function useMarketplace(): UseMarketplaceReturn {
     filling,
     fillStep,
     handleFill,
-    handleExecuteBuyOrder,
     handleCancel,
     // Status
     msg, setMsg,

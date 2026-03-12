@@ -199,7 +199,7 @@ export const STAKING_ABI: BitcoinInterfaceAbi = [
 ];
 
 // ─── P2PMarket ABI ───────────────────────────────────────────────────────────
-/** P2PMarket v9 ABI: createSellOrder, fillSellOrder, createBuyOrder, acceptBuyOrder, executeBuyOrder, cancelOrder, getOrder, getNextOrderId */
+/** P2PMarket v10 ABI: createSellOrder, fillSellOrder, createBuyOrder (locks BTC), fillBuyOrder (atomic), cancelOrder, getOrder, getNextOrderId */
 export const MARKETPLACE_ABI: BitcoinInterfaceAbi = [
   {
     name: 'createSellOrder',
@@ -231,13 +231,7 @@ export const MARKETPLACE_ABI: BitcoinInterfaceAbi = [
     type: BitcoinAbiTypes.Function,
   },
   {
-    name: 'acceptBuyOrder',
-    inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
-    type: BitcoinAbiTypes.Function,
-  },
-  {
-    name: 'executeBuyOrder',
+    name: 'fillBuyOrder',
     inputs: [{ name: 'orderId', type: ABIDataTypes.UINT256 }],
     outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
     type: BitcoinAbiTypes.Function,

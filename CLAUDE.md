@@ -31,7 +31,7 @@ Mission control for programmable Bitcoin. Built on OP_NET consensus layer.
 - VIBE: `opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl`
 - Pool v6: `opt1sqqhj9pld6lwsts0qljrlm3l4hjek8lhz4q4y2cl4`
 - NativeSwap v4: `opt1sqral2q69evhz02lt8yrytfqheyjqy9rk4scf86p8`
-- Market: `opt1sqr9djv83f9yg94x5zfv7ppgd4narm3ewyvp3pnkl`
+- Market v10: `opt1sqq54r566klqfdn5uuqtwv0hsnyh0yaefmyulg7lh`
 
 ## Critical Rules
 - NEVER `tb1` — always `opt1` for OPNet

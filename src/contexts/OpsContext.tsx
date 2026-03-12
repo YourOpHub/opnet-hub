@@ -3,9 +3,6 @@ import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import { updateSwapOp, getActiveOps, getHistory, type SwapOp, type SwapOpUpdate } from '../swapApi';
 
-/** Markets that sync to server — everything else is local-only */
-const SERVER_MARKETS = new Set(['fractalswap', 'p2p']);
-
 export interface OpEntry {
   id: string;
   market: string;      // fractalswap | p2p | mint | swap | stake | liquidity | transfer | split | deploy
@@ -116,7 +113,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (idx >= 0) { const next = [...prev]; next[idx] = entry; return next; }
       return [entry, ...prev];
     });
-    if (wallet && SERVER_MARKETS.has(data.market)) {
+    if (wallet) {
       const update: SwapOpUpdate = {
         id: data.id, market: data.market, order_id: data.orderId, wallet,
         direction: data.direction, role: data.role, step: data.step,
@@ -132,7 +129,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, step, txIds: txIds || o.txIds, updatedAt: Date.now() } : o));
     if (wallet) {
       const op = opsRef.current.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', ...(txIds !== undefined ? { tx_ids: txIds } : {}) });
+      if (op) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step, status: 'active', ...(txIds !== undefined ? { tx_ids: txIds } : {}) });
     }
   }, [wallet]);
 
@@ -140,7 +137,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, status: 'completed', step: 'Done', updatedAt: Date.now() } : o));
     if (wallet) {
       const op = opsRef.current.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Done', status: 'completed' });
+      if (op) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Done', status: 'completed' });
     }
   }, [wallet]);
 
@@ -148,7 +145,7 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.map(o => o.id === id ? { ...o, status: 'failed', step: 'Failed', error, updatedAt: Date.now() } : o));
     if (wallet) {
       const op = opsRef.current.find(o => o.id === id);
-      if (op && SERVER_MARKETS.has(op.market)) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Failed', status: 'failed', error });
+      if (op) void updateSwapOp({ id, market: op.market, order_id: op.orderId, wallet, step: 'Failed', status: 'failed', error });
     }
   }, [wallet]);
 

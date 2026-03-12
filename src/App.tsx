@@ -135,9 +135,18 @@ const App: React.FC = () => {
     const closeDrop = useCallback(() => { hoverTimer.current = setTimeout(() => setWDrop(false), 300); }, []);
 
     const [indexerBalances, setIndexerBalances] = useState<HolderBalance[]>([]);
+    const [balRefreshKey, setBalRefreshKey] = useState(0);
+
+    // Listen for global balance refresh events (fired by any component after TX confirmation)
+    useEffect(() => {
+        const handler = (): void => setBalRefreshKey(k => k + 1);
+        window.addEventListener('opnet:balance-refresh', handler);
+        return () => window.removeEventListener('opnet:balance-refresh', handler);
+    }, []);
 
     useEffect(() => {
-        if (!wDrop || !wAddr || !senderAddr) return;
+        // Refresh on dropdown open OR on global balance refresh (even if dropdown closed)
+        if ((!wDrop && balRefreshKey === 0) || !wAddr || !senderAddr) return;
         let cancelled = false;
 
         // Try indexer API first for ALL tokens
@@ -167,7 +176,7 @@ const App: React.FC = () => {
             })();
         });
         return () => { cancelled = true; };
-    }, [wDrop, wAddr, senderAddr, sdkProvider, hashedMLDSAKey, publicKey]);
+    }, [wDrop, wAddr, senderAddr, sdkProvider, hashedMLDSAKey, publicKey, balRefreshKey]);
 
     const handleWallet = useCallback(() => {
         if (wOn) disconnect();

@@ -8,7 +8,7 @@ import {
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
-import { buildTxParams, withRetry, waitForNextBlock } from '../txUtils';
+import { buildTxParams, withRetry, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import { DEPLOYED_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
 import * as api from '../api';
@@ -517,6 +517,7 @@ const SatoshiMiner: React.FC = () => {
                                 updateOpStep(mOpId, 'Waiting for block confirmation...', { tx: txHash });
                                 await waitForNextBlock(gameProvider, (s) => updateOpStep(mOpId, s));
                                 completeOp(mOpId);
+                                emitBalanceRefresh();
 
                                 setClaimStatus('done');
                                 setMineBalance(prev => Math.max(0, prev - claimAmount));

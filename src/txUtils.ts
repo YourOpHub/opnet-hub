@@ -200,6 +200,14 @@ export async function getMinBtcRequired(
 }
 
 /**
+ * Emit a global event to notify App.tsx (and any listener) that balances should be refreshed.
+ * Call this after any on-chain TX is confirmed (after waitForNextBlock).
+ */
+export function emitBalanceRefresh(): void {
+  window.dispatchEvent(new Event('opnet:balance-refresh'));
+}
+
+/**
  * Format user-friendly error messages for common OPNet transaction failures.
  * @param e - Caught error (Error instance or unknown).
  * @returns Human-readable error string.

@@ -18,7 +18,7 @@ import { FRACTALSWAP_ABI } from '../abis';
 import { NETWORK } from '../config';
 import { lockOrder, unlockOrder } from '../swapApi';
 import { CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX, getContractOpscanUrl, getTxUrl } from '../contracts';
-import { buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
+import { buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import { SwapDirection, OrderStatus } from '../crosschain/types';
 import { sendFractalBTC } from '../wallets/unisat';
 import { satsToBtc } from '../components/crosschain/types';
@@ -156,6 +156,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       setCreateStep('');
       toast(`Order #${actualNextId} confirmed on-chain!`, 'success', createTxLink);
       completeOp(createOpId);
+      emitBalanceRefresh();
       void fetchOrders();
     } catch (e) {
       setCreateStep(formatTxError(e));
@@ -222,6 +223,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       void unlockOrder(lockKey, walletAddress);
       toast(`Order #${orderId} confirmed on-chain!`, 'success', takeTxLink);
       setActionStep('');
+      emitBalanceRefresh();
       void fetchOrders();
       return;
     } catch (e) {
@@ -266,6 +268,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       completeOp(opId);
       toast(`Order #${orderId} settled on-chain!`, 'success', completeTxLink);
       setActionStep('');
+      emitBalanceRefresh();
       void fetchOrders();
       return;
     } catch (e) {
@@ -311,6 +314,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       await waitForNextBlock(provider, setActionStep);
       toast('Cancellation confirmed!', 'success', cancelTxLink);
       setActionStep('');
+      emitBalanceRefresh();
       void fetchOrders();
       return;
     } catch (e) {
@@ -423,6 +427,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       toast(`Order #${orderId} fully settled!`, 'success', tasCompleteTxLink);
+      emitBalanceRefresh();
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -483,6 +488,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       await waitForNextBlock(provider, (s) => updateOpStep(opId, s));
       completeOp(opId);
       toast(`Order #${orderId} fully settled!`, 'success', sacTxLink);
+      emitBalanceRefresh();
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -520,6 +526,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       await waitForNextBlock(provider, setActionStep);
       toast('Refund confirmed!', 'success', refundTxLink);
       setActionStep('');
+      emitBalanceRefresh();
       void fetchOrders();
       return;
     } catch (e) {

@@ -8,7 +8,7 @@ import {
 import { STAKING_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import {
   DEPLOYED_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
   getContractOpscanUrl, getTxUrl,
@@ -159,6 +159,7 @@ const Staking: React.FC = () => {
       setStep('');
       setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE!`, txHash });
       addTxRecord({ type: 'mint', txHash: receipt.transactionId || '', tokenA: 'MINE', amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
+      emitBalanceRefresh();
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -195,6 +196,7 @@ const Staking: React.FC = () => {
 
       setStep('');
       setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE!`, txHash });
+      emitBalanceRefresh();
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');
@@ -231,6 +233,7 @@ const Staking: React.FC = () => {
       const ts = Date.now();
       setLastClaimTs(ts);
       try { localStorage.setItem(claimKey, String(ts)); } catch (e) { logger.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
+      emitBalanceRefresh();
       setTimeout(() => setRefreshKey(k => k + 1), 5000);
     } catch (e) {
       setStep('');

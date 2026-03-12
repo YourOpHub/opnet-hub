@@ -16,7 +16,7 @@ import { Address } from '@btc-vision/transaction';
 import { TOKEN_ESCROW_ABI } from '../abis';
 import { NETWORK } from '../config';
 import { TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_PUBKEY, DEPLOYER_MLDSA_HEX } from '../contracts';
-import { buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
+import { buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import { ensureAllowance } from '../txUtils';
 import { generateHTLCPair, verifyPreimage, hexToBigInt } from '../crosschain/htlc';
 import { buildP2OPScript, getP2OPAddress, DIR_SELL_TOKEN, DIR_BUY_TOKEN, resolveToken, TOKEN_OPTIONS } from './crossChainShared';
@@ -115,7 +115,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       state.setTbBtcPrice('');
       state.setTbMakerAddr('');
 
-      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setTbStep(formatTxError(e));
@@ -178,7 +178,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast(`Order taken! Fee: ${Number(feeSats)} sats.`, 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -211,7 +211,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast('Swap confirmed! Tokens released.', 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -235,7 +235,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast('Token escrow order cancelled! Tokens returned.', 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -259,7 +259,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       toast('Refund sent! Tokens returned.', 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => fetchEscrowOrders()).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));

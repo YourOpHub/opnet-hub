@@ -8,7 +8,7 @@ import {
 import { POOL_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import { addTxRecord } from '../txHistory';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
@@ -158,6 +158,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setLpMine(prev => prev + mAmt);
       setLpVibe(prev => prev + vAmt);
       addTxRecord({ type: 'mint', txHash: addReceipt.transactionId || '', tokenA: 'LP', amountA: `${mAmt}+${vAmt}`, status: 'confirmed', wallet: walletAddress });
+      emitBalanceRefresh();
       setTimeout(onRefresh, 3000);
     } catch (e) {
       setStep('');
@@ -217,6 +218,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setVibeAmt('');
       setResult({ ok: true, msg: `Removed ${m.toLocaleString()} MINE + ${v.toLocaleString()} VIBE. Tokens returned to your wallet!`, txHash: receipt.transactionId || '' });
       addTxRecord({ type: 'claim', txHash: receipt.transactionId || '', tokenA: 'LP', amountA: `${m}+${v}`, status: 'confirmed', wallet: walletAddress });
+      emitBalanceRefresh();
       setTimeout(onRefresh, 3000);
     } catch (e) {
       setStep('');

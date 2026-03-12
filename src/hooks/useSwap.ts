@@ -30,7 +30,7 @@ import {
 import { POOL_ABI, MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -508,6 +508,7 @@ export function useSwap(): UseSwapReturn {
       }
 
       localStorage.setItem('hub_swapped', '1');
+      emitBalanceRefresh();
       setTimeout(() => setBalRefreshKey(k => k + 1), 3000);
     } catch (e) {
       logger.error('[Swap]', e);
@@ -546,6 +547,7 @@ export function useSwap(): UseSwapReturn {
       completeOp(mOpId);
       setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: activeWallet });
+      emitBalanceRefresh();
       setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';

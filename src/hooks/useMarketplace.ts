@@ -31,7 +31,7 @@ import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import type { ContractTokenInfo } from '../contracts';
 import { Address } from '@btc-vision/transaction';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import { MARKET_ADDRESS, MARKET_PUBKEY, DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
 import { useToast } from '../components/Toast';
 import { lockOrder, unlockOrder, getActiveLocks } from '../swapApi';
@@ -432,7 +432,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       toast('Order confirmed on-chain!', 'success', createTxLink);
       completeOp(createOpId);
       setCreateStep('');
-      setBalRefreshKey(k => k + 1);
+      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
       void fetchOrders(); void fetchTokens();
       return;
     } catch (e) {
@@ -529,7 +529,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
-      setBalRefreshKey(k => k + 1);
+      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
       void fetchOrders();
       return;
     } catch (e) {
@@ -603,7 +603,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
-      setBalRefreshKey(k => k + 1);
+      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
       void fetchOrders();
       return;
     } catch (e) {
@@ -672,7 +672,7 @@ export function useMarketplace(): UseMarketplaceReturn {
       toast('Cancel confirmed!', 'success', cancelTxLink);
       completeOp(cancelOpId);
       setFillStep('');
-      setBalRefreshKey(k => k + 1);
+      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
       void fetchOrders();
     } catch (e) {
       failOp(cancelOpId, formatTxError(e));

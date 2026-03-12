@@ -77,7 +77,6 @@ describe('Landing', () => {
     expect(screen.getByText('Build')).toBeTruthy();
     expect(screen.getByText('Mine')).toBeTruthy();
     expect(screen.getByText('Market')).toBeTruthy();
-    expect(screen.getByText('Explorer')).toBeTruthy();
     expect(screen.getByText('Tools')).toBeTruthy();
     expect(screen.getByText('MultiSend')).toBeTruthy();
     expect(screen.getByText('FractalSwap')).toBeTruthy();

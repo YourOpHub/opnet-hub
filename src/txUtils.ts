@@ -62,12 +62,12 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 
  * Wait for the next on-chain block by polling getBlockNumber every 8s.
  * @param provider - JSON-RPC provider.
  * @param setStep - Optional callback for progress updates.
- * @param timeoutMs - Max wait time in ms (default 60s). Proceeds anyway on timeout.
+ * @param timeoutMs - Max wait time in ms (default 5min). Proceeds anyway on timeout.
  */
 export async function waitForNextBlock(
   provider: JSONRpcProvider,
   setStep?: (s: string) => void,
-  timeoutMs = 60_000,
+  timeoutMs = 300_000,
 ): Promise<void> {
   let startBlock: bigint;
   try { startBlock = await provider.getBlockNumber(); } catch (e) { logger.warn('[txUtils] Failed to get initial block number for wait:', e); return; }

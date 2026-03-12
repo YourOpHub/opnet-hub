@@ -141,8 +141,8 @@ export const OP20_SELECTORS = {
 } as const;
 
 /** SimpleStaking v4 — fundRewards + events (Staked/Unstaked/RewardClaimed/RewardRateChanged/RewardsFunded) */
-export const STAKING_ADDRESS = env('VITE_STAKING_ADDRESS') || 'opt1sqqd90vsx5gryp6gmvenk023s0hahy6e70qjt8ss9';
-export const STAKING_PUBKEY = env('VITE_STAKING_PUBKEY') || '0xb6ea2d2c8773bfe6fe844842ccda369f6aa53399275d63aa4b6fd22e95df0b8d';
+export const STAKING_ADDRESS = env('VITE_STAKING_ADDRESS') || 'opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c';
+export const STAKING_PUBKEY = env('VITE_STAKING_PUBKEY') || '0x6b92dfca57e7415b6e89868ee1e2c51dcda8f8b4bf9a28b19900e1bfba2121ae';
 export const STAKING_DEPLOYED = !!STAKING_ADDRESS;
 
 /** Staking selectors (from opnet-transform build output) */

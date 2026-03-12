@@ -372,10 +372,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
-      setCreateStep('');
       setOrderAmount(''); setOrderPrice('');
-      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Confirming...`, 'success');
-      setCreating(false);
 
       const createOpId = `p2p:create:${Date.now()}:${walletAddress}`;
       trackOp({
@@ -397,12 +394,12 @@ export function useMarketplace(): UseMarketplaceReturn {
         }).catch((e) => { logger.warn('[useMarketplace] Create indexer notify error:', e); });
       } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
-      void waitForNextBlock(provider).then(() => {
-        toast('Order confirmed on-chain!', 'success');
-        completeOp(createOpId);
-        void fetchOrders(); void fetchTokens();
-      }).catch((e) => { logger.warn('[useMarketplace] Create confirmation error:', e); });
-      void fetchOrders();
+      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Waiting for block...`, 'success');
+      await waitForNextBlock(provider, setCreateStep);
+      toast('Order confirmed on-chain!', 'success');
+      completeOp(createOpId);
+      setCreateStep('');
+      void fetchOrders(); void fetchTokens();
       return;
     } catch (e) {
       setCreateStep(formatTxError(e));
@@ -475,9 +472,8 @@ export function useMarketplace(): UseMarketplaceReturn {
         await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       }
 
-      setFillStep(''); setFillId(null); setFillAmount('');
-      toast('Order filled! Confirming...', 'success');
-      setFilling(false);
+      setFillId(null); setFillAmount('');
+      toast('Order filled! Waiting for block...', 'success');
 
       trackOp({
         id: opId, market: 'p2p', orderId,
@@ -491,12 +487,11 @@ export function useMarketplace(): UseMarketplaceReturn {
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
-      void waitForNextBlock(provider).then(() => {
-        toast('Fill confirmed on-chain!', 'success');
-        completeOp(opId);
-        void unlockOrder(lockKey, walletAddress);
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useMarketplace] Fill confirmation error:', e); void unlockOrder(lockKey, walletAddress); });
+      await waitForNextBlock(provider, setFillStep);
+      toast('Fill confirmed on-chain!', 'success');
+      completeOp(opId);
+      void unlockOrder(lockKey, walletAddress);
+      setFillStep('');
       void fetchOrders();
       return;
     } catch (e) {
@@ -554,9 +549,8 @@ export function useMarketplace(): UseMarketplaceReturn {
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = btcPaymentSats + 50_000n;
       await (sim as CallResult).sendTransaction(tp as TransactionParameters);
 
-      setFillStep(''); setFillId(null);
-      toast('Buy order executed! Confirming...', 'success');
-      setFilling(false);
+      setFillId(null);
+      toast('Buy order executed! Waiting for block...', 'success');
 
       trackOp({
         id: opId, market: 'p2p', orderId,
@@ -564,12 +558,11 @@ export function useMarketplace(): UseMarketplaceReturn {
         amounts: { amount: String(remaining), price: String(order.pricePerToken), token: order.tokenSymbol },
       });
 
-      void waitForNextBlock(provider).then(() => {
-        toast('Execution confirmed on-chain!', 'success');
-        completeOp(opId);
-        void unlockOrder(lockKey, walletAddress);
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useMarketplace] Execution confirmation error:', e); void unlockOrder(lockKey, walletAddress); });
+      await waitForNextBlock(provider, setFillStep);
+      toast('Execution confirmed on-chain!', 'success');
+      completeOp(opId);
+      void unlockOrder(lockKey, walletAddress);
+      setFillStep('');
       void fetchOrders();
       return;
     } catch (e) {
@@ -621,17 +614,15 @@ export function useMarketplace(): UseMarketplaceReturn {
       const tp = await buildTxParams(provider, walletAddress);
       await (sim as CallResult).sendTransaction(tp as TransactionParameters);
 
-      toast('Order cancel submitted! Confirming...', 'success');
+      toast('Order cancel submitted! Waiting for block...', 'success');
       void fetch(`${MARKET_API}/market/cancel`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, creator: walletAddress }),
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Cancel indexer notify error:', e); });
 
-      void waitForNextBlock(provider).then(() => {
-        toast('Cancel confirmed!', 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useMarketplace] Cancel confirmation error:', e); });
+      await waitForNextBlock(provider);
+      toast('Cancel confirmed!', 'success');
       void fetchOrders();
     } catch (e) {
       setMsg(formatTxError(e));

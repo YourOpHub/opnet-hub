@@ -13,12 +13,6 @@ import { withRetry } from '../txUtils';
 import type { LaunchToken } from '../launchpad/types';
 import { loadTokens, saveTokens, addToken } from '../launchpad/store';
 import { isServerAvailable, fetchTokens, registerToken } from '../launchpad/api';
-import { DEPLOYED_CONTRACTS } from '../contracts';
-
-/** Only show our own deployed tokens */
-const OUR_ADDRESSES = new Set(
-  Object.values(DEPLOYED_CONTRACTS).map(t => t.address),
-);
 import LaunchpadForm from './launchpad/LaunchpadForm';
 import LaunchpadTokenList from './launchpad/LaunchpadTokenList';
 import LaunchpadDeployProgress from './launchpad/LaunchpadDeployProgress';
@@ -55,9 +49,8 @@ const Launchpad: React.FC = () => {
           local.forEach(lt => { if (!merged.find(m => m.address === lt.address)) merged.push(lt); });
         }
       }
-      const ours = merged.filter(t => OUR_ADDRESSES.has(t.address));
-      setTokens(ours);
-      saveTokens(ours);
+      setTokens(merged);
+      saveTokens(merged);
     })();
   }, []);
 

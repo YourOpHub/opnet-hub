@@ -13,7 +13,6 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { logger } from '../logger';
 import { getContract, TransactionOutputFlags, type CallResult, type BaseContractProperties } from 'opnet';
 import { FRACTALSWAP_ABI } from '../abis';
 import { NETWORK } from '../config';
@@ -151,12 +150,10 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       state.setFormReceive('');
       state.setFormMakerAddr('');
 
-      void waitForNextBlock(provider).then(() => {
-        setCreateStep('');
-        toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
-        completeOp(createOpId);
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Create confirmation error:', e); setCreateStep(''); });
+      await waitForNextBlock(provider, setCreateStep);
+      setCreateStep('');
+      toast(`Order #${actualNextId} confirmed on-chain!`, 'success');
+      completeOp(createOpId);
       void fetchOrders();
     } catch (e) {
       setCreateStep(formatTxError(e));
@@ -213,17 +210,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
       await (sim as CallResult).sendTransaction(tp);
 
-      setActionStep('');
       trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'TX sent, confirming...', amounts: { btc: Number(order.btcAmount).toString() } });
-      toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Confirming...`, 'success');
-      setActioning(null);
+      toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Waiting for block...`, 'success');
 
-      void waitForNextBlock(provider).then(() => {
-        completeOp(opId);
-        void unlockOrder(lockKey, walletAddress);
-        toast(`Order #${orderId} confirmed on-chain!`, 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Take confirmation error:', e); completeOp(opId); void unlockOrder(lockKey, walletAddress); });
+      await waitForNextBlock(provider, setActionStep);
+      completeOp(opId);
+      void unlockOrder(lockKey, walletAddress);
+      toast(`Order #${orderId} confirmed on-chain!`, 'success');
+      setActionStep('');
       void fetchOrders();
       return;
     } catch (e) {
@@ -258,17 +252,14 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
       await (sim as CallResult).sendTransaction(tp);
 
-      setActionStep('');
       const opId = `fractalswap:complete:${orderId}:${walletAddress}`;
       trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'BTC claimed, settling...' });
-      toast(`Order #${orderId} completed! BTC claimed.`, 'success');
-      setActioning(null);
+      toast(`Order #${orderId} completed! Waiting for block...`, 'success');
 
-      void waitForNextBlock(provider).then(() => {
-        completeOp(opId);
-        toast(`Order #${orderId} settled on-chain!`, 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Complete confirmation error:', e); completeOp(opId); });
+      await waitForNextBlock(provider, setActionStep);
+      completeOp(opId);
+      toast(`Order #${orderId} settled on-chain!`, 'success');
+      setActionStep('');
       void fetchOrders();
       return;
     } catch (e) {
@@ -307,14 +298,11 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       await (sim as CallResult).sendTransaction(tp);
 
-      setActionStep('');
-      toast(`Order cancelled!${order.direction === SwapDirection.BTC_TO_FB ? ' BTC refunded.' : ''} Confirming...`, 'success');
-      setActioning(null);
+      toast(`Order cancelled!${order.direction === SwapDirection.BTC_TO_FB ? ' BTC refunded.' : ''} Waiting for block...`, 'success');
 
-      void waitForNextBlock(provider).then(() => {
-        toast('Cancellation confirmed!', 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Cancel confirmation error:', e); });
+      await waitForNextBlock(provider, setActionStep);
+      toast('Cancellation confirmed!', 'success');
+      setActionStep('');
       void fetchOrders();
       return;
     } catch (e) {
@@ -417,14 +405,12 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] Complete #${orderId}: claimed ${Number(order.btcAmount)} sats BTC`);
       updateOpStep(opId, `Swap complete! Paid ${satsToBtc(fbAmountSats)} FB, received ${satsToBtc(order.btcAmount)} BTC`);
-      toast(`Order #${orderId} done! You paid ${satsToBtc(fbAmountSats)} FB and received ${satsToBtc(order.btcAmount)} BTC`, 'success');
+      toast(`Order #${orderId} done! Waiting for block...`, 'success');
 
-      void waitForNextBlock(provider).then(() => {
-        completeOp(opId);
-        void unlockOrder(lockKey, walletAddress);
-        toast(`Order #${orderId} fully settled!`, 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Auto-swap confirmation error:', e); completeOp(opId); void unlockOrder(lockKey, walletAddress); });
+      await waitForNextBlock(provider, (s) => updateOpStep(opId, s));
+      completeOp(opId);
+      void unlockOrder(lockKey, walletAddress);
+      toast(`Order #${orderId} fully settled!`, 'success');
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -478,13 +464,11 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       await (sim as CallResult).sendTransaction(tp);
 
       updateOpStep(opId, 'Auto-claim complete! Settling...');
-      toast(`Order #${orderId} completed! BTC claimed.`, 'success');
+      toast(`Order #${orderId} completed! Waiting for block...`, 'success');
 
-      void waitForNextBlock(provider).then(() => {
-        completeOp(opId);
-        toast(`Order #${orderId} fully settled!`, 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Auto-claim confirmation error:', e); completeOp(opId); });
+      await waitForNextBlock(provider, (s) => updateOpStep(opId, s));
+      completeOp(opId);
+      toast(`Order #${orderId} fully settled!`, 'success');
       void fetchOrders();
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -515,14 +499,11 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
       await (sim as CallResult).sendTransaction(tp);
 
-      setActionStep('');
-      toast('Refund sent! BTC returned. Confirming...', 'success');
-      setActioning(null);
+      toast('Refund sent! BTC returned. Waiting for block...', 'success');
 
-      void waitForNextBlock(provider).then(() => {
-        toast('Refund confirmed!', 'success');
-        void fetchOrders();
-      }).catch((e) => { logger.warn('[useFractalSwap] Refund confirmation error:', e); });
+      await waitForNextBlock(provider, setActionStep);
+      toast('Refund confirmed!', 'success');
+      setActionStep('');
       void fetchOrders();
       return;
     } catch (e) {

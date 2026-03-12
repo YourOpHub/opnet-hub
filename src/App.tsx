@@ -6,7 +6,6 @@ import { getContract, OP_20_ABI, type IOP20Contract } from 'opnet';
 import { NETWORK, CURRENT_ENV } from './config';
 import { getProvider } from './contractCache';
 import Landing from './components/Landing';
-import QuestPanel from './components/Quests';
 import OpsPanel from './components/OpsPanel';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { ToastProvider } from './components/Toast';
@@ -103,7 +102,6 @@ function findGroup(tabId: string): string | null {
 
 const App: React.FC = () => {
     const [tab, setTab] = useState('home');
-    const [qOpen, setQOpen] = useState(false);
     const [openGroup, setOpenGroup] = useState<string | null>(null);
 
     const {
@@ -398,11 +396,6 @@ const App: React.FC = () => {
                 </div>
             </footer>
 
-            <button className="q-fab" onClick={() => setQOpen(!qOpen)} aria-label="Toggle quests panel" aria-expanded={qOpen}>
-                <span aria-hidden="true">{'\u2737'}</span>
-            </button>
-
-            <QuestPanel open={qOpen} onClose={() => setQOpen(false)} onNav={navigate} />
             <OpsPanel />
         </OpsProvider>
         </ToastProvider>

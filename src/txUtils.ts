@@ -20,8 +20,10 @@ const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffff
  */
 export type TxParams = TransactionParameters;
 
-// Session-level cache: tracks tokens already approved this session (tokenAddr:spenderAddr)
+// Session-level cache: tracks tokens already approved this session (wallet:tokenAddr:spenderAddr)
+// Keyed by wallet to auto-invalidate on wallet change
 const approvedThisSession = new Set<string>();
+let _cachedWallet = '';
 
 /**
  * Build transaction parameters from live gas data. Frontend mode: signer/mldsaSigner are null (wallet injects).
@@ -109,7 +111,12 @@ export async function ensureAllowance(
   setStep: (s: string) => void,
   tokenLabel = 'token',
 ): Promise<boolean> {
-  const cacheKey = `${tokenAddress}:${spenderPubkeyHex}`;
+  // Clear cache on wallet change
+  if (_cachedWallet !== walletAddress) {
+    approvedThisSession.clear();
+    _cachedWallet = walletAddress;
+  }
+  const cacheKey = `${walletAddress}:${tokenAddress}:${spenderPubkeyHex}`;
 
   // Session cache: if we already approved this token for this spender, skip
   if (approvedThisSession.has(cacheKey)) {
@@ -150,11 +157,12 @@ export async function ensureAllowance(
   const tp = await buildTxParams(provider, walletAddress);
   await approveResult.sendTransaction(tp);
 
-  // Mark as approved in session cache
-  approvedThisSession.add(cacheKey);
-
-  // Wait for next block
+  // Wait for next block BEFORE marking as approved — prevents race condition
+  // where cache says "approved" but on-chain allowance hasn't confirmed yet
   await waitForNextBlock(provider, setStep);
+
+  // Mark as approved in session cache (after block confirmation)
+  approvedThisSession.add(cacheKey);
 
   return true; // Approval was sent
 }
@@ -199,7 +207,7 @@ export async function getMinBtcRequired(
 export function formatTxError(e: unknown): string {
   let msg = e instanceof Error ? e.message : 'Transaction failed';
   const lower = msg.toLowerCase();
-  if (lower.includes('no utxo')) return 'No BTC UTXOs.' + (CURRENT_ENV !== 'mainnet' ? ' Get testnet BTC from the faucet.' : ' Fund your wallet first.');
+  if (lower.includes('no utxo')) return 'No BTC UTXOs.' + (CURRENT_ENV !== 'mainnet' ? ' Get testnet BTC: https://faucet.opnet.org' : ' Fund your wallet first.');
   if (lower.includes('insufficient allowance') || lower.includes('allowance')) return 'Allowance not yet confirmed. Please wait ~30s and try again (approval already sent).';
   if (lower.includes('timeout') || lower.includes('fetch')) return 'Network timeout — try again in a few seconds.';
   if (lower.includes('cannot accept own order') || lower.includes('own order')) return 'Cannot fill your own order. Use a different wallet.';

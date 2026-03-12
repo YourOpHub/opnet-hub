@@ -104,6 +104,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     if (tab === 'add') { setMineAmt(''); setVibeAmt(''); }
   }, [tab]);
 
+  // Must be before useCallback hooks that reference them
+  const mineBal = balances['MINE'];
+  const vibeBal = balances['VIBE'];
+
   const addLiquidity = useCallback(async () => {
     if (!walletAddress) { openConnectModal(); return; }
     const mAmt = parseFloat(mineAmt);
@@ -159,7 +163,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setStep('');
       setResult({ ok: false, msg: formatTxError(e) });
     } finally { setBusy(false); }
-  }, [walletAddress, mineAmt, vibeAmt, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
+  }, [walletAddress, mineAmt, vibeAmt, mineBal, vibeBal, provider, senderAddr, openConnectModal, onRefresh, trackOp, updateOpStep, completeOp]);
 
   const removeLiquidity = useCallback(async () => {
     logger.info('[LiquidityModal] removeLiquidity called', { walletAddress: !!walletAddress, senderAddr: !!senderAddr, mineAmt, lpMine, lpVibe });
@@ -207,8 +211,6 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
   if (!open) return null;
 
   const connected = !!walletAddress;
-  const mineBal = balances['MINE'];
-  const vibeBal = balances['VIBE'];
   const fmtBal = (b: bigint | undefined): string => b != null ? (Number(b) / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
 
   return (

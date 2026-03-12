@@ -8,7 +8,7 @@ import {
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
-import { buildTxParams, withRetry } from '../txUtils';
+import { buildTxParams, withRetry, waitForNextBlock } from '../txUtils';
 import { DEPLOYED_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
 import * as api from '../api';
@@ -85,9 +85,9 @@ const SPRITE_HIT = `${BASE}miner-hit.png`;
 const SPRITE_RIG = `${BASE}mining-rig.png`;
 
 const SatoshiMiner: React.FC = () => {
-    const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
+    const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
     const gameProvider = React.useMemo(() => getProvider(), []);
-    const { trackOp, completeOp } = useOps();
+    const { trackOp, updateOpStep, completeOp } = useOps();
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
     const [tot, setTot] = useState<number>(() => ld('sm_t', 0));
     const [ups, setUps] = useState<Up[]>(() => ld('sm_u', UPS));
@@ -491,7 +491,7 @@ const SatoshiMiner: React.FC = () => {
                     <button
                         onClick={async () => {
                             if (claimStatus !== 'idle' || mineBalance < 1) return;
-                            if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+                            if (!walletAddress) { openConnectModal(); return; }
                             if (!senderAddr) { setShowClaim(true); return; }
 
                             const claimAmount = Math.min(Math.floor(mineBalance), 1_000_000);
@@ -509,11 +509,13 @@ const SatoshiMiner: React.FC = () => {
                                 const contract = getContract<MintableContract>(MINE_CONTRACT, MINTABLE_ABI, gameProvider, GAME_NETWORK, senderAddr);
                                 const sim = await withRetry(() => contract.publicMint(rawAmount));
                                 if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
-                                if (!walletAddress) throw new Error('Wallet not connected');
                                 const txParams = await buildTxParams(gameProvider, walletAddress);
                                 const mOpId = `mint_MINE_${Date.now()}`;
                                 trackOp({ id: mOpId, market: 'mint', orderId: 'MINE', direction: '', role: '', step: `Claiming ${claimAmount.toLocaleString()} MINE...` });
-                                await (sim as CallResult).sendTransaction(txParams);
+                                const receipt = await (sim as CallResult).sendTransaction(txParams);
+                                const txHash = (receipt as { transactionId?: string })?.transactionId || '';
+                                updateOpStep(mOpId, 'Waiting for block confirmation...', { tx: txHash });
+                                await waitForNextBlock(gameProvider, (s) => updateOpStep(mOpId, s));
                                 completeOp(mOpId);
 
                                 setClaimStatus('done');

@@ -2,12 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { logger } from '../logger';
 import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
-  type JSONRpcProvider, getContract, BitcoinUtils,
+  getContract, BitcoinUtils,
   type CallResult, type BaseContractProperties,
 } from 'opnet';
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
-import type { TxParams } from '../txUtils';
+import { buildTxParams, waitForNextBlock, formatTxError } from '../txUtils';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { DEPLOYED_CONTRACTS, type ContractTokenInfo, getContractOpscanUrl, getTxUrl } from '../contracts';
@@ -22,25 +22,6 @@ interface IMintableContract extends BaseContractProperties {
 }
 
 const FAUCET = 'https://faucet.opnet.org';
-
-/** Fetch network gas parameters and build proper tx params */
-async function buildTxParams(provider: JSONRpcProvider, refundTo: string): Promise<TxParams> {
-  const gas = await provider.gasParameters();
-  const feeRate = gas.bitcoin.recommended.medium || gas.bitcoin.conservative || 10;
-  const gasPerSat = gas.gasPerSat > 0n ? gas.gasPerSat : 1n;
-  const priorityFeeSats = gas.baseGas / gasPerSat;
-  const priorityFee: bigint = priorityFeeSats < 1000n ? 1000n : priorityFeeSats > 50000n ? 50000n : priorityFeeSats;
-  // Frontend: signer/mldsaSigner null — wallet extension injects real signers
-  return {
-    signer: null,
-    mldsaSigner: null,
-    refundTo,
-    maximumAllowedSatToSpend: 50_000n,
-    network: NETWORK,
-    feeRate,
-    priorityFee,
-  };
-}
 
 /** Server response for token import */
 interface ImportTokenResponse {
@@ -76,8 +57,8 @@ const genLogo = (sym: string): string => {
 };
 
 const TokenGallery: React.FC = () => {
-  const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
-  const { trackOp, completeOp } = useOps();
+  const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
+  const { trackOp, updateOpStep, completeOp } = useOps();
   const [tokens, setTokens] = useState<DeployedToken[]>([]);
   const [chainInfo, setChainInfo] = useState<Record<string, { totalSupply: bigint; confirmed: boolean }>>({});
   const [mintAddr, setMintAddr] = useState<string | null>(null);
@@ -230,7 +211,7 @@ const TokenGallery: React.FC = () => {
   const provider = useMemo(() => getProvider(), []);
 
   const doFeaturedMint = useCallback(async (tok: typeof featured[0]) => {
-    if (!walletAddress || !walletInstance) { openConnectModal(); return; }
+    if (!walletAddress) { openConnectModal(); return; }
     const amt = parseFloat(featMintAmt);
     if (!amt || amt <= 0) { setFeatMintResult({ ok: false, msg: 'Enter a valid amount' }); return; }
     const maxMint = tok.maxMintPerTx ? tok.maxMintPerTx / Math.pow(10, tok.decimals) : 1_000_000;
@@ -242,22 +223,21 @@ const TokenGallery: React.FC = () => {
       const contract = getContract<IMintableContract>(tok.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await contract.publicMint(rawAmount);
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
-      if (!walletAddress) throw new Error('Wallet not connected');
       const txParams = await buildTxParams(provider, walletAddress);
       const fmOpId = `mint_${tok.symbol}_${Date.now()}`;
       trackOp({ id: fmOpId, market: 'mint', orderId: tok.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${tok.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
-      completeOp(fmOpId);
       const txHash = receipt.transactionId || '';
+      updateOpStep(fmOpId, 'Waiting for block confirmation...', { tx: txHash });
+      await waitForNextBlock(provider, (s) => updateOpStep(fmOpId, s));
+      completeOp(fmOpId);
       setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setHistRefresh(k => k + 1);
     } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Mint failed';
-      if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`;
-      setFeatMintResult({ ok: false, msg });
+      setFeatMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setFeatMinting(false); }
-  }, [walletAddress, walletInstance, featMintAmt, openConnectModal, provider, senderAddr, trackOp, completeOp]);
+  }, [walletAddress, featMintAmt, openConnectModal, provider, senderAddr, trackOp, updateOpStep, completeOp]);
 
   const removeToken = (addr: string): void => {
     const updated = tokens.filter(t => t.address !== addr);
@@ -266,58 +246,33 @@ const TokenGallery: React.FC = () => {
   };
 
   const doMint = useCallback(async (token: DeployedToken) => {
-    if (!walletAddress || !walletInstance) {
-      openConnectModal();
-      return;
-    }
-
+    if (!walletAddress) { openConnectModal(); return; }
     const amt = parseFloat(mintAmount);
-    if (!amt || amt <= 0) {
-      setMintResult({ ok: false, msg: 'Enter a valid amount' });
-      return;
-    }
-
-    if (!senderAddr) {
-      setMintResult({ ok: false, msg: 'Wallet public key not available. Reconnect wallet.' });
-      return;
-    }
+    if (!amt || amt <= 0) { setMintResult({ ok: false, msg: 'Enter a valid amount' }); return; }
+    if (!senderAddr) { setMintResult({ ok: false, msg: 'Wallet public key not available. Reconnect wallet.' }); return; }
 
     setMinting(true);
     setMintResult(null);
-
     try {
       const rawAmount = BigInt(Math.floor(amt * Math.pow(10, token.decimals)));
-
-      const contract = getContract<IMintableContract>(
-        token.address, MINTABLE_ABI, provider, NETWORK, senderAddr,
-      );
+      const contract = getContract<IMintableContract>(token.address, MINTABLE_ABI, provider, NETWORK, senderAddr);
       const sim = await contract.publicMint(rawAmount);
-
-      if ((sim as CallResult).revert) {
-        throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
-      }
-
-      if (!walletAddress) throw new Error('Wallet not connected');
+      if ((sim as CallResult).revert) throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress);
       const umOpId = `mint_${token.symbol}_${Date.now()}`;
       trackOp({ id: umOpId, market: 'mint', orderId: token.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${token.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
-      completeOp(umOpId);
-
       const txHash = receipt.transactionId || '';
+      updateOpStep(umOpId, 'Waiting for block confirmation...', { tx: txHash });
+      await waitForNextBlock(provider, (s) => updateOpStep(umOpId, s));
+      completeOp(umOpId);
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
       setHistRefresh(k => k + 1);
     } catch (e) {
-      let msg = e instanceof Error ? e.message : 'Mint failed';
-      if (msg.toLowerCase().includes('no utxo')) {
-        msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ` Get ${CURRENT_ENV} BTC: ${FAUCET}` : ''}`;
-      }
-      setMintResult({ ok: false, msg });
-    } finally {
-      setMinting(false);
-    }
-  }, [walletAddress, walletInstance, mintAmount, openConnectModal, provider, senderAddr, trackOp, completeOp]);
+      setMintResult({ ok: false, msg: formatTxError(e) });
+    } finally { setMinting(false); }
+  }, [walletAddress, mintAmount, openConnectModal, provider, senderAddr, trackOp, updateOpStep, completeOp]);
 
   const connected = !!walletAddress;
   const inputStyle: React.CSSProperties = {

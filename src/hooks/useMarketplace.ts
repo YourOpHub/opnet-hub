@@ -615,11 +615,15 @@ export function useMarketplace(): UseMarketplaceReturn {
   // Cancel order
   const handleCancel = useCallback(async (orderId: string) => {
     if (!walletAddress || !senderAddr) return;
+    if (filling) { toast('Another operation in progress', 'error'); return; }
+    setFilling(true); setFillStep('Cancelling order...');
+    const cancelOpId = `p2p:cancel:${orderId}:${walletAddress}`;
     try {
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
+      trackOp({ id: cancelOpId, market: 'p2p', orderId, direction: 'cancel', role: 'maker', step: 'Cancelling...' });
       const cancelReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       const cancelTxId = (cancelReceipt as { transactionId?: string })?.transactionId || '';
       const cancelTxLink = cancelTxId ? { url: getTxUrl(cancelTxId), label: 'View TX' } : undefined;
@@ -631,14 +635,17 @@ export function useMarketplace(): UseMarketplaceReturn {
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Cancel indexer notify error:', e); });
 
-      await waitForNextBlock(provider);
+      await waitForNextBlock(provider, setFillStep);
       toast('Cancel confirmed!', 'success', cancelTxLink);
+      completeOp(cancelOpId);
+      setFillStep('');
       void fetchOrders();
     } catch (e) {
-      setMsg(formatTxError(e));
-      setTimeout(() => setMsg(''), 5000);
-    }
-  }, [walletAddress, senderAddr, provider, fetchOrders, toast]);
+      failOp(cancelOpId, formatTxError(e));
+      setFillStep(formatTxError(e));
+      setTimeout(() => setFillStep(''), 5000);
+    } finally { setFilling(false); }
+  }, [walletAddress, senderAddr, filling, provider, fetchOrders, toast, trackOp, completeOp, failOp]);
 
   // Select token from search input
   const handleSearchSelect = useCallback(() => {

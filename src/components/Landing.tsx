@@ -140,6 +140,10 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
             </a>
           </div>
         </div>
+
+        <div className="hero-img-wrap" aria-hidden="true">
+          <img src="/Gemini_Generated_Image_qci8paqci8paqci8.png" alt="" className="hero-img" loading="eager" />
+        </div>
       </div>
 
       {/* ═══ LIVE TICKER ═══ */}

@@ -162,9 +162,9 @@ export const STAKING_SELECTORS = {
 } as const;
 
 /** P2PMarket v9 — output bitmap fix (prevents BTC double-counting in batch fills) */
-/** P2PMarket v10 — atomic buy orders (BTC locked at creation, fillBuyOrder) */
-export const MARKET_ADDRESS = env('VITE_MARKET_ADDRESS') || 'opt1sqq54r566klqfdn5uuqtwv0hsnyh0yaefmyulg7lh';
-export const MARKET_PUBKEY = env('VITE_MARKET_PUBKEY') || '0xdc6dd5aa610f98ace2d19b2cf4ddc37e40d8963c1a7c84aa71bf2c90f78d9daf';
+/** P2PMarket v10 — atomic buy orders (BTC locked at creation, fillBuyOrder, expiry) */
+export const MARKET_ADDRESS = env('VITE_MARKET_ADDRESS') || 'opt1sqzveth6qep7ajey4vwcuujw049ke4z7khs7097qn';
+export const MARKET_PUBKEY = env('VITE_MARKET_PUBKEY') || '0x4e027a4fdae4a71be26a285fc9a802387aade4280d78bcbe8e898062d0ce7097';
 export const MARKET_HEX = MARKET_PUBKEY.replace('0x', '');
 
 /** P2PMarket v5 selectors — trustless buy orders (accept + execute) */

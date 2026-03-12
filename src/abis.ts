@@ -255,6 +255,7 @@ export const MARKETPLACE_ABI: BitcoinInterfaceAbi = [
       { name: 'filled', type: ABIDataTypes.UINT256 },
       { name: 'pricePerToken', type: ABIDataTypes.UINT256 },
       { name: 'seller', type: ABIDataTypes.UINT256 },
+      { name: 'lockedBtc', type: ABIDataTypes.UINT256 },
     ],
     type: BitcoinAbiTypes.Function,
   },

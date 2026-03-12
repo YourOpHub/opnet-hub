@@ -10,7 +10,7 @@ import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock } from '../txUtils';
 import { addTxRecord } from '../txHistory';
-import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, NATIVESWAP_ADDRESS, getContractOpscanUrl } from '../contracts';
+import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
 import { useOps } from '../contexts/OpsContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -35,15 +35,12 @@ interface Props {
   onRefresh: () => void;
 }
 
-type PoolType = 'simplepool' | 'nativeswap' | 'custom';
-
 const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, balances, onRefresh }) => {
   const { walletAddress, walletInstance, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const { trackOp, completeOp } = useOps();
   const trapRef = useFocusTrap(open, onClose);
 
-  const [poolType, setPoolType] = useState<PoolType>('simplepool');
   const [tab, setTab] = useState<'add' | 'remove'>('add');
   const [mineAmt, setMineAmt] = useState('');
   const [vibeAmt, setVibeAmt] = useState('');
@@ -113,6 +110,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
     const vAmt = parseFloat(vibeAmt);
     if (!mAmt || !vAmt || mAmt <= 0 || vAmt <= 0) { setResult({ ok: false, msg: 'Enter both amounts' }); return; }
     if (!senderAddr) { setResult({ ok: false, msg: 'Wallet key not available' }); return; }
+    const mineBalNum = mineBal != null ? Number(mineBal) / 1e8 : 0;
+    const vibeBalNum = vibeBal != null ? Number(vibeBal) / 1e8 : 0;
+    if (mAmt > mineBalNum) { setResult({ ok: false, msg: `Insufficient MINE balance (have ${mineBalNum.toLocaleString()}, need ${mAmt.toLocaleString()})` }); return; }
+    if (vAmt > vibeBalNum) { setResult({ ok: false, msg: `Insufficient VIBE balance (have ${vibeBalNum.toLocaleString()}, need ${vAmt.toLocaleString()})` }); return; }
 
     setBusy(true);
     setResult(null);
@@ -224,62 +225,8 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
           ))}
         </div>
 
-        {/* Pool Selector */}
-        <div className="mb-14">
-          <div className="liq-label mb-6">Pool</div>
-          <div className="flex-center gap-4">
-            <button onClick={() => setPoolType('simplepool')} style={{
-              flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: poolType === 'simplepool' ? 'rgba(14,165,233,.12)' : 'rgba(255,255,255,.03)',
-              color: poolType === 'simplepool' ? '#0ea5e9' : '#5a6578', fontWeight: 700, fontSize: '.65rem',
-              fontFamily: 'var(--ff)', transition: 'all .2s',
-              outline: poolType === 'simplepool' ? '1px solid rgba(14,165,233,.3)' : 'none',
-            }}>
-              MINE/VIBE
-            </button>
-            <button onClick={() => setPoolType('nativeswap')} style={{
-              flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: poolType === 'nativeswap' ? 'rgba(247,147,26,.12)' : 'rgba(255,255,255,.03)',
-              color: poolType === 'nativeswap' ? '#F7931A' : '#5a6578', fontWeight: 700, fontSize: '.65rem',
-              fontFamily: 'var(--ff)', transition: 'all .2s',
-              outline: poolType === 'nativeswap' ? '1px solid rgba(247,147,26,.3)' : 'none',
-            }}>
-              BTC/Token
-            </button>
-          </div>
-        </div>
-
-        {/* NativeSwap info — uses existing deployed NativeSwap contract */}
-        {poolType === 'nativeswap' && (
-          <div className="liq-ns-info">
-            {NATIVESWAP_ADDRESS ? (<>
-              <div className="fs-72 fw-700 mb-8 c-o">NativeSwap BTC/Token Pool</div>
-              <div className="fs-62 lh-16 mb-10" style={{ color: '#8b95a9' }}>
-                BTC/Token swaps use the deployed NativeSwap v5 contract. Select BTC as one of the tokens in the <strong style={{ color: '#0ea5e9' }}>Swap</strong> tab to trade.
-              </div>
-              <div className="d-flex gap-8 mb-10">
-                <button onClick={onClose}
-                  className="flex-1 br-12 pointer fw-700 fs-75 ff-ui" style={{ padding: '12px', border: 'none', background: 'linear-gradient(135deg, #F7931A, #e8850f)', color: '#000' }}>
-                  Go to Swap
-                </button>
-                <a href={getContractOpscanUrl(NATIVESWAP_ADDRESS)} target="_blank" rel="noopener noreferrer"
-                  className="br-12 no-decoration fs-62 fw-600 d-flex ai-center" style={{ padding: '12px 16px', background: 'rgba(56,189,248,.08)', border: '1px solid rgba(56,189,248,.2)', color: '#38bdf8' }}>
-                  OPScan ↗
-                </a>
-              </div>
-              <div className="text-mono fs-50 word-break c-muted">
-                {NATIVESWAP_ADDRESS}
-              </div>
-            </>) : (
-              <div className="fs-65 c-y">
-                NativeSwap contract not yet deployed.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Pool Info (SimplePool) */}
-        {poolType === 'simplepool' && <div className="liq-pool-info">
+        {/* Pool Info */}
+        <div className="liq-pool-info">
           <div className="grid-3col gap-8" style={{ marginBottom: hasLP ? 8 : 0 }}>
             <div className="text-center">
               <div className="liq-label-sm">MINE</div>
@@ -300,10 +247,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
               <span className="liq-mono c-c">{poolShare.toFixed(2)}%</span>
             </div>
           )}
-        </div>}
+        </div>
 
-        {/* ADD TAB (SimplePool only for now) */}
-        {poolType === 'simplepool' && tab === 'add' && (
+        {/* ADD TAB */}
+        {tab === 'add' && (
           <div>
             <div className="mb-8">
               <div className="flex-between mb-6">
@@ -363,7 +310,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
         )}
 
         {/* REMOVE TAB (SimplePool only for now) */}
-        {poolType === 'simplepool' && tab === 'remove' && (
+        {tab === 'remove' && (
           <div>
             {/* Position summary if tracked in localStorage */}
             {hasLP && (

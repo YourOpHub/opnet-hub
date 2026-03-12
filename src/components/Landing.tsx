@@ -49,16 +49,16 @@ function useCounter(target: number, duration = 1200): number {
 }
 
 const FEATURES = [
-  { icon: '🔄', title: 'Swap', desc: 'Trade OP-20 tokens on a real Bitcoin L1 AMM with 0.3% fees', color: '#F7931A', tab: 'swap' },
-  { icon: '📈', title: 'Stake', desc: 'Lock MINE tokens and earn block rewards automatically', color: '#a78bfa', tab: 'staking' },
-  { icon: '🚀', title: 'Build', desc: 'Deploy smart contracts with WASM — AssemblyScript or Rust', color: '#0ea5e9', tab: 'launch' },
-  { icon: '⛏️', title: 'Mine', desc: 'Clicker game that earns real $MINE tokens on Bitcoin L1', color: '#22c55e', tab: 'game' },
-  { icon: '🤝', title: 'Market', desc: 'P2P OTC marketplace for trustless OP-20 token trading', color: '#ec4899', tab: 'market' },
-  { icon: '🪙', title: 'Explorer', desc: '22,000+ indexed tokens with holder counts and mintable detection', color: '#f59e0b', tab: 'explorer' },
-  { icon: '🔧', title: 'Tools', desc: 'Block explorer, UTXO viewer, gas monitor and more', color: '#eab308', tab: 'tools' },
-  { icon: '📤', title: 'MultiSend', desc: 'Batch transfer tokens to multiple recipients in one session', color: '#38bdf8', tab: 'multisend' },
-  { icon: '⚡', title: 'FractalSwap', desc: 'Swap BTC \u2194 Fractal BTC via trustless atomic swaps \u2014 1% fee', color: '#8b5cf6', tab: 'xchain' },
-  { icon: '📡', title: 'News', desc: 'Live on-chain activity feed and ecosystem updates', color: '#34d399', tab: 'news' },
+  { icon: '/icons/icon-swap.png', title: 'Swap', desc: 'Trade OP-20 tokens on a real Bitcoin L1 AMM with 0.3% fees', color: '#F7931A', tab: 'swap' },
+  { icon: '/icons/icon-stake.png', title: 'Stake', desc: 'Lock MINE tokens and earn block rewards automatically', color: '#a78bfa', tab: 'staking' },
+  { icon: '/icons/icon-build.png', title: 'Build', desc: 'Deploy smart contracts with WASM — AssemblyScript or Rust', color: '#0ea5e9', tab: 'launch' },
+  { icon: '/icons/icon-mine.png', title: 'Mine', desc: 'Clicker game that earns real $MINE tokens on Bitcoin L1', color: '#22c55e', tab: 'game' },
+  { icon: '/icons/icon-market.png', title: 'Market', desc: 'P2P OTC marketplace for trustless OP-20 token trading', color: '#ec4899', tab: 'market' },
+  { icon: '/icons/icon-tools.png', title: 'Explorer', desc: '22,000+ indexed tokens with holder counts and mintable detection', color: '#f59e0b', tab: 'explorer' },
+  { icon: '/icons/icon-tools.png', title: 'Tools', desc: 'Block explorer, UTXO viewer, gas monitor and more', color: '#eab308', tab: 'tools' },
+  { icon: '/icons/icon-multisend.png', title: 'MultiSend', desc: 'Batch transfer tokens to multiple recipients in one session', color: '#38bdf8', tab: 'multisend' },
+  { icon: '/icons/icon-xchain.png', title: 'FractalSwap', desc: 'Swap BTC \u2194 Fractal BTC via trustless atomic swaps \u2014 1% fee', color: '#8b5cf6', tab: 'xchain' },
+  { icon: '/icons/icon-news.png', title: 'News', desc: 'Live on-chain activity feed and ecosystem updates', color: '#34d399', tab: 'news' },
 ];
 
 const TECH = [
@@ -182,7 +182,7 @@ const Landing: React.FC<{ onNav: (t: string) => void }> = ({ onNav }) => {
         {FEATURES.map((f, i) => (
           <div key={f.tab} className="Pg fc" onClick={() => nav(f.tab)} role="listitem" tabIndex={0} aria-label={`${f.title}: ${f.desc}`} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(f.tab); } }}
             style={{ animation: rev2.style.opacity === 1 ? `cardRevealIn .5s cubic-bezier(.22,1,.36,1) ${i * 0.05}s both` : 'none', cursor: 'pointer' }}>
-            <div className="fc-i" aria-hidden="true">{f.icon}</div>
+            <img src={f.icon} alt="" className="fc-i" aria-hidden="true" />
             <div className="fc-t">{f.title}</div>
             <div className="fc-d">{f.desc}</div>
           </div>

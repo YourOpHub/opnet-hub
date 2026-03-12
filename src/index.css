@@ -663,17 +663,45 @@ a:hover {
 .hero-l > *:first-child { flex: 1; min-width: 0 }
 
 .hero-img-wrap {
-  flex: 0 0 380px;
-  max-width: 380px;
+  flex: 0 0 480px;
+  max-width: 480px;
   position: relative;
   z-index: 1
+}
+.hero-img-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,.15) 0%, rgba(247,147,26,.08) 40%, transparent 70%);
+  animation: heroGlow 4s ease-in-out infinite;
+  z-index: 0;
+}
+@keyframes heroGlow {
+  0%, 100% { opacity: .6; transform: scale(.95) }
+  50% { opacity: 1; transform: scale(1.05) }
+}
+.hero-img-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  border: 1px solid rgba(247,147,26,.1);
+  animation: heroOrbit 20s linear infinite;
+  z-index: 0;
+}
+@keyframes heroOrbit {
+  from { transform: rotate(0deg) }
+  to { transform: rotate(360deg) }
 }
 .hero-img {
   width: 100%;
   height: auto;
   animation: heroFloat 6s ease-in-out infinite;
   filter: drop-shadow(0 0 40px rgba(14,165,233,.2)) drop-shadow(0 0 80px rgba(247,147,26,.1));
-  transition: filter .4s
+  transition: filter .4s;
+  position: relative;
+  z-index: 1
 }
 .hero-img:hover {
   filter: drop-shadow(0 0 50px rgba(14,165,233,.35)) drop-shadow(0 0 100px rgba(247,147,26,.2))
@@ -777,12 +805,12 @@ a:hover {
 
 @media(max-width:960px) {
   .hero-l { flex-direction: column; text-align: center; padding: 56px 32px 44px; gap: 24px }
-  .hero-img-wrap { flex: 0 0 auto; max-width: 280px; order: -1 }
+  .hero-img-wrap { flex: 0 0 auto; max-width: 340px; order: -1 }
 }
 @media(max-width:768px) {
   .hero-h1 { font-size: 2.6rem }
   .hero-l { padding: 48px 24px 36px }
-  .hero-img-wrap { max-width: 220px }
+  .hero-img-wrap { max-width: 260px }
 }
 
 .hero-ac {
@@ -1032,8 +1060,8 @@ a:hover {
   width: 48px;
   height: 48px;
   margin-bottom: 16px;
-  border-radius: 12px;
-  filter: drop-shadow(0 0 12px rgba(247, 147, 26, .2));
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.3));
   transition: transform .3s var(--ease-spring)
 }
 
@@ -2572,7 +2600,7 @@ a:hover {
   .hero-l { padding: 32px 16px 28px; border-radius: 16px; gap: 16px }
   .hero-h1 { font-size: 1.8rem }
   .hero-sub { font-size: .8rem }
-  .hero-img-wrap { max-width: 180px }
+  .hero-img-wrap { max-width: 200px }
   .hero-ctas { gap: 8px }
   .btn-p, .btn-s { padding: 12px 20px; font-size: .78rem }
   .pillars { gap: 10px }

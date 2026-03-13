@@ -516,7 +516,7 @@ const TokenGallery: React.FC = () => {
                 <div className="fw-800 fs-90 c-w">MINE/VIBE Liquidity Pool</div>
                 <div className="fs-65 c-t3 mt-2">SimplePool AMM · 0.3% fee · 500K MINE / 25M VIBE</div>
                 <div className="text-mono fs-52 c-t4 mt-2 word-break">
-                  {'opt1sqrfwvy6ekprrx9h5nwem9d07nufuzqhxg5zg6ar2'}
+                  {'opt1sqz6acsz9tkyfzzlg337x35swysmtp4u8kye8u2pv'}
                 </div>
               </div>
             </div>

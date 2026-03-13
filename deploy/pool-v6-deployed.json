@@ -1,0 +1,24 @@
+{
+  "network": "testnet",
+  "version": "v6",
+  "pool": {
+    "address": "opt1sqz6acsz9tkyfzzlg337x35swysmtp4u8kye8u2pv",
+    "pubkey": "0xb4c67df83e48afab333c1c9d0a9120924bd99342f6c1ecf2a1d42bf6db8d393e",
+    "tokenA": "opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa",
+    "tokenB": "opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl",
+    "reserveA": 500000,
+    "reserveB": 2500000
+  },
+  "selectors": {
+    "sync": "0x4ffcd515",
+    "addLiquidity": "0xe4e35d85",
+    "removeLiquidity": "0x4847feb8",
+    "liquidityOf": "0x28703b84",
+    "swap": "0xc345780b",
+    "getReserves": "0x06374bfc",
+    "getTokens": "0xf68958f1",
+    "getFeeRate": "0x9960835f",
+    "setFeeRate": "0x385d614d"
+  },
+  "deployedAt": "2026-03-13T20:30:53.434Z"
+}

@@ -45,7 +45,7 @@ describe('TakeOrderButton', () => {
   it('shows address input on click', () => {
     render(<TakeOrderButton {...defaultProps} />);
     fireEvent.click(screen.getByText('Take'));
-    expect(screen.getByLabelText('Receiving address for swap')).toBeTruthy();
+    expect(screen.getByLabelText('Fractal address for swap')).toBeTruthy();
   });
 
   it('has OK button disabled without address', () => {
@@ -66,9 +66,9 @@ describe('TakeOrderButton', () => {
   it('cancel button hides address input', () => {
     render(<TakeOrderButton {...defaultProps} />);
     fireEvent.click(screen.getByText('Take'));
-    expect(screen.getByLabelText('Receiving address for swap')).toBeTruthy();
+    expect(screen.getByLabelText('Fractal address for swap')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel take order' }));
-    expect(screen.queryByLabelText('Receiving address for swap')).toBeNull();
+    expect(screen.queryByLabelText('Fractal address for swap')).toBeNull();
   });
 
   it('renders custom label', () => {

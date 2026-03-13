@@ -21,10 +21,51 @@ const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffff
  */
 export type TxParams = TransactionParameters;
 
-// Session-level cache: tracks tokens already approved this session (wallet:tokenAddr:spenderAddr)
-// Keyed by wallet to auto-invalidate on wallet change
-const approvedThisSession = new Set<string>();
+// Persistent allowance cache: localStorage + in-memory Set
+// Survives page reloads — avoids re-approving tokens that already have infinite allowance
+const ALLOWANCE_CACHE_PREFIX = 'opnet_allow:';
+const ALLOWANCE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+const _memoryCache = new Set<string>();
 let _cachedWallet = '';
+
+function getAllowanceCacheKey(wallet: string, token: string, spender: string): string {
+  return `${ALLOWANCE_CACHE_PREFIX}${wallet}:${token}:${spender}`;
+}
+
+function isAllowanceCached(wallet: string, token: string, spender: string): boolean {
+  const memKey = `${wallet}:${token}:${spender}`;
+  if (_memoryCache.has(memKey)) return true;
+  try {
+    const lsKey = getAllowanceCacheKey(wallet, token, spender);
+    const stored = localStorage.getItem(lsKey);
+    if (stored) {
+      const ts = parseInt(stored, 10);
+      if (Date.now() - ts < ALLOWANCE_CACHE_TTL) {
+        _memoryCache.add(memKey);
+        return true;
+      }
+      localStorage.removeItem(lsKey);
+    }
+  } catch { /* localStorage unavailable */ }
+  return false;
+}
+
+function cacheAllowance(wallet: string, token: string, spender: string): void {
+  const memKey = `${wallet}:${token}:${spender}`;
+  _memoryCache.add(memKey);
+  try {
+    localStorage.setItem(getAllowanceCacheKey(wallet, token, spender), String(Date.now()));
+  } catch { /* localStorage unavailable */ }
+}
+
+function clearAllowanceCache(): void {
+  _memoryCache.clear();
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith(ALLOWANCE_CACHE_PREFIX));
+    for (const k of keys) localStorage.removeItem(k);
+  } catch { /* localStorage unavailable */ }
+}
 
 /**
  * Build transaction parameters from live gas data. Frontend mode: signer/mldsaSigner are null (wallet injects).
@@ -162,45 +203,56 @@ export async function ensureAllowance(
   setStep: (s: string) => void,
   tokenLabel = 'token',
 ): Promise<{ approved: boolean; txId: string }> {
-  // Clear cache on wallet change
+  // Clear all caches on wallet change
   if (_cachedWallet !== walletAddress) {
-    approvedThisSession.clear();
+    clearAllowanceCache();
     _cachedWallet = walletAddress;
   }
-  const cacheKey = `${walletAddress}:${tokenAddress}:${spenderPubkeyHex}`;
 
-  // Session cache: if we already approved this token for this spender, skip
-  if (approvedThisSession.has(cacheKey)) {
-    setStep(`${tokenLabel} already approved \u2713`);
+  // 1. Check persistent cache (localStorage + memory) — survives page reloads
+  if (isAllowanceCached(walletAddress, tokenAddress, spenderPubkeyHex)) {
+    setStep(`${tokenLabel} already approved ✓`);
     return { approved: false, txId: '' };
   }
 
   const senderAddress = senderAddr instanceof Address ? senderAddr : Address.fromString(senderAddr);
   const tokenContract = getContract<IOP20Contract>(tokenAddress, OP_20_ABI, provider, NETWORK, senderAddress);
-  // SDK requires Address objects for ADDRESS-type parameters — NOT bech32 strings
   const spenderAddr = Address.fromString(spenderPubkeyHex);
 
-  // Check existing allowance
+  // 2. Check on-chain allowance with retry (RPC errors shouldn't trigger re-approval)
   setStep(`Checking ${tokenLabel} allowance...`);
-  try {
-    const allowanceRes = await tokenContract.allowance(senderAddress, spenderAddr);
-    const callRes = allowanceRes as CallResult;
-    if (!callRes.revert) {
-      const props = callRes.properties as Record<string, unknown>;
-      const cur = props?.remaining != null ? BigInt(String(props.remaining)) : 0n;
-      if (cur >= amount) {
-        approvedThisSession.add(cacheKey);
-        setStep(`${tokenLabel} already approved \u2713`);
-        return { approved: false, txId: '' }; // Already approved
+  // Threshold: if allowance is "infinite" (>= half of MAX_UINT256), treat as approved
+  const INFINITE_THRESHOLD = MAX_UINT256 / 2n;
+  let onChainChecked = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const allowanceRes = await tokenContract.allowance(senderAddress, spenderAddr);
+      const callRes = allowanceRes as CallResult;
+      if (!callRes.revert) {
+        onChainChecked = true;
+        const props = callRes.properties as Record<string, unknown>;
+        const cur = props?.remaining != null ? BigInt(String(props.remaining)) : 0n;
+        if (cur >= amount || cur >= INFINITE_THRESHOLD) {
+          cacheAllowance(walletAddress, tokenAddress, spenderPubkeyHex);
+          setStep(`${tokenLabel} already approved ✓`);
+          return { approved: false, txId: '' };
+        }
+        break; // On-chain check succeeded, allowance is insufficient — need to approve
+      } else {
+        logger.warn(`[txUtils] Allowance check reverted (attempt ${attempt + 1}):`, callRes.revert);
       }
-    } else {
-      logger.warn('[txUtils] Allowance check reverted:', callRes.revert);
+    } catch (e) {
+      logger.warn(`[txUtils] Allowance check failed (attempt ${attempt + 1}/3):`, e);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
-  } catch (e) {
-    logger.warn('[txUtils] Allowance check failed, proceeding with approval:', e);
   }
 
-  // Send increaseAllowance(max_uint256)
+  // If all on-chain checks failed (RPC errors), don't force re-approval — warn and proceed cautiously
+  if (!onChainChecked) {
+    logger.warn('[txUtils] Could not verify allowance on-chain after 3 attempts');
+  }
+
+  // 3. Send increaseAllowance(max_uint256)
   setStep(`Approving ${tokenLabel}...`);
   const approveSim = await withRetry(() => tokenContract.increaseAllowance(spenderAddr, MAX_UINT256));
   const approveResult = approveSim as CallResult;
@@ -209,13 +261,10 @@ export async function ensureAllowance(
   const approveReceipt = await approveResult.sendTransaction(tp);
   const approveTxId = (approveReceipt as { transactionId?: string })?.transactionId || '';
 
-  // Wait for TX confirmation BEFORE marking as approved — prevents race condition
-  // where cache says "approved" but on-chain allowance hasn't confirmed yet
+  // 4. Wait for TX confirmation, then cache persistently
   setStep(`${tokenLabel} approved! Waiting for confirmation...`);
   await waitForTxConfirmation(approveTxId, setStep);
-
-  // Mark as approved in session cache (after block confirmation)
-  approvedThisSession.add(cacheKey);
+  cacheAllowance(walletAddress, tokenAddress, spenderPubkeyHex);
 
   return { approved: true, txId: approveTxId };
 }

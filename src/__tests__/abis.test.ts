@@ -128,14 +128,14 @@ describe('STAKING_ABI', () => {
 
 // ---- MARKETPLACE_ABI ----
 describe('MARKETPLACE_ABI', () => {
-  it('has 8 functions', () => {
-    expect(MARKETPLACE_ABI.length).toBe(8);
+  it('has 7 functions', () => {
+    expect(MARKETPLACE_ABI.length).toBe(7);
   });
 
   it('contains all marketplace methods', () => {
     expectValidAbi(MARKETPLACE_ABI, [
-      'createSellOrder', 'fillSellOrder', 'createBuyOrder', 'acceptBuyOrder',
-      'executeBuyOrder', 'cancelOrder', 'getOrder', 'getNextOrderId',
+      'createSellOrder', 'fillSellOrder', 'createBuyOrder', 'fillBuyOrder',
+      'cancelOrder', 'getOrder', 'getNextOrderId',
     ]);
   });
 
@@ -144,9 +144,9 @@ describe('MARKETPLACE_ABI', () => {
     expect(create.inputs!.length).toBe(3);
   });
 
-  it('getOrder returns 8 output fields', () => {
+  it('getOrder returns 9 output fields (v10)', () => {
     const getOrder = MARKETPLACE_ABI.find(e => e.name === 'getOrder')! as AbiEntry;
-    expect(getOrder.outputs!.length).toBe(8);
+    expect(getOrder.outputs!.length).toBe(9);
   });
 
   it('getNextOrderId has no inputs', () => {

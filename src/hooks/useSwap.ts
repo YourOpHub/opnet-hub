@@ -454,7 +454,11 @@ export function useSwap(): UseSwapReturn {
           from.address, POOL_PUBKEY, rawAmount,
           provider, activeSender, activeWallet, (s: string) => { setSwapStep(s); updateOpStep(swapOpId, s); }, from.symbol,
         );
-        if (spApprove.txId) updateOpStep(swapOpId, `${from.symbol} approved!`, { approve: spApprove.txId });
+        if (spApprove.txId) {
+          updateOpStep(swapOpId, `${from.symbol} approved! Waiting for confirmation...`, { approve: spApprove.txId });
+          setSwapStep('Waiting for approval confirmation...');
+          await waitForTxConfirmation(spApprove.txId, (s) => { setSwapStep(s); updateOpStep(swapOpId, s); });
+        }
         updateOpStep(swapOpId, `Swapping ${fromVal} ${from.symbol}\u2192${to.symbol}...`);
         setSwapStep('Executing swap on SimplePool...');
         const poolContract = getContract<IPoolContract>(
@@ -478,7 +482,11 @@ export function useSwap(): UseSwapReturn {
           from.pubkey, MOTOSWAP_ROUTER_PUBKEY, rawAmount,
           provider, activeSender, activeWallet, (s: string) => { setSwapStep(s); updateOpStep(swapOpId, s); }, from.symbol,
         );
-        if (msApprove.txId) updateOpStep(swapOpId, `${from.symbol} approved!`, { approve: msApprove.txId });
+        if (msApprove.txId) {
+          updateOpStep(swapOpId, `${from.symbol} approved! Waiting for confirmation...`, { approve: msApprove.txId });
+          setSwapStep('Waiting for approval confirmation...');
+          await waitForTxConfirmation(msApprove.txId, (s) => { setSwapStep(s); updateOpStep(swapOpId, s); });
+        }
         updateOpStep(swapOpId, 'Swapping via Motoswap...');
         setSwapStep('Executing swap via Motoswap Router...');
         const router = getContract<IMotoswapRouterContract>(

@@ -451,24 +451,16 @@ export function useMarketplace(initialToken?: string | null): UseMarketplaceRetu
         updateOpStep(createOpId, 'Checking token approval...');
         setCreateStep('Checking token approval...');
         const sellApprove = await ensureAllowance(selectedToken, MARKET_PUBKEY, amountU256, provider, senderAddr, walletAddress, (s: string) => { setCreateStep(s); updateOpStep(createOpId, s); }, selInfo?.symbol || 'token');
-        if (sellApprove.txId) updateOpStep(createOpId, 'Token approved!', { approve: sellApprove.txId });
+        if (sellApprove.approved && sellApprove.txId) {
+          updateOpStep(createOpId, 'Token approved! Waiting for confirmation...', { approve: sellApprove.txId });
+          setCreateStep('Waiting for approval confirmation...');
+          await waitForTxConfirmation(sellApprove.txId, (s) => { setCreateStep(s); updateOpStep(createOpId, s); });
+        }
 
         updateOpStep(createOpId, 'Signing sell order TX...');
         setCreateStep('Creating sell order on-chain...');
-        // Retry simulation on allowance revert (RPC might not have indexed the approval yet)
-        let sim: CallResult | undefined;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256)) as CallResult;
-          if (!sim.revert) break;
-          if (attempt < 2 && sim.revert.toLowerCase().includes('allowance')) {
-            setCreateStep(`Waiting for allowance to propagate... (attempt ${attempt + 2}/3)`);
-            updateOpStep(createOpId, 'Waiting for allowance confirmation...');
-            await new Promise(r => setTimeout(r, 10_000));
-            continue;
-          }
-          throw new Error(`Revert: ${sim.revert}`);
-        }
-        if (!sim || sim.revert) throw new Error(`Revert: ${sim?.revert ?? 'simulation failed'}`);
+        const sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256)) as CallResult;
+        if (sim.revert) throw new Error(`Revert: ${sim.revert}`);
         const tp = await buildTxParams(provider, walletAddress);
         createReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {

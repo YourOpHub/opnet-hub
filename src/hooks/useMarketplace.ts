@@ -81,6 +81,7 @@ export interface MarketToken {
   sellCount: number;
   buyCount: number;
   totalVolume: number;
+  holders: number;
 }
 
 const KNOWN_TOKENS: MarketToken[] = (Object.values(DEPLOYED_CONTRACTS) as ContractTokenInfo[]).map(t => ({
@@ -92,6 +93,7 @@ const KNOWN_TOKENS: MarketToken[] = (Object.values(DEPLOYED_CONTRACTS) as Contra
   sellCount: 0,
   buyCount: 0,
   totalVolume: 0,
+  holders: 0,
 }));
 
 function resolveTokenHex(hex64: string): { address: string; symbol: string; name: string; decimals: number } | null {
@@ -134,6 +136,8 @@ export interface UseMarketplaceReturn {
   filteredTokens: MarketToken[];
   search: string;
   setSearch: React.Dispatch<React.SetStateAction<string>>;
+  tokenSort: 'holders' | 'volume' | 'orders';
+  setTokenSort: React.Dispatch<React.SetStateAction<'holders' | 'volume' | 'orders'>>;
   handleSearchSelect: () => void;
   selectedToken: string | null;
   setSelectedToken: React.Dispatch<React.SetStateAction<string | null>>;
@@ -193,6 +197,7 @@ export function useMarketplace(): UseMarketplaceReturn {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
+  const [tokenSort, setTokenSort] = useState<'holders' | 'volume' | 'orders'>('holders');
   const [orderType, setOrderType] = useState<'sell' | 'buy'>('sell');
   const [orderAmount, setOrderAmount] = useState('');
   const [orderPrice, setOrderPrice] = useState('');
@@ -303,8 +308,21 @@ export function useMarketplace(): UseMarketplaceReturn {
     }
   }, [provider]);
 
-  // Fetch token list
+  // Fetch token list + holder counts
   const fetchTokens = useCallback(async () => {
+    // Fetch holder counts from token indexer
+    const holderMap: Record<string, number> = {};
+    try {
+      const hRes = await fetch(`${MARKET_API}/api/tokens?limit=500`, { signal: AbortSignal.timeout(3000) });
+      if (hRes.ok) {
+        const hData = (await hRes.json()) as { address: string; pubkey: string; holder_count: number }[];
+        for (const t of hData) {
+          const pk = t.pubkey?.startsWith('0x') ? t.pubkey : `0x${t.pubkey || t.address}`;
+          holderMap[pk] = t.holder_count ?? 0;
+        }
+      }
+    } catch (e) { logger.warn('[useMarketplace] Holder count fetch failed:', e); }
+
     try {
       const res = await fetch(`${MARKET_API}/market/tokens`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
@@ -312,13 +330,18 @@ export function useMarketplace(): UseMarketplaceReturn {
         const serverTokens: MarketToken[] = body.tokens ?? [];
         // KNOWN_TOKENS have canonical post-reset addresses — match server data by SYMBOL
         const merged: MarketToken[] = KNOWN_TOKENS.map(kt => {
-          const srv = serverTokens.find(s => s.symbol.toUpperCase() === kt.symbol.toUpperCase());
-          return { ...kt, sellCount: srv?.sellCount ?? 0, buyCount: srv?.buyCount ?? 0, totalVolume: srv?.totalVolume ?? 0 };
+          const srv = serverTokens.find(s => s.symbol.toUpperCase() === kt.symbol.toUpperCase() && s.address === kt.address);
+          return {
+            ...kt,
+            sellCount: srv?.sellCount ?? 0, buyCount: srv?.buyCount ?? 0, totalVolume: srv?.totalVolume ?? 0,
+            holders: holderMap[kt.pubkey] ?? 0,
+          };
         });
         // Append any server tokens not in KNOWN_TOKENS (truly unknown tokens)
         for (const st of serverTokens) {
-          if (!KNOWN_TOKENS.find(k => k.symbol.toUpperCase() === st.symbol.toUpperCase())) {
-            merged.push({ ...st, pubkey: st.pubkey || '', decimals: st.decimals || 8 });
+          if (!KNOWN_TOKENS.find(k => k.address === st.address)) {
+            const pk = st.pubkey?.startsWith('0x') ? st.pubkey : `0x${st.pubkey || ''}`;
+            merged.push({ ...st, pubkey: pk, decimals: st.decimals || 8, holders: holderMap[pk] ?? 0 });
           }
         }
         setTokenList(merged);
@@ -326,7 +349,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         return;
       }
     } catch (e) { logger.warn('[useMarketplace] Token server offline, using fallback:', e); }
-    setTokenList(KNOWN_TOKENS);
+    setTokenList(KNOWN_TOKENS.map(kt => ({ ...kt, holders: holderMap[kt.pubkey] ?? 0 })));
     setLoading(false);
   }, []);
 
@@ -348,14 +371,21 @@ export function useMarketplace(): UseMarketplaceReturn {
 
   // Derived state
   const filteredTokens = useMemo(() => {
-    if (!search) return tokenList;
-    const q = search.toLowerCase();
-    return tokenList.filter(t =>
-      t.symbol.toLowerCase().includes(q) ||
-      t.name.toLowerCase().includes(q) ||
-      t.address.toLowerCase().includes(q)
-    );
-  }, [tokenList, search]);
+    let list = tokenList;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(t =>
+        t.symbol.toLowerCase().includes(q) ||
+        t.name.toLowerCase().includes(q) ||
+        t.address.toLowerCase().includes(q)
+      );
+    }
+    return [...list].sort((a, b) => {
+      if (tokenSort === 'holders') return b.holders - a.holders;
+      if (tokenSort === 'volume') return b.totalVolume - a.totalVolume;
+      return (b.sellCount + b.buyCount) - (a.sellCount + a.buyCount);
+    });
+  }, [tokenList, search, tokenSort]);
 
   const selInfo = tokenList.find(t => t.address === selectedToken);
   const selInfoRef = useRef(selInfo);
@@ -689,7 +719,7 @@ export function useMarketplace(): UseMarketplaceReturn {
           symbol: known?.symbol || search.slice(-6).toUpperCase(),
           name: known?.name || 'OP20 Token',
           decimals: known?.decimals || 8,
-          sellCount: 0, buyCount: 0, totalVolume: 0,
+          sellCount: 0, buyCount: 0, totalVolume: 0, holders: 0,
         }]);
       }
     }
@@ -708,6 +738,7 @@ export function useMarketplace(): UseMarketplaceReturn {
     loading,
     filteredTokens,
     search, setSearch,
+    tokenSort, setTokenSort,
     handleSearchSelect,
     // Token detail
     selectedToken, setSelectedToken,

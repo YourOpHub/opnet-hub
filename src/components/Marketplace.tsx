@@ -1,5 +1,5 @@
 import React from 'react';
-import { fmtNum, hashColor, genLogo } from '../launchpad/types';
+import { fmtNum, genLogo } from '../launchpad/types';
 import {
   useMarketplace,
   type Order,
@@ -21,7 +21,7 @@ const iStyle: React.CSSProperties = {
 const Marketplace: React.FC = () => {
   const {
     walletAddress, senderHex,
-    loading, filteredTokens, search, setSearch, handleSearchSelect,
+    loading, filteredTokens, search, setSearch, tokenSort, setTokenSort, handleSearchSelect,
     selectedToken, setSelectedToken, selInfo,
     setOrders, ordersLoading,
     sellOrders, buyOrders, myOrders,
@@ -289,6 +289,12 @@ const Marketplace: React.FC = () => {
   // ════════════════════════════════
   // TOKEN LIST VIEW
   // ════════════════════════════════
+  const sortOptions: { key: 'holders' | 'volume' | 'orders'; label: string }[] = [
+    { key: 'holders', label: 'Holders' },
+    { key: 'volume', label: 'Volume' },
+    { key: 'orders', label: 'Orders' },
+  ];
+
   return (
     <div className="max-w-900">
       <div className="mb-16">
@@ -299,7 +305,7 @@ const Marketplace: React.FC = () => {
         </p>
       </div>
 
-      <div className="flex-center gap-8 mb-14">
+      <div className="flex-center gap-8 mb-10">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, symbol or paste contract address..."
           onKeyDown={e => e.key === 'Enter' && handleSearchSelect()}
           aria-label="Search tokens by name, symbol, or contract address"
@@ -311,6 +317,21 @@ const Marketplace: React.FC = () => {
         )}
       </div>
 
+      <div className="flex-center gap-6 mb-14">
+        <span className="fs-62 c-t4">Sort:</span>
+        {sortOptions.map(s => (
+          <button key={s.key} onClick={() => setTokenSort(s.key)}
+            className="br-8 pointer ff-ui fs-64 p-4-10"
+            style={{
+              background: tokenSort === s.key ? 'rgba(16,185,129,.12)' : 'transparent',
+              border: `1px solid ${tokenSort === s.key ? 'rgba(16,185,129,.3)' : 'var(--bd)'}`,
+              color: tokenSort === s.key ? 'var(--g)' : 'var(--t3)',
+            }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="text-center c-t4 fs-82 p-50">Loading tokens...</div>
       ) : filteredTokens.length === 0 ? (
@@ -320,34 +341,34 @@ const Marketplace: React.FC = () => {
           <div className="c-t4 fs-66">Paste a contract address above to open its orderbook</div>
         </div>
       ) : (
-        <div className="d-grid gap-10 grid-auto-260" role="list" aria-label="Available tokens">
-          {filteredTokens.map((t: MarketToken) => {
-            const [c1] = hashColor(t.symbol);
-            return (
-              <div key={t.address} onClick={() => setSelectedToken(t.address)}
-                className="p-16 pointer bg3-bd-r14" role="listitem" tabIndex={0} aria-label={`${t.symbol} - ${t.name}`}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedToken(t.address); } }}
-                style={{ transition: 'border-color .15s' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = c1)}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--bd)')}>
-                <div className="flex-center gap-10 mb-8">
-                  <img src={genLogo(t.symbol)} alt={`${t.symbol} logo`} className="w-36 h-36 br-50" />
-                  <div>
-                    <div className="fw-700 c-w fs-90">{t.symbol}</div>
-                    <div className="fs-62 c-t4">{t.name}</div>
-                  </div>
-                </div>
-                <div className="flex-between fs-62 c-t3">
-                  <span>Sells: <strong className="c-red">{t.sellCount}</strong></span>
-                  <span>Bids: <strong className="c-g">{t.buyCount}</strong></span>
-                  <span>Vol: <strong className="c-o text-mono">{fmtNum(t.totalVolume)}</strong></span>
-                </div>
-                <div className="fs-2xs c-t4 text-mono mt-6 truncate">
-                  {t.address}
+        <div className="P p-0-overflow-hidden" role="list" aria-label="Available tokens">
+          {/* Header */}
+          <div className="ob-hdr" style={{ gridTemplateColumns: '2fr 70px 70px 55px 55px' }}>
+            <span>Token</span>
+            <span className="ob-r">Holders</span>
+            <span className="ob-r">Volume</span>
+            <span className="ob-r">Sells</span>
+            <span className="ob-r">Bids</span>
+          </div>
+          {filteredTokens.map((t: MarketToken) => (
+            <div key={t.address} onClick={() => setSelectedToken(t.address)}
+              className="ob-row pointer" role="listitem" tabIndex={0}
+              aria-label={`${t.symbol} - ${t.name}`}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedToken(t.address); } }}
+              style={{ gridTemplateColumns: '2fr 70px 70px 55px 55px' }}>
+              <div className="flex-center gap-8">
+                <img src={genLogo(t.symbol)} alt={`${t.symbol} logo`} className="w-28 h-28 br-50" />
+                <div>
+                  <span className="fw-700 c-w fs-80">{t.symbol}</span>
+                  <span className="fs-62 c-t4 ml-6">{t.name}</span>
                 </div>
               </div>
-            );
-          })}
+              <span className="ob-mono ob-r c-w">{t.holders > 0 ? fmtNum(t.holders) : '-'}</span>
+              <span className="ob-mono ob-r c-o">{t.totalVolume > 0 ? fmtNum(t.totalVolume) : '-'}</span>
+              <span className="ob-mono ob-r c-red">{t.sellCount || '-'}</span>
+              <span className="ob-mono ob-r c-g">{t.buyCount || '-'}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

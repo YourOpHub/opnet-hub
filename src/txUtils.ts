@@ -84,9 +84,9 @@ export async function buildTxParams(provider: JSONRpcProvider, refundTo: string)
   const maxPriority = isMainnet ? 100_000n : 10_000n;
   const priorityFee = priorityFeeSats < 500n ? 500n : priorityFeeSats > maxPriority ? maxPriority : priorityFeeSats;
   const maxSats = isMainnet ? 200_000n : 50_000n;
-  // Frontend: signer/mldsaSigner must be explicitly null — SDK checks `signer !== null`
-  // If signer is undefined (absent), SDK takes the WITH-signer path and wallet rejects it.
-  return { signer: null, mldsaSigner: null, refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee } as TxParams;
+  // Frontend: signer/mldsaSigner MUST be absent (not even null) — wallet injects signers itself.
+  // Passing signer: null causes wallet warning "signer is not allowed in interaction parameters".
+  return { refundTo, maximumAllowedSatToSpend: maxSats, network: NETWORK, feeRate, priorityFee } as TxParams;
 }
 
 /**
@@ -261,10 +261,10 @@ export async function ensureAllowance(
   const approveReceipt = await approveResult.sendTransaction(tp);
   const approveTxId = (approveReceipt as { transactionId?: string })?.transactionId || '';
 
-  // 4. Wait for TX confirmation, then cache persistently
-  setStep(`${tokenLabel} approved! Waiting for confirmation...`);
-  await waitForTxConfirmation(approveTxId, setStep);
+  // 4. Cache immediately (optimistic) — OPNet supports chained TXs in same block,
+  // so the main operation can reference the approval TX from mempool.
   cacheAllowance(walletAddress, tokenAddress, spenderPubkeyHex);
+  setStep(`${tokenLabel} approved!`);
 
   return { approved: true, txId: approveTxId };
 }

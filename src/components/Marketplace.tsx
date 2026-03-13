@@ -96,9 +96,11 @@ const Marketplace: React.FC = () => {
                 {sellOrders.map((o: Order) => {
                   const remaining = o.amount - o.amountFilled;
                   const totalCostSats = Math.ceil(remaining * o.pricePerToken);
+                  const isMySellOrder = o.creator === senderHex;
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 80px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 80px auto', background: isMySellOrder ? 'rgba(245,158,11,.06)' : undefined }}>
                       <span className="ob-mono c-w">
+                        {isMySellOrder && <span className="ob-badge fs-xs" style={{ background: 'rgba(245,158,11,.15)', color: '#f59e0b', marginRight: 4 }}>YOU</span>}
                         {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
                       <span className="ob-mono ob-r fw-700 c-red">{o.pricePerToken} <span className="fs-xs fw-400 c-t3">sat</span></span>
@@ -157,8 +159,9 @@ const Marketplace: React.FC = () => {
                   const totalCostSats = Math.ceil(remaining * o.pricePerToken);
                   const isMyBuyOrder = o.creator === senderHex;
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 80px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 80px auto', background: isMyBuyOrder ? 'rgba(245,158,11,.06)' : undefined }}>
                       <span className="ob-mono c-w">
+                        {isMyBuyOrder && <span className="ob-badge fs-xs" style={{ background: 'rgba(245,158,11,.15)', color: '#f59e0b', marginRight: 4 }}>YOU</span>}
                         {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
                       <span className="ob-mono ob-r fw-700 c-g">{o.pricePerToken} <span className="fs-xs fw-400 c-t3">sat</span></span>

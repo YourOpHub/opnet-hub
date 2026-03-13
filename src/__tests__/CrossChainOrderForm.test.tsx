@@ -2,8 +2,7 @@
  * CrossChainOrderForm.test.tsx -- Tests for src/components/crosschain/CrossChainOrderForm.tsx
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { SwapDirection } from '../crosschain/types';
+import { render, screen } from '@testing-library/react';
 
 vi.mock('../logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -12,8 +11,6 @@ vi.mock('../logger', () => ({
 import CrossChainOrderForm from '../components/crosschain/CrossChainOrderForm';
 
 const makeProps = () => ({
-  formDirection: SwapDirection.BTC_TO_FB,
-  setFormDirection: vi.fn(),
   formAmount: '0.001',
   setFormAmount: vi.fn(),
   formReceive: '0.001',
@@ -31,8 +28,6 @@ const makeProps = () => ({
   formReceiveSats: 100000n,
   formFeeSats: 1000n,
   formRate: '1.00',
-  sendUnit: 'BTC',
-  receiveUnit: 'FB',
   onSubmit: vi.fn(),
 });
 
@@ -42,33 +37,20 @@ describe('CrossChainOrderForm', () => {
     expect(screen.getByRole('form', { name: 'Create swap order' })).toBeTruthy();
   });
 
-  it('renders direction buttons', () => {
+  it('renders BTC lock and FB want inputs', () => {
     render(<CrossChainOrderForm {...makeProps()} />);
-    expect(screen.getByText('I have BTC, want FB')).toBeTruthy();
-    expect(screen.getByText('I have FB, want BTC')).toBeTruthy();
+    expect(screen.getByLabelText(/Amount of BTC to lock/)).toBeTruthy();
+    expect(screen.getByLabelText(/Amount of FB you want/)).toBeTruthy();
   });
 
-  it('renders pay and get inputs', () => {
+  it('renders Fractal receiving address input', () => {
     render(<CrossChainOrderForm {...makeProps()} />);
-    expect(screen.getByLabelText(/Amount you pay in BTC/)).toBeTruthy();
-    expect(screen.getByLabelText(/Amount you get in FB/)).toBeTruthy();
-  });
-
-  it('renders receiving address input', () => {
-    render(<CrossChainOrderForm {...makeProps()} />);
-    expect(screen.getByLabelText(/Fractal.*receiving address/i)).toBeTruthy();
-  });
-
-  it('calls setFormDirection on direction change', () => {
-    const props = makeProps();
-    render(<CrossChainOrderForm {...props} />);
-    fireEvent.click(screen.getByText('I have FB, want BTC'));
-    expect(props.setFormDirection).toHaveBeenCalledWith(SwapDirection.FB_TO_BTC);
+    expect(screen.getByLabelText(/Fractal receiving address/i)).toBeTruthy();
   });
 
   it('renders summary section', () => {
     render(<CrossChainOrderForm {...makeProps()} />);
-    expect(screen.getByText(/You pay:/)).toBeTruthy();
+    expect(screen.getByText(/You lock:/)).toBeTruthy();
     expect(screen.getByText(/Taker fee/)).toBeTruthy();
   });
 
@@ -78,5 +60,10 @@ describe('CrossChainOrderForm', () => {
     props.formMakerAddr = 'bc1pfoo';
     render(<CrossChainOrderForm {...props} />);
     expect(screen.getByText('Creating...')).toBeTruthy();
+  });
+
+  it('renders Lock BTC button', () => {
+    render(<CrossChainOrderForm {...makeProps()} />);
+    expect(screen.getByText('Lock BTC & Create Order')).toBeTruthy();
   });
 });

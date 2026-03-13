@@ -97,8 +97,6 @@ export interface CrossChainState {
   setActioning: (id: string | null) => void;
 
   // Create form
-  formDirection: SwapDirection;
-  setFormDirection: (d: SwapDirection) => void;
   formAmount: string;
   setFormAmount: (v: string) => void;
   formReceive: string;
@@ -122,7 +120,6 @@ export interface CrossChainState {
   myOrders: FractalSwapOrder[];
   otherOpenOrders: FractalSwapOrder[];
   totalVolumeSats: bigint;
-  availBuyFb: FractalSwapOrder[];
   availGetBtc: FractalSwapOrder[];
   isMyOrderFn: (o: FractalSwapOrder) => boolean;
   isTakerFn: (o: FractalSwapOrder) => boolean;
@@ -228,7 +225,6 @@ export function useCrossChainState(): CrossChainState {
   const [feeBps, setFeeBps] = useState(100);
 
   // ── Create form ──
-  const [formDirection, setFormDirection] = useState<SwapDirection>(SwapDirection.BTC_TO_FB);
   const [formAmount, setFormAmount] = useState('');
   const [formReceive, setFormReceive] = useState('');
   const [formMakerAddr, setFormMakerAddr] = useState('');
@@ -278,18 +274,15 @@ export function useCrossChainState(): CrossChainState {
   const contractReady = !!CROSSCHAIN_ADDRESS;
   const escrowReady = !!TOKEN_ESCROW_ADDRESS;
 
-  // ── Auto-fill maker address from connected wallets ──
+  // ── Auto-fill maker address from connected UniSat wallet ──
   const [makerAddrManual, setMakerAddrManual] = useState(false);
   useEffect(() => {
     if (makerAddrManual) return;
-    if (formDirection === SwapDirection.BTC_TO_FB && unisat.connected && unisat.address) {
+    // BTC_TO_FB only: maker provides their Fractal address
+    if (unisat.connected && unisat.address) {
       setFormMakerAddr(unisat.address);
-    } else if (formDirection === SwapDirection.FB_TO_BTC && walletAddress) {
-      setFormMakerAddr(walletAddress);
     }
-  }, [unisat.connected, unisat.address, formDirection, makerAddrManual, walletAddress]);
-
-  useEffect(() => { setMakerAddrManual(false); }, [formDirection]);
+  }, [unisat.connected, unisat.address, makerAddrManual]);
 
   useEffect(() => {
     if (tbMakerAddr) return;
@@ -459,15 +452,15 @@ export function useCrossChainState(): CrossChainState {
 
   const formAmountSats = formAmount ? BigInt(Math.round(parseFloat(formAmount) * 1e8)) : 0n;
   const formReceiveSats = formReceive ? BigInt(Math.round(parseFloat(formReceive) * 1e8)) : 0n;
-  const formBtcSats = formDirection === SwapDirection.BTC_TO_FB ? formAmountSats : formReceiveSats;
-  const formFeeSats = formBtcSats > 0n ? (formBtcSats * BigInt(feeBps)) / 10000n : 0n;
+  // BTC_TO_FB only: amount = BTC locked, receive = FB wanted
+  const formFeeSats = formAmountSats > 0n ? (formAmountSats * BigInt(feeBps)) / 10000n : 0n;
   const formRate = formAmountSats > 0n && formReceiveSats > 0n
     ? (Number(formReceiveSats) / Number(formAmountSats)).toFixed(4) : '';
-  const sendUnit = formDirection === SwapDirection.BTC_TO_FB ? 'BTC' : 'FB';
-  const receiveUnit = formDirection === SwapDirection.BTC_TO_FB ? 'FB' : 'BTC';
+  const sendUnit = 'BTC';
+  const receiveUnit = 'FB';
   const expiryOpts = suggestedExpiryBlocks(1);
 
-  const availBuyFb = otherOpenOrders.filter(o => o.direction === SwapDirection.FB_TO_BTC);
+  // BTC_TO_FB only: takers see these orders and can fill them by sending FB
   const availGetBtc = otherOpenOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB);
 
   // ── Token Bridge derived state ──
@@ -526,8 +519,6 @@ export function useCrossChainState(): CrossChainState {
     setActioning,
 
     // Create form
-    formDirection,
-    setFormDirection,
     formAmount,
     setFormAmount,
     formReceive,
@@ -551,7 +542,6 @@ export function useCrossChainState(): CrossChainState {
     myOrders,
     otherOpenOrders,
     totalVolumeSats,
-    availBuyFb,
     availGetBtc,
     isMyOrderFn,
     isTakerFn,

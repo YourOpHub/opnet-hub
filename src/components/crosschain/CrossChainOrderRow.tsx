@@ -196,10 +196,8 @@ interface AvailableOrderRowProps {
   actionStep: string;
   feeBps: number;
   isLocked: boolean;
-  unisatAddress: string;
   walletAddress: string;
   onTakeAndSwap: (id: string, takerAddr: string) => void;
-  onTake: (id: string, takerAddr: string) => void;
 }
 
 const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
@@ -209,46 +207,32 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
   actionStep,
   feeBps,
   isLocked,
-  unisatAddress,
   walletAddress,
   onTakeAndSwap,
-  onTake,
 }) => {
   const blocksLeft = order.expiry > 0 ? order.expiry - currentBlock : 0;
   const isExpired = order.expiry > 0 && blocksLeft <= 0;
   const feeSats = (order.btcAmount * BigInt(feeBps)) / 10000n;
-  const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
   const isThisActioning = actioning === order.id;
 
-  const takerGetsAmount = isBtcToFb ? order.btcAmount : order.wantAmount;
-  const takerSendsAmount = isBtcToFb ? order.wantAmount : order.btcAmount;
-  const takerGetsUnit = isBtcToFb ? 'BTC' : 'FB';
-  const takerSendsUnit = isBtcToFb ? 'FB' : 'BTC';
-
+  // BTC_TO_FB only: taker gets BTC, sends FB
   return (
     <React.Fragment key={order.id}>
       <div className="ob-row" role="row" aria-label={`Available swap order #${order.id}`} style={{ gridTemplateColumns: AV_COLS }}>
         <span className="ob-mono ob-r fw-700" style={{ color: '#22c55e' }}>
-          {fmtBtc(takerGetsAmount)} <span className="fw-500 fs-62 c-t2">{takerGetsUnit}</span>
+          {fmtBtc(order.btcAmount)} <span className="fw-500 fs-62 c-t2">BTC</span>
         </span>
         <span className="ob-mono ob-r c-t1">
-          {fmtBtc(takerSendsAmount)} <span className="fs-62 c-t3">{takerSendsUnit}</span>
+          {fmtBtc(order.wantAmount)} <span className="fs-62 c-t3">FB</span>
         </span>
         <span className="ob-mono ob-r c-t2">{fmtRate(order.btcAmount, order.wantAmount)}</span>
         <div className="ob-act">
-          {!isExpired && isBtcToFb && (
+          {!isExpired && (
             <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
               onTake={onTakeAndSwap} disabled={isThisActioning || isLocked}
               defaultAddr={walletAddress || ''}
               addrHint="Your OPNet address (opt1p...)"
-              label={isLocked ? '\u{1F512}' : 'Take'} />
-          )}
-          {!isExpired && !isBtcToFb && (
-            <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
-              onTake={onTake} disabled={isThisActioning || isLocked}
-              defaultAddr={unisatAddress || ''}
-              addrHint="Your Fractal address (bc1p...)"
-              label={isLocked ? '\u{1F512}' : 'Take'} />
+              label={isLocked ? '\u{1F512}' : 'Take & Swap'} />
           )}
           {isExpired && <span className="c-red fs-64">Expired</span>}
         </div>

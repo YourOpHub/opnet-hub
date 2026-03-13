@@ -8,6 +8,9 @@ import { MyOrderRow, AvailableOrderRow, MY_COLS, AV_COLS } from './crosschain/Cr
 import { EscrowOrderCard } from './crosschain/CrossChainOrderActions';
 import { satsToBtc } from './crosschain/types';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for Token Bridge re-enable
+void DIR_BUY_TOKEN;
+
 const fractalChain = SUPPORTED_CHAINS[0] ?? { id: 0, name: 'Unknown', shortName: 'Unknown', icon: '', color: '#888', type: 'utxo' as const, settlement: 'htlc' as const, addressRegex: /.*/, addressPlaceholder: '', explorerUrl: '', nativeAsset: '', testnetAvailable: false };
 
 // Token Bridge section hidden — functionality merged into Marketplace
@@ -40,8 +43,6 @@ const CrossChainMarketplace: React.FC = () => {
     locks,
 
     // Create form state
-    formDirection,
-    setFormDirection,
     formAmount,
     setFormAmount,
     formReceive,
@@ -70,7 +71,6 @@ const CrossChainMarketplace: React.FC = () => {
     activeOrders,
     myOrders,
     totalVolumeSats,
-    availBuyFb,
     availGetBtc,
     isMyOrderFn,
     isTakerFn,
@@ -81,13 +81,10 @@ const CrossChainMarketplace: React.FC = () => {
     formReceiveSats,
     formFeeSats,
     formRate,
-    sendUnit,
-    receiveUnit,
 
     // FractalSwap handlers
     fetchOrders,
     handleCreate,
-    handleTake,
     handleTakeAndSwap,
     handleComplete,
     handleSendAndClaim,
@@ -150,7 +147,7 @@ const CrossChainMarketplace: React.FC = () => {
             FractalSwap
           </h2>
           <p className="h-subtitle">
-            Native BTC &#x2194; Fractal BTC exchange &#x2014; trustless atomic swaps, {feeBps / 100}% fee
+            Lock OPNet BTC &#x2192; Get Fractal BTC &#x2014; trustless escrow, {feeBps / 100}% taker fee
           </p>
         </div>
         <div className="flex-center gap-8">
@@ -504,8 +501,6 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* Create Order Form */}
           <CrossChainOrderForm
-            formDirection={formDirection}
-            setFormDirection={setFormDirection}
             formAmount={formAmount}
             setFormAmount={setFormAmount}
             formReceive={formReceive}
@@ -523,8 +518,6 @@ const CrossChainMarketplace: React.FC = () => {
             formReceiveSats={formReceiveSats}
             formFeeSats={formFeeSats}
             formRate={formRate}
-            sendUnit={sendUnit}
-            receiveUnit={receiveUnit}
             onSubmit={handleCreate}
           />
 
@@ -564,61 +557,20 @@ const CrossChainMarketplace: React.FC = () => {
             </div>
           )}
 
-          {/* ── Available Swaps — split by direction ── */}
-          <div className="grid-2col gap-12 mb-16" role="region" aria-label="Available swaps">
-            {/* Buy FB — taker pays BTC on OPNet, gets FB on Fractal */}
+          {/* ── Available Orders ── */}
+          <div className="mb-16" role="region" aria-label="Available swaps">
             <div className="P p-0-overflow-hidden">
               <div className="ob-section-hdr c-g fs-86">
-                Get Fractal BTC
-                <span className="ob-section-sub">you lock OPNet BTC &#x2192; receive FB on Fractal</span>
-                <span className="ob-badge ml-auto" style={{ background: 'rgba(34,197,94,.1)', color: '#22c55e' }}>{availBuyFb.length}</span>
-              </div>
-              {loading ? (
-                <div className="p-28-center-t2">Loading...</div>
-              ) : availBuyFb.length === 0 ? (
-                <div className="ob-empty">
-                  <div className="empty-icon-med">&#x1F517;</div>
-                  No cross-chain swaps yet — create one above!
-                </div>
-              ) : (
-                <div className="ob-scroll">
-                  <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
-                    <span className="ob-r c-g">You Get (FB)</span><span className="ob-r">You Pay (BTC)</span>
-                    <span className="ob-r">Rate</span>
-                    <span className="ob-r">Action</span>
-                  </div>
-                  {availBuyFb.map(order => (
-                    <AvailableOrderRow
-                      key={order.id}
-                      order={order}
-                      currentBlock={currentBlock}
-                      actioning={actioning}
-                      actionStep={actionStep}
-                      feeBps={feeBps}
-                      isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
-                      unisatAddress={unisat.address || ''}
-                      walletAddress={walletAddress || ''}
-                      onTakeAndSwap={handleTakeAndSwap}
-                      onTake={handleTake}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Get OPNet BTC — taker sends FB on Fractal, gets BTC on OPNet */}
-            <div className="P p-0-overflow-hidden">
-              <div className="ob-section-hdr c-y fs-86">
-                Get OPNet BTC
-                <span className="ob-section-sub">you send FB on Fractal &#x2192; receive BTC on OPNet</span>
-                <span className="ob-badge ml-auto c-warn-alt" style={{ background: 'rgba(245,158,11,.1)' }}>{availGetBtc.length}</span>
+                Available Orders
+                <span className="ob-section-sub">send FB on Fractal &#x2192; claim locked BTC on OPNet</span>
+                <span className="ob-badge ml-auto" style={{ background: 'rgba(34,197,94,.1)', color: '#22c55e' }}>{availGetBtc.length}</span>
               </div>
               {loading ? (
                 <div className="p-28-center-t2">Loading...</div>
               ) : availGetBtc.length === 0 ? (
                 <div className="ob-empty">
                   <div className="empty-icon-med">&#x1F517;</div>
-                  No cross-chain swaps yet — create one above!
+                  No orders yet &#x2014; create one above!
                 </div>
               ) : (
                 <div className="ob-scroll">
@@ -636,10 +588,8 @@ const CrossChainMarketplace: React.FC = () => {
                       actionStep={actionStep}
                       feeBps={feeBps}
                       isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
-                      unisatAddress={unisat.address || ''}
                       walletAddress={walletAddress || ''}
                       onTakeAndSwap={handleTakeAndSwap}
-                      onTake={handleTake}
                     />
                   ))}
                 </div>
@@ -652,9 +602,9 @@ const CrossChainMarketplace: React.FC = () => {
             <div className="fw-700-fs82-mb10">How It Works</div>
             <div className="grid-3col gap-12">
               {[
-                { num: '1', title: 'Create Order', desc: 'Post what you want to swap. BTC is locked in the smart contract for safety.' },
-                { num: '2', title: 'Take & Auto-Swap', desc: 'One click: pay fee \u2192 send Fractal BTC \u2192 claim locked BTC. Fully automatic.' },
-                { num: '3', title: 'Done', desc: 'Both sides receive their funds. Track progress in the Operations panel.' },
+                { num: '1', title: 'Lock BTC', desc: 'Maker locks OPNet BTC in smart contract and specifies how much FB they want.' },
+                { num: '2', title: 'Fill Order', desc: 'Taker sends Fractal BTC to maker\'s address. Relayer verifies and releases locked BTC.' },
+                { num: '3', title: 'Done', desc: 'Maker gets FB, taker gets BTC. Track progress in the Operations panel.' },
               ].map(s => (
                 <div key={s.num} className="text-center">
                   <div className="step-num step-num-purple">{s.num}</div>

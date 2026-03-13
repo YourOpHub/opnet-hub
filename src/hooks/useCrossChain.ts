@@ -64,8 +64,6 @@ export function useCrossChain(): UseCrossChainReturn {
     locks: state.locks,
 
     // Create form state
-    formDirection: state.formDirection,
-    setFormDirection: state.setFormDirection,
     formAmount: state.formAmount,
     setFormAmount: state.setFormAmount,
     formReceive: state.formReceive,
@@ -95,7 +93,6 @@ export function useCrossChain(): UseCrossChainReturn {
     myOrders: state.myOrders,
     otherOpenOrders: state.otherOpenOrders,
     totalVolumeSats: state.totalVolumeSats,
-    availBuyFb: state.availBuyFb,
     availGetBtc: state.availGetBtc,
     isMyOrderFn: state.isMyOrderFn,
     isTakerFn: state.isTakerFn,
@@ -112,7 +109,6 @@ export function useCrossChain(): UseCrossChainReturn {
     // FractalSwap handlers
     fetchOrders: state.fetchOrders,
     handleCreate: fractal.handleCreate,
-    handleTake: fractal.handleTake,
     handleTakeAndSwap: fractal.handleTakeAndSwap,
     handleComplete: fractal.handleComplete,
     handleSendAndClaim: fractal.handleSendAndClaim,

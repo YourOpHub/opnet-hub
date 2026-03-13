@@ -12,14 +12,14 @@
  *  - Auto-trigger FB send when FB_TO_BTC order transitions Open → Taken
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { getContract, TransactionOutputFlags, type CallResult, type BaseContractProperties } from 'opnet';
 import { FRACTALSWAP_ABI } from '../abis';
 import { NETWORK } from '../config';
 import { lockOrder, unlockOrder } from '../swapApi';
 import { CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { buildTxParams, withRetry, formatTxError, waitForTxConfirmation, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
-import { SwapDirection, OrderStatus } from '../crosschain/types';
+import { SwapDirection } from '../crosschain/types';
 import { sendFractalBTC } from '../wallets/unisat';
 import { satsToBtc } from '../components/crosschain/types';
 import { buildP2OPScript, getP2OPAddress, encodeFractalAddr, decodeFractalAddr } from './crossChainShared';
@@ -40,7 +40,6 @@ interface FractalSwapContract extends BaseContractProperties {
 
 export interface FractalSwapActions {
   handleCreate: () => Promise<void>;
-  handleTake: (orderId: string, takerAddrInput: string) => Promise<void>;
   handleTakeAndSwap: (orderId: string, takerAddrInput: string) => Promise<void>;
   handleSendAndClaim: (orderId: string) => Promise<void>;
   handleComplete: (orderId: string) => Promise<void>;
@@ -55,12 +54,12 @@ export interface FractalSwapActions {
  */
 export function useFractalSwap(state: CrossChainState): FractalSwapActions {
   const {
-    walletAddress, senderAddr, openConnectModal, mldsaHex,
+    walletAddress, senderAddr, openConnectModal,
     provider, unisat,
     orders, feeBps, currentBlock,
     contractReady,
-    formDirection, formAmount, formReceive, formMakerAddr, formExpiry,
-    formAmountSats, formReceiveSats, formRate, sendUnit, receiveUnit,
+    formAmount, formReceive, formMakerAddr, formExpiry,
+    formAmountSats, formReceiveSats, formRate,
     setCreating, setCreateStep,
     setActioning, setActionStep, setMsg,
     fetchOrders,
@@ -101,54 +100,51 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       // Encode fractal address as u256 (P2TR witness program = 32 bytes)
       const fractalAddrU256 = encodeFractalAddr(formMakerAddr);
 
-      const contractBtcAmount = formDirection === SwapDirection.BTC_TO_FB ? formAmountSats : formReceiveSats;
-      const contractWantAmount = formDirection === SwapDirection.BTC_TO_FB ? formReceiveSats : formAmountSats;
+      // BTC_TO_FB only: maker locks BTC, wants FB
+      const contractBtcAmount = formAmountSats;
+      const contractWantAmount = formReceiveSats;
 
-      if (formDirection === SwapDirection.BTC_TO_FB) {
-        market.setTransactionDetails({
-          inputs: [],
-          outputs: [{
-            value: contractBtcAmount,
-            index: 1,
-            flags: TransactionOutputFlags.hasScriptPubKey,
-            scriptPubKey: contractP2OPScript,
-            to: CROSSCHAIN_ADDRESS,
-          }],
-        });
-      }
+      market.setTransactionDetails({
+        inputs: [],
+        outputs: [{
+          value: contractBtcAmount,
+          index: 1,
+          flags: TransactionOutputFlags.hasScriptPubKey,
+          scriptPubKey: contractP2OPScript,
+          to: CROSSCHAIN_ADDRESS,
+        }],
+      });
 
       setCreateStep('Creating order...');
       const sim = await withRetry(() =>
-        market.createOrder(BigInt(formDirection), contractBtcAmount, contractWantAmount, expiryU256, fractalAddrU256),
+        market.createOrder(BigInt(SwapDirection.BTC_TO_FB), contractBtcAmount, contractWantAmount, expiryU256, fractalAddrU256),
       );
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
 
-      if (formDirection === SwapDirection.BTC_TO_FB) {
-        (tp as unknown as Record<string, unknown>).extraOutputs = [{
-          script: contractP2OPScript,
-          value: Number(contractBtcAmount),
-        }];
-        (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = contractBtcAmount + 50_000n;
-      }
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{
+        script: contractP2OPScript,
+        value: Number(contractBtcAmount),
+      }];
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = contractBtcAmount + 50_000n;
 
       const createRcpt = await (sim as CallResult).sendTransaction(tp);
       const createTxId = (createRcpt as { transactionId?: string })?.transactionId || '';
       const createTxLink = createTxId ? { url: getTxUrl(createTxId), label: 'View TX' } : undefined;
 
-      if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats, formAmountSats, sendUnit, receiveUnit);
+      if (formRate) saveRate(actualNextId, parseFloat(formRate), formReceiveSats, formAmountSats, 'BTC', 'FB');
 
-      const createdPayLabel = formDirection === SwapDirection.BTC_TO_FB ? `${satsToBtc(contractBtcAmount)} BTC` : `${satsToBtc(contractWantAmount)} FB`;
-      const createdGetLabel = formDirection === SwapDirection.BTC_TO_FB ? `${satsToBtc(contractWantAmount)} FB` : `${satsToBtc(contractBtcAmount)} BTC`;
+      const createdPayLabel = `${satsToBtc(contractBtcAmount)} BTC`;
+      const createdGetLabel = `${satsToBtc(contractWantAmount)} FB`;
       const createOpId = `fractalswap:create:${actualNextId}:${walletAddress}`;
       trackOp({
         id: createOpId, market: 'fractalswap', orderId: actualNextId,
-        direction: formDirection === SwapDirection.BTC_TO_FB ? 'BTC_TO_FB' : 'FB_TO_BTC',
-        role: 'maker', step: `Pay ${createdPayLabel} \u2192 Get ${createdGetLabel}`,
+        direction: 'BTC_TO_FB',
+        role: 'maker', step: `Lock ${createdPayLabel} \u2192 Get ${createdGetLabel}`,
         amounts: { btc: Number(contractBtcAmount).toString(), want: Number(contractWantAmount).toString(), pay: createdPayLabel, get: createdGetLabel },
       });
       setCreateStep('Waiting for confirmation...');
-      toast(`Order #${actualNextId} created! Pay ${createdPayLabel} → Get ${createdGetLabel}.${formDirection === SwapDirection.BTC_TO_FB ? ' BTC locked.' : ''} Waiting for block...`, 'success', createTxLink);
+      toast(`Order #${actualNextId} created! Lock ${createdPayLabel} → Get ${createdGetLabel}. BTC locked. Waiting for block...`, 'success', createTxLink);
       state.setFormAmount('');
       state.setFormReceive('');
       state.setFormMakerAddr('');
@@ -161,73 +157,11 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       setTimeout(() => setCreateStep(''), 5000);
     } finally { setCreating(false); }
   }, [
-    walletAddress, senderAddr, formAmount, formMakerAddr, formReceive, formDirection, formExpiry,
+    walletAddress, senderAddr, formAmount, formMakerAddr, formReceive, formExpiry,
     formAmountSats, formReceiveSats, currentBlock, provider, openConnectModal, contractReady,
-    fetchOrders, toast, formRate, saveRate, contractP2OPScript, sendUnit, receiveUnit,
+    fetchOrders, toast, formRate, saveRate, contractP2OPScript,
     trackOp, completeOp, setCreating, setCreateStep, setMsg, state,
   ]);
-
-  // ── Take Order ──
-  const handleTake = useCallback(async (orderId: string, takerAddrInput: string) => {
-    if (!walletAddress || !senderAddr) { openConnectModal(); return; }
-    if (!contractReady) return;
-
-    const lockKey = `fractalswap:${orderId}`;
-    const lockRes = await lockOrder(lockKey, walletAddress);
-    if (!lockRes.ok) { toast(lockRes.error || 'Order is locked by another user', 'error'); return; }
-
-    setActioning(orderId); setActionStep('Taking order...');
-    const opId = `fractalswap:${orderId}:${walletAddress}`;
-    try {
-      const order = orders.find(o => o.id === orderId);
-      if (!order) throw new Error('Order not found');
-
-      const takerAddrU256 = encodeFractalAddr(takerAddrInput);
-
-      const rawFee = (order.btcAmount * BigInt(feeBps)) / 10000n;
-      const feeSats = rawFee < 330n ? 330n : rawFee;
-      const feeRecipientScript = buildP2OPScript(DEPLOYER_MLDSA_HEX);
-      const feeRecipientAddress = getP2OPAddress(DEPLOYER_MLDSA_HEX);
-
-      const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr ?? undefined);
-
-      const isFbToBtc = order.direction === SwapDirection.FB_TO_BTC;
-      const txOutputs: Array<{ value: bigint; index: number; flags: number; scriptPubKey: Buffer; to: string }> = [
-        { value: feeSats, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: feeRecipientScript, to: feeRecipientAddress },
-      ];
-      if (isFbToBtc) {
-        txOutputs.push({ value: order.btcAmount, index: 2, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: contractP2OPScript, to: CROSSCHAIN_ADDRESS });
-      }
-      market.setTransactionDetails({ inputs: [], outputs: txOutputs });
-
-      setActionStep(`Taking order (fee: ${Number(feeSats)} sats${isFbToBtc ? ` + locking ${satsToBtc(order.btcAmount)}` : ''})...`);
-      const sim = await withRetry(() => market.takeOrder(BigInt(orderId), takerAddrU256));
-      if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
-
-      const tp = await buildTxParams(provider, walletAddress);
-      const extraOuts: Array<{ script: Buffer; value: number }> = [{ script: feeRecipientScript, value: Number(feeSats) }];
-      if (isFbToBtc) extraOuts.push({ script: contractP2OPScript, value: Number(order.btcAmount) });
-      (tp as unknown as Record<string, unknown>).extraOutputs = extraOuts;
-      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
-      const takeRcpt = await (sim as CallResult).sendTransaction(tp);
-      const takeTxId = (takeRcpt as { transactionId?: string })?.transactionId || '';
-      const takeTxLink = takeTxId ? { url: getTxUrl(takeTxId), label: 'View TX' } : undefined;
-
-      trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'TX sent, confirming...', amounts: { btc: Number(order.btcAmount).toString() } });
-      toast(`Order #${orderId} taken! Fee: ${satsToBtc(feeSats)}.${isFbToBtc ? ' BTC locked.' : ''} Waiting for block...`, 'success', takeTxLink);
-
-      void unlockOrder(lockKey, walletAddress);
-      setActionStep('');
-      // Background: confirm TX, then complete op and refresh
-      void waitForTxConfirmation(takeTxId).then(() => { completeOp(opId); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(opId); });
-      return;
-    } catch (e) {
-      failOp(opId, formatTxError(e));
-      void unlockOrder(lockKey, walletAddress);
-      setActionStep(formatTxError(e));
-      setTimeout(() => setActionStep(''), 5000);
-    } finally { setActioning(null); }
-  }, [walletAddress, senderAddr, orders, feeBps, provider, openConnectModal, contractReady, fetchOrders, toast, trackOp, completeOp, failOp, contractP2OPScript, setActioning, setActionStep]);
 
   // ── Complete Order ──
   const handleComplete = useCallback(async (orderId: string) => {
@@ -278,29 +212,22 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       if (!order) throw new Error('Order not found');
 
       const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr ?? undefined);
-
-      if (order.direction === SwapDirection.BTC_TO_FB) {
-        const myScript = getMyP2OPScript();
-        market.setTransactionDetails({
-          inputs: [],
-          outputs: [{ value: order.btcAmount, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: myScript, to: walletAddress }],
-        });
-      }
+      const myScript = getMyP2OPScript();
+      market.setTransactionDetails({
+        inputs: [],
+        outputs: [{ value: order.btcAmount, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: myScript, to: walletAddress }],
+      });
 
       const sim = await withRetry(() => market.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-
-      if (order.direction === SwapDirection.BTC_TO_FB) {
-        const myScript = getMyP2OPScript();
-        (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
-      }
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: myScript, value: Number(order.btcAmount) }];
 
       const cancelRcpt = await (sim as CallResult).sendTransaction(tp);
       const cancelTxId = (cancelRcpt as { transactionId?: string })?.transactionId || '';
       const cancelTxLink = cancelTxId ? { url: getTxUrl(cancelTxId), label: 'View TX' } : undefined;
 
-      toast(`Order cancelled!${order.direction === SwapDirection.BTC_TO_FB ? ' BTC refunded.' : ''}`, 'success', cancelTxLink);
+      toast('Order cancelled! BTC refunded.', 'success', cancelTxLink);
       setActionStep('');
       // Background: confirm TX, then refresh
       void waitForTxConfirmation(cancelTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
@@ -343,40 +270,36 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const feeRecipientAddress = getP2OPAddress(DEPLOYER_MLDSA_HEX);
 
       const market = getContract<FractalSwapContract>(CROSSCHAIN_ADDRESS, FRACTALSWAP_ABI, provider, NETWORK, senderAddr ?? undefined);
-      const isFbToBtc = order.direction === SwapDirection.FB_TO_BTC;
-      const txOutputs: Array<{ value: bigint; index: number; flags: number; scriptPubKey: Buffer; to: string }> = [
-        { value: feeSats, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: feeRecipientScript, to: feeRecipientAddress },
-      ];
-      if (isFbToBtc) {
-        txOutputs.push({ value: order.btcAmount, index: 2, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: contractP2OPScript, to: CROSSCHAIN_ADDRESS });
-      }
-      market.setTransactionDetails({ inputs: [], outputs: txOutputs });
+      // BTC_TO_FB: taker only pays fee (no BTC lock needed)
+      market.setTransactionDetails({
+        inputs: [],
+        outputs: [
+          { value: feeSats, index: 1, flags: TransactionOutputFlags.hasScriptPubKey, scriptPubKey: feeRecipientScript, to: feeRecipientAddress },
+        ],
+      });
 
       const sim = await withRetry(() => market.takeOrder(BigInt(orderId), takerAddrU256));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
-      const extraOuts: Array<{ script: Buffer; value: number }> = [{ script: feeRecipientScript, value: Number(feeSats) }];
-      if (isFbToBtc) extraOuts.push({ script: contractP2OPScript, value: Number(order.btcAmount) });
-      (tp as unknown as Record<string, unknown>).extraOutputs = extraOuts;
-      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + (isFbToBtc ? order.btcAmount : 0n) + 50_000n;
+      (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: feeRecipientScript, value: Number(feeSats) }];
+      (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
       const tasRcpt = await (sim as CallResult).sendTransaction(tp);
       const tasTxId = (tasRcpt as { transactionId?: string })?.transactionId || '';
       const tasTxLink = tasTxId ? { url: getTxUrl(tasTxId), label: 'View TX' } : undefined;
 
-      const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
-      const payLabel = isBtcToFb ? `${satsToBtc(order.wantAmount)} FB` : `${satsToBtc(order.btcAmount)} BTC`;
-      const getLabel = isBtcToFb ? `${satsToBtc(order.btcAmount)} BTC` : `${satsToBtc(order.wantAmount)} FB`;
+      const payLabel = `${satsToBtc(order.wantAmount)} FB`;
+      const getLabel = `${satsToBtc(order.btcAmount)} BTC`;
       // eslint-disable-next-line no-console
-      console.log(`[FractalSwap] Take #${orderId}: direction=${isBtcToFb ? 'BTC→FB' : 'FB→BTC'}, btcAmount=${order.btcAmount}, wantAmount=${order.wantAmount}, fee=${feeSats}`);
-      toast(`Order #${orderId} taken! Pay ${payLabel} → Get ${getLabel}. Fee: ${Number(feeSats)} sats.`, 'success', tasTxLink);
-      updateOpStep(opId, `Step 1/3: Pay ${payLabel} → Get ${getLabel}. Confirming...`);
+      console.log(`[FractalSwap] Take #${orderId}: BTC→FB, btcAmount=${order.btcAmount}, wantAmount=${order.wantAmount}, fee=${feeSats}`);
+      toast(`Order #${orderId} taken! Send ${payLabel} → Get ${getLabel}. Fee: ${Number(feeSats)} sats.`, 'success', tasTxLink);
+      updateOpStep(opId, `Step 1/3: Send ${payLabel} → Get ${getLabel}. Confirming...`);
 
       // ── Wait for take TX confirmation (up to 15 min for testnet) ──
       await waitForTxConfirmation(tasTxId, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 900_000);
 
-      // ── Step 2: Send Fractal BTC via UniSat ──
-      const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
+      // ── Step 2: Send Fractal BTC via UniSat to maker's Fractal address ──
+      const targetHex = order.makerAddr;
       const fbAmountSats = order.wantAmount;
 
       const targetFractalAddr = decodeFractalAddr(targetHex);
@@ -437,12 +360,11 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
     const opId = `fractalswap:claim:${orderId}:${walletAddress}`;
     setActioning(orderId);
-    trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: order.direction === SwapDirection.BTC_TO_FB ? 'taker' : 'maker', step: 'Step 1/2: Sending FB...' });
+    trackOp({ id: opId, market: 'fractalswap', orderId, direction: 'BTC_TO_FB', role: 'taker', step: 'Step 1/2: Sending FB...' });
 
     try {
-      // ── Step 1: Send FB ──
-      const isBtcToFb = order.direction === SwapDirection.BTC_TO_FB;
-      const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
+      // ── Step 1: Send FB to maker's Fractal address ──
+      const targetHex = order.makerAddr;
       const fbAmountSats = order.wantAmount;
 
       const targetFractalAddr = decodeFractalAddr(targetHex);
@@ -518,65 +440,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
     } finally { setActioning(null); }
   }, [walletAddress, senderAddr, orders, provider, openConnectModal, contractReady, fetchOrders, getMyP2OPScript, setActioning, setActionStep, toast]);
 
-  // ── Auto-send FB when maker's FB_TO_BTC order transitions Open → Taken ──
-  const prevOrderStatusesRef = useRef<Record<string, OrderStatus>>({});
-  const walletAddressRef = useRef(walletAddress);
-  walletAddressRef.current = walletAddress;
-  const unisatRef = useRef(unisat);
-  unisatRef.current = unisat;
-  const handleSendAndClaimRef = useRef(handleSendAndClaim);
-  handleSendAndClaimRef.current = handleSendAndClaim;
-  const actioningRef = useRef(state.actioning);
-  actioningRef.current = state.actioning;
-
-  useEffect(() => {
-    const prev = prevOrderStatusesRef.current;
-    const next: Record<string, OrderStatus> = {};
-    for (const o of orders) next[o.id] = o.status;
-
-    for (const order of orders) {
-      if (order.direction !== SwapDirection.FB_TO_BTC) continue;
-      if (order.status !== OrderStatus.Taken) continue;
-      if (prev[order.id] !== OrderStatus.Open) continue;
-      if (!mldsaHex || order.creator.toLowerCase() !== mldsaHex) continue;
-      if (actioningRef.current) continue;
-
-      if (unisatRef.current.connected) {
-        toast(`Auto-sending FB for order #${order.id}...`, 'info');
-        setTimeout(() => handleSendAndClaimRef.current(order.id), 500);
-      } else {
-        toast('Your order was taken! Connect UniSat to send FB & claim BTC', 'warning');
-      }
-    }
-
-    prevOrderStatusesRef.current = next;
-  }, [orders, toast, mldsaHex]);
-
-  // Auto-trigger when UniSat connects: check for pending Taken FB_TO_BTC orders
-  const prevUnisatConnected = useRef(unisat.connected);
-  useEffect(() => {
-    const wasConnected = prevUnisatConnected.current;
-    prevUnisatConnected.current = unisat.connected;
-    if (wasConnected || !unisat.connected) return;
-
-    const wa = walletAddressRef.current;
-    if (!wa) return;
-    if (actioningRef.current) return;
-
-    const myTakenFbToBtc = orders.find(o =>
-      o.direction === SwapDirection.FB_TO_BTC &&
-      o.status === OrderStatus.Taken &&
-      mldsaHex !== '' && o.creator.toLowerCase() === mldsaHex,
-    );
-    if (myTakenFbToBtc) {
-      toast(`Auto-sending FB for order #${myTakenFbToBtc.id}...`, 'info');
-      setTimeout(() => handleSendAndClaimRef.current(myTakenFbToBtc.id), 500);
-    }
-  }, [unisat.connected, orders, toast, mldsaHex]);
-
   return {
     handleCreate,
-    handleTake,
     handleTakeAndSwap,
     handleSendAndClaim,
     handleComplete,

@@ -199,9 +199,10 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
 
       updateOpStep(rOpId, `Removing ${m} MINE + ${v} VIBE...`);
       setStep('Removing liquidity from pool...');
-      // Contract v6: amountA is used to compute shares, actual withdrawal is proportional from shares
-      // No rounding margin needed — contract derives both amounts from shares consistently
-      const removeSim = await withRetry(() => poolContract.removeLiquidity(freshMineRaw, 0n));
+      // Subtract 1 from requestedA to avoid rounding revert ("AmountA exceeds share entitlement")
+      // shares = requestedA * totalShares / reserveA rounds down, but the reverse calc can exceed requestedA
+      const safeAmountA = freshMineRaw > 1n ? freshMineRaw - 1n : freshMineRaw;
+      const removeSim = await withRetry(() => poolContract.removeLiquidity(safeAmountA, 0n));
       if ((removeSim as CallResult).revert) throw new Error(`removeLiquidity failed: ${(removeSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       const receipt = await (removeSim as CallResult).sendTransaction(tp);

@@ -141,25 +141,9 @@ export async function waitForNextBlock(
   logger.warn('[txUtils] Block wait timeout, proceeding anyway');
 }
 
-/** Check TX confirmation via mempool.opnet.org (faster than OPNet RPC).
- *  Returns true if confirmed, false if unconfirmed/pending, null on error. */
-async function checkMempoolTx(txId: string): Promise<boolean | null> {
-  const hash = txId.replace(/^0x/i, '');
-  try {
-    const res = await fetch(`https://mempool.opnet.org/api/tx/${hash}`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { status?: { confirmed?: boolean } };
-    return data?.status?.confirmed === true;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Wait for a specific transaction to be confirmed.
- * Primary: polls mempool.opnet.org (updates faster).
- * Fallback: OPNet RPC getTransactionReceipt.
- * Links still point to opscan.org (see getTxUrl).
+ * Wait for a specific transaction to be confirmed by polling getTransactionReceipt.
+ * Returns true if confirmed, false on timeout or RPC failure.
  * @param txId - Transaction hash to track.
  * @param setStep - Optional callback for progress updates.
  * @param timeoutMs - Max wait time in ms (default 5min).
@@ -178,21 +162,12 @@ export async function waitForTxConfirmation(
     const elapsed = Math.round((Date.now() - start) / 1000);
     if (elapsed > 0) setStep?.(`Confirming TX ${short}... (${elapsed}s)`);
     try {
-      // Try mempool first (faster indexing)
-      const mempoolResult = await checkMempoolTx(txId);
-      if (mempoolResult === true) {
+      const receipt = await getTransactionReceipt(txId);
+      consecutiveFailures = 0;
+      if (receipt != null) {
         setStep?.('TX confirmed!');
         return true;
       }
-      // Fallback to OPNet RPC receipt
-      if (mempoolResult === null) {
-        const receipt = await getTransactionReceipt(txId);
-        if (receipt != null) {
-          setStep?.('TX confirmed!');
-          return true;
-        }
-      }
-      consecutiveFailures = 0;
     } catch {
       consecutiveFailures++;
       if (consecutiveFailures >= 5) {

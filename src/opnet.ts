@@ -347,18 +347,19 @@ export async function getTransaction(txHash: string): Promise<Record<string, unk
   return null;
 }
 
-/** Get transaction receipt. RPC expects raw 64-char hex hash (no 0x prefix). */
+/** Get transaction receipt. RPC expects raw 64-char hex hash (no 0x prefix).
+ *  retries=0: single RPC call — waitForTxConfirmation handles the higher-level polling loop. */
 export async function getTransactionReceipt(txHash: string): Promise<Record<string, unknown> | null> {
   const hash = txHash.trim().replace(/^0x/i, '');
   if (!hash) return null;
   try {
-    const r = await rpc('btc_getTransactionReceipt', [hash], 12000) as Record<string, unknown> | null;
+    const r = await rpc('btc_getTransactionReceipt', [hash], 12000, 0) as Record<string, unknown> | null;
     return r ?? null;
   } catch (e) {
     const msg = (e instanceof Error ? e.message : '').toLowerCase();
-    // "Could not find the transaction" / "not found" = TX in mempool, not confirmed yet — NOT an error
+    // "not found" = TX in mempool, not confirmed yet — silently return null
     if (msg.includes('not found') || msg.includes('could not find')) return null;
-    throw e; // Re-throw real errors (network, 429, etc.) so caller can track failures
+    throw e; // Re-throw real errors (network, 429, etc.)
   }
 }
 

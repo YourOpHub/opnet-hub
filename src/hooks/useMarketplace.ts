@@ -502,11 +502,11 @@ export function useMarketplace(): UseMarketplaceReturn {
       } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
       const createTxLink = createTxId ? { url: getTxUrl(createTxId), label: 'View TX' } : undefined;
-      completeOp(createOpId);
+      updateOpStep(createOpId, 'TX sent! Confirming...', { create: createTxId });
       setCreateStep('');
-      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order created!`, 'success', createTxLink);
+      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order TX sent! Confirming...`, 'success', createTxLink);
       // Background: confirm TX, then refresh
-      void waitForTxConfirmation(createTxId).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); void fetchTokens(); }).catch(() => {});
+      void waitForTxConfirmation(createTxId).then(() => { completeOp(createOpId); setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); void fetchTokens(); }).catch(() => { completeOp(createOpId); });
       return;
     } catch (e) {
       failOp(createOpId, formatTxError(e));
@@ -526,9 +526,11 @@ export function useMarketplace(): UseMarketplaceReturn {
     setFilling(true); setFillStep('Preparing fill...');
     const opId = `p2p:fill:${orderId}:${walletAddress}`;
     const order = orders.find(o => o.id === orderId);
+    // Taker perspective: filling a sell order = BUYING tokens, filling a buy order = SELLING tokens
+    const takerDirection = order?.type === 'sell' ? 'buy' : 'sell';
     trackOp({
       id: opId, market: 'p2p', orderId,
-      direction: order?.type || 'sell', role: 'taker', step: 'Preparing...',
+      direction: takerDirection, role: 'taker', step: 'Preparing...',
       amounts: { amount: String(amount || order?.amount || 0), price: String(order?.pricePerToken || 0), token: order?.tokenSymbol || '' },
     });
     try {
@@ -637,12 +639,12 @@ export function useMarketplace(): UseMarketplaceReturn {
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
-      completeOp(opId);
+      updateOpStep(opId, 'TX sent! Confirming...', { fill: fillTxId });
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
-      toast('Order filled!', 'success', fillTxLink);
+      toast('Fill TX sent! Confirming...', 'success', fillTxLink);
       // Background: confirm TX, then refresh
-      void waitForTxConfirmation(fillTxId).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      void waitForTxConfirmation(fillTxId).then(() => { completeOp(opId); setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(opId); });
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -714,11 +716,11 @@ export function useMarketplace(): UseMarketplaceReturn {
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Cancel indexer notify error:', e); });
 
-      completeOp(cancelOpId);
+      updateOpStep(cancelOpId, 'Cancel TX sent! Confirming...', { cancel: cancelTxId });
       setFillStep('');
-      toast('Order cancelled!', 'success', cancelTxLink);
+      toast('Cancel TX sent! Confirming...', 'success', cancelTxLink);
       // Background: confirm TX, then refresh
-      void waitForTxConfirmation(cancelTxId).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      void waitForTxConfirmation(cancelTxId).then(() => { completeOp(cancelOpId); setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(cancelOpId); });
     } catch (e) {
       failOp(cancelOpId, formatTxError(e));
       setFillStep(formatTxError(e));

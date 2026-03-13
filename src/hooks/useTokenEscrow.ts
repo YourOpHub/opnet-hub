@@ -111,7 +111,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const nextId = escrowOrders.length > 0 ? Math.max(...escrowOrders.map(o => parseInt(o.id))) + 1 : 1;
       savePreimage(`tb_${nextId}`, preimage);
 
-      toast(`Token escrow order created! ${tbDirection === DIR_SELL_TOKEN ? 'Tokens locked.' : 'Intent posted.'}`, 'success');
+      toast(`Escrow order TX broadcast! ${tbDirection === DIR_SELL_TOKEN ? 'Tokens locking...' : 'Intent posting...'} Awaiting confirmation...`, 'info');
       setTbStep('');
       state.setTbTokenAmount('');
       state.setTbBtcPrice('');
@@ -179,7 +179,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const takeTxId = (takeRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
-      toast(`Order taken! Fee: ${Number(feeSats)} sats.`, 'success');
+      toast(`Take TX broadcast! Fee: ${Number(feeSats)} sats. Awaiting confirmation...`, 'info');
       setActioning(null);
 
       void waitForTxConfirmation(takeTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
@@ -213,7 +213,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const confirmTxId = (confirmRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
-      toast('Swap confirmed! Tokens released.', 'success');
+      toast('Confirm TX broadcast! Awaiting on-chain confirmation...', 'info');
       setActioning(null);
 
       void waitForTxConfirmation(confirmTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
@@ -238,7 +238,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const cancelTxId = (cancelRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
-      toast('Token escrow order cancelled! Tokens returned.', 'success');
+      toast('Cancel TX broadcast! Awaiting confirmation...', 'info');
       setActioning(null);
 
       void waitForTxConfirmation(cancelTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
@@ -263,7 +263,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const refundTxId = (refundRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
-      toast('Refund sent! Tokens returned.', 'success');
+      toast('Refund TX broadcast! Awaiting confirmation...', 'info');
       setActioning(null);
 
       void waitForTxConfirmation(refundTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });

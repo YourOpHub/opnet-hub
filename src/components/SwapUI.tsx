@@ -457,10 +457,20 @@ const SwapUI: React.FC = () => {
 
           {/* Result */}
           {swapResult && (
-            <div className={swapResult.type === 'error' ? 'result-err' : 'result-ok'} role="alert" aria-live="assertive">
+            <div className={swapResult.type === 'error' ? 'result-err' : swapResult.type === 'pending' ? 'result-pending' : 'result-ok'} role="alert" aria-live="assertive">
+              {swapResult.type === 'pending' && (
+                <>
+                  <div className="c-y fw-700 mb-4">TX Broadcast — Awaiting Confirmation</div>
+                  <div className="c-t2 fs-70">Expected: ~{swapResult.amtOut} {to.symbol}</div>
+                  {swapResult.hash && (
+                    <a href={getTxUrl(swapResult.hash)} target="_blank" rel="noopener noreferrer"
+                      className="c-c2 fs-65 mt-4 d-block no-decoration fw-600">View TX on OPScan ↗</a>
+                  )}
+                </>
+              )}
               {swapResult.type === 'success' && (
                 <>
-                  <div className="c-g fw-700 mb-4">✓ Swap Confirmed On-Chain</div>
+                  <div className="c-g fw-700 mb-4">Swap Confirmed On-Chain</div>
                   <div className="c-t2 fs-70">Received: {swapResult.amtOut} {to.symbol}</div>
                   {swapResult.hash && (
                     <a href={getTxUrl(swapResult.hash)} target="_blank" rel="noopener noreferrer"

@@ -144,7 +144,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
         amounts: { btc: Number(contractBtcAmount).toString(), want: Number(contractWantAmount).toString(), pay: createdPayLabel, get: createdGetLabel },
       });
       setCreateStep('Waiting for confirmation...');
-      toast(`Order #${actualNextId} created! Lock ${createdPayLabel} → Get ${createdGetLabel}. BTC locked. Waiting for block...`, 'success', createTxLink);
+      toast(`Order #${actualNextId} broadcast! Lock ${createdPayLabel} → Get ${createdGetLabel}. Awaiting confirmation...`, 'info', createTxLink);
       state.setFormAmount('');
       state.setFormReceive('');
       state.setFormMakerAddr('');
@@ -191,7 +191,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       const opId = `fractalswap:complete:${orderId}:${walletAddress}`;
       trackOp({ id: opId, market: 'fractalswap', orderId, direction: String(order.direction), role: 'taker', step: 'BTC claimed, confirming...' });
-      toast(`Order #${orderId} complete TX sent! Confirming...`, 'success', completeTxLink);
+      toast(`Order #${orderId} complete TX broadcast! Awaiting confirmation...`, 'info', completeTxLink);
       setActionStep('');
       // Background: confirm TX, then complete op and refresh
       void waitForTxConfirmation(completeTxId).then(() => { completeOp(opId); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(opId); });
@@ -234,7 +234,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const cancelTxId = (cancelRcpt as { transactionId?: string })?.transactionId || '';
       const cancelTxLink = cancelTxId ? { url: getTxUrl(cancelTxId), label: 'View TX' } : undefined;
 
-      toast(`Order cancelled! ${remaining > 0n ? `${satsToBtc(remaining)} BTC refunded.` : 'No BTC to refund.'}`, 'success', cancelTxLink);
+      toast(`Cancel TX broadcast! ${remaining > 0n ? `${satsToBtc(remaining)} BTC refund pending.` : ''} Awaiting confirmation...`, 'info', cancelTxLink);
       setActionStep('');
       // Background: confirm TX, then refresh
       void waitForTxConfirmation(cancelTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
@@ -312,7 +312,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const getLabel = `${satsToBtc(effectiveBtc)} BTC`;
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] Take #${orderId}${isPartial ? ` (partial→#${fillOrderIdStr})` : ''}: BTC→FB, fill=${effectiveBtc}, want=${effectiveFb}, fee=${feeSats}`);
-      toast(`Order #${orderId} ${isPartial ? 'partially ' : ''}taken! Send ${payLabel} → Get ${getLabel}. Fee: ${Number(feeSats)} sats.`, 'success', tasTxLink);
+      toast(`Take TX broadcast! ${isPartial ? 'Partial fill: ' : ''}Send ${payLabel} → Get ${getLabel}. Fee: ${Number(feeSats)} sats. Awaiting confirmation...`, 'info', tasTxLink);
       updateOpStep(opId, `Step 1/3: Send ${payLabel} → Get ${getLabel}. Confirming...`);
 
       // ── Wait for take TX confirmation (up to 15 min for testnet) ──
@@ -329,7 +329,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const txid = await sendFractalBTC(targetFractalAddr, Number(effectiveFb), 1);
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] FB sent: ${Number(effectiveFb)} sats to ${targetFractalAddr}, txid=${txid}`);
-      toast(`FB sent (${satsToBtc(effectiveFb)})! Now claiming ${satsToBtc(effectiveBtc)} BTC...`, 'success');
+      toast(`FB sent (${satsToBtc(effectiveFb)})! Claiming ${satsToBtc(effectiveBtc)} BTC next...`, 'info');
 
       // ── Step 3: Complete Order (claim locked BTC) — use fillOrderId (child or parent) ──
       updateOpStep(opId, 'Step 3/3: Waiting for take confirmation before claiming...');
@@ -355,7 +355,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       // eslint-disable-next-line no-console
       console.log(`[FractalSwap] Complete #${fillOrderIdStr}: claimed ${Number(effectiveBtc)} sats BTC`);
       void unlockOrder(lockKey, walletAddress);
-      toast(`Order #${fillOrderIdStr} settling! Paid ${satsToBtc(effectiveFb)} FB, claiming ${satsToBtc(effectiveBtc)} BTC... Confirming...`, 'success', tasCompleteTxLink);
+      toast(`Order #${fillOrderIdStr} settle TX broadcast! Paid ${satsToBtc(effectiveFb)} FB, claiming ${satsToBtc(effectiveBtc)} BTC. Awaiting confirmation...`, 'info', tasCompleteTxLink);
       // Background: confirm TX, then complete op and refresh
       void waitForTxConfirmation(tasCompleteTxId).then(() => { completeOp(opId); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(opId); });
     } catch (e) {
@@ -390,7 +390,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       }
 
       const txid = await sendFractalBTC(targetFractalAddr, Number(fbAmountSats), 1);
-      toast(`FB sent! TX: ${txid.slice(0, 12)}...`, 'success');
+      toast(`FB sent! TX: ${txid.slice(0, 12)}... Awaiting confirmation...`, 'info');
       updateOpStep(opId, 'Step 2/2: Claiming locked BTC...');
 
       // ── Step 2: Complete Order (wait for take to be fully confirmed) ──
@@ -412,7 +412,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const sacTxId = (sacRcpt as { transactionId?: string })?.transactionId || '';
       const sacTxLink = sacTxId ? { url: getTxUrl(sacTxId), label: 'View TX' } : undefined;
 
-      toast(`Order #${orderId} settling! Confirming...`, 'success', sacTxLink);
+      toast(`Order #${orderId} settle TX broadcast! Awaiting confirmation...`, 'info', sacTxLink);
       // Background: confirm TX, then complete op and refresh
       void waitForTxConfirmation(sacTxId).then(() => { completeOp(opId); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(opId); });
     } catch (e) {
@@ -446,7 +446,7 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       const refundTxId = (refundRcpt as { transactionId?: string })?.transactionId || '';
       const refundTxLink = refundTxId ? { url: getTxUrl(refundTxId), label: 'View TX' } : undefined;
 
-      toast('Refund sent! BTC returned.', 'success', refundTxLink);
+      toast('Refund TX broadcast! Awaiting confirmation...', 'info', refundTxLink);
       setActionStep('');
       // Background: confirm TX, then refresh
       void waitForTxConfirmation(refundTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});

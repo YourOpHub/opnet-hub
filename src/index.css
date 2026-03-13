@@ -3377,6 +3377,7 @@ input:focus-visible, textarea:focus-visible {
 
 /* Result boxes */
 .result-ok { margin-top: 12px; padding: 10px 12px; background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.15); border-radius: 14px; font-size: .72rem; }
+.result-pending { margin-top: 12px; padding: 10px 12px; background: rgba(234,179,8,.06); border: 1px solid rgba(234,179,8,.15); border-radius: 14px; font-size: .72rem; }
 .result-err { margin-top: 12px; padding: 10px 12px; background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.2); border-radius: 14px; font-size: .72rem; }
 
 /* Flex utilities */

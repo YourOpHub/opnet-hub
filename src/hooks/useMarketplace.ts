@@ -514,7 +514,7 @@ export function useMarketplace(initialToken?: string | null): UseMarketplaceRetu
       const createTxLink = createTxId ? { url: getTxUrl(createTxId), label: 'View TX' } : undefined;
       updateOpStep(createOpId, 'TX sent! Confirming...', { create: createTxId });
       setCreateStep('');
-      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order TX sent! Confirming...`, 'success', createTxLink);
+      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order TX broadcast! Awaiting confirmation...`, 'info', createTxLink);
       // Background: confirm TX, then refresh
       void waitForTxConfirmation(createTxId).then(() => { completeOp(createOpId); setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); void fetchTokens(); }).catch(() => { completeOp(createOpId); });
       return;
@@ -662,7 +662,7 @@ export function useMarketplace(initialToken?: string | null): UseMarketplaceRetu
       updateOpStep(opId, 'TX sent! Confirming...', { fill: fillTxId });
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
-      toast('Fill TX sent! Confirming...', 'success', fillTxLink);
+      toast('Fill TX broadcast! Awaiting confirmation...', 'info', fillTxLink);
       // Background: confirm TX, then refresh
       void waitForTxConfirmation(fillTxId).then(() => { completeOp(opId); setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(opId); });
       return;
@@ -738,7 +738,7 @@ export function useMarketplace(initialToken?: string | null): UseMarketplaceRetu
 
       updateOpStep(cancelOpId, 'Cancel TX sent! Confirming...', { cancel: cancelTxId });
       setFillStep('');
-      toast('Cancel TX sent! Confirming...', 'success', cancelTxLink);
+      toast('Cancel TX broadcast! Awaiting confirmation...', 'info', cancelTxLink);
       // Background: confirm TX, then refresh
       void waitForTxConfirmation(cancelTxId).then(() => { completeOp(cancelOpId); setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => { completeOp(cancelOpId); });
     } catch (e) {

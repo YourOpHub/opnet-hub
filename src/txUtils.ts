@@ -74,16 +74,26 @@ export async function waitForNextBlock(
 ): Promise<void> {
   let startBlock: bigint;
   try { startBlock = await provider.getBlockNumber(); } catch (e) { logger.warn('[txUtils] Failed to get initial block number for wait:', e); return; }
-  
+
   const start = Date.now();
+  let consecutiveFailures = 0;
+  const MAX_CONSECUTIVE_FAILURES = 5;
   while (Date.now() - start < timeoutMs) {
     await new Promise(r => setTimeout(r, 8_000));
     const elapsed = Math.round((Date.now() - start) / 1000);
     setStep?.(`Waiting for block confirmation... (${elapsed}s)`);
     try {
       const current = await provider.getBlockNumber();
+      consecutiveFailures = 0;
       if (current > startBlock) return;
-    } catch (e) { logger.warn('[txUtils] Block number poll failed, retrying:', e); }
+    } catch (e) {
+      consecutiveFailures++;
+      logger.warn(`[txUtils] Block poll failed (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, e);
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        logger.warn('[txUtils] RPC unreachable after consecutive failures, proceeding');
+        return;
+      }
+    }
   }
   // Timeout — proceed anyway (best-effort)
   logger.warn('[txUtils] Block wait timeout, proceeding anyway');

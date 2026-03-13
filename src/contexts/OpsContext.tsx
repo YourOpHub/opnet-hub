@@ -154,16 +154,22 @@ export const OpsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOps(prev => prev.filter(o => o.id !== id));
   }, []);
 
-  // Auto-timeout stale ops: active > 30 min → mark as failed
+  // Auto-resolve stale ops: active > 30 min
+  // If TX was broadcast (has txIds) → mark as completed (TX is on-chain by now)
+  // If no TX was sent → mark as failed
   useEffect(() => {
     const STALE_MS = 30 * 60 * 1000;
     const now = Date.now();
     const stale = ops.filter(o => o.status === 'active' && now - o.updatedAt > STALE_MS);
     if (stale.length === 0) return;
     for (const op of stale) {
-      failOp(op.id, 'Operation timed out (no block confirmation after 30 min)');
+      if (op.txIds && Object.keys(op.txIds).length > 0) {
+        completeOp(op.id);
+      } else {
+        failOp(op.id, 'Operation timed out (no transaction sent after 30 min)');
+      }
     }
-  }, [ops, failOp]);
+  }, [ops, failOp, completeOp]);
 
   const activeOps = ops.filter(o => o.status === 'active');
   const historyOps = ops.filter(o => o.status !== 'active')

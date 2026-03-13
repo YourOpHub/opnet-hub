@@ -94,13 +94,11 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
       trackOp({ id: opId, market: 'split', orderId: `${splitCount}x`, direction: '', role: '', step: `Splitting into ${splitCount} UTXOs...` });
       try {
         await (sim as CallResult).sendTransaction(tp);
-        setStep('');
-        setErr('');
-        setStep('Waiting for block confirmation...');
-        await waitForNextBlock(provider, setStep, 90_000);
         completeOp(opId);
         setStep('');
-        void fetchUTXOs();
+        setErr('');
+        // Background: refresh after next block
+        void waitForNextBlock(provider, undefined, 90_000).then(() => { void fetchUTXOs(); }).catch(() => {});
       } catch (e2) {
         failOp(opId, formatTxError(e2));
         throw e2;

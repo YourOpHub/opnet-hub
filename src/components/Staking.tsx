@@ -153,16 +153,11 @@ const Staking: React.FC = () => {
       const txParams = await buildTxParams(provider, walletAddress);
       const receipt = await (stakeSim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      updateOpStep(sOpId, 'Waiting for block confirmation...', { tx: txHash });
-      setStep('Waiting for block confirmation...');
-      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(sOpId, s); });
       completeOp(sOpId);
-
       setStep('');
       setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE!`, txHash });
       addTxRecord({ type: 'mint', txHash: receipt.transactionId || '', tokenA: 'MINE', amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      emitBalanceRefresh();
-      setTimeout(() => setRefreshKey(k => k + 1), 5000);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       failOp(sOpId, formatTxError(e));
       setStep('');
@@ -192,15 +187,10 @@ const Staking: React.FC = () => {
       trackOp({ id: uOpId, market: 'stake', orderId: 'Unstake', direction: '', role: '', step: `Unstaking ${amt.toLocaleString()} MINE...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      updateOpStep(uOpId, 'Waiting for block confirmation...', { tx: txHash });
-      setStep('Waiting for block confirmation...');
-      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(uOpId, s); });
       completeOp(uOpId);
-
       setStep('');
       setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE!`, txHash });
-      emitBalanceRefresh();
-      setTimeout(() => setRefreshKey(k => k + 1), 5000);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       setStep('');
       setResult({ type: 'error', msg: e instanceof Error ? e.message : 'Unstake failed' });
@@ -226,18 +216,13 @@ const Staking: React.FC = () => {
       trackOp({ id: cOpId, market: 'stake', orderId: 'Claim', direction: '', role: '', step: 'Claiming staking rewards...' });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      updateOpStep(cOpId, 'Waiting for block confirmation...', { tx: txHash });
-      setStep('Waiting for block confirmation...');
-      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(cOpId, s); });
       completeOp(cOpId);
-
       setStep('');
       setResult({ type: 'success', msg: 'Rewards claimed!', txHash });
       const ts = Date.now();
       setLastClaimTs(ts);
       try { localStorage.setItem(claimKey, String(ts)); } catch (e) { logger.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
-      emitBalanceRefresh();
-      setTimeout(() => setRefreshKey(k => k + 1), 5000);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       setStep('');
       setResult({ type: 'error', msg: e instanceof Error ? e.message : 'Claim failed' });

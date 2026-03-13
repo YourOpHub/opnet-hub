@@ -502,14 +502,11 @@ export function useMarketplace(): UseMarketplaceReturn {
       } catch (e) { logger.warn('[useMarketplace] Indexer notification failed:', e); }
 
       const createTxLink = createTxId ? { url: getTxUrl(createTxId), label: 'View TX' } : undefined;
-      updateOpStep(createOpId, 'TX sent, waiting for block...', createTxId ? { create: createTxId } : undefined);
-      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order submitted! Waiting for block...`, 'success', createTxLink);
-      await waitForNextBlock(provider, (s) => { setCreateStep(s); updateOpStep(createOpId, s); });
-      toast('Order confirmed on-chain!', 'success', createTxLink);
       completeOp(createOpId);
       setCreateStep('');
-      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
-      void fetchOrders(); void fetchTokens();
+      toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order created!`, 'success', createTxLink);
+      // Background: refresh after next block
+      void waitForNextBlock(provider).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); void fetchTokens(); }).catch(() => {});
       return;
     } catch (e) {
       failOp(createOpId, formatTxError(e));
@@ -633,9 +630,6 @@ export function useMarketplace(): UseMarketplaceReturn {
       const fillTxId = (fillReceipt as { transactionId?: string })?.transactionId || '';
       const fillTxLink = fillTxId ? { url: getTxUrl(fillTxId), label: 'View TX' } : undefined;
       setFillId(null); setFillAmount('');
-      toast('Order filled! Waiting for block...', 'success', fillTxLink);
-
-      updateOpStep(opId, 'TX sent, waiting for block...', fillTxId ? { fill: fillTxId } : undefined);
 
       void fetch(`${MARKET_API}/market/fill`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -643,13 +637,12 @@ export function useMarketplace(): UseMarketplaceReturn {
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Fill indexer notify error:', e); });
 
-      await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(opId, s); });
-      toast('Fill confirmed on-chain!', 'success', fillTxLink);
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
-      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
-      void fetchOrders();
+      toast('Order filled!', 'success', fillTxLink);
+      // Background: refresh after next block
+      void waitForNextBlock(provider).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -715,20 +708,17 @@ export function useMarketplace(): UseMarketplaceReturn {
       const cancelTxId = (cancelReceipt as { transactionId?: string })?.transactionId || '';
       const cancelTxLink = cancelTxId ? { url: getTxUrl(cancelTxId), label: 'View TX' } : undefined;
 
-      toast('Order cancel submitted! Waiting for block...', 'success', cancelTxLink);
-      updateOpStep(cancelOpId, 'TX sent, waiting for block...', cancelTxId ? { cancel: cancelTxId } : undefined);
       void fetch(`${MARKET_API}/market/cancel`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, creator: walletAddress }),
         signal: AbortSignal.timeout(5000),
       }).catch((e) => { logger.warn('[useMarketplace] Cancel indexer notify error:', e); });
 
-      await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(cancelOpId, s); });
-      toast('Cancel confirmed!', 'success', cancelTxLink);
       completeOp(cancelOpId);
       setFillStep('');
-      setBalRefreshKey(k => k + 1); emitBalanceRefresh();
-      void fetchOrders();
+      toast('Order cancelled!', 'success', cancelTxLink);
+      // Background: refresh after next block
+      void waitForNextBlock(provider).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
     } catch (e) {
       failOp(cancelOpId, formatTxError(e));
       setFillStep(formatTxError(e));

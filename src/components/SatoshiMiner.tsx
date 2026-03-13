@@ -87,7 +87,7 @@ const SPRITE_RIG = `${BASE}mining-rig.png`;
 const SatoshiMiner: React.FC = () => {
     const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
     const gameProvider = React.useMemo(() => getProvider(), []);
-    const { trackOp, updateOpStep, completeOp } = useOps();
+    const { trackOp, completeOp } = useOps();
     const [sats, setSats] = useState<number>(() => ld('sm_s', 0));
     const [tot, setTot] = useState<number>(() => ld('sm_t', 0));
     const [ups, setUps] = useState<Up[]>(() => ld('sm_u', UPS));
@@ -512,12 +512,9 @@ const SatoshiMiner: React.FC = () => {
                                 const txParams = await buildTxParams(gameProvider, walletAddress);
                                 const mOpId = `mint_MINE_${Date.now()}`;
                                 trackOp({ id: mOpId, market: 'mint', orderId: 'MINE', direction: '', role: '', step: `Claiming ${claimAmount.toLocaleString()} MINE...` });
-                                const receipt = await (sim as CallResult).sendTransaction(txParams);
-                                const txHash = (receipt as { transactionId?: string })?.transactionId || '';
-                                updateOpStep(mOpId, 'Waiting for block confirmation...', { tx: txHash });
-                                await waitForNextBlock(gameProvider, (s) => updateOpStep(mOpId, s));
+                                await (sim as CallResult).sendTransaction(txParams);
                                 completeOp(mOpId);
-                                emitBalanceRefresh();
+                                void waitForNextBlock(gameProvider).then(() => { emitBalanceRefresh(); }).catch(() => {});
 
                                 setClaimStatus('done');
                                 setMineBalance(prev => Math.max(0, prev - claimAmount));

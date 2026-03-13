@@ -466,13 +466,11 @@ export function useSwap(): UseSwapReturn {
         const txParams2 = await buildTxParams(provider, activeWallet);
         const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
         const txHash = swapReceipt.transactionId || '';
-        updateOpStep(swapOpId, 'Waiting for block confirmation...', { tx: txHash });
-        setSwapStep('Waiting for block confirmation...');
-        await waitForNextBlock(provider, (s) => { setSwapStep(s); updateOpStep(swapOpId, s); });
         completeOp(swapOpId);
         setSwapStep('');
         setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
         addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: activeWallet });
+        void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
       } else if (motoPool) {
         // ── Motoswap Router swap ──
         trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'motoswap', role: '', step: `Checking ${from.symbol} approval...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
@@ -499,13 +497,11 @@ export function useSwap(): UseSwapReturn {
         const txParams2 = await buildTxParams(provider, activeWallet);
         const swapReceipt = await (swapSim as CallResult).sendTransaction(txParams2);
         const txHash = swapReceipt.transactionId || '';
-        updateOpStep(swapOpId, 'Waiting for block confirmation...', { tx: txHash });
-        setSwapStep('Waiting for block confirmation...');
-        await waitForNextBlock(provider, (s) => { setSwapStep(s); updateOpStep(swapOpId, s); });
         completeOp(swapOpId);
         setSwapStep('');
         setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
         addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: activeWallet });
+        void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
       } else {
         throw new Error('No pool found for this pair');
       }
@@ -546,13 +542,10 @@ export function useSwap(): UseSwapReturn {
       trackOp({ id: mOpId, market: 'mint', orderId: sym, direction: '', role: '', step: `Minting ${MINT_AMOUNT.toLocaleString()} ${sym}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      updateOpStep(mOpId, 'Waiting for block confirmation...', { tx: txHash });
-      await waitForNextBlock(provider, (s) => updateOpStep(mOpId, s));
       completeOp(mOpId);
       setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: activeWallet });
-      emitBalanceRefresh();
-      setTimeout(() => setBalRefreshKey(k => k + 1), 5000);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
       if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC: https://faucet.opnet.org' : ''}`;

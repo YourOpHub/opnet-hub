@@ -152,18 +152,13 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       if ((addSim as CallResult).revert) throw new Error(`addLiquidity failed: ${(addSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       const addReceipt = await (addSim as CallResult).sendTransaction(tp);
-      updateOpStep(aOpId, 'Waiting for block confirmation...', { tx: addReceipt.transactionId || '' });
-      setStep('Waiting for block confirmation...');
-      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(aOpId, s); });
       completeOp(aOpId);
-
       setStep('');
       setResult({ ok: true, msg: `Added ${mAmt.toLocaleString()} MINE + ${vAmt.toLocaleString()} VIBE on-chain!`, txHash: addReceipt.transactionId || '' });
       setLpMine(prev => prev + mAmt);
       setLpVibe(prev => prev + vAmt);
       addTxRecord({ type: 'mint', txHash: addReceipt.transactionId || '', tokenA: 'LP', amountA: `${mAmt}+${vAmt}`, status: 'confirmed', wallet: walletAddress });
-      emitBalanceRefresh();
-      setTimeout(onRefresh, 3000);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(onRefresh, 1000); }).catch(() => {});
     } catch (e) {
       failOp(aOpId, formatTxError(e));
       setStep('');
@@ -209,11 +204,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       if ((removeSim as CallResult).revert) throw new Error(`removeLiquidity failed: ${(removeSim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
       const receipt = await (removeSim as CallResult).sendTransaction(tp);
-      updateOpStep(rOpId, 'Waiting for block confirmation...', { tx: receipt.transactionId || '' });
-      setStep('Waiting for block confirmation...');
-      await waitForNextBlock(provider, (s) => { setStep(s); updateOpStep(rOpId, s); });
       completeOp(rOpId);
-
       setStep('');
       setLpMine(prev => Math.max(0, prev - m));
       setLpVibe(prev => Math.max(0, prev - v));
@@ -221,8 +212,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setVibeAmt('');
       setResult({ ok: true, msg: `Removed ${m.toLocaleString()} MINE + ${v.toLocaleString()} VIBE. Tokens returned to your wallet!`, txHash: receipt.transactionId || '' });
       addTxRecord({ type: 'claim', txHash: receipt.transactionId || '', tokenA: 'LP', amountA: `${m}+${v}`, status: 'confirmed', wallet: walletAddress });
-      emitBalanceRefresh();
-      setTimeout(onRefresh, 3000);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(onRefresh, 1000); }).catch(() => {});
     } catch (e) {
       failOp(rOpId, formatTxError(e));
       setStep('');

@@ -228,13 +228,10 @@ const TokenGallery: React.FC = () => {
       trackOp({ id: fmOpId, market: 'mint', orderId: tok.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${tok.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      updateOpStep(fmOpId, 'Waiting for block confirmation...', { tx: txHash });
-      await waitForNextBlock(provider, (s) => updateOpStep(fmOpId, s));
       completeOp(fmOpId);
       setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      emitBalanceRefresh();
-      setHistRefresh(k => k + 1);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
     } catch (e) {
       setFeatMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setFeatMinting(false); }
@@ -264,13 +261,10 @@ const TokenGallery: React.FC = () => {
       trackOp({ id: umOpId, market: 'mint', orderId: token.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${token.symbol}...` });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      updateOpStep(umOpId, 'Waiting for block confirmation...', { tx: txHash });
-      await waitForNextBlock(provider, (s) => updateOpStep(umOpId, s));
       completeOp(umOpId);
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      emitBalanceRefresh();
-      setHistRefresh(k => k + 1);
+      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
     } catch (e) {
       setMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setMinting(false); }

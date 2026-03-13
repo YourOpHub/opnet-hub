@@ -12,8 +12,9 @@ export const AV_COLS = '90px 90px 68px auto';
    ───────────────────────────────────────────────────────── */
 export const TakeOrderButton: React.FC<{
   orderId: string; feeSats: number; defaultAddr?: string; label?: string;
+  addrHint?: string;
   onTake: (id: string, takerAddr: string) => void; disabled: boolean;
-}> = ({ orderId, feeSats, onTake, disabled, defaultAddr, label }) => {
+}> = ({ orderId, feeSats, onTake, disabled, defaultAddr, label, addrHint }) => {
   const [show, setShow] = useState(false);
   const [addr, setAddr] = useState(defaultAddr || '');
   const addrRef = React.useRef(addr);
@@ -38,8 +39,8 @@ export const TakeOrderButton: React.FC<{
   return (
     <div className="d-flex gap-4 ai-center flex-wrap" onClick={e => e.stopPropagation()}>
       <input style={{ ...iStyle, width: 200, fontSize: '.66rem', padding: '4px 8px' }}
-        aria-label="Receiving address for swap"
-        placeholder="Receiving address (bc1p...)"
+        aria-label={addrHint || 'Fractal address for swap'}
+        placeholder={addrHint || 'Your Fractal address (bc1p...)'}
         value={addr} onChange={e => setAddr(e.target.value)} />
       <button className="ob-btn green"
         disabled={disabled || addr.length < 10}
@@ -195,7 +196,6 @@ interface AvailableOrderRowProps {
   actionStep: string;
   feeBps: number;
   isLocked: boolean;
-  walletAddress: string | undefined | null;
   unisatAddress: string;
   onTakeAndSwap: (id: string, takerAddr: string) => void;
   onTake: (id: string, takerAddr: string) => void;
@@ -208,7 +208,6 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
   actionStep,
   feeBps,
   isLocked,
-  walletAddress,
   unisatAddress,
   onTakeAndSwap,
   onTake,
@@ -239,12 +238,14 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
             <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
               onTake={onTakeAndSwap} disabled={isThisActioning || isLocked}
               defaultAddr={unisatAddress || ''}
+              addrHint="Your Fractal address (bc1p...)"
               label={isLocked ? '\u{1F512}' : 'Take'} />
           )}
           {!isExpired && !isBtcToFb && (
             <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
               onTake={onTake} disabled={isThisActioning || isLocked}
-              defaultAddr={walletAddress || ''}
+              defaultAddr={unisatAddress || ''}
+              addrHint="Your Fractal address (bc1p...)"
               label={isLocked ? '\u{1F512}' : 'Take'} />
           )}
           {isExpired && <span className="c-red fs-64">Expired</span>}

@@ -566,11 +566,11 @@ const CrossChainMarketplace: React.FC = () => {
 
           {/* ── Available Swaps — split by direction ── */}
           <div className="grid-2col gap-12 mb-16" role="region" aria-label="Available swaps">
-            {/* Buy FB — taker pays BTC, gets FB */}
+            {/* Buy FB — taker pays BTC on OPNet, gets FB on Fractal */}
             <div className="P p-0-overflow-hidden">
               <div className="ob-section-hdr c-g fs-86">
-                Buy FB
-                <span className="ob-section-sub">pay BTC &#x2192; get FB</span>
+                Get Fractal BTC
+                <span className="ob-section-sub">you lock OPNet BTC &#x2192; receive FB on Fractal</span>
                 <span className="ob-badge ml-auto" style={{ background: 'rgba(34,197,94,.1)', color: '#22c55e' }}>{availBuyFb.length}</span>
               </div>
               {loading ? (
@@ -583,7 +583,7 @@ const CrossChainMarketplace: React.FC = () => {
               ) : (
                 <div className="ob-scroll">
                   <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
-                    <span className="ob-r c-g">You Get</span><span className="ob-r">You Pay</span>
+                    <span className="ob-r c-g">You Get (FB)</span><span className="ob-r">You Pay (BTC)</span>
                     <span className="ob-r">Rate</span>
                     <span className="ob-r">Action</span>
                   </div>
@@ -596,7 +596,6 @@ const CrossChainMarketplace: React.FC = () => {
                       actionStep={actionStep}
                       feeBps={feeBps}
                       isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
-                      walletAddress={walletAddress}
                       unisatAddress={unisat.address || ''}
                       onTakeAndSwap={handleTakeAndSwap}
                       onTake={handleTake}
@@ -606,11 +605,11 @@ const CrossChainMarketplace: React.FC = () => {
               )}
             </div>
 
-            {/* Get BTC — taker pays FB, gets BTC */}
+            {/* Get OPNet BTC — taker sends FB on Fractal, gets BTC on OPNet */}
             <div className="P p-0-overflow-hidden">
               <div className="ob-section-hdr c-y fs-86">
-                Get BTC
-                <span className="ob-section-sub">pay FB &#x2192; get BTC</span>
+                Get OPNet BTC
+                <span className="ob-section-sub">you send FB on Fractal &#x2192; receive BTC on OPNet</span>
                 <span className="ob-badge ml-auto c-warn-alt" style={{ background: 'rgba(245,158,11,.1)' }}>{availGetBtc.length}</span>
               </div>
               {loading ? (
@@ -623,7 +622,7 @@ const CrossChainMarketplace: React.FC = () => {
               ) : (
                 <div className="ob-scroll">
                   <div className="ob-hdr" style={{ gridTemplateColumns: AV_COLS }}>
-                    <span className="ob-r c-g">You Get</span><span className="ob-r">You Pay</span>
+                    <span className="ob-r c-g">You Get (BTC)</span><span className="ob-r">You Send (FB)</span>
                     <span className="ob-r">Rate</span>
                     <span className="ob-r">Action</span>
                   </div>
@@ -636,7 +635,6 @@ const CrossChainMarketplace: React.FC = () => {
                       actionStep={actionStep}
                       feeBps={feeBps}
                       isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
-                      walletAddress={walletAddress}
                       unisatAddress={unisat.address || ''}
                       onTakeAndSwap={handleTakeAndSwap}
                       onTake={handleTake}

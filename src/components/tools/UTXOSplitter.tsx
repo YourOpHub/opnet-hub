@@ -4,7 +4,7 @@ import { SPLITTER_DUMMY_ABI } from '../../abis';
 import * as opnet from '../../opnet';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS } from '../../contracts';
 import { NETWORK } from '../../config';
-import { buildTxParams, formatTxError, waitForNextBlock } from '../../txUtils';
+import { buildTxParams, formatTxError, waitForTxConfirmation } from '../../txUtils';
 import { useTokenTools } from '../../hooks/useTokenTools';
 import { cardS, inputS, btnS, monoSm, copyBtnS } from './toolStyles';
 
@@ -93,12 +93,13 @@ const UTXOSplitter = React.memo(function UTXOSplitter() {
       const opId = `split_${Date.now()}`;
       trackOp({ id: opId, market: 'split', orderId: `${splitCount}x`, direction: '', role: '', step: `Splitting into ${splitCount} UTXOs...` });
       try {
-        await (sim as CallResult).sendTransaction(tp);
+        const splitReceipt = await (sim as CallResult).sendTransaction(tp);
+        const splitTxId = (splitReceipt as { transactionId?: string })?.transactionId || '';
         completeOp(opId);
         setStep('');
         setErr('');
-        // Background: refresh after next block
-        void waitForNextBlock(provider, undefined, 90_000).then(() => { void fetchUTXOs(); }).catch(() => {});
+        // Background: confirm TX, then refresh UTXOs
+        void waitForTxConfirmation(splitTxId, undefined, 90_000).then(() => { void fetchUTXOs(); }).catch(() => {});
       } catch (e2) {
         failOp(opId, formatTxError(e2));
         throw e2;

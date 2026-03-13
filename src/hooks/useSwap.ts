@@ -30,7 +30,7 @@ import {
 import { POOL_ABI, MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForTxConfirmation, emitBalanceRefresh } from '../txUtils';
 import * as opnetRpc from '../opnet';
 import { fetchBtcPrice } from '../btc-price';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
@@ -470,7 +470,7 @@ export function useSwap(): UseSwapReturn {
         setSwapStep('');
         setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
         addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: activeWallet });
-        void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
+        void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
       } else if (motoPool) {
         // ── Motoswap Router swap ──
         trackOp({ id: swapOpId, market: 'swap', orderId: `${from.symbol}\u2192${to.symbol}`, direction: 'motoswap', role: '', step: `Checking ${from.symbol} approval...`, amounts: { tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6) } });
@@ -501,7 +501,7 @@ export function useSwap(): UseSwapReturn {
         setSwapStep('');
         setSwapResult({ type: 'success', hash: txHash, amtOut: toVal.toLocaleString(undefined, { maximumFractionDigits: 6 }) });
         addTxRecord({ type: 'swap', txHash, tokenA: from.symbol, tokenB: to.symbol, amountA: fromVal.toString(), amountB: toVal.toFixed(6), status: 'confirmed', wallet: activeWallet });
-        void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
+        void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
       } else {
         throw new Error('No pool found for this pair');
       }
@@ -545,7 +545,7 @@ export function useSwap(): UseSwapReturn {
       completeOp(mOpId);
       setMintResult({ sym, ok: true, msg: `Minted ${MINT_AMOUNT.toLocaleString()} ${sym}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: sym, amountA: MINT_AMOUNT.toString(), status: 'confirmed', wallet: activeWallet });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
+      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setTimeout(() => setBalRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       let msg = e instanceof Error ? e.message : 'Mint failed';
       if (msg.toLowerCase().includes('no utxo')) msg = `No BTC UTXOs.${CURRENT_ENV !== 'mainnet' ? ' Get ' + CURRENT_ENV + ' BTC: https://faucet.opnet.org' : ''}`;

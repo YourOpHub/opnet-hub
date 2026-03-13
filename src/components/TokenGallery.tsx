@@ -7,7 +7,7 @@ import {
 } from 'opnet';
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
-import { buildTxParams, waitForNextBlock, formatTxError, emitBalanceRefresh } from '../txUtils';
+import { buildTxParams, waitForTxConfirmation, formatTxError, emitBalanceRefresh } from '../txUtils';
 import { NETWORK, CURRENT_ENV } from '../config';
 import * as opnet from '../opnet';
 import { DEPLOYED_CONTRACTS, type ContractTokenInfo, getContractOpscanUrl, getTxUrl } from '../contracts';
@@ -231,7 +231,7 @@ const TokenGallery: React.FC = () => {
       completeOp(fmOpId);
       setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
+      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
     } catch (e) {
       setFeatMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setFeatMinting(false); }
@@ -264,7 +264,7 @@ const TokenGallery: React.FC = () => {
       completeOp(umOpId);
       setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}!`, txHash });
       addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
+      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
     } catch (e) {
       setMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setMinting(false); }

@@ -8,7 +8,7 @@ import {
 import { MINTABLE_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
-import { buildTxParams, withRetry, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { buildTxParams, withRetry, waitForTxConfirmation, emitBalanceRefresh } from '../txUtils';
 import { DEPLOYED_CONTRACTS } from '../contracts';
 import * as opnet from '../opnet';
 import * as api from '../api';
@@ -512,9 +512,10 @@ const SatoshiMiner: React.FC = () => {
                                 const txParams = await buildTxParams(gameProvider, walletAddress);
                                 const mOpId = `mint_MINE_${Date.now()}`;
                                 trackOp({ id: mOpId, market: 'mint', orderId: 'MINE', direction: '', role: '', step: `Claiming ${claimAmount.toLocaleString()} MINE...` });
-                                await (sim as CallResult).sendTransaction(txParams);
+                                const mintReceipt = await (sim as CallResult).sendTransaction(txParams);
+                                const mintTxId = (mintReceipt as { transactionId?: string })?.transactionId || '';
                                 completeOp(mOpId);
-                                void waitForNextBlock(gameProvider).then(() => { emitBalanceRefresh(); }).catch(() => {});
+                                void waitForTxConfirmation(mintTxId).then(() => { emitBalanceRefresh(); }).catch(() => {});
 
                                 setClaimStatus('done');
                                 setMineBalance(prev => Math.max(0, prev - claimAmount));

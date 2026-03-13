@@ -31,7 +31,7 @@ import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
 import type { ContractTokenInfo } from '../contracts';
 import { Address } from '@btc-vision/transaction';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForTxConfirmation, emitBalanceRefresh } from '../txUtils';
 import { MARKET_ADDRESS, MARKET_PUBKEY, DEPLOYED_CONTRACTS, getContractOpscanUrl, getTxUrl, addressToPubkey } from '../contracts';
 import { useToast } from '../components/Toast';
 import { lockOrder, unlockOrder, getActiveLocks } from '../swapApi';
@@ -505,8 +505,8 @@ export function useMarketplace(): UseMarketplaceReturn {
       completeOp(createOpId);
       setCreateStep('');
       toast(`${orderType === 'sell' ? 'Sell' : 'Buy'} order created!`, 'success', createTxLink);
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); void fetchTokens(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(createTxId).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); void fetchTokens(); }).catch(() => {});
       return;
     } catch (e) {
       failOp(createOpId, formatTxError(e));
@@ -581,7 +581,7 @@ export function useMarketplace(): UseMarketplaceReturn {
         const totalRemaining = BigInt(Math.round((order.amount - order.amountFilled) * 1e8));
         const fillApprove = await ensureAllowance(order.tokenAddress, MARKET_PUBKEY, totalRemaining, provider, senderAddr, walletAddress, (s: string) => { setFillStep(s); updateOpStep(opId, s); }, order.tokenSymbol || 'token');
         if (fillApprove.txId) updateOpStep(opId, 'Token approved!', { approve: fillApprove.txId });
-        if (fillApprove.approved) await waitForNextBlock(provider, (s) => { setFillStep(s); updateOpStep(opId, s); });
+        if (fillApprove.approved && fillApprove.txId) await waitForTxConfirmation(fillApprove.txId, (s) => { setFillStep(s); updateOpStep(opId, s); });
 
         // BTC output to seller (self) — claiming buyer's locked BTC from contract
         const remaining = order.amount - order.amountFilled;
@@ -641,8 +641,8 @@ export function useMarketplace(): UseMarketplaceReturn {
       void unlockOrder(lockKey, walletAddress);
       setFillStep('');
       toast('Order filled!', 'success', fillTxLink);
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(fillTxId).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -717,8 +717,8 @@ export function useMarketplace(): UseMarketplaceReturn {
       completeOp(cancelOpId);
       setFillStep('');
       toast('Order cancelled!', 'success', cancelTxLink);
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(cancelTxId).then(() => { setBalRefreshKey(k => k + 1); emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
     } catch (e) {
       failOp(cancelOpId, formatTxError(e));
       setFillStep(formatTxError(e));

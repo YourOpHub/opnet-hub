@@ -16,7 +16,7 @@ import { Address } from '@btc-vision/transaction';
 import { TOKEN_ESCROW_ABI } from '../abis';
 import { NETWORK } from '../config';
 import { TOKEN_ESCROW_ADDRESS, TOKEN_ESCROW_PUBKEY, DEPLOYER_MLDSA_HEX } from '../contracts';
-import { buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { buildTxParams, withRetry, formatTxError, waitForTxConfirmation, emitBalanceRefresh } from '../txUtils';
 import { ensureAllowance } from '../txUtils';
 import { generateHTLCPair, verifyPreimage, hexToBigInt } from '../crosschain/htlc';
 import { buildP2OPScript, getP2OPAddress, DIR_SELL_TOKEN, DIR_BUY_TOKEN, resolveToken, TOKEN_OPTIONS } from './crossChainShared';
@@ -105,7 +105,8 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       );
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      await (sim as CallResult).sendTransaction(tp);
+      const createRcpt = await (sim as CallResult).sendTransaction(tp);
+      const createTxId = (createRcpt as { transactionId?: string })?.transactionId || '';
 
       const nextId = escrowOrders.length > 0 ? Math.max(...escrowOrders.map(o => parseInt(o.id))) + 1 : 1;
       savePreimage(`tb_${nextId}`, preimage);
@@ -116,7 +117,7 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       state.setTbBtcPrice('');
       state.setTbMakerAddr('');
 
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForTxConfirmation(createTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setTbStep(formatTxError(e));
@@ -174,13 +175,14 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const tp = await buildTxParams(provider, walletAddress);
       (tp as unknown as Record<string, unknown>).extraOutputs = [{ script: feeRecipientScript, value: Number(feeSats) }];
       (tp as unknown as Record<string, unknown>).maximumAllowedSatToSpend = feeSats + 50_000n;
-      await (sim as CallResult).sendTransaction(tp);
+      const takeRcpt = await (sim as CallResult).sendTransaction(tp);
+      const takeTxId = (takeRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
       toast(`Order taken! Fee: ${Number(feeSats)} sats.`, 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForTxConfirmation(takeTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -207,13 +209,14 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
 
       const tp = await buildTxParams(provider, walletAddress);
-      await (sim as CallResult).sendTransaction(tp);
+      const confirmRcpt = await (sim as CallResult).sendTransaction(tp);
+      const confirmTxId = (confirmRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
       toast('Swap confirmed! Tokens released.', 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForTxConfirmation(confirmTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -231,13 +234,14 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const sim = await withRetry(() => bridge.cancelOrder(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      await (sim as CallResult).sendTransaction(tp);
+      const cancelRcpt = await (sim as CallResult).sendTransaction(tp);
+      const cancelTxId = (cancelRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
       toast('Token escrow order cancelled! Tokens returned.', 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForTxConfirmation(cancelTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -255,13 +259,14 @@ export function useTokenEscrow(state: CrossChainState): TokenEscrowActions {
       const sim = await withRetry(() => bridge.refundExpired(BigInt(orderId)));
       if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
       const tp = await buildTxParams(provider, walletAddress);
-      await (sim as CallResult).sendTransaction(tp);
+      const refundRcpt = await (sim as CallResult).sendTransaction(tp);
+      const refundTxId = (refundRcpt as { transactionId?: string })?.transactionId || '';
 
       setActionStep('');
       toast('Refund sent! Tokens returned.', 'success');
       setActioning(null);
 
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] Block wait/refresh error:', e); });
+      void waitForTxConfirmation(refundTxId).then(() => { emitBalanceRefresh(); void fetchEscrowOrders(); }).catch((e) => { logger.warn('[useTokenEscrow] TX confirm/refresh error:', e); });
       void fetchEscrowOrders();
     } catch (e) {
       setActionStep(formatTxError(e));

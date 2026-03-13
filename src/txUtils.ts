@@ -11,6 +11,7 @@ import { type JSONRpcProvider, getContract, OP_20_ABI, type IOP20Contract, type 
 import { logger } from './logger';
 import { Address } from '@btc-vision/transaction';
 import { NETWORK, CURRENT_ENV } from './config';
+import { getTransactionReceipt } from './opnet';
 const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 
 /**
@@ -100,6 +101,46 @@ export async function waitForNextBlock(
 }
 
 /**
+ * Wait for a specific transaction to be confirmed by polling getTransactionReceipt.
+ * Returns true if confirmed, false on timeout or RPC failure.
+ * @param txId - Transaction hash to track.
+ * @param setStep - Optional callback for progress updates.
+ * @param timeoutMs - Max wait time in ms (default 5min).
+ */
+export async function waitForTxConfirmation(
+  txId: string,
+  setStep?: (s: string) => void,
+  timeoutMs = 300_000,
+): Promise<boolean> {
+  if (!txId) return false;
+  const start = Date.now();
+  let consecutiveFailures = 0;
+  const short = txId.replace('0x', '').slice(0, 12);
+  // Check immediately, then poll every 6s
+  while (Date.now() - start < timeoutMs) {
+    const elapsed = Math.round((Date.now() - start) / 1000);
+    if (elapsed > 0) setStep?.(`Confirming TX ${short}... (${elapsed}s)`);
+    try {
+      const receipt = await getTransactionReceipt(txId);
+      consecutiveFailures = 0;
+      if (receipt != null) {
+        setStep?.('TX confirmed!');
+        return true;
+      }
+    } catch {
+      consecutiveFailures++;
+      if (consecutiveFailures >= 5) {
+        logger.warn(`[txUtils] TX receipt poll unreachable for ${short}, proceeding`);
+        return false;
+      }
+    }
+    await new Promise(r => setTimeout(r, 6_000));
+  }
+  logger.warn(`[txUtils] TX confirmation timeout for ${short}`);
+  return false;
+}
+
+/**
  * Ensure OP20 token allowance is sufficient for a spender; approves max_uint256 if not.
  * @param tokenAddress - OP20 token contract address.
  * @param spenderPubkeyHex - Spender hex pubkey (e.g. '0xe3523...'), NOT bech32.
@@ -168,10 +209,10 @@ export async function ensureAllowance(
   const approveReceipt = await approveResult.sendTransaction(tp);
   const approveTxId = (approveReceipt as { transactionId?: string })?.transactionId || '';
 
-  // Wait for next block BEFORE marking as approved — prevents race condition
+  // Wait for TX confirmation BEFORE marking as approved — prevents race condition
   // where cache says "approved" but on-chain allowance hasn't confirmed yet
   setStep(`${tokenLabel} approved! Waiting for confirmation...`);
-  await waitForNextBlock(provider, setStep);
+  await waitForTxConfirmation(approveTxId, setStep);
 
   // Mark as approved in session cache (after block confirmation)
   approvedThisSession.add(cacheKey);

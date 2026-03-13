@@ -18,7 +18,7 @@ import { FRACTALSWAP_ABI } from '../abis';
 import { NETWORK } from '../config';
 import { lockOrder, unlockOrder } from '../swapApi';
 import { CROSSCHAIN_ADDRESS, CROSSCHAIN_PUBKEY, DEPLOYER_MLDSA_HEX, getContractOpscanUrl, getTxUrl } from '../contracts';
-import { buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { buildTxParams, withRetry, formatTxError, waitForTxConfirmation, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
 import { SwapDirection, OrderStatus } from '../crosschain/types';
 import { sendFractalBTC } from '../wallets/unisat';
 import { satsToBtc } from '../components/crosschain/types';
@@ -155,8 +155,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       completeOp(createOpId);
       setCreateStep('');
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(createTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
     } catch (e) {
       setCreateStep(formatTxError(e));
       setTimeout(() => setCreateStep(''), 5000);
@@ -220,8 +220,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       setActionStep('');
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(takeTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
       return;
     } catch (e) {
       failOp(opId, formatTxError(e));
@@ -262,8 +262,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       completeOp(opId);
       toast(`Order #${orderId} completed!`, 'success', completeTxLink);
       setActionStep('');
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(completeTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
       return;
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -305,8 +305,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       toast(`Order cancelled!${order.direction === SwapDirection.BTC_TO_FB ? ' BTC refunded.' : ''}`, 'success', cancelTxLink);
       setActionStep('');
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(cancelTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
       return;
     } catch (e) {
       setActionStep(formatTxError(e));
@@ -375,8 +375,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       toast(`Order #${orderId} taken! Pay ${payLabel} → Get ${getLabel}. Fee: ${Number(feeSats)} sats.`, 'success', tasTxLink);
       updateOpStep(opId, `Step 1/3: Pay ${payLabel} → Get ${getLabel}. Confirming...`);
 
-      // ── Wait for block confirmation (up to 15 min for testnet) ──
-      await waitForNextBlock(provider, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 900_000);
+      // ── Wait for take TX confirmation (up to 15 min for testnet) ──
+      await waitForTxConfirmation(tasTxId, (s) => updateOpStep(opId, `Step 1/3: ${s}`), 900_000);
 
       // ── Step 2: Send Fractal BTC via UniSat ──
       const targetHex = isBtcToFb ? order.makerAddr : order.takerAddr;
@@ -420,8 +420,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
       completeOp(opId);
       void unlockOrder(lockKey, walletAddress);
       toast(`Order #${orderId} fully settled! Paid ${satsToBtc(fbAmountSats)} FB, got ${satsToBtc(order.btcAmount)} BTC`, 'success', tasCompleteTxLink);
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(tasCompleteTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
     } catch (e) {
       failOp(opId, formatTxError(e));
       void unlockOrder(lockKey, walletAddress);
@@ -479,8 +479,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       completeOp(opId);
       toast(`Order #${orderId} fully settled!`, 'success', sacTxLink);
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(sacTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
     } catch (e) {
       failOp(opId, formatTxError(e));
       setActionStep(formatTxError(e));
@@ -514,8 +514,8 @@ export function useFractalSwap(state: CrossChainState): FractalSwapActions {
 
       toast('Refund sent! BTC returned.', 'success', refundTxLink);
       setActionStep('');
-      // Background: refresh after next block
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
+      // Background: confirm TX, then refresh
+      void waitForTxConfirmation(refundTxId).then(() => { emitBalanceRefresh(); void fetchOrders(); }).catch(() => {});
       return;
     } catch (e) {
       setActionStep(formatTxError(e));

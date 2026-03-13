@@ -8,7 +8,7 @@ import {
 import { POOL_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForTxConfirmation, emitBalanceRefresh } from '../txUtils';
 import { addTxRecord } from '../txHistory';
 import { DEPLOYED_CONTRACTS, POOL_ADDRESS, POOL_PUBKEY, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { fetchAllTokens, type IndexedToken } from '../tokenApi';
@@ -135,14 +135,14 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       if (mineRes.txId) updateOpStep(aOpId, 'MINE approved, confirming...', { approve_mine: mineRes.txId });
 
       // Step 2: Ensure VIBE allowance (if MINE needed approval, UTXOs changed — wait for block)
-      if (mineRes.approved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
+      if (mineRes.approved && mineRes.txId) await waitForTxConfirmation(mineRes.txId, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
       updateOpStep(aOpId, 'Approving VIBE...');
       const vibeRes = await ensureAllowance(
         DEPLOYED_CONTRACTS.VIBE.address, POOL_PUBKEY, vibeRaw,
         provider, senderAddr, walletAddress, (s: string) => { setStep(s); updateOpStep(aOpId, s); }, 'VIBE',
       );
       if (vibeRes.txId) updateOpStep(aOpId, 'VIBE approved, confirming...', { approve_vibe: vibeRes.txId });
-      if (vibeRes.approved) await waitForNextBlock(provider, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
+      if (vibeRes.approved && vibeRes.txId) await waitForTxConfirmation(vibeRes.txId, (s: string) => { setStep(s); updateOpStep(aOpId, s); });
 
       // Step 3: addLiquidity on pool
       updateOpStep(aOpId, `Adding ${mAmt} MINE + ${vAmt} VIBE...`);
@@ -158,7 +158,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setLpMine(prev => prev + mAmt);
       setLpVibe(prev => prev + vAmt);
       addTxRecord({ type: 'mint', txHash: addReceipt.transactionId || '', tokenA: 'LP', amountA: `${mAmt}+${vAmt}`, status: 'confirmed', wallet: walletAddress });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(onRefresh, 1000); }).catch(() => {});
+      void waitForTxConfirmation(addReceipt.transactionId || '').then(() => { emitBalanceRefresh(); setTimeout(onRefresh, 1000); }).catch(() => {});
     } catch (e) {
       failOp(aOpId, formatTxError(e));
       setStep('');
@@ -212,7 +212,7 @@ const LiquidityModal: React.FC<Props> = ({ open, onClose, reserveA, reserveB, ba
       setVibeAmt('');
       setResult({ ok: true, msg: `Removed ${m.toLocaleString()} MINE + ${v.toLocaleString()} VIBE. Tokens returned to your wallet!`, txHash: receipt.transactionId || '' });
       addTxRecord({ type: 'claim', txHash: receipt.transactionId || '', tokenA: 'LP', amountA: `${m}+${v}`, status: 'confirmed', wallet: walletAddress });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(onRefresh, 1000); }).catch(() => {});
+      void waitForTxConfirmation(receipt.transactionId || '').then(() => { emitBalanceRefresh(); setTimeout(onRefresh, 1000); }).catch(() => {});
     } catch (e) {
       failOp(rOpId, formatTxError(e));
       setStep('');

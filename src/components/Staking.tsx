@@ -8,7 +8,7 @@ import {
 import { STAKING_ABI } from '../abis';
 import { getProvider } from '../contractCache';
 import { NETWORK, CURRENT_ENV } from '../config';
-import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForNextBlock, emitBalanceRefresh } from '../txUtils';
+import { ensureAllowance, buildTxParams, withRetry, formatTxError, waitForTxConfirmation, emitBalanceRefresh } from '../txUtils';
 import {
   DEPLOYED_CONTRACTS, STAKING_ADDRESS, STAKING_PUBKEY, STAKING_DEPLOYED,
   getContractOpscanUrl, getTxUrl,
@@ -157,7 +157,7 @@ const Staking: React.FC = () => {
       setStep('');
       setResult({ type: 'success', msg: `Staked ${amt.toLocaleString()} MINE!`, txHash });
       addTxRecord({ type: 'mint', txHash: receipt.transactionId || '', tokenA: 'MINE', amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
+      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       failOp(sOpId, formatTxError(e));
       setStep('');
@@ -190,7 +190,7 @@ const Staking: React.FC = () => {
       completeOp(uOpId);
       setStep('');
       setResult({ type: 'success', msg: `Unstaked ${amt.toLocaleString()} MINE!`, txHash });
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
+      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       setStep('');
       setResult({ type: 'error', msg: e instanceof Error ? e.message : 'Unstake failed' });
@@ -222,7 +222,7 @@ const Staking: React.FC = () => {
       const ts = Date.now();
       setLastClaimTs(ts);
       try { localStorage.setItem(claimKey, String(ts)); } catch (e) { logger.warn('[Staking] Failed to save claim timestamp to localStorage:', e); }
-      void waitForNextBlock(provider).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
+      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setTimeout(() => setRefreshKey(k => k + 1), 1000); }).catch(() => {});
     } catch (e) {
       setStep('');
       setResult({ type: 'error', msg: e instanceof Error ? e.message : 'Claim failed' });

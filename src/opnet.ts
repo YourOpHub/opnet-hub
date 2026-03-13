@@ -70,7 +70,8 @@ async function rpc(method: string, params: unknown[] = [], timeoutMs = 8000, ret
       }
     }
   }
-  logger.warn(`[OP_NET RPC] ${method} failed after ${retries + 1} attempts:`, lastError);
+  // Only log warning for retried calls; single-shot calls (retries=0) are handled by caller
+  if (retries > 0) logger.warn(`[OP_NET RPC] ${method} failed after ${retries + 1} attempts:`, lastError);
   throw lastError;
 }
 

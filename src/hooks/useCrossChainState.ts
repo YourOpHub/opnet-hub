@@ -434,15 +434,14 @@ export function useCrossChainState(): CrossChainState {
       stored[orderId] = { r: rateNum, rx: receiveSats.toString() };
       localStorage.setItem('fractalswap_rates', JSON.stringify(stored));
     } catch (e) { logger.warn('[CrossChain] Failed to save rate to localStorage:', e); }
-    {
-      fetch(`${API_URL}/api/orders/rate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, sendSats: sendSats.toString(), receiveSats: receiveSats.toString(), sendUnit: sUnit, receiveUnit: rUnit, rate: rateNum }),
-      }).then(r => {
-        if (r.ok) setServerRates(prev => ({ ...prev, [orderId]: { send_sats: sendSats.toString(), receive_sats: receiveSats.toString(), send_unit: sUnit, receive_unit: rUnit, rate: rateNum } }));
-      }).catch((e) => { logger.warn('[useCrossChainState] Rate sync error:', e); });
-    }
+    void fetch(`${API_URL}/api/orders/rate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, sendSats: sendSats.toString(), receiveSats: receiveSats.toString(), sendUnit: sUnit, receiveUnit: rUnit, rate: rateNum }),
+      signal: AbortSignal.timeout(5000),
+    }).then(r => {
+      if (r.ok) setServerRates(prev => ({ ...prev, [orderId]: { send_sats: sendSats.toString(), receive_sats: receiveSats.toString(), send_unit: sUnit, receive_unit: rUnit, rate: rateNum } }));
+    }).catch(() => { /* Rate sync is best-effort — silently ignore */ });
   }, [API_URL]);
 
   // ── FractalSwap derived state ──

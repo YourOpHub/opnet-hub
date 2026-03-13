@@ -98,9 +98,9 @@ NativeSwap: C-01 bitmap, C-02 effective reserves, C-03 reservation limits, H-03 
 |----------|---------|
 | MINE Token | `opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa` |
 | VIBE Token | `opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl` |
-| SimplePool v4 | `opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex` |
-| SimpleStaking v3 | `opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c` |
-| P2PMarket v9 | `opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt` |
+| SimplePool v6 | `opt1sqz6acsz9tkyfzzlg337x35swysmtp4u8kye8u2pv` |
+| SimpleStaking v4 | `opt1sqzfsz6csap8jpv8ueac5n2u0vx2a85epuyk9ez5c` |
+| P2PMarket v10 | `opt1sqzveth6qep7ajey4vwcuujw049ke4z7khs7097qn` |
 | NativeSwap v5 | `opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj` |
 | FractalSwap v7 | `opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu` |
 

@@ -38,9 +38,9 @@ const TWEAKED_A = Buffer.from(walletA._tweakedKey).toString('hex');
 const TWEAKED_B = Buffer.from(walletB._tweakedKey).toString('hex');
 
 // Contract addresses
-const NATIVESWAP = 'opt1sqral2q69evhz02lt8yrytfqheyjqy9rk4scf86p8';
-const NATIVESWAP_PK = '0x227a8a279f61c463d835e0635480927047be7bc948452431e95403ddf256b4c7';
-const NATIVESWAP_HEX = '227a8a279f61c463d835e0635480927047be7bc948452431e95403ddf256b4c7';
+const NATIVESWAP = 'opt1sqp3uxpgy9yjrhpvjukhpqhmsqr4qe7hahgup8cuj';
+const NATIVESWAP_PK = '0x51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
+const NATIVESWAP_HEX = '51649d55996afffaad032f897dcd7ad17d6ead208b53a8eee29237494029f900';
 const MINE = 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa';
 const MINE_PK = '0xdb2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d';
 

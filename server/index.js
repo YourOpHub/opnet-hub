@@ -549,7 +549,7 @@ app.post('/api/faucet/claim', faucetLimiter, async (req, res) => {
 });
 
 // ─── Pool Snapshots API ───
-const POOL_SNAPSHOT_ADDRESS = process.env.POOL_ADDRESS || 'opt1sqrfwvy6ekprrx9h5nwem9d07nufuzqhxg5zg6ar2';
+const POOL_SNAPSHOT_ADDRESS = process.env.POOL_ADDRESS || 'opt1sqz6acsz9tkyfzzlg337x35swysmtp4u8kye8u2pv';
 const POOL_SNAPSHOT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const GET_RESERVES_SELECTOR = '06374bfc';
 

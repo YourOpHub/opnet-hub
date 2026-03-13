@@ -33,7 +33,7 @@ const TX_DELAY = 2000;         // delay between TXs
 
 const C = {
     MINE:       { addr: 'opt1sqrwvpmkj7syt6c4g2c5x46g2k7dpypl7accseewa', pk: 'db2b3427af74557818643536cbb299fb105ac7327c930751ab50d673c1cf0f9d' },
-    MARKET:     { addr: 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt', pk: 'd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595' },
+    MARKET:     { addr: 'opt1sqzveth6qep7ajey4vwcuujw049ke4z7khs7097qn', pk: '4e027a4fdae4a71be26a285fc9a802387aade4280d78bcbe8e898062d0ce7097' },
     CROSSCHAIN: { addr: 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu', pk: '526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2' },
 };
 

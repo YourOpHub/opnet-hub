@@ -13,9 +13,9 @@ const VIBE_ADDRESS = 'opt1sqzc940wqqhjrvxj8zw04xuqps992aknmpq5ts8fl';
 const VIBE_HEX = '1aac600a01af5af5210f7d90d9d33ec281ddab4c86394de3cdead6743bced818';
 
 // New pool address from deploy
-const POOL_ADDRESS = 'opt1sqplvfq5ytgtwzes6tc4ys77f90279rsz8q4dg7ex';
-const POOL_PUBKEY = '0xcc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
-const POOL_HEX = 'cc89d6c4764ed98b097860c5d8bc6b5432ece5ef11aa3eb7d9b8d65de5262bdc';
+const POOL_ADDRESS = 'opt1sqz6acsz9tkyfzzlg337x35swysmtp4u8kye8u2pv';
+const POOL_PUBKEY = '0xb4c67df83e48afab333c1c9d0a9120924bd99342f6c1ecf2a1d42bf6db8d393e';
+const POOL_HEX = 'b4c67df83e48afab333c1c9d0a9120924bd99342f6c1ecf2a1d42bf6db8d393e';
 
 // Seed amounts
 const MINE_LIQUIDITY = 500_000n * 100_000_000n;  // 500K MINE (reduced, low on sats)

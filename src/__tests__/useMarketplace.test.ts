@@ -86,8 +86,8 @@ vi.mock('../contracts', () => ({
       decimals: 8,
     },
   },
-  MARKET_ADDRESS: 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt',
-  MARKET_PUBKEY: '0xd44b7c6a2f1cc47452d81c4184a48acb6cc880549724088d786cbf57a257e595',
+  MARKET_ADDRESS: 'opt1sqzveth6qep7ajey4vwcuujw049ke4z7khs7097qn',
+  MARKET_PUBKEY: '0x4e027a4fdae4a71be26a285fc9a802387aade4280d78bcbe8e898062d0ce7097',
   getContractOpscanUrl: vi.fn((addr: string) => `https://opscan.org/accounts/${addr}`),
   getTxUrl: vi.fn((txid: string) => `https://opscan.org/transactions/${txid}`),
   addressToPubkey: vi.fn((addr: string) => addr),
@@ -612,7 +612,7 @@ describe('handleSearchSelect logic', () => {
   });
 
   it('resolves opt1sq address directly', () => {
-    const addr = 'opt1sqq3l4ku6vf4xeyr0603mehwvf9rp2ja39ghx02qt';
+    const addr = 'opt1sqzveth6qep7ajey4vwcuujw049ke4z7khs7097qn';
     expect(resolveSearch(addr, tokenList)).toBe(addr);
   });
 

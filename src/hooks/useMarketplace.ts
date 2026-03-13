@@ -545,6 +545,16 @@ export function useMarketplace(): UseMarketplaceReturn {
 
       const market = getContract<MarketContract>(MARKET_ADDRESS, MARKETPLACE_ABI, provider, NETWORK, senderAddr);
 
+      // Pre-flight: verify order is still active on-chain before spending gas
+      try {
+        const liveOrder = await market.getOrder(BigInt(orderId));
+        const liveStatus = Number((liveOrder?.properties as Record<string, unknown>)?.status ?? 0n);
+        if (liveStatus !== 1) throw new Error('Order is no longer active (already filled or cancelled)');
+      } catch (e) {
+        if (e instanceof Error && e.message.includes('no longer active')) throw e;
+        // RPC error — proceed anyway, let simulation catch it
+      }
+
       let fillReceipt: unknown;
       if (order.type === 'sell') {
         const rawPayment = BigInt(Math.ceil(fillAmt * order.pricePerToken));

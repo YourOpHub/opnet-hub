@@ -72,45 +72,37 @@ const Marketplace: React.FC = () => {
           </div>
         )}
 
-        {/* Two-column: Sell orders | Buy orders — exchange-style tables */}
+        {/* Two-column: For Sale | Buy Requests — exchange-style tables */}
         <div className="d-grid gap-12 mb-16 grid-1-1">
-          {/* SELL ORDERS (asks) */}
+          {/* FOR SALE — other people selling, you can buy */}
           <div className="P p-0-overflow-hidden">
             <div className="fw-700 fs-86 c-red d-flex ai-baseline gap-6 p-12-12-6">
-              Sell Orders
-              <span className="fs-62 fw-600 c-t2">Asks</span>
+              For Sale
+              <span className="fs-62 fw-600 c-t2">you pay BTC, get tokens</span>
               <span className="ob-badge c-red ml-auto ob-badge-red">{sellOrders.length}</span>
             </div>
             {ordersLoading && sellOrders.length === 0 ? (
-              <div className="ob-empty c-t3">Loading sell orders...</div>
+              <div className="ob-empty c-t3">Loading...</div>
             ) : sellOrders.length === 0 ? (
               <div className="ob-empty">
-                <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: 0.7, marginBottom: 8 }} />
-                <div>No sell orders yet — be the first to create one!</div>
+                <div className="c-t4 fs-74">No tokens for sale yet</div>
               </div>
             ) : (
               <div className="ob-scroll">
-                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
-                  <span>Amount</span><span className="ob-r">Price</span><span className="ob-r">Total</span>
-                  <span className="ob-r">Fill</span><span className="ob-r">Action</span>
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 80px auto' }}>
+                  <span>Amount</span><span className="ob-r">Price</span><span className="ob-r">Cost</span>
+                  <span className="ob-r">Action</span>
                 </div>
                 {sellOrders.map((o: Order) => {
                   const remaining = o.amount - o.amountFilled;
                   const totalCostSats = Math.ceil(remaining * o.pricePerToken);
-                  const pct = o.amount > 0 ? Math.round((o.amountFilled / o.amount) * 100) : 0;
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 80px auto' }}>
                       <span className="ob-mono c-w">
                         {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
-                      <span className="ob-mono ob-r fw-700 c-red">{o.pricePerToken}</span>
+                      <span className="ob-mono ob-r fw-700 c-red">{o.pricePerToken} <span className="fs-xs fw-400 c-t3">sat</span></span>
                       <span className="ob-mono ob-r c-o">{fmtNum(totalCostSats)}</span>
-                      <span className="ob-r pos-relative">
-                        <span className="c-t2">{pct}%</span>
-                        {pct > 0 && <div className="pos-absolute br-1" style={{ bottom: 0, left: 0, right: 0, height: 2, background: 'rgba(255,255,255,.08)' }}>
-                          <div className="br-1" style={{ height: '100%', background: 'rgba(239,68,68,.5)', width: `${pct}%` }} />
-                        </div>}
-                      </span>
                       <div className="ob-act">
                         {o.creator === senderHex ? (
                           <button className="ob-btn danger" onClick={() => handleCancel(o.id)}>Cancel</button>
@@ -127,8 +119,10 @@ const Marketplace: React.FC = () => {
                           </div>
                         ) : (
                           <div className="flex-center gap-4">
-                            <button className="ob-btn green" onClick={() => handleFill(o.id)} disabled={filling}>Buy</button>
-                            <button className="ob-btn" onClick={() => setFillId(o.id)}>Partial</button>
+                            <button className="ob-btn green" onClick={() => handleFill(o.id)} disabled={filling}>
+                              Buy tokens
+                            </button>
+                            <button className="ob-btn" onClick={() => setFillId(o.id)} title="Buy partial amount">Part</button>
                           </div>
                         )}
                       </div>
@@ -139,47 +133,42 @@ const Marketplace: React.FC = () => {
             )}
           </div>
 
-          {/* BUY ORDERS (bids) */}
+          {/* BUY REQUESTS — other people want to buy, you can sell to them */}
           <div className="P p-0-overflow-hidden">
             <div className="fw-700 fs-86 c-g d-flex ai-baseline gap-6 p-12-12-6">
-              Buy Orders
-              <span className="fs-62 fw-600 c-t2">Bids</span>
+              Buy Requests
+              <span className="fs-62 fw-600 c-t2">you send tokens, get BTC</span>
               <span className="ob-badge c-g ml-auto ob-badge-green">{buyOrders.length}</span>
             </div>
             {ordersLoading && buyOrders.length === 0 ? (
-              <div className="ob-empty c-t3">Loading buy orders...</div>
+              <div className="ob-empty c-t3">Loading...</div>
             ) : buyOrders.length === 0 ? (
               <div className="ob-empty">
-                <img src="/icons/empty-orders.png" alt="" style={{ width: 80, opacity: 0.7, marginBottom: 8 }} />
-                <div>No buy orders yet — be the first to create one!</div>
+                <div className="c-t4 fs-74">No buy requests yet</div>
               </div>
             ) : (
               <div className="ob-scroll">
-                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
-                  <span>Wants</span><span className="ob-r">Price</span><span className="ob-r">Locked</span>
-                  <span className="ob-r">Fill</span><span className="ob-r">Action</span>
+                <div className="ob-hdr" style={{ gridTemplateColumns: '1fr 70px 80px auto' }}>
+                  <span>Wants</span><span className="ob-r">Price</span><span className="ob-r">BTC locked</span>
+                  <span className="ob-r">Action</span>
                 </div>
                 {buyOrders.map((o: Order) => {
                   const remaining = o.amount - o.amountFilled;
                   const totalCostSats = Math.ceil(remaining * o.pricePerToken);
                   const isMyBuyOrder = o.creator === senderHex;
-                  const pct = o.amount > 0 ? Math.round((o.amountFilled / o.amount) * 100) : 0;
                   return (
-                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 90px 40px auto' }}>
+                    <div key={o.id} className="ob-row" style={{ gridTemplateColumns: '1fr 70px 80px auto' }}>
                       <span className="ob-mono c-w">
                         {fmtNum(remaining)} <span className="fs-xs c-t3">/ {fmtNum(o.amount)}</span>
                       </span>
-                      <span className="ob-mono ob-r fw-700 c-g">{o.pricePerToken}</span>
+                      <span className="ob-mono ob-r fw-700 c-g">{o.pricePerToken} <span className="fs-xs fw-400 c-t3">sat</span></span>
                       <span className="ob-mono ob-r c-o">{fmtNum(totalCostSats)}</span>
-                      <span className="ob-r pos-relative">
-                        <span className="c-t2">{pct}%</span>
-                      </span>
                       <div className="ob-act">
                         {isMyBuyOrder ? (
                           <button className="ob-btn danger" onClick={() => handleCancel(o.id)}>Cancel</button>
                         ) : (
                           <button className="ob-btn accent" onClick={() => handleFill(o.id)} disabled={filling}>
-                            {filling ? '..' : 'Sell'}
+                            {filling ? '..' : 'Sell tokens'}
                           </button>
                         )}
                       </div>
@@ -289,11 +278,8 @@ const Marketplace: React.FC = () => {
   // ════════════════════════════════
   // TOKEN LIST VIEW
   // ════════════════════════════════
-  const sortOptions: { key: 'holders' | 'volume' | 'orders'; label: string }[] = [
-    { key: 'holders', label: 'Holders' },
-    { key: 'volume', label: 'Volume' },
-    { key: 'orders', label: 'Orders' },
-  ];
+  const sortArrow = (key: 'holders' | 'volume' | 'orders'): string =>
+    tokenSort === key ? ' \u25BC' : '';
 
   return (
     <div className="max-w-900">
@@ -305,7 +291,7 @@ const Marketplace: React.FC = () => {
         </p>
       </div>
 
-      <div className="flex-center gap-8 mb-10">
+      <div className="flex-center gap-8 mb-14">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, symbol or paste contract address..."
           onKeyDown={e => e.key === 'Enter' && handleSearchSelect()}
           aria-label="Search tokens by name, symbol, or contract address"
@@ -315,21 +301,6 @@ const Marketplace: React.FC = () => {
             Open &rarr;
           </button>
         )}
-      </div>
-
-      <div className="flex-center gap-6 mb-14">
-        <span className="fs-62 c-t4">Sort:</span>
-        {sortOptions.map(s => (
-          <button key={s.key} onClick={() => setTokenSort(s.key)}
-            className="br-8 pointer ff-ui fs-64 p-4-10"
-            style={{
-              background: tokenSort === s.key ? 'rgba(16,185,129,.12)' : 'transparent',
-              border: `1px solid ${tokenSort === s.key ? 'rgba(16,185,129,.3)' : 'var(--bd)'}`,
-              color: tokenSort === s.key ? 'var(--g)' : 'var(--t3)',
-            }}>
-            {s.label}
-          </button>
-        ))}
       </div>
 
       {loading ? (
@@ -342,12 +313,20 @@ const Marketplace: React.FC = () => {
         </div>
       ) : (
         <div className="P p-0-overflow-hidden" role="list" aria-label="Available tokens">
-          {/* Header */}
           <div className="ob-hdr" style={{ gridTemplateColumns: '2fr 70px 70px 55px 55px' }}>
             <span>Token</span>
-            <span className="ob-r">Holders</span>
-            <span className="ob-r">Volume</span>
-            <span className="ob-r">Sells</span>
+            <span className="ob-r pointer" onClick={() => setTokenSort('holders')}
+              style={{ color: tokenSort === 'holders' ? 'var(--g)' : undefined, cursor: 'pointer' }}>
+              Holders{sortArrow('holders')}
+            </span>
+            <span className="ob-r pointer" onClick={() => setTokenSort('volume')}
+              style={{ color: tokenSort === 'volume' ? 'var(--g)' : undefined, cursor: 'pointer' }}>
+              Volume{sortArrow('volume')}
+            </span>
+            <span className="ob-r pointer" onClick={() => setTokenSort('orders')}
+              style={{ color: tokenSort === 'orders' ? 'var(--g)' : undefined, cursor: 'pointer' }}>
+              Sells{sortArrow('orders')}
+            </span>
             <span className="ob-r">Bids</span>
           </div>
           {filteredTokens.map((t: MarketToken) => (

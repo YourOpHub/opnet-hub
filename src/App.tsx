@@ -59,12 +59,6 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
     {
-        id: 'launchpad', label: 'Launchpad', icon: '\u2726',
-        items: [
-            { id: 'launch', label: 'Deploy' },
-        ],
-    },
-    {
         id: 'defi', label: 'DeFi', icon: '\u25C8',
         items: [
             { id: 'swap', label: 'Swap' },
@@ -273,6 +267,13 @@ const App: React.FC = () => {
                             >
                                 Home
                             </button>
+                            <button
+                                className={`Nt ${tab === 'launch' ? 'on' : ''}`}
+                                onClick={() => { navigate('launch'); setOpenGroup(null); }}
+                            >
+                                <span className="nav-group-icon" aria-hidden="true">{'\u2726'}</span>
+                                Launchpad
+                            </button>
                             {NAV_GROUPS.map(g => (
                                 <div key={g.id} className="nav-group"
                                     onMouseEnter={() => { clearTimeout(navGroupTimer.current); setOpenGroup(g.id); }}
@@ -361,6 +362,9 @@ const App: React.FC = () => {
             <nav className="mobile-nav" role="navigation" aria-label="Mobile navigation">
                 <button className={`mn-item ${tab === 'home' ? 'on' : ''}`} onClick={() => navigate('home')} aria-label="Home" aria-current={tab === 'home' ? 'page' : undefined}>
                     <span className="mn-icon" aria-hidden="true">{'\u2302'}</span><span className="mn-label">Home</span>
+                </button>
+                <button className={`mn-item ${tab === 'launch' ? 'on' : ''}`} onClick={() => navigate('launch')} aria-label="Launchpad" aria-current={tab === 'launch' ? 'page' : undefined}>
+                    <span className="mn-icon" aria-hidden="true">{'\u2726'}</span><span className="mn-label">Launch</span>
                 </button>
                 {NAV_GROUPS.map(g => (
                     <button key={g.id} className={`mn-item ${activeGroup === g.id ? 'on' : ''}`}

@@ -17,7 +17,11 @@ import LaunchpadForm from './launchpad/LaunchpadForm';
 import LaunchpadTokenList from './launchpad/LaunchpadTokenList';
 import LaunchpadDeployProgress from './launchpad/LaunchpadDeployProgress';
 
-const Launchpad: React.FC = () => {
+interface LaunchpadProps {
+  onNav?: (id: string, params?: { token?: string }) => void;
+}
+
+const Launchpad: React.FC<LaunchpadProps> = ({ onNav }) => {
   const { walletAddress, address: senderAddr } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
 
@@ -169,6 +173,7 @@ const Launchpad: React.FC = () => {
         onSelectedChange={setSelected}
         syncToken={syncToken}
         syncBalance={syncBalance}
+        onNav={onNav}
       />
       <LaunchpadForm open={deployOpen} onClose={() => setDeployOpen(false)} onCreated={handleCreated} />
     </div>

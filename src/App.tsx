@@ -188,7 +188,14 @@ const App: React.FC = () => {
         else openConnectModal();
     }, [wOn, disconnect, openConnectModal]);
 
-    const navigate = useCallback((id: string) => {
+    const [marketInitToken, setMarketInitToken] = useState<string | null>(null);
+
+    const navigate = useCallback((id: string, params?: { token?: string }) => {
+        if (id === 'market' && params?.token) {
+            setMarketInitToken(params.token);
+        } else if (id !== 'market') {
+            setMarketInitToken(null);
+        }
         setTab(id);
         // auto-expand group for active tab
         const g = findGroup(id);
@@ -224,8 +231,8 @@ const App: React.FC = () => {
             case 'swap': return wrap(<SwapUI />, 'Swap');
             case 'staking': return wrap(<Staking />, 'Staking');
             case 'analytics': return wrap(<Analytics />, 'Analytics');
-            case 'launch': return wrap(<Launchpad />, 'Launchpad');
-            case 'market': return wrap(<Marketplace />, 'Marketplace');
+            case 'launch': return wrap(<Launchpad onNav={navigate} />, 'Launchpad');
+            case 'market': return wrap(<Marketplace initialToken={marketInitToken} />, 'Marketplace');
             case 'xchain': return wrap(<CrossChainMarketplace />, 'Cross-Chain');
             case 'game': return wrap(<SatoshiMiner />, 'Satoshi Miner');
             case 'news': return wrap(<NewsFeed />, 'News');

@@ -28,12 +28,13 @@ export interface LaunchpadDeployProgressProps {
   onSelectedChange: (token: LaunchToken) => void;
   syncToken: (addr: string) => Promise<void>;
   syncBalance: (addr: string) => Promise<void>;
+  onNav?: ((id: string, params?: { token?: string }) => void) | undefined;
 }
 
 const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
   selected, userBal, holderCount, opscanHolderList, opscanHolders,
   mintAmt, setMintAmt, minting, setMinting, mintStep, setMintStep,
-  onTokensChange, onSelectedChange, syncToken, syncBalance,
+  onTokensChange, onSelectedChange, syncToken, syncBalance, onNav,
 }) => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const { trackOp, completeOp, failOp, updateOpStep } = useOps();
@@ -199,6 +200,12 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
             {isReal && <a href={getContractOpscanUrl(selected.address)} target="_blank" rel="noopener noreferrer" className="br-8 c-c fs-62 no-decoration fw-600 p-4-10 bg-info-b">OPScan</a>}
             {isReal && selected.txHash && <a href={getTxUrl(selected.txHash)} target="_blank" rel="noopener noreferrer" className="br-8 c-o fs-62 no-decoration fw-600 p-4-10 bg-info-o-08">Deploy TX</a>}
           </div>
+          {isReal && onNav && (
+            <button onClick={() => onNav('market', { token: selected.address })}
+              className="lbtn w-full mb-8" style={{ fontSize: '.76rem' }}>
+              Trade on Market
+            </button>
+          )}
           <div className="fs-sm c-t3 lh-15">Trade on <strong>Swap</strong> page via MotoSwap AMM pools.</div>
         </div>
 

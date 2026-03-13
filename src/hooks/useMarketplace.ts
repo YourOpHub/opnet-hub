@@ -36,6 +36,7 @@ import { MARKET_ADDRESS, MARKET_PUBKEY, DEPLOYED_CONTRACTS, getContractOpscanUrl
 import { useToast } from '../components/Toast';
 import { lockOrder, unlockOrder, getActiveLocks } from '../swapApi';
 import { useOps } from '../contexts/OpsContext';
+import { loadTokens as loadLaunchpadTokens } from '../launchpad/store';
 
 const MARKET_API = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -177,7 +178,7 @@ export interface UseMarketplaceReturn {
  * Manages P2P marketplace orders: create, fill, execute, and cancel on-chain orders.
  * @returns Order state, token list, form state, and order action handlers.
  */
-export function useMarketplace(): UseMarketplaceReturn {
+export function useMarketplace(initialToken?: string | null): UseMarketplaceReturn {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
   const provider = useMemo(() => getProvider(), []);
   const { toast } = useToast();
@@ -353,12 +354,24 @@ export function useMarketplace(): UseMarketplaceReturn {
             merged.push({ ...st, pubkey: pk, decimals: st.decimals || 8, holders: holderMap[pk] ?? 0 });
           }
         }
+        // Append launchpad tokens not already in merged list
+        for (const lt of loadLaunchpadTokens()) {
+          if (lt.address.startsWith('opt1sq') && !merged.find(m => m.address === lt.address)) {
+            merged.push({ address: lt.address, pubkey: '', symbol: lt.symbol, name: lt.name, decimals: lt.decimals, sellCount: 0, buyCount: 0, totalVolume: 0, holders: 0 });
+          }
+        }
         setTokenList(merged);
         setLoading(false);
         return;
       }
     } catch (e) { logger.warn('[useMarketplace] Token server offline, using fallback:', e); }
-    setTokenList(KNOWN_TOKENS.map(kt => ({ ...kt, holders: holderMap[kt.pubkey] ?? 0 })));
+    const fallback = KNOWN_TOKENS.map(kt => ({ ...kt, holders: holderMap[kt.pubkey] ?? 0 }));
+    for (const lt of loadLaunchpadTokens()) {
+      if (lt.address.startsWith('opt1sq') && !fallback.find(m => m.address === lt.address)) {
+        fallback.push({ address: lt.address, pubkey: '', symbol: lt.symbol, name: lt.name, decimals: lt.decimals, sellCount: 0, buyCount: 0, totalVolume: 0, holders: 0 });
+      }
+    }
+    setTokenList(fallback);
     setLoading(false);
   }, []);
 
@@ -377,6 +390,11 @@ export function useMarketplace(): UseMarketplaceReturn {
 
   useEffect(() => { void fetchTokens(); }, [fetchTokens]);
   useEffect(() => { if (selectedToken) void fetchOrders(); }, [selectedToken, fetchOrders]);
+
+  // Auto-select token from external navigation (e.g. Launchpad → Marketplace)
+  useEffect(() => {
+    if (initialToken) setSelectedToken(initialToken);
+  }, [initialToken]);
 
   // Derived state
   const filteredTokens = useMemo(() => {

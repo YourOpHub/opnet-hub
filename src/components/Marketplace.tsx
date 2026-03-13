@@ -18,7 +18,11 @@ const iStyle: React.CSSProperties = {
 /* ═══════════════════════════════════════════════════════════════
    MARKETPLACE — per-token orderbook with partial fills
    ═══════════════════════════════════════════════════════════════ */
-const Marketplace: React.FC = () => {
+interface MarketplaceProps {
+  initialToken?: string | null;
+}
+
+const Marketplace: React.FC<MarketplaceProps> = ({ initialToken }) => {
   const {
     walletAddress, senderHex,
     loading, filteredTokens, search, setSearch, tokenSort, setTokenSort, handleSearchSelect,
@@ -30,7 +34,7 @@ const Marketplace: React.FC = () => {
     fillId, setFillId, fillAmount, setFillAmount, filling, fillStep,
     handleFill, handleCancel,
     msg, lastTxId, tokenBalance,
-  } = useMarketplace();
+  } = useMarketplace(initialToken);
 
   /* ─── RENDER ─── */
 

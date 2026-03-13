@@ -1,4 +1,4 @@
-/** FractalSwap v6 — BTC ↔ Fractal BTC swap type definitions */
+/** FractalSwap v8 — BTC ↔ Fractal BTC swap type definitions (partial fills) */
 
 export enum SwapDirection {
   BTC_TO_FB = 1,
@@ -25,6 +25,8 @@ export interface FractalSwapOrder {
   makerAddr: string;     // hex (maker's Fractal address)
   takerAddr: string;     // hex (taker's Fractal address)
   feePaid: bigint;       // sats
+  filledBtc: bigint;     // v8: cumulative BTC filled (for parent orders)
+  parentId: number;      // v8: 0 = root order, >0 = child of partial fill
 }
 
 export const MAKER_STEPS_BTC_TO_FB = ['Create Order + Lock BTC', 'Wait for Taker', 'Taker Sends FB + Claims BTC', 'Done'];

@@ -733,6 +733,7 @@ describe('FractalSwap order categorization', () => {
     id, direction, status, creator, taker,
     btcAmount, wantAmount, expiry,
     makerAddr: zero64, takerAddr: zero64, feePaid: 0n,
+    filledBtc: 0n, parentId: 0,
   });
 
   const orders: FractalSwapOrder[] = [

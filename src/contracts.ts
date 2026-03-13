@@ -179,9 +179,9 @@ export const MARKET_SELECTORS = {
     getNextOrderId: 0xf4920cae,    // getNextOrderId() → nextId
 } as const;
 
-/** FractalSwap v7 — real BTC escrow + relayer auto-complete */
-export const CROSSCHAIN_ADDRESS = env('VITE_CROSSCHAIN_ADDRESS') || 'opt1sqphsge6t2hq833cdylnuqzzw070nq0866seampsu';
-export const CROSSCHAIN_PUBKEY = env('VITE_CROSSCHAIN_PUBKEY') || '0x526fe291e36e072116516ddc28ad44276d9827f625316715d78befbe1750c0f2';
+/** FractalSwap v8 — real BTC escrow + relayer auto-complete + PARTIAL FILLS */
+export const CROSSCHAIN_ADDRESS = env('VITE_CROSSCHAIN_ADDRESS') || 'opt1sqphxm7la5z4n3ynzux84gl9dztgrgfw64cu6u3w8';
+export const CROSSCHAIN_PUBKEY = env('VITE_CROSSCHAIN_PUBKEY') || '0x761b52cc0451447c786ac7e4386811274b7f5114cdc7d47225f6a8ee3ed44c2d';
 
 /** Motoswap DEX contracts — env-overridable for mainnet migration */
 export const MOTOSWAP_FACTORY_ADDRESS = env('VITE_MOTOSWAP_FACTORY_ADDRESS') || 'opt1sqzs3e6qrtkgyfu0x592x6rdfe4r9dpjxqycyhr7w';
@@ -221,15 +221,15 @@ export const NATIVESWAP_SELECTORS = {
 /** Fee recipient P2OP address string (for on-chain output.to matching) */
 export const FEE_RECIPIENT_ADDR = 'opt1sfjnexj8d35sut49m4nw7nljwk7ctpvhdf906s8j5t40mc764ft4qptud3g';
 
-/** FractalSwap v7 selectors (from opnet-transform build output) */
+/** FractalSwap v8 selectors (from opnet-transform build output) */
 export const CROSSCHAIN_SELECTORS = {
     createOrder: 0x17b631a3,     // createOrder(uint256,uint256,uint256,uint256,uint256)
-    takeOrder: 0xfe6bb1e1,       // takeOrder(uint256,uint256)
+    takeOrder: 0xf0f0518b,       // takeOrder(uint256,uint256,uint256) — v8: 3rd param = fillBtcAmount
     completeOrder: 0x39585799,   // completeOrder(uint256) — manual completion by taker/maker
     relayerComplete: 0x4e402884, // relayerComplete(uint256) — v7: auto-complete by trusted relayer
     cancelOrder: 0xeb5aa830,     // cancelOrder(uint256)
     refundExpired: 0x7136e9b2,   // refundExpired(uint256)
-    getOrder: 0xe9489555,        // getOrder(uint256) → 10 fields
+    getOrder: 0xe9489555,        // getOrder(uint256) → 12 fields (v8: +filledBtc, +parentId)
     getNextOrderId: 0xf4920cae,  // getNextOrderId()
     setFeeRecipient: 0x5ccb9ecd, // setFeeRecipient(uint256,string)
     setFeeBps: 0xfdd3c00b,       // setFeeBps(uint256)

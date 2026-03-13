@@ -200,9 +200,9 @@ describe('OPSCAN base URLs', () => {
 
 // ---- Extended selectors ----
 describe('CROSSCHAIN_SELECTORS', () => {
-  it('has all v7 selectors', () => {
+  it('has all v8 selectors', () => {
     expect(CROSSCHAIN_SELECTORS.createOrder).toBe(0x17b631a3);
-    expect(CROSSCHAIN_SELECTORS.takeOrder).toBe(0xfe6bb1e1);
+    expect(CROSSCHAIN_SELECTORS.takeOrder).toBe(0xf0f0518b);
     expect(CROSSCHAIN_SELECTORS.completeOrder).toBe(0x39585799);
     expect(CROSSCHAIN_SELECTORS.relayerComplete).toBe(0x4e402884);
     expect(CROSSCHAIN_SELECTORS.cancelOrder).toBe(0xeb5aa830);

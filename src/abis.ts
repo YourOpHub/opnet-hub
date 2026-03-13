@@ -268,8 +268,8 @@ export const MARKETPLACE_ABI: BitcoinInterfaceAbi = [
   },
 ];
 
-// ─── FractalSwap v7 ABI ──────────────────────────────────────────────────────
-/** FractalSwap v7 ABI: createOrder, takeOrder, completeOrder, cancelOrder, refundExpired, getOrder, getNextOrderId, getFeeInfo */
+// ─── FractalSwap v8 ABI ──────────────────────────────────────────────────────
+/** FractalSwap v8 ABI: createOrder, takeOrder (partial fills), completeOrder, cancelOrder, refundExpired, getOrder (12 fields), getNextOrderId, getFeeInfo */
 export const FRACTALSWAP_ABI: BitcoinInterfaceAbi = [
   {
     name: 'createOrder',
@@ -289,8 +289,9 @@ export const FRACTALSWAP_ABI: BitcoinInterfaceAbi = [
     inputs: [
       { name: 'orderId', type: ABIDataTypes.UINT256 },
       { name: 'takerAddr', type: ABIDataTypes.UINT256 },
+      { name: 'fillBtcAmount', type: ABIDataTypes.UINT256 },
     ],
-    outputs: [{ name: 'success', type: ABIDataTypes.BOOL }],
+    outputs: [{ name: 'fillOrderId', type: ABIDataTypes.UINT256 }],
   },
   {
     name: 'completeOrder',
@@ -326,6 +327,8 @@ export const FRACTALSWAP_ABI: BitcoinInterfaceAbi = [
       { name: 'makerAddr', type: ABIDataTypes.UINT256 },
       { name: 'takerAddr', type: ABIDataTypes.UINT256 },
       { name: 'feePaid', type: ABIDataTypes.UINT256 },
+      { name: 'filledBtc', type: ABIDataTypes.UINT256 },
+      { name: 'parentId', type: ABIDataTypes.UINT256 },
     ],
   },
   {

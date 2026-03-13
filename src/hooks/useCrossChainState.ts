@@ -346,6 +346,8 @@ export function useCrossChainState(): CrossChainState {
             makerAddr: (p.makerAddr ?? 0n).toString(16).padStart(64, '0'),
             takerAddr: (p.takerAddr ?? 0n).toString(16).padStart(64, '0'),
             feePaid: p.feePaid ?? 0n,
+            filledBtc: p.filledBtc ?? 0n,
+            parentId: Number(p.parentId ?? 0n),
           });
         } catch (e) { logger.warn(`[CrossChain] Skipping unreadable order #${i}:`, e); }
       }
@@ -460,8 +462,8 @@ export function useCrossChainState(): CrossChainState {
   const receiveUnit = 'FB';
   const expiryOpts = suggestedExpiryBlocks(1);
 
-  // BTC_TO_FB only: takers see these orders and can fill them by sending FB
-  const availGetBtc = otherOpenOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB);
+  // BTC_TO_FB only: takers see these orders (root orders only, not children)
+  const availGetBtc = otherOpenOrders.filter(o => o.direction === SwapDirection.BTC_TO_FB && o.parentId === 0);
 
   // ── Token Bridge derived state ──
   const activeEscrowOrders = escrowOrders.filter(o => o.status === 1 || o.status === 2);

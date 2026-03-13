@@ -23,6 +23,8 @@ const mockOrder: FractalSwapOrder = {
   makerAddr: 'bc1qtest',
   takerAddr: '',
   feePaid: 1000n,
+  filledBtc: 0n,
+  parentId: 0,
 };
 
 vi.mock('../hooks/useCrossChain', () => ({

@@ -137,7 +137,8 @@ const EscrowOrderCardBase: React.FC<EscrowOrderCardProps> = ({
           <div className="cc-actions-row">
             {/* Take order */}
             {order.status === 1 && !isExpired && !isMyOrder && (
-              <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
+              <TakeOrderButton orderId={order.id} feeBps={100}
+                remaining={order.btcPrice}
                 onTake={(id, addr) => onTake(id, addr)} disabled={isThisTbActioning} />
             )}
 

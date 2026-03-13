@@ -173,9 +173,9 @@ describe('FRACTALSWAP_ABI', () => {
     expect(create.inputs!.length).toBe(5);
   });
 
-  it('getOrder returns 10 output fields', () => {
+  it('getOrder returns 12 output fields (v8: +filledBtc, +parentId)', () => {
     const getOrder = FRACTALSWAP_ABI.find(e => e.name === 'getOrder')! as AbiEntry;
-    expect(getOrder.outputs!.length).toBe(10);
+    expect(getOrder.outputs!.length).toBe(12);
   });
 
   it('getFeeInfo returns 2 outputs', () => {

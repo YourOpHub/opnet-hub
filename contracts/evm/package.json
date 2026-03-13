@@ -1,0 +1,26 @@
+{
+  "name": "opnet-htlc-evm",
+  "version": "1.0.0",
+  "description": "HTLC contracts for cross-chain atomic swaps on EVM chains",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "deploy:bsc-test": "hardhat run scripts/deploy.ts --network bscTestnet",
+    "deploy:polygon-test": "hardhat run scripts/deploy.ts --network polygonAmoy",
+    "deploy:arb-test": "hardhat run scripts/deploy.ts --network arbitrumSepolia",
+    "deploy:base-test": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "deploy:op-test": "hardhat run scripts/deploy.ts --network optimismSepolia",
+    "deploy:avax-test": "hardhat run scripts/deploy.ts --network avalancheFuji",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.1.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0"
+  }
+}

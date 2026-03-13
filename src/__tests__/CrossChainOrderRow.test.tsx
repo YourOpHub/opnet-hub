@@ -2,6 +2,7 @@
  * CrossChainOrderRow.test.tsx -- Tests for src/components/crosschain/CrossChainOrderRow.tsx
  *
  * Covers: TakeOrderButton, MY_COLS/AV_COLS exports, PreimageInput
+ * Updated for v8: feeBps, remaining, fillBtcAmount
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -27,7 +28,8 @@ describe('CrossChainOrderRow exports', () => {
 describe('TakeOrderButton', () => {
   const defaultProps = {
     orderId: 'order-1',
-    feeSats: 5000,
+    feeBps: 100,
+    remaining: 100000n,
     onTake: vi.fn(),
     disabled: false,
   };
@@ -39,31 +41,32 @@ describe('TakeOrderButton', () => {
 
   it('shows fee info', () => {
     render(<TakeOrderButton {...defaultProps} />);
-    expect(screen.getByText(/5.?000.*sat fee/)).toBeTruthy();
+    expect(screen.getByText(/1.?000.*sat fee/)).toBeTruthy();
   });
 
-  it('shows address input on click', () => {
+  it('shows fill + address inputs on click', () => {
     render(<TakeOrderButton {...defaultProps} />);
     fireEvent.click(screen.getByText('Take'));
+    expect(screen.getByLabelText('Fill amount in BTC')).toBeTruthy();
     expect(screen.getByLabelText('Fractal address for swap')).toBeTruthy();
   });
 
-  it('has OK button disabled without address', () => {
+  it('has Fill All button disabled without address', () => {
     render(<TakeOrderButton {...defaultProps} />);
     fireEvent.click(screen.getByText('Take'));
-    const okBtn = screen.getByText('OK');
+    const okBtn = screen.getByText('Fill All');
     expect(okBtn.hasAttribute('disabled')).toBe(true);
   });
 
-  it('calls onTake with orderId and address', () => {
+  it('calls onTake with orderId, address, and 0n for full fill', () => {
     const onTake = vi.fn();
     render(<TakeOrderButton {...defaultProps} onTake={onTake} defaultAddr="bc1ptest12345678" />);
     fireEvent.click(screen.getByText('Take'));
-    fireEvent.click(screen.getByText('OK'));
-    expect(onTake).toHaveBeenCalledWith('order-1', 'bc1ptest12345678');
+    fireEvent.click(screen.getByText('Fill All'));
+    expect(onTake).toHaveBeenCalledWith('order-1', 'bc1ptest12345678', 0n);
   });
 
-  it('cancel button hides address input', () => {
+  it('cancel button hides inputs', () => {
     render(<TakeOrderButton {...defaultProps} />);
     fireEvent.click(screen.getByText('Take'));
     expect(screen.getByLabelText('Fractal address for swap')).toBeTruthy();

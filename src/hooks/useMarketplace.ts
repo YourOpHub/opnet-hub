@@ -252,44 +252,53 @@ export function useMarketplace(): UseMarketplaceReturn {
       const nextIdResult = await market.getNextOrderId();
       const nextId = Number((nextIdResult?.properties as Record<string, unknown>)?.nextOrderId ?? 1n);
       // eslint-disable-next-line no-console
-      console.log(`[Market] Fetching orders 1..${nextId - 1} (filter: ${tokenFilter || 'none'})`);
+      console.log(`[Market] Contract=${MARKET_ADDRESS.slice(-12)} nextOrderId=${nextId} filter=${tokenFilter || 'none'}`);
       if (nextId <= 1) return [];
+
+      // Build a reverse lookup: pubkey hex → bech32 address for token filter matching
+      const pubkeyToAddr: Record<string, string> = {};
+      for (const kt of KNOWN_TOKENS) {
+        const hex = kt.pubkey.replace('0x', '').toLowerCase();
+        pubkeyToAddr[hex] = kt.address;
+      }
 
       const chainOrders: Order[] = [];
       let errors = 0;
       for (let i = 1; i < nextId && i < 200; i++) {
         try {
           const r = await market.getOrder(BigInt(i));
-          if (r?.properties == null) continue;
+          // eslint-disable-next-line no-console
+          if (r?.properties == null) { console.warn(`[Market] Order #${i}: no properties`); continue; }
           const p = r.properties as Record<string, unknown>;
           const orderType = Number(p.orderType ?? 0n);
           const status = Number(p.status ?? 0n);
           if (status !== 1) continue; // v10: only ACTIVE orders shown
           const tokenHex = ((p.token ?? 0n) as bigint).toString(16).padStart(64, '0');
           const resolved = resolveTokenHex(tokenHex);
-          const tokenBech32 = resolved?.address || tokenHex;
-          if (tokenFilter) {
-            if (tokenBech32 !== tokenFilter && !tokenHex.includes(tokenFilter.replace('opt1sq', '').slice(-16))) continue;
-          }
+          const tokenBech32 = resolved?.address || pubkeyToAddr[tokenHex.toLowerCase()] || '';
+          // eslint-disable-next-line no-console
+          console.log(`[Market] Order #${i}: type=${orderType} token=${tokenHex.slice(0, 8)}... resolved=${tokenBech32.slice(-12) || 'NONE'} filter=${tokenFilter?.slice(-12) || '-'}`);
+          if (tokenFilter && tokenBech32 && tokenBech32 !== tokenFilter) continue;
+          // If token not resolved and filter is set, skip (can't match unknown tokens)
+          if (tokenFilter && !tokenBech32) continue;
           const decimals = resolved?.decimals || 8;
           const amount = Number(p.amount ?? 0n) / Math.pow(10, decimals);
           const filled = Number(p.filled ?? 0n) / Math.pow(10, decimals);
           const price = Number(p.pricePerToken ?? 0n);
-          const statusStr = 'active'; // v10: only ACTIVE orders pass the filter
           const sellerHex = ((p.seller ?? 0n) as bigint).toString(16).padStart(64, '0');
           chainOrders.push({
             id: String(i),
             type: orderType === 1 ? 'sell' : 'buy',
             creator: ((p.creator ?? 0n) as bigint).toString(16).padStart(64, '0'),
             seller: sellerHex,
-            tokenAddress: tokenBech32,
+            tokenAddress: tokenBech32 || tokenHex,
             tokenSymbol: resolved?.symbol || '???',
             tokenName: resolved?.name || 'OP20 Token',
             amount, amountFilled: filled,
             pricePerToken: price,
             totalPrice: (amount - filled) * price,
             createdAt: Date.now() / 1000,
-            status: statusStr as Order['status'],
+            status: 'active' as Order['status'],
             fills: [],
           });
         } catch (e) {
@@ -428,8 +437,20 @@ export function useMarketplace(): UseMarketplaceReturn {
 
         updateOpStep(createOpId, 'Signing sell order TX...');
         setCreateStep('Creating sell order on-chain...');
-        const sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256));
-        if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
+        // Retry simulation on allowance revert (RPC might not have indexed the approval yet)
+        let sim: CallResult | undefined;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          sim = await withRetry(() => market.createSellOrder(tokenAddr, amountU256, priceU256)) as CallResult;
+          if (!sim.revert) break;
+          if (attempt < 2 && sim.revert.toLowerCase().includes('allowance')) {
+            setCreateStep(`Waiting for allowance to propagate... (attempt ${attempt + 2}/3)`);
+            updateOpStep(createOpId, 'Waiting for allowance confirmation...');
+            await new Promise(r => setTimeout(r, 10_000));
+            continue;
+          }
+          throw new Error(`Revert: ${sim.revert}`);
+        }
+        if (!sim || sim.revert) throw new Error(`Revert: ${sim?.revert ?? 'simulation failed'}`);
         const tp = await buildTxParams(provider, walletAddress);
         createReceipt = await (sim as CallResult).sendTransaction(tp as TransactionParameters);
       } else {
@@ -586,8 +607,19 @@ export function useMarketplace(): UseMarketplaceReturn {
           }],
         });
 
-        const sim = await withRetry(() => market.fillBuyOrder(BigInt(orderId)));
-        if ((sim as CallResult).revert) throw new Error(`Revert: ${(sim as CallResult).revert}`);
+        // Retry simulation on allowance revert (RPC might be slow to index approval)
+        let sim: CallResult | undefined;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          sim = await withRetry(() => market.fillBuyOrder(BigInt(orderId))) as CallResult;
+          if (!sim.revert) break;
+          if (attempt < 2 && sim.revert.toLowerCase().includes('allowance')) {
+            setFillStep(`Waiting for allowance to propagate... (attempt ${attempt + 2}/3)`);
+            await new Promise(r => setTimeout(r, 10_000));
+            continue;
+          }
+          throw new Error(`Revert: ${sim.revert}`);
+        }
+        if (!sim || sim.revert) throw new Error(`Revert: ${sim?.revert ?? 'simulation failed'}`);
 
         const tp = await buildTxParams(provider, walletAddress);
         (tp as unknown as Record<string, unknown>).extraOutputs = [{

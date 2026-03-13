@@ -74,11 +74,11 @@ const Marketplace: React.FC = () => {
 
         {/* Two-column: For Sale | Buy Requests — exchange-style tables */}
         <div className="d-grid gap-12 mb-16 grid-1-1">
-          {/* FOR SALE — other people selling tokens for BTC */}
+          {/* FOR SALE — others selling tokens, you BUY by paying BTC */}
           <div className="P p-0-overflow-hidden">
             <div className="fw-700 fs-86 c-red d-flex ai-baseline gap-6 p-12-12-6">
               For Sale
-              <span className="fs-62 fw-600 c-t2">you send tokens, get BTC</span>
+              <span className="fs-62 fw-600 c-t2">you pay BTC, get tokens</span>
               <span className="ob-badge c-red ml-auto ob-badge-red">{sellOrders.length}</span>
             </div>
             {ordersLoading && sellOrders.length === 0 ? (
@@ -137,7 +137,7 @@ const Marketplace: React.FC = () => {
           <div className="P p-0-overflow-hidden">
             <div className="fw-700 fs-86 c-g d-flex ai-baseline gap-6 p-12-12-6">
               Buy Requests
-              <span className="fs-62 fw-600 c-t2">you pay BTC, get tokens</span>
+              <span className="fs-62 fw-600 c-t2">you send tokens, get BTC</span>
               <span className="ob-badge c-g ml-auto ob-badge-green">{buyOrders.length}</span>
             </div>
             {ordersLoading && buyOrders.length === 0 ? (

@@ -113,9 +113,9 @@ export const DEPLOYER_TWEAKED_HEX = env('VITE_DEPLOYER_TWEAKED') || '0fb4ee12787
 export const MINE_DEPLOY_TXID = '0c49c38d168dd72b3a8cf622e41af707e6a22256ae3cf2e36d33a24307948fdb';
 export const VIBE_DEPLOY_TXID = '81debce471fa810f416caaa88210a251558acc032a4ac0c0584ea1427ae60a1a';
 
-/** SimplePool v6 AMM — LP shares + configurable fee (1-500 bps) + removeLiquidity rounding fix */
-export const POOL_ADDRESS = env('VITE_POOL_ADDRESS') || 'opt1sqqhj9pld6lwsts0qljrlm3l4hjek8lhz4q4y2cl4';
-export const POOL_PUBKEY = env('VITE_POOL_PUBKEY') || '0x2acb8d7a8fce5cf7090d8c205cbb74c75c35965ff3848966ead01b80a59fca63';
+/** SimplePool v5 AMM — LP shares + configurable fee (1-500 bps) */
+export const POOL_ADDRESS = env('VITE_POOL_ADDRESS') || 'opt1sqrfwvy6ekprrx9h5nwem9d07nufuzqhxg5zg6ar2';
+export const POOL_PUBKEY = env('VITE_POOL_PUBKEY') || '0xa01ec094a09a0fbc71118a8a3b6ef2be277e95846685c3773ceb1ece467e2d57';
 export const POOL_HEX = POOL_PUBKEY.replace('0x', '');
 
 /** SimplePool v5 selectors (from opnet-transform build output) */

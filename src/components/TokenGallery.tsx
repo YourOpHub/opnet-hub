@@ -244,13 +244,13 @@ const TokenGallery: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Mint reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress);
       const fmOpId = `mint_${tok.symbol}_${Date.now()}`;
-      trackOp({ id: fmOpId, market: 'mint', orderId: tok.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${tok.symbol}...` });
+      trackOp({ id: fmOpId, market: 'mint', orderId: tok.symbol, direction: 'mint', role: '', step: `Minting ${amt.toLocaleString()} ${tok.symbol}...`, amounts: { amount: String(amt), token: tok.symbol } });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      completeOp(fmOpId);
-      setFeatMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${tok.symbol}!`, txHash });
-      addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
+      updateOpStep(fmOpId, 'TX sent! Confirming...', { mint: txHash });
+      setFeatMintResult({ ok: true, msg: `Mint TX sent! Confirming...`, txHash });
+      addTxRecord({ type: 'mint', txHash, tokenA: tok.symbol, amountA: amt.toString(), status: 'pending', wallet: walletAddress });
+      void waitForTxConfirmation(txHash).then(() => { completeOp(fmOpId); emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => { completeOp(fmOpId); });
     } catch (e) {
       setFeatMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setFeatMinting(false); }
@@ -277,13 +277,13 @@ const TokenGallery: React.FC = () => {
       if ((sim as CallResult).revert) throw new Error(`Mint simulation reverted: ${(sim as CallResult).revert}`);
       const txParams = await buildTxParams(provider, walletAddress);
       const umOpId = `mint_${token.symbol}_${Date.now()}`;
-      trackOp({ id: umOpId, market: 'mint', orderId: token.symbol, direction: '', role: '', step: `Minting ${amt.toLocaleString()} ${token.symbol}...` });
+      trackOp({ id: umOpId, market: 'mint', orderId: token.symbol, direction: 'mint', role: '', step: `Minting ${amt.toLocaleString()} ${token.symbol}...`, amounts: { amount: String(amt), token: token.symbol } });
       const receipt = await (sim as CallResult).sendTransaction(txParams);
       const txHash = receipt.transactionId || '';
-      completeOp(umOpId);
-      setMintResult({ ok: true, msg: `Minted ${amt.toLocaleString()} ${token.symbol}!`, txHash });
-      addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'confirmed', wallet: walletAddress });
-      void waitForTxConfirmation(txHash).then(() => { emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => {});
+      updateOpStep(umOpId, 'TX sent! Confirming...', { mint: txHash });
+      setMintResult({ ok: true, msg: `Mint TX sent! Confirming...`, txHash });
+      addTxRecord({ type: 'mint', txHash, tokenA: token.symbol, amountA: amt.toString(), status: 'pending', wallet: walletAddress });
+      void waitForTxConfirmation(txHash).then(() => { completeOp(umOpId); emitBalanceRefresh(); setHistRefresh(k => k + 1); }).catch(() => { completeOp(umOpId); });
     } catch (e) {
       setMintResult({ ok: false, msg: formatTxError(e) });
     } finally { setMinting(false); }

@@ -7,7 +7,7 @@ import { LAUNCHPAD_ABI } from '../../abis';
 import { getProvider } from '../../contractCache';
 import { NETWORK } from '../../config';
 import { getContractOpscanUrl, getTxUrl } from '../../contracts';
-import { buildTxParams, withRetry, formatTxError } from '../../txUtils';
+import { buildTxParams, withRetry, formatTxError, waitForTxConfirmation, emitBalanceRefresh } from '../../txUtils';
 import type { LaunchToken, TradeRecord } from '../../launchpad/types';
 import { getProgress, isGraduated, fmtNum, hashColor, genLogo, timeAgo, GRADUATION_PCT } from '../../launchpad/types';
 import { addTrade } from '../../launchpad/store';
@@ -36,7 +36,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
   onTokensChange, onSelectedChange, syncToken, syncBalance,
 }) => {
   const { walletAddress, address: senderAddr, openConnectModal } = useWalletConnect();
-  const { trackOp, completeOp } = useOps();
+  const { trackOp, completeOp, failOp, updateOpStep } = useOps();
 
   const handleMint = useCallback(async () => {
     if (!walletAddress || !senderAddr) { openConnectModal(); return; }
@@ -57,10 +57,15 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
       setMintStep('Sign in your wallet...');
       const txParams = await buildTxParams(provider, walletAddress);
       const lpOpId = `mint_${selected.symbol}_${Date.now()}`;
-      trackOp({ id: lpOpId, market: 'mint', orderId: selected.symbol, direction: '', role: '', step: `Minting ${amount.toLocaleString()} ${selected.symbol}...` });
+      trackOp({ id: lpOpId, market: 'mint', orderId: selected.symbol, direction: '', role: '', step: `Minting ${amount.toLocaleString()} ${selected.symbol}...`, amounts: { amount: String(amount), token: selected.symbol } });
       const receipt = await callRes.sendTransaction(txParams as TransactionParameters);
-      completeOp(lpOpId);
       const txHash = receipt?.transactionId || '';
+      if (txHash) {
+        updateOpStep(lpOpId, `TX broadcast: ${txHash.slice(0, 16)}...`);
+        void waitForTxConfirmation(txHash).then(() => { completeOp(lpOpId); emitBalanceRefresh(); }).catch(() => { completeOp(lpOpId); });
+      } else {
+        completeOp(lpOpId);
+      }
       setMintStep(`TX: ${txHash ? txHash.slice(0, 20) + '...' : 'broadcast'}`);
       const trade: TradeRecord = { id: `t_${Date.now()}`, type: 'buy', amount, price: 0, wallet: `${walletAddress.slice(0, 10)}...${walletAddress.slice(-4)}`, txHash, timestamp: Date.now() };
       const updated = addTrade(selected.address, trade);
@@ -75,7 +80,7 @@ const LaunchpadDeployProgress: React.FC<LaunchpadDeployProgressProps> = ({
       };
       pollMint().catch((e) => { logger.warn('[LaunchpadDeployProgress] Mint poll error:', e); setMintStep(''); });
     } catch (e) { logger.error('[LP Mint]', e); setMintStep(formatTxError(e)); setTimeout(() => setMintStep(''), 6000); } finally { setMinting(false); }
-  }, [walletAddress, senderAddr, selected, mintAmt, openConnectModal, syncToken, syncBalance, trackOp, completeOp, userBal, setMinting, setMintStep, setMintAmt, onTokensChange, onSelectedChange]);
+  }, [walletAddress, senderAddr, selected, mintAmt, openConnectModal, syncToken, syncBalance, trackOp, completeOp, failOp, updateOpStep, userBal, setMinting, setMintStep, setMintAmt, onTokensChange, onSelectedChange]);
 
   if (!selected) return (<div className="lp-main"><div className="flex-center-full c-t4 fs-82 h-full">Select a contract from the sidebar</div></div>);
 

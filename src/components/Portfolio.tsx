@@ -63,6 +63,13 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
     return () => { cancelled = true; };
   }, []);
 
+  // Auto-refresh balances when any TX confirms (mint, swap, stake, etc.)
+  useEffect(() => {
+    const handler = (): void => setRefreshKey(k => k + 1);
+    window.addEventListener('opnet:balance-refresh', handler);
+    return () => window.removeEventListener('opnet:balance-refresh', handler);
+  }, []);
+
   // Fetch pool reserves
   useEffect(() => {
     if (!POOL_ADDRESS) return;
@@ -183,7 +190,7 @@ const Portfolio: React.FC<{ walletAddress?: string; senderAddress?: Address | nu
 
     // M-02 FIX: restore previous network on unmount
     return () => { cancelled = true; opnet.setNetwork(prevNet); };
-  }, [walletAddress, senderAddress, provider]);
+  }, [walletAddress, senderAddress, provider, refreshKey]);
 
   const history = walletAddress ? getTxHistory(walletAddress) : [];
   const btcAmount = btcSats != null ? Number(btcSats) / 1e8 : 0;

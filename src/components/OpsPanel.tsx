@@ -53,6 +53,9 @@ function formatOpAmounts(op: OpEntry): string | null {
   if (op.market === 'stake' && amount && token) {
     return `${Number(amount).toLocaleString()} ${token}`;
   }
+  if (op.market === 'mint' && amount && token) {
+    return `Mint ${Number(amount).toLocaleString()} ${token}`;
+  }
   return null;
 }
 

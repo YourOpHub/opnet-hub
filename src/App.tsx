@@ -59,6 +59,13 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
     {
+        id: 'launchpad', label: 'Launchpad', icon: '\u{1F680}',
+        items: [
+            { id: 'launch', label: 'Deploy' },
+            { id: 'explorer', label: 'Explorer' },
+        ],
+    },
+    {
         id: 'defi', label: 'DeFi', icon: '\u25C8',
         items: [
             { id: 'swap', label: 'Swap' },
@@ -70,8 +77,6 @@ const NAV_GROUPS: NavGroup[] = [
     {
         id: 'tokens', label: 'Tokens', icon: '\u2B22',
         items: [
-            { id: 'explorer', label: 'Explorer' },
-            { id: 'launch', label: 'Launchpad' },
             { id: 'tools', label: 'Tools' },
             { id: 'multisend', label: 'MultiSend' },
         ],

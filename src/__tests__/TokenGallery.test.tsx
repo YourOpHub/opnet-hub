@@ -60,10 +60,13 @@ vi.mock('../contexts/OpsContext', () => ({
   })),
 }));
 vi.mock('../tokenApi', () => ({
-  fetchAllTokens: vi.fn().mockResolvedValue([
-    { symbol: 'TEST', name: 'Test Token', address: '0xabc', pubkey: '0xabc123', decimals: 8, total_supply: '100000000000000', deploy_block: 100, mintable: 1, holder_count: 5 },
-    { symbol: 'FOO', name: 'Foo Token', address: '0xdef', pubkey: '0xdef456', decimals: 8, total_supply: '0', deploy_block: 200, mintable: 0, holder_count: 0 },
-  ]),
+  fetchTokensPage: vi.fn().mockResolvedValue({
+    tokens: [
+      { symbol: 'TEST', name: 'Test Token', address: '0xabc', pubkey: '0xabc123', decimals: 8, total_supply: '100000000000000', deploy_block: 100, mintable: 1, holder_count: 5 },
+      { symbol: 'FOO', name: 'Foo Token', address: '0xdef', pubkey: '0xdef456', decimals: 8, total_supply: '0', deploy_block: 200, mintable: 0, holder_count: 0 },
+    ],
+    total: 2, lastBlock: 200, offset: 0, limit: 5000,
+  }),
   formatTokenBalance: vi.fn((s: string) => s),
 }));
 

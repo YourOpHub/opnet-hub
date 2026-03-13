@@ -743,14 +743,26 @@ app.get("/api/tokens", (req: Request, res: Response) => {
   try {
     const limit = Math.min(
       Math.max(parseInt(req.query.limit as string) || 500, 1),
-      2000
+      50000
     );
     const offset = Math.max(
       parseInt(req.query.offset as string) || 0,
       0
     );
     const tokens = indexer.getAllTokens(limit, offset);
-    res.json(tokens);
+    const status = indexer.getScanStatus() as Record<string, unknown>;
+    // If client requests paginated response (count=true), wrap with metadata
+    if (req.query.count === "true") {
+      res.json({
+        tokens,
+        total: status.tokenCount ?? tokens.length,
+        lastBlock: status.lastScannedBlock ?? 0,
+        offset,
+        limit,
+      });
+    } else {
+      res.json(tokens);
+    }
   } catch (_e) {
     res.status(500).json({ error: "Failed to fetch tokens" });
   }

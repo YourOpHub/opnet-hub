@@ -13,7 +13,7 @@ import * as opnet from '../opnet';
 import { DEPLOYED_CONTRACTS, type ContractTokenInfo, getContractOpscanUrl, getTxUrl } from '../contracts';
 import { addTxRecord, getTxHistory, formatTimeAgo, type TxRecord } from '../txHistory';
 import { useOps } from '../contexts/OpsContext';
-import { fetchAllTokens, type IndexedToken, formatTokenBalance } from '../tokenApi';
+import { fetchTokensPage, type IndexedToken, type TokenPage, formatTokenBalance } from '../tokenApi';
 
 
 /** Typed interface for MintableToken publicMint */
@@ -72,9 +72,11 @@ const TokenGallery: React.FC = () => {
   const [featMintResult, setFeatMintResult] = useState<{ ok: boolean; msg: string; txHash?: string } | null>(null);
   const [mintHistory, setMintHistory] = useState<TxRecord[]>([]);
   const [histRefresh, setHistRefresh] = useState(0);
-  // All tokens from indexer
+  // All tokens from indexer (paginated)
   const [allTokens, setAllTokens] = useState<IndexedToken[]>([]);
   const [allLoading, setAllLoading] = useState(false);
+  const [allTotal, setAllTotal] = useState(0);
+  const [lastBlock, setLastBlock] = useState(0);
   const [allSearch, setAllSearch] = useState('');
   const [sortField, setSortField] = useState<'block' | 'symbol' | 'supply' | 'holders'>('block');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -90,18 +92,35 @@ const TokenGallery: React.FC = () => {
     if (walletAddress) setMintHistory(getTxHistory(walletAddress).filter(r => r.type === 'mint'));
   }, [walletAddress, histRefresh]);
 
-  // Load all tokens from indexer when tab=all
+  // Load tokens from indexer (paginated, auto-loads all pages)
   const loadAllTokens = useCallback(async () => {
     setAllLoading(true);
     try {
-      const list = await fetchAllTokens();
-      setAllTokens(list);
+      const PAGE = 5000;
+      const first: TokenPage = await fetchTokensPage(PAGE, 0);
+      const all = [...first.tokens];
+      setAllTotal(first.total);
+      setLastBlock(first.lastBlock);
+      // Auto-load remaining pages
+      while (all.length < first.total) {
+        const next = await fetchTokensPage(PAGE, all.length);
+        if (next.tokens.length === 0) break;
+        all.push(...next.tokens);
+      }
+      setAllTokens(all);
     } catch (e) { logger.warn('[TokenGallery] Failed to fetch all tokens:', e); }
     setAllLoading(false);
   }, []);
 
   useEffect(() => {
     if (tab === 'all') void loadAllTokens();
+  }, [tab, loadAllTokens]);
+
+  // Auto-refresh token list + block every 60s
+  useEffect(() => {
+    if (tab !== 'all') return;
+    const iv = setInterval(() => { void loadAllTokens(); }, 60_000);
+    return () => clearInterval(iv);
   }, [tab, loadAllTokens]);
 
   const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
@@ -288,7 +307,7 @@ const TokenGallery: React.FC = () => {
 
       {/* Tab switcher */}
       <div className="d-flex gap-6 mb-14">
-        {([['all', `All Tokens (${allTokens.length})`], ['featured', 'Featured'], ['user', `My (${tokens.length})`]] as const).map(([id, label]) => (
+        {([['all', `All Tokens (${allTotal > 0 ? allTotal.toLocaleString() : allTokens.length.toLocaleString()})`], ['featured', 'Featured'], ['user', `My (${tokens.length})`]] as const).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} className="flex-1 br-14 fs-78 fw-700 pointer ff-ui" style={{ padding: '10px', background: tab === id ? 'rgba(247,147,26,.08)' : 'var(--bg3)', border: `1px solid ${tab === id ? 'rgba(247,147,26,.3)' : 'var(--bd)'}`, color: tab === id ? 'var(--o)' : 'var(--t2)' }}>{label}</button>
         ))}
       </div>
@@ -313,7 +332,8 @@ const TokenGallery: React.FC = () => {
             <span className="sep-v" />
             <button onClick={() => setFilterMintable(v => !v)} aria-pressed={filterMintable} aria-label="Filter mintable tokens" className="br-20 fs-60 fw-700 pointer ff-ui" style={{ padding: '4px 10px', background: filterMintable ? 'rgba(168,85,247,.15)' : 'transparent', border: `1px solid ${filterMintable ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.06)'}`, color: filterMintable ? '#a855f7' : 'var(--t3)', transition: 'all .15s' }}>Mintable{filterMintable ? ' \u2713' : ''}</button>
             <span className="ml-auto fs-58 c-t4 text-mono">
-              {sortedFiltered.length.toLocaleString()} tokens
+              {sortedFiltered.length.toLocaleString()}{allTotal > 0 && allTotal !== allTokens.length ? ` / ${allTotal.toLocaleString()}` : ''} tokens
+              {lastBlock > 0 && <span className="ml-6 c-t3">Block #{lastBlock.toLocaleString()}</span>}
             </span>
           </div>
 

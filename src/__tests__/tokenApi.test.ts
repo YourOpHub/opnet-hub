@@ -109,13 +109,14 @@ describe('tokenApi async functions', () => {
   });
 
   describe('fetchAllTokens', () => {
-    it('fetches tokens from /api/tokens', async () => {
+    it('fetches tokens from /api/tokens with pagination', async () => {
       const tokens = [
         { address: 'opt1abc', pubkey: '0x123', symbol: 'MINE', name: 'Mine', decimals: 8, total_supply: '21000000', deploy_block: 100 },
       ];
+      // fetchAllTokens now calls fetchTokensPage which uses count=true
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(tokens),
+        json: () => Promise.resolve({ tokens, total: 1, lastBlock: 100, offset: 0, limit: 5000 }),
       });
 
       const result = await fetchAllTokens();

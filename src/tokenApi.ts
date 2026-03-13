@@ -28,18 +28,41 @@ export interface HolderBalance {
     balance: string;
 }
 
-/** Fetch all known OP-20 tokens from the indexer */
-export async function fetchAllTokens(): Promise<IndexedToken[]> {
+/** Paginated token response from /api/tokens?count=true */
+export interface TokenPage {
+    tokens: IndexedToken[];
+    total: number;
+    lastBlock: number;
+    offset: number;
+    limit: number;
+}
+
+/** Fetch tokens page from the indexer (paginated, with total count + block info) */
+export async function fetchTokensPage(limit = 500, offset = 0): Promise<TokenPage> {
     try {
-        const res = await fetch(`${API_BASE}/api/tokens`, {
-            signal: AbortSignal.timeout(8000),
+        const res = await fetch(`${API_BASE}/api/tokens?limit=${limit}&offset=${offset}&count=true`, {
+            signal: AbortSignal.timeout(15000),
         });
-        if (!res.ok) return [];
-        return await res.json() as IndexedToken[];
+        if (!res.ok) return { tokens: [], total: 0, lastBlock: 0, offset, limit };
+        return await res.json() as TokenPage;
     } catch (e) {
-        logger.warn('[tokenApi] Failed to fetch all tokens:', e);
-        return [];
+        logger.warn('[tokenApi] Failed to fetch tokens page:', e);
+        return { tokens: [], total: 0, lastBlock: 0, offset, limit };
     }
+}
+
+/** Fetch all known OP-20 tokens from the indexer (loads all pages automatically) */
+export async function fetchAllTokens(): Promise<IndexedToken[]> {
+    const PAGE = 5000;
+    const first = await fetchTokensPage(PAGE, 0);
+    const all = [...first.tokens];
+    // Auto-load remaining pages
+    while (all.length < first.total) {
+        const next = await fetchTokensPage(PAGE, all.length);
+        if (next.tokens.length === 0) break;
+        all.push(...next.tokens);
+    }
+    return all;
 }
 
 /** Fetch all token balances for a holder (by MLDSA pubkey hex + optional tweaked pubkey) */

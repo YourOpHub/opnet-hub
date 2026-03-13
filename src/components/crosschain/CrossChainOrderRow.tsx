@@ -197,6 +197,7 @@ interface AvailableOrderRowProps {
   feeBps: number;
   isLocked: boolean;
   unisatAddress: string;
+  walletAddress: string;
   onTakeAndSwap: (id: string, takerAddr: string) => void;
   onTake: (id: string, takerAddr: string) => void;
 }
@@ -209,6 +210,7 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
   feeBps,
   isLocked,
   unisatAddress,
+  walletAddress,
   onTakeAndSwap,
   onTake,
 }) => {
@@ -237,8 +239,8 @@ const AvailableOrderRowBase: React.FC<AvailableOrderRowProps> = ({
           {!isExpired && isBtcToFb && (
             <TakeOrderButton orderId={order.id} feeSats={Number(feeSats)}
               onTake={onTakeAndSwap} disabled={isThisActioning || isLocked}
-              defaultAddr={unisatAddress || ''}
-              addrHint="Your Fractal address (bc1p...)"
+              defaultAddr={walletAddress || ''}
+              addrHint="Your OPNet address (opt1p...)"
               label={isLocked ? '\u{1F512}' : 'Take'} />
           )}
           {!isExpired && !isBtcToFb && (

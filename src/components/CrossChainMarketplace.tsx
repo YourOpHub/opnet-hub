@@ -597,6 +597,7 @@ const CrossChainMarketplace: React.FC = () => {
                       feeBps={feeBps}
                       isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
                       unisatAddress={unisat.address || ''}
+                      walletAddress={walletAddress || ''}
                       onTakeAndSwap={handleTakeAndSwap}
                       onTake={handleTake}
                     />
@@ -636,6 +637,7 @@ const CrossChainMarketplace: React.FC = () => {
                       feeBps={feeBps}
                       isLocked={!!locks[`fractalswap:${order.id}`] && locks[`fractalswap:${order.id}`]?.locked_by !== walletAddress}
                       unisatAddress={unisat.address || ''}
+                      walletAddress={walletAddress || ''}
                       onTakeAndSwap={handleTakeAndSwap}
                       onTake={handleTake}
                     />

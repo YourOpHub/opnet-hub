@@ -73,14 +73,14 @@ export function getP2OPAddress(mldsaHex: string): string {
 /**
  * Encode a Fractal/Bitcoin bech32m address (P2TR) into a u256 bigint.
  * Stores the 32-byte witness program directly — fits exactly in u256.
- * Only P2TR (Taproot, version 1) addresses are supported.
+ * Supports P2TR (Taproot, version 1) addresses: bc1p... (Fractal) and opt1p... (OPNet).
  */
 export function encodeFractalAddr(addr: string): bigint {
   let decoded;
   try {
     decoded = bech32m.decode(addr, 90);
   } catch {
-    throw new Error(`Invalid address format: "${addr}". Expected a Taproot address (bc1p...)`);
+    throw new Error(`Invalid address format: "${addr}". Expected a Taproot address (bc1p... or opt1p...)`);
   }
   const version = decoded.words[0];
   const program = bech32m.fromWords(decoded.words.slice(1));
@@ -92,7 +92,7 @@ export function encodeFractalAddr(addr: string): bigint {
   return result;
 }
 
-/** Validate a Fractal/Bitcoin P2TR address. Returns error message or empty string if valid. */
+/** Validate a Fractal/Bitcoin/OPNet P2TR address. Returns error message or empty string if valid. */
 export function validateFractalAddr(addr: string): string {
   if (!addr) return '';
   try {

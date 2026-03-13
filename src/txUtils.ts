@@ -141,9 +141,34 @@ export async function waitForNextBlock(
   logger.warn('[txUtils] Block wait timeout, proceeding anyway');
 }
 
+/** Mempool API path per network (mempool.opnet.org is a mempool.space fork) */
+const MEMPOOL_PATH: Record<string, string> = {
+  testnet: 'testnet4',
+  mainnet: '',
+  regtest: 'testnet4',
+};
+
+/** Check TX confirmation via mempool.opnet.org (faster than OPNet RPC).
+ *  Returns true if confirmed, false if found but unconfirmed, null on error/404. */
+async function checkMempoolTx(txId: string): Promise<boolean | null> {
+  const hash = txId.replace(/^0x/i, '');
+  const path = MEMPOOL_PATH[CURRENT_ENV] || 'testnet4';
+  const base = path ? `https://mempool.opnet.org/${path}` : 'https://mempool.opnet.org';
+  try {
+    const res = await fetch(`${base}/api/tx/${hash}`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { status?: { confirmed?: boolean } };
+    if (data?.status?.confirmed === true) return true;
+    return false; // found but not confirmed yet
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Wait for a specific transaction to be confirmed by polling getTransactionReceipt.
- * Returns true if confirmed, false on timeout or RPC failure.
+ * Wait for a specific transaction to be confirmed.
+ * Primary: polls mempool.opnet.org (updates faster than OPNet RPC).
+ * Fallback: OPNet RPC getTransactionReceipt if mempool unavailable.
  * @param txId - Transaction hash to track.
  * @param setStep - Optional callback for progress updates.
  * @param timeoutMs - Max wait time in ms (default 5min).
@@ -162,12 +187,22 @@ export async function waitForTxConfirmation(
     const elapsed = Math.round((Date.now() - start) / 1000);
     if (elapsed > 0) setStep?.(`Confirming TX ${short}... (${elapsed}s)`);
     try {
-      const receipt = await getTransactionReceipt(txId);
-      consecutiveFailures = 0;
-      if (receipt != null) {
+      // Try mempool first (faster indexing)
+      const mempoolResult = await checkMempoolTx(txId);
+      if (mempoolResult === true) {
         setStep?.('TX confirmed!');
         return true;
       }
+      // If mempool errored (null), fallback to OPNet RPC
+      if (mempoolResult === null) {
+        const receipt = await getTransactionReceipt(txId);
+        if (receipt != null) {
+          setStep?.('TX confirmed!');
+          return true;
+        }
+      }
+      // mempoolResult === false means found but not yet confirmed — keep polling
+      consecutiveFailures = 0;
     } catch {
       consecutiveFailures++;
       if (consecutiveFailures >= 5) {
